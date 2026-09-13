@@ -59,7 +59,7 @@ export function SettingsPage() {
             <LanguageToggle />
           </div>
           <div className="settings-row settings-row-control">
-            <span className="settings-row-main"><span className="settings-row-icon"><Bell size={17} /></span><span><strong>Notifiche</strong><small>Preferenze globali</small></span></span>
+            <span className="settings-row-main"><span className="settings-row-icon"><Bell size={17} /></span><span><strong>Notifiche</strong><small>Avvisi push di Homisuite su questo dispositivo</small></span></span>
             <NotificationsToggle />
           </div>
           <SettingRow icon={<LockKeyhole size={17} />} title="Sicurezza" detail="Cambia la password del tuo account" onClick={() => setSecurityOpen(true)} />

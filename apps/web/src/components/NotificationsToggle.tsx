@@ -3,12 +3,23 @@ import { Switch } from './Switch'
 import { core } from '../core/client'
 import { DEVICE_PUSH_SUPPORTED, getExistingPushSubscription, subscribeDevicePush, toSubscriptionKeys } from '../core/devicePush'
 
+const BLOCKED_MESSAGE = 'Notifiche bloccate dal browser per questo sito. Sbloccale dalle impostazioni del sito (icona del lucchetto nella barra degli indirizzi) per attivarle.'
+
 export function NotificationsToggle() {
   const [subscribed, setSubscribed] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Checked once up front so a browser-level block shows immediately --
+  // without this, the row looks like an ordinary off toggle until the
+  // person clicks it and only then learns it's blocked.
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     if (!DEVICE_PUSH_SUPPORTED) {
+      setSubscribed(false)
+      return
+    }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      setBlocked(true)
       setSubscribed(false)
       return
     }
@@ -51,11 +62,11 @@ export function NotificationsToggle() {
       setSubscribed(true)
     } catch (cause) {
       setSubscribed(false)
-      setError(
-        cause instanceof Error && cause.message === 'permission_denied'
-          ? 'Notifiche bloccate dal browser per questo sito.'
-          : 'Non è stato possibile attivare le notifiche.',
-      )
+      if (cause instanceof Error && cause.message === 'permission_denied') {
+        setBlocked(true)
+      } else {
+        setError('Non è stato possibile attivare le notifiche.')
+      }
     }
   }
 
@@ -68,10 +79,14 @@ export function NotificationsToggle() {
       <Switch
         checked={Boolean(subscribed)}
         onChange={() => void (subscribed ? turnOff() : turnOn())}
-        disabled={subscribed === null}
+        disabled={subscribed === null || blocked}
         aria-label="Notifiche push su questo dispositivo"
       />
-      {error && <small className="form-error" role="alert">{error}</small>}
+      {blocked ? (
+        <small className="form-error" role="alert">{BLOCKED_MESSAGE}</small>
+      ) : (
+        error && <small className="form-error" role="alert">{error}</small>
+      )}
     </span>
   )
 }
