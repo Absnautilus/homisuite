@@ -6,7 +6,7 @@
 // mounts at that path in this shell (HousekeepingModuleGate's basePath),
 // unlike the original standalone Housekeeping app's own /staff route.
 self.addEventListener('push', (event) => {
-  let data = { title: 'RoomCall', body: 'Nuova richiesta', data: {} }
+  let data = { title: 'Homisuite', body: 'Nuova richiesta', data: {} }
   try {
     if (event.data) data = { ...data, ...event.data.json() }
   } catch {
@@ -16,8 +16,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
+      icon: '/icon-192.png',
+      badge: '/favicon-48x48.png',
       data: data.data,
       actions: [
         { action: 'accept', title: 'Accetta richiesta' },
