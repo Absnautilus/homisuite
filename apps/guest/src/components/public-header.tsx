@@ -1,4 +1,3 @@
-import { LogoMark } from '@/components/logo'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -9,8 +8,8 @@ export function PublicHeader({ onLogout }: { onLogout?: () => void }) {
     <div className="mx-auto w-full max-w-xl px-4 pt-6">
       <div className="flex items-center gap-1 rounded-full bg-accent py-1.5 pr-2 pl-3 text-white shadow-md">
         <span className="flex flex-1 items-center gap-2">
-          <LogoMark className="h-5 w-5 text-white" mouthColor="var(--accent)" />
-          <span className="font-head text-sm font-extrabold">RoomCall</span>
+          <img src="/icon-192.png" alt="" className="h-5 w-5 rounded" />
+          <span className="font-head text-sm font-extrabold">Homisuite</span>
         </span>
         <TextSizeToggle dark align="right" />
         <LanguageToggle dark align="right" />

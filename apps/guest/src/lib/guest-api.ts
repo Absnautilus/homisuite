@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { getHotelId, getHotelSlugFromPath, getStoredHotelId, setResolvedHotelId } from '@/lib/env'
+import { getHotelId, getHotelSlugFromPath, getStoredHotelId, getStoredHotelName, setResolvedHotel } from '@/lib/env'
 import type { GuestRequest, RequestCategory, RequestType } from '@/lib/types'
 
 export function isInvalidSessionError(error: unknown): boolean {
@@ -15,9 +15,12 @@ export async function resolveHotelFromSlug(): Promise<boolean> {
   const slug = getHotelSlugFromPath()
   if (slug) {
     try {
+      // A table-returning RPC comes back as an array of rows -- empty (not
+      // an error) for an unknown or inactive slug.
       const { data, error } = await supabase.rpc('resolve_hotel_guest_slug', { p_slug: slug })
-      if (!error && data) {
-        setResolvedHotelId(data)
+      const row = Array.isArray(data) ? (data[0] as { id: string; name: string } | undefined) : undefined
+      if (!error && row) {
+        setResolvedHotel(row.id, row.name)
         return true
       }
     } catch {
@@ -27,7 +30,7 @@ export async function resolveHotelFromSlug(): Promise<boolean> {
   }
   const stored = getStoredHotelId()
   if (stored) {
-    setResolvedHotelId(stored)
+    setResolvedHotel(stored, getStoredHotelName())
     return true
   }
   return false

@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { LogoMark } from '@/components/logo'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label } from '@/components/ui/field'
 import { guestLogin } from '@/lib/guest-api'
+import { getHotelName } from '@/lib/env'
 import { useLocale } from '@/lib/i18n/locale-context'
 
 // apps/guest is its own deployment now, one shared domain for every hotel,
@@ -16,6 +16,7 @@ const STAFF_APP_URL = import.meta.env.VITE_STAFF_APP_URL as string | undefined
 
 export function LoginScreen({ onSuccess }: { onSuccess: (token: string) => void }) {
   const { t } = useLocale()
+  const hotelName = getHotelName()
   const [roomNumber, setRoomNumber] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -43,11 +44,11 @@ export function LoginScreen({ onSuccess }: { onSuccess: (token: string) => void 
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="rounded-lg border border-line bg-surface p-9 shadow-md">
-          <div className="mx-auto mb-4 flex h-[50px] w-[50px] items-center justify-center rounded-md bg-accent text-accent-ink shadow-[0_8px_20px_-6px_var(--accent)]">
-            <LogoMark className="h-6 w-6" mouthColor="#fff" />
-          </div>
-          <div className="text-center text-[0.625rem] font-extrabold uppercase tracking-wider text-accent">RoomCall</div>
-          <h1 className="text-center font-head text-[1.1875rem] font-extrabold text-foreground">{t('login.title')}</h1>
+          <img src="/icon-192.png" alt="" className="mx-auto mb-4 h-[50px] w-[50px] rounded-md shadow-[0_8px_20px_-6px_var(--accent)]" />
+          <div className="text-center text-[0.625rem] font-extrabold uppercase tracking-wider text-accent">Homisuite</div>
+          <h1 className="text-center font-head text-[1.1875rem] font-extrabold text-foreground">
+            {hotelName ? t('login.titleWithHotel', { hotel: hotelName }) : t('login.title')}
+          </h1>
           <p className="mx-auto mt-1.5 max-w-[230px] text-center text-xs leading-relaxed text-muted">{t('login.subtitle')}</p>
 
           <form onSubmit={onSubmit} className="mt-7 flex flex-col gap-3.5">

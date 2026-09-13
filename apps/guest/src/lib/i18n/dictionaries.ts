@@ -3,6 +3,7 @@ import type { Locale } from '@/lib/i18n/locales'
 export const dictionaries = {
   it: {
     'login.title': 'Accedi al tuo soggiorno',
+    'login.titleWithHotel': 'Accedi al tuo soggiorno a {hotel}',
     'login.subtitle': 'Inserisci il numero di camera e il PIN ricevuto in Reception.',
     'login.sectionTitle': 'I tuoi dati',
     'login.room': 'Camera',
@@ -386,6 +387,7 @@ export const dictionaries = {
   },
   en: {
     'login.title': 'Access your stay',
+    'login.titleWithHotel': 'Access your stay at {hotel}',
     'login.subtitle': 'Enter your room number and the PIN given at check-in.',
     'login.sectionTitle': 'Your details',
     'login.room': 'Room',
@@ -768,6 +770,7 @@ export const dictionaries = {
   },
   fr: {
     'login.title': 'Accédez à votre séjour',
+    'login.titleWithHotel': 'Accédez à votre séjour à {hotel}',
     'login.subtitle': 'Indiquez le numéro de chambre et le code PIN remis à la réception.',
     'login.sectionTitle': 'Vos informations',
     'login.room': 'Chambre',
@@ -1152,6 +1155,7 @@ export const dictionaries = {
   },
   de: {
     'login.title': 'Zu Ihrem Aufenthalt anmelden',
+    'login.titleWithHotel': 'Zu Ihrem Aufenthalt im {hotel} anmelden',
     'login.subtitle': 'Geben Sie Ihre Zimmernummer und die an der Rezeption erhaltene PIN ein.',
     'login.sectionTitle': 'Ihre Angaben',
     'login.room': 'Zimmer',
@@ -1535,6 +1539,7 @@ export const dictionaries = {
   },
   es: {
     'login.title': 'Accede a tu estancia',
+    'login.titleWithHotel': 'Accede a tu estancia en {hotel}',
     'login.subtitle': 'Indica el número de habitación y el PIN facilitado en Recepción.',
     'login.sectionTitle': 'Tus datos',
     'login.room': 'Habitación',
@@ -1919,6 +1924,7 @@ export const dictionaries = {
   },
   pt: {
     'login.title': 'Aceda à sua estadia',
+    'login.titleWithHotel': 'Aceda à sua estadia no {hotel}',
     'login.subtitle': 'Indique o número do quarto e o PIN fornecido na Receção.',
     'login.sectionTitle': 'Os seus dados',
     'login.room': 'Quarto',
@@ -2302,6 +2308,7 @@ export const dictionaries = {
   },
   ja: {
     'login.title': 'ご滞在にログイン',
+    'login.titleWithHotel': '{hotel}でのご滞在にログイン',
     'login.subtitle': 'フロントで受け取った部屋番号とPINを入力してください。',
     'login.sectionTitle': 'お客様情報',
     'login.room': '部屋番号',
@@ -2684,6 +2691,7 @@ export const dictionaries = {
   },
   bn: {
     'login.title': 'আপনার থাকার তথ্যে লগইন করুন',
+    'login.titleWithHotel': '{hotel}-এ আপনার থাকার তথ্যে লগইন করুন',
     'login.subtitle': 'রিসেপশন থেকে পাওয়া রুম নম্বর এবং পিন লিখুন।',
     'login.sectionTitle': 'আপনার তথ্য',
     'login.room': 'রুম',
@@ -3066,6 +3074,7 @@ export const dictionaries = {
   },
   hi: {
     'login.title': 'अपने प्रवास में लॉगिन करें',
+    'login.titleWithHotel': '{hotel} में अपने प्रवास में लॉगिन करें',
     'login.subtitle': 'रिसेप्शन से मिला कमरा नंबर और पिन दर्ज करें।',
     'login.sectionTitle': 'आपकी जानकारी',
     'login.room': 'कमरा',
@@ -3448,6 +3457,7 @@ export const dictionaries = {
   },
   ar: {
     'login.title': 'سجّل الدخول إلى إقامتك',
+    'login.titleWithHotel': 'سجّل الدخول إلى إقامتك في {hotel}',
     'login.subtitle': 'أدخل رقم الغرفة ورمز PIN الذي استلمته من الاستقبال.',
     'login.sectionTitle': 'بياناتك',
     'login.room': 'الغرفة',
@@ -3830,6 +3840,7 @@ export const dictionaries = {
   },
   zh: {
     'login.title': '登录您的住宿',
+    'login.titleWithHotel': '登录您在{hotel}的住宿',
     'login.subtitle': '请输入前台提供的房间号和PIN码。',
     'login.sectionTitle': '您的信息',
     'login.room': '房间',
@@ -4212,6 +4223,7 @@ export const dictionaries = {
   },
   ru: {
     'login.title': 'Войдите в личный кабинет проживания',
+    'login.titleWithHotel': 'Войдите в личный кабинет проживания в {hotel}',
     'login.subtitle': 'Введите номер комнаты и PIN-код, полученный на стойке регистрации.',
     'login.sectionTitle': 'Ваши данные',
     'login.room': 'Комната',
