@@ -3,7 +3,7 @@
 -- guest_requests_legacy_hotel_for_property already is.
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(11);
 
 select is(
   slugify_hotel_name('Palazzo Veneziano'),
@@ -43,19 +43,24 @@ select is(
 -- ### anon resolution ###
 set local role anon;
 select is(
-  resolve_hotel_guest_slug('test-slug-hotel'),
+  (select id from resolve_hotel_guest_slug('test-slug-hotel')),
   '00000044-0000-0000-0000-000000000001'::uuid,
-  'anon resolves the plain slug to the first (active) hotel'
+  'anon resolves the plain slug to the first (active) hotel''s id'
 );
 select is(
-  resolve_hotel_guest_slug('test-slug-hotel-3'),
-  null,
-  'anon resolution of an inactive hotel''s slug returns null, not the id'
+  (select name from resolve_hotel_guest_slug('test-slug-hotel')),
+  'Test Slug Hotel',
+  'anon resolution also returns the hotel''s name, for the pre-login guest UI'
 );
 select is(
-  resolve_hotel_guest_slug('no-such-slug'),
+  (select id from resolve_hotel_guest_slug('test-slug-hotel-3')),
   null,
-  'anon resolution of an unknown slug returns null'
+  'anon resolution of an inactive hotel''s slug returns no row, not the id'
+);
+select is(
+  (select id from resolve_hotel_guest_slug('no-such-slug')),
+  null,
+  'anon resolution of an unknown slug returns no row'
 );
 reset role;
 

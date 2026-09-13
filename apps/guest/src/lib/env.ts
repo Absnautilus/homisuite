@@ -15,7 +15,9 @@ export const SUPABASE_ANON_KEY = required('VITE_SUPABASE_ANON_KEY', import.meta.
 // the hotel id itself -- resolveHotelFromSlug (guest-api.ts) looks it up
 // against the database and caches the result here.
 const HOTEL_ID_KEY = 'guest_hotel_id'
+const HOTEL_NAME_KEY = 'guest_hotel_name'
 let cachedHotelId: string | null = null
+let cachedHotelName: string | null = null
 
 export function getHotelId(): string {
   if (!cachedHotelId) {
@@ -24,12 +26,24 @@ export function getHotelId(): string {
   return cachedHotelId
 }
 
+// Null when the login screen shouldn't name the hotel -- either resolution
+// hasn't run yet, or it fell back to a stored id from before this was
+// cached (see getStoredHotelName). Callers should fall back to a
+// hotel-agnostic title in that case, not show a blank name.
+export function getHotelName(): string | null {
+  return cachedHotelName
+}
+
 // Called only by resolveHotelFromSlug once a slug has actually resolved to
-// a real hotel id -- never with unverified user input.
-export function setResolvedHotelId(hotelId: string): void {
+// a real hotel -- never with unverified user input. hotelName is best
+// effort: the stored-id fallback path in resolveHotelFromSlug may only have
+// a previously cached name (or none, for a visit that predates this).
+export function setResolvedHotel(hotelId: string, hotelName: string | null): void {
   cachedHotelId = hotelId
+  cachedHotelName = hotelName
   try {
     localStorage.setItem(HOTEL_ID_KEY, hotelId)
+    if (hotelName) localStorage.setItem(HOTEL_NAME_KEY, hotelName)
   } catch {
     // localStorage unavailable (private mode, etc.) -- the id still works
     // for this visit, it just won't survive a reload without the URL slug.
@@ -39,6 +53,14 @@ export function setResolvedHotelId(hotelId: string): void {
 export function getStoredHotelId(): string | null {
   try {
     return localStorage.getItem(HOTEL_ID_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function getStoredHotelName(): string | null {
+  try {
+    return localStorage.getItem(HOTEL_NAME_KEY)
   } catch {
     return null
   }

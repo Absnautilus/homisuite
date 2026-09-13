@@ -12,7 +12,7 @@ export function Logo({ className, textClassName }: { className?: string; textCla
   return (
     <span className={`inline-flex items-center gap-2 text-accent ${className ?? ''}`}>
       <LogoMark className="h-6 w-6" />
-      <span className={textClassName ?? 'font-head font-extrabold text-foreground'}>RoomCall</span>
+      <span className={textClassName ?? 'font-head font-extrabold text-foreground'}>Homisuite</span>
     </span>
   )
 }
