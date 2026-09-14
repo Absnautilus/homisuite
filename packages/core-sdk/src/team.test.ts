@@ -31,6 +31,7 @@ describe('getTeamMembers', () => {
       role: { id: 'role-property', slug: 'manager', displayName: 'Manager', scope: 'property', rank: 20 },
       jobTitle: { id: 'job-1', propertyId: 'property-1', name: 'Reception', active: true },
       employmentStatus: 'active',
+      housekeepingDepartment: null,
     }])
   })
 })

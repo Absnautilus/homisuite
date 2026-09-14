@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import type { CoreRole, JobTitle, TeamMember } from '@homisuite/core-sdk'
+import type { CoreRole, HousekeepingDepartment, JobTitle, TeamMember } from '@homisuite/core-sdk'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Modal } from '../components/Modal'
 import { PasswordField } from '../components/PasswordField'
@@ -214,7 +214,7 @@ export function TeamPage() {
       <EditMemberModal member={editing} roles={assignableRoles} jobTitles={team.jobTitles.filter((job) => job.active)} currentProfileId={runtime.profile?.id ?? ''} propertyId={property?.id ?? ''} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await loadTeam({ silent: true }) }} />
       <ResetPasswordModal member={resettingPassword} onClose={() => setResettingPassword(null)} />
       <JobModal job={jobEditor} propertyId={property?.id ?? ''} onClose={() => setJobEditor(null)} onSaved={async () => { setJobEditor(null); await loadTeam({ silent: true }) }} />
-      <ModulesModal member={modulesFor} onClose={() => setModulesFor(null)} />
+      <ModulesModal member={modulesFor} propertyId={property?.id ?? ''} onClose={() => setModulesFor(null)} />
       {confirmDialog}
     </div>
   )
@@ -327,14 +327,17 @@ function ResetPasswordModal({ member, onClose }: { member: TeamMember | null; on
 // directly. This list is written as one row now, but the modal itself
 // (status fetched per module, toggle calls grant/revoke) is the shape a
 // second module would extend, not a Housekeeping-only special case.
-function ModulesModal({ member, onClose }: { member: TeamMember | null; onClose: () => void }) {
+function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | null; propertyId: string; onClose: () => void }) {
   const [status, setStatus] = useState<boolean | null>(null)
+  const [department, setDepartment] = useState<HousekeepingDepartment>('reception')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [savingDepartment, setSavingDepartment] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!member) { setStatus(null); setError(null); return }
+    setDepartment(member.housekeepingDepartment ?? 'reception')
     setLoading(true)
     setError(null)
     core.getHousekeepingAccessStatus(member.membership.id)
@@ -356,8 +359,16 @@ function ModulesModal({ member, onClose }: { member: TeamMember | null; onClose:
     setError(null)
     setStatus(next)
     try {
-      if (next) await core.grantHousekeepingAccess({ membershipId: member.membership.id })
-      else await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
+      if (next) {
+        await core.grantHousekeepingAccess({ membershipId: member.membership.id })
+        // Reception by default -- matches the front-desk visibility a
+        // Team-bridged member has always been meant to have. The picker
+        // below lets an admin narrow it to a single department afterwards.
+        await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: 'reception' })
+        setDepartment('reception')
+      } else {
+        await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
+      }
     } catch (cause) {
       setStatus(!next)
       setError(readableError(cause))
@@ -366,12 +377,40 @@ function ModulesModal({ member, onClose }: { member: TeamMember | null; onClose:
     }
   }
 
+  async function onDepartmentChange(value: string) {
+    if (!member || savingDepartment) return
+    const next = value as HousekeepingDepartment
+    const previous = department
+    setDepartment(next)
+    setSavingDepartment(true)
+    setError(null)
+    try {
+      await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: next })
+    } catch (cause) {
+      setDepartment(previous)
+      setError(readableError(cause))
+    } finally {
+      setSavingDepartment(false)
+    }
+  }
+
   return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="button" onClick={onClose} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
-      <div className="module-access-row">
-        <span>Housekeeping</span>
-        <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label="Accesso a Housekeeping" />
-      </div>
+      <>
+        <div className="module-access-row">
+          <span>Housekeeping</span>
+          <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label="Accesso a Housekeeping" />
+        </div>
+        {status && (
+          <Field label="Reparto in Housekeeping" htmlFor="modules-department">
+            <Select id="modules-department" name="department" value={department} onChange={(value) => void onDepartmentChange(value)} disabled={savingDepartment}>
+              <option value="reception">Reception (vede tutte le richieste)</option>
+              <option value="housekeeping">Piani</option>
+              <option value="maintenance">Manutenzione</option>
+            </Select>
+          </Field>
+        )}
+      </>
     )}
     {error ? <p className="form-error" role="alert">{error}</p> : null}
   </Modal>
