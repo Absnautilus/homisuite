@@ -5,6 +5,7 @@ import type {
   CreateTeamMemberWithCredentialsInput,
   CreateTeamMemberWithCredentialsResult,
   EmploymentStatus,
+  HousekeepingDepartment,
   InviteTeamMemberInput,
   JobTitle,
   Membership,
@@ -114,6 +115,7 @@ export async function getTeamMembers(client: SupabaseClient<Database>, propertyI
       role,
       jobTitle: detail?.job_title_id ? titles.get(detail.job_title_id) ?? null : null,
       employmentStatus: (detail?.employment_status ?? 'active') as EmploymentStatus,
+      housekeepingDepartment: (detail?.housekeeping_department ?? null) as HousekeepingDepartment | null,
     }]
   }).sort((left, right) => left.profile.fullName.localeCompare(right.profile.fullName))
 }
@@ -227,7 +229,7 @@ export async function updateTeamMember(client: SupabaseClient<Database>, input: 
     if (!data) throw new Error('membership_status_update_not_applied')
   }
 
-  if (input.jobTitleId !== undefined || input.employmentStatus !== undefined) {
+  if (input.jobTitleId !== undefined || input.employmentStatus !== undefined || input.housekeepingDepartment !== undefined) {
     const existing = await client.from('property_staff_details')
       .select('profile_id')
       .eq('property_id', input.propertyId)
@@ -238,6 +240,7 @@ export async function updateTeamMember(client: SupabaseClient<Database>, input: 
     const changes = {
       ...(input.jobTitleId !== undefined ? { job_title_id: input.jobTitleId } : {}),
       ...(input.employmentStatus !== undefined ? { employment_status: input.employmentStatus } : {}),
+      ...(input.housekeepingDepartment !== undefined ? { housekeeping_department: input.housekeepingDepartment } : {}),
     }
     const result = existing.data
       ? await client.from('property_staff_details').update(changes)

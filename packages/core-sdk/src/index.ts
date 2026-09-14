@@ -9,6 +9,7 @@ export type {
   CoreRole,
   JobTitle,
   EmploymentStatus,
+  HousekeepingDepartment,
   TeamMember,
   InviteTeamMemberInput,
   CreateTeamMemberWithCredentialsInput,

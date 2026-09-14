@@ -47,12 +47,22 @@ export interface JobTitle {
 
 export type EmploymentStatus = 'active' | 'inactive'
 
+// Independent of the free-text job title above: which of Housekeeping's
+// own departments this person's guest_requests queue is scoped to once
+// Housekeeping access is granted. null means "not set" -- Housekeeping
+// falls back to its own legacy default for that case (see
+// current_staff_department()'s own comment). Deliberately excludes
+// Housekeeping's 'porter' department value, which only ever applies to
+// request categories, never to a staff member themselves.
+export type HousekeepingDepartment = 'reception' | 'housekeeping' | 'maintenance'
+
 export interface TeamMember {
   profile: Profile
   membership: Membership
   role: CoreRole
   jobTitle: JobTitle | null
   employmentStatus: EmploymentStatus
+  housekeepingDepartment: HousekeepingDepartment | null
 }
 
 export interface InviteTeamMemberInput {
@@ -113,6 +123,7 @@ export interface UpdateTeamMemberInput {
   membershipStatus?: MembershipStatus
   jobTitleId?: string | null
   employmentStatus?: EmploymentStatus
+  housekeepingDepartment?: HousekeepingDepartment | null
 }
 
 export interface Membership {

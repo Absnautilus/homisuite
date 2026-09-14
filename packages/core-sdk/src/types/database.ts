@@ -412,6 +412,7 @@ export interface Database {
           profile_id: string
           job_title_id: string | null
           employment_status: string
+          housekeeping_department: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -421,6 +422,7 @@ export interface Database {
           profile_id: string
           job_title_id?: string | null
           employment_status?: string
+          housekeeping_department?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -428,6 +430,7 @@ export interface Database {
         Update: {
           job_title_id?: string | null
           employment_status?: string
+          housekeeping_department?: string | null
         }
         Relationships: []
       }
