@@ -7,7 +7,7 @@
 -- 047_property_logo_storage.test.sql).
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(12);
 
 select ok(to_regclass('public.early_access_signups') is not null, 'the early_access_signups table exists');
 
@@ -15,41 +15,54 @@ set local role service_role;
 
 select lives_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
-     values ('mario.rossi@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', 'guest_requests') $$,
+     values ('mario.rossi@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', array['guest_requests']) $$,
   'the service role can insert a valid lead'
+);
+
+select lives_ok(
+  $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
+     values ('multi-problem@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', array['guest_requests', 'shift_planning']) $$,
+  'the service role can insert a lead with more than one main_problem'
 );
 
 select throws_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
-     values ('Mario.Rossi@Hotel-Test.it', 'Hotel Test Duplicate', 'owner', '1-20', 'shift_planning') $$,
+     values ('Mario.Rossi@Hotel-Test.it', 'Hotel Test Duplicate', 'owner', '1-20', array['shift_planning']) $$,
   '23505', null,
   'the same email in a different case is rejected as a duplicate'
 );
 
 select throws_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
-     values ('bad-role@hotel-test.it', 'Hotel Test', 'ceo', '21-50', 'guest_requests') $$,
+     values ('bad-role@hotel-test.it', 'Hotel Test', 'ceo', '21-50', array['guest_requests']) $$,
   '23514', null,
   'an invalid role is rejected'
 );
 
 select throws_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
-     values ('bad-rooms@hotel-test.it', 'Hotel Test', 'general_manager', '500+', 'guest_requests') $$,
+     values ('bad-rooms@hotel-test.it', 'Hotel Test', 'general_manager', '500+', array['guest_requests']) $$,
   '23514', null,
   'an invalid rooms_range is rejected'
 );
 
 select throws_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
-     values ('bad-problem@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', 'world_peace') $$,
+     values ('bad-problem@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', array['world_peace']) $$,
   '23514', null,
   'an invalid main_problem is rejected'
 );
 
 select throws_ok(
+  $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
+     values ('empty-problem@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', array[]::text[]) $$,
+  '23514', null,
+  'an empty main_problem array is rejected'
+);
+
+select throws_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem, status)
-     values ('bad-status@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', 'guest_requests', 'won') $$,
+     values ('bad-status@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', array['guest_requests'], 'won') $$,
   '23514', null,
   'an invalid status is rejected'
 );
@@ -64,7 +77,7 @@ select ok(
 
 select throws_ok(
   $$ insert into early_access_signups (email, hotel_name, role, rooms_range, main_problem)
-     values ('anon-attempt@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', 'guest_requests') $$,
+     values ('anon-attempt@hotel-test.it', 'Hotel Test', 'general_manager', '21-50', array['guest_requests']) $$,
   '42501', null,
   'anon cannot insert a lead'
 );

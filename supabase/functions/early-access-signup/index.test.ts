@@ -8,6 +8,7 @@
 // against supabase/tests), and a unit suite for an unauthenticated,
 // public-facing endpoint should never send real email regardless.
 import {
+  buildConfirmationEmail,
   buildNotificationEmail,
   corsHeadersFor,
   handleRequest,
@@ -86,7 +87,7 @@ const validPayload = () => ({
   hotel_name: 'Hotel Test',
   role: 'general_manager',
   rooms_range: '21-50',
-  main_problem: 'guest_requests',
+  main_problem: ['guest_requests'],
   marketing_consent: true,
   utm_source: 'google',
   utm_medium: 'cpc',
@@ -160,11 +161,39 @@ Deno.test('validateLead rejects an invalid rooms_range', () => {
 })
 
 Deno.test('validateLead rejects an invalid main_problem', () => {
-  assertEquals(validateLead({ ...validPayload(), main_problem: 'world_peace' }), null, 'a main_problem outside the whitelist must be rejected')
+  assertEquals(validateLead({ ...validPayload(), main_problem: ['world_peace'] }), null, 'a main_problem outside the whitelist must be rejected')
+})
+
+Deno.test('validateLead rejects an empty main_problem array', () => {
+  assertEquals(validateLead({ ...validPayload(), main_problem: [] }), null, 'at least one main_problem must be selected')
+})
+
+Deno.test('validateLead rejects a non-array main_problem', () => {
+  assertEquals(validateLead({ ...validPayload(), main_problem: 'guest_requests' }), null, 'main_problem must be an array, not a bare string')
+})
+
+Deno.test('validateLead rejects a main_problem array with one invalid entry among valid ones', () => {
+  assertEquals(
+    validateLead({ ...validPayload(), main_problem: ['guest_requests', 'world_peace'] }),
+    null,
+    'every entry must be in the whitelist',
+  )
+})
+
+Deno.test('validateLead accepts and dedupes multiple main_problem values', () => {
+  const lead = validateLead({ ...validPayload(), main_problem: ['guest_requests', 'shift_planning', 'guest_requests'] })
+  assert(lead !== null, 'multiple valid selections must validate')
+  assertEquals(lead!.main_problem, ['guest_requests', 'shift_planning'], 'duplicates are dropped, order otherwise kept')
 })
 
 Deno.test('validateLead rejects a non-boolean marketing_consent', () => {
   assertEquals(validateLead({ ...validPayload(), marketing_consent: 'yes' }), null, 'marketing_consent must be a real boolean')
+})
+
+Deno.test('buildNotificationEmail joins multiple main_problem labels', () => {
+  const lead: Lead = { ...validateLead(validPayload())!, main_problem: ['guest_requests', 'shift_planning'] }
+  const email = buildNotificationEmail(lead, true)
+  assert(email.text.includes('Richieste ospiti, Pianificazione turni'), 'every selected problem label must appear, joined')
 })
 
 Deno.test('isHoneypotTriggered: only a non-empty website field counts', () => {
@@ -178,6 +207,23 @@ Deno.test('buildNotificationEmail escapes HTML in user-controlled fields', () =>
   const email = buildNotificationEmail(lead, true)
   assert(!email.html.includes('<script>alert(1)</script>'), 'raw HTML from the hotel name must not reach the email body unescaped')
   assert(email.html.includes('&lt;script&gt;'), 'the escaped form must be present instead')
+})
+
+Deno.test('buildConfirmationEmail escapes HTML in user-controlled fields', () => {
+  const lead: Lead = { ...validateLead(validPayload())!, hotel_name: '<script>alert(1)</script>' }
+  const email = buildConfirmationEmail(lead, true)
+  assert(!email.html.includes('<script>alert(1)</script>'), 'raw HTML from the hotel name must not reach the email body unescaped')
+  assert(email.html.includes('&lt;script&gt;'), 'the escaped form must be present instead')
+})
+
+Deno.test('buildConfirmationEmail: subject and copy differ for a new vs. an updated lead', () => {
+  const lead = validateLead(validPayload())!
+  const created = buildConfirmationEmail(lead, true)
+  const updated = buildConfirmationEmail(lead, false)
+  assertEquals(created.subject, 'Richiesta ricevuta — homisuite early access', 'subject is fixed regardless of new/updated')
+  assertEquals(updated.subject, created.subject, 'subject does not change for an update')
+  assert(created.html.includes('abbiamo ricevuto la tua richiesta'), 'a new lead gets the "received" wording')
+  assert(updated.html.includes('abbiamo aggiornato la tua richiesta'), 'an updated lead gets the "updated" wording instead')
 })
 
 // ---------------------------------------------------------------------------
@@ -200,7 +246,7 @@ Deno.test('upsertLead updates an existing lead instead of duplicating it, keepin
       hotel_name: 'Old Name',
       role: 'owner',
       rooms_range: '1-20',
-      main_problem: 'handover',
+      main_problem: ['handover'],
       marketing_consent: false,
       status: 'qualified',
       created_at: '2020-01-01T00:00:00.000Z',
@@ -226,7 +272,7 @@ Deno.test('upsertLead updates an existing lead instead of duplicating it, keepin
 // handleRequest -- full request/response cycle, DB and email both faked
 // ---------------------------------------------------------------------------
 
-Deno.test('handleRequest: valid payload -> 201 created, notification sent after the DB write', async () => {
+Deno.test('handleRequest: valid payload -> 201 created, both emails sent after the DB write', async () => {
   const { client } = createFakeAdminClient()
   const calls: string[] = []
   const request = makeRequest(validPayload(), { origin: ALLOWED_ORIGIN })
@@ -237,14 +283,20 @@ Deno.test('handleRequest: valid payload -> 201 created, notification sent after 
     },
     sendEmail: (_lead, isNew) => {
       calls.push('email')
-      assertEquals(isNew, true, 'the email handler must be told this is a new lead')
+      assertEquals(isNew, true, 'the notification handler must be told this is a new lead')
+      return Promise.resolve()
+    },
+    sendConfirmation: (lead, isNew) => {
+      calls.push('confirmation')
+      assertEquals(isNew, true, 'the confirmation handler must be told this is a new lead')
+      assertEquals(lead.email, 'mario.rossi@hotel-test.it', 'the confirmation must go to the lead, not to the internal notification address')
       return Promise.resolve()
     },
     env: testEnv,
   })
   assertEquals(response.status, 201, 'a brand new lead must return 201')
   assertEquals(await response.json(), { ok: true, status: 'created' }, 'the created response body must match the documented shape')
-  assertEquals(calls, ['db', 'email'], 'the database write must happen before the notification email')
+  assertEquals(calls, ['db', 'email', 'confirmation'], 'the database write must happen before either email, notification before confirmation')
 })
 
 Deno.test('handleRequest: same email again -> 200 updated', async () => {
@@ -288,8 +340,13 @@ Deno.test('handleRequest: invalid rooms_range -> 400', async () => {
 })
 
 Deno.test('handleRequest: invalid main_problem -> 400', async () => {
-  const response = await handleRequest(makeRequest({ ...validPayload(), main_problem: 'world_peace' }, { origin: ALLOWED_ORIGIN }), { env: testEnv })
+  const response = await handleRequest(makeRequest({ ...validPayload(), main_problem: ['world_peace'] }, { origin: ALLOWED_ORIGIN }), { env: testEnv })
   assertEquals(response.status, 400, 'an invalid main_problem must be rejected')
+})
+
+Deno.test('handleRequest: empty main_problem array -> 400', async () => {
+  const response = await handleRequest(makeRequest({ ...validPayload(), main_problem: [] }, { origin: ALLOWED_ORIGIN }), { env: testEnv })
+  assertEquals(response.status, 400, 'an empty main_problem selection must be rejected')
 })
 
 Deno.test('handleRequest: non-boolean marketing_consent -> 400', async () => {
@@ -301,6 +358,7 @@ Deno.test('handleRequest: honeypot filled -> looks like success, nothing written
   const { client, rows } = createFakeAdminClient()
   let dbTouched = false
   let emailSent = false
+  let confirmationSent = false
   const response = await handleRequest(makeRequest({ ...validPayload(), website: 'http://spam.example' }, { origin: ALLOWED_ORIGIN }), {
     createAdminClient: () => {
       dbTouched = true
@@ -310,12 +368,17 @@ Deno.test('handleRequest: honeypot filled -> looks like success, nothing written
       emailSent = true
       return Promise.resolve()
     },
+    sendConfirmation: () => {
+      confirmationSent = true
+      return Promise.resolve()
+    },
     env: testEnv,
   })
   assertEquals(response.status, 201, 'a honeypot hit must still look like an ordinary success to the caller')
   assertEquals(await response.json(), { ok: true, status: 'created' }, 'the honeypot response must be indistinguishable from a real success')
   assert(!dbTouched, 'the database must never be touched when the honeypot is triggered')
   assert(!emailSent, 'no notification email must be sent when the honeypot is triggered')
+  assert(!confirmationSent, 'no confirmation email must be sent when the honeypot is triggered')
   assertEquals(rows().length, 0, 'no row must exist after a honeypot-triggered submission')
 })
 
@@ -336,16 +399,40 @@ Deno.test('handleRequest: OPTIONS preflight from a disallowed origin fails', asy
   assertEquals(response.status, 403, 'a preflight from a disallowed origin must fail')
 })
 
-Deno.test('handleRequest: email provider failure does not delete or fail the already-saved lead', async () => {
+Deno.test('handleRequest: notification email failure does not delete or fail the already-saved lead, confirmation still attempted', async () => {
   const { client, rows } = createFakeAdminClient()
+  let confirmationAttempted = false
   const response = await handleRequest(makeRequest(validPayload(), { origin: ALLOWED_ORIGIN }), {
     createAdminClient: () => client,
     sendEmail: () => Promise.reject(new Error('resend_request_failed_500')),
+    sendConfirmation: () => {
+      confirmationAttempted = true
+      return Promise.resolve()
+    },
     env: testEnv,
   })
   assertEquals(response.status, 201, 'a notification failure must not surface as an API error')
   assertEquals(await response.json(), { ok: true, status: 'created' }, 'the caller must still see a normal success response')
   assertEquals(rows().length, 1, 'the lead must remain saved even though the notification email failed')
+  assert(confirmationAttempted, 'a notification failure must not stop the confirmation email from being attempted')
+})
+
+Deno.test('handleRequest: confirmation email failure does not delete or fail the already-saved lead, notification still attempted', async () => {
+  const { client, rows } = createFakeAdminClient()
+  let notificationAttempted = false
+  const response = await handleRequest(makeRequest(validPayload(), { origin: ALLOWED_ORIGIN }), {
+    createAdminClient: () => client,
+    sendEmail: () => {
+      notificationAttempted = true
+      return Promise.resolve()
+    },
+    sendConfirmation: () => Promise.reject(new Error('resend_request_failed_500')),
+    env: testEnv,
+  })
+  assertEquals(response.status, 201, 'a confirmation failure must not surface as an API error')
+  assertEquals(await response.json(), { ok: true, status: 'created' }, 'the caller must still see a normal success response')
+  assertEquals(rows().length, 1, 'the lead must remain saved even though the confirmation email failed')
+  assert(notificationAttempted, 'a confirmation failure must not stop the internal notification from being attempted')
 })
 
 Deno.test('handleRequest: database failure -> 500, no technical details leaked', async () => {

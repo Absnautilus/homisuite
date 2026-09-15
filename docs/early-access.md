@@ -19,8 +19,9 @@ early-access-signup Edge Function  (supabase/functions/early-access-signup)
     v
 public.early_access_signups        (Supabase Postgres)
     |
-    v
-notification email -> EARLY_ACCESS_NOTIFICATION_TO (info@homisuite.com)
+    +--> notification email -> EARLY_ACCESS_NOTIFICATION_TO (info@homisuite.com)
+    |
+    +--> confirmation email -> the lead's own email address
 ```
 
 The landing's browser **never** talks to Supabase directly: no
@@ -71,7 +72,7 @@ Request body (`application/json`):
   "hotel_name": "Hotel Roma",
   "role": "general_manager",
   "rooms_range": "21-50",
-  "main_problem": "guest_requests",
+  "main_problem": ["guest_requests", "shift_planning"],
   "marketing_consent": true,
   "utm_source": "google",
   "utm_medium": "cpc",
@@ -101,10 +102,14 @@ email-provider detail, or any environment variable value.
 
 ## Database — `public.early_access_signups`
 
-Migration: `supabase/migrations/20260915140000_early_access_signups.sql`
+Migrations: `supabase/migrations/20260915140000_early_access_signups.sql`
 (additive only — touches nothing else: no changes to `organizations`,
 `properties`, `memberships`, `auth`, guest sessions, permissions, or any
-other module).
+other module) plus
+`supabase/migrations/20260915180000_early_access_main_problem_array.sql`,
+which widened `main_problem` from a single value to an array once the
+landing's form became multi-select (existing rows were migrated in place,
+each wrapped into a one-element array — no data lost).
 
 | Column | Type | Notes |
 |---|---|---|
@@ -113,7 +118,7 @@ other module).
 | `hotel_name` | `text` | required |
 | `role` | `text` | whitelist, see below |
 | `rooms_range` | `text` | whitelist |
-| `main_problem` | `text` | whitelist |
+| `main_problem` | `text[]` | non-empty, every element from the whitelist |
 | `marketing_consent` | `boolean` | default `false` |
 | `utm_source` / `utm_medium` / `utm_campaign` / `utm_content` / `utm_term` | `text`, nullable | attribution |
 | `landing_path` | `text`, nullable | which landing page/variant |
@@ -126,7 +131,7 @@ enum-via-CHECK convention — see `housekeeping_department` in
 
 - `role`: `general_manager`, `front_office_manager`, `front_office`, `operations`, `owner`, `other`
 - `rooms_range`: `1-20`, `21-50`, `51-100`, `101-200`, `200+`
-- `main_problem`: `guest_requests`, `shift_planning`, `internal_communication`, `transfer`, `restaurants_experiences`, `handover`, `other`
+- `main_problem`: one or more of `guest_requests`, `shift_planning`, `internal_communication`, `transfer`, `restaurants_experiences`, `handover`, `other` — enforced with `cardinality(main_problem) > 0 and main_problem <@ array[...]`, so the array can never be empty or contain a value outside the list
 - `status`: `new`, `contacted`, `qualified`, `pilot`, `converted`, `rejected`
 
 ### Email uniqueness
@@ -244,7 +249,7 @@ it, rather than guessing a value into the code.
   `400 invalid_payload` on failure is the entire integration once/if it's
   needed.
 
-## Email notification
+## Email notification and confirmation
 
 **No transactional email provider existed anywhere in this repository**
 before this feature (confirmed by searching for Resend/SendGrid/Postmark/
@@ -253,28 +258,55 @@ was added — **Resend** is the default/suggested provider, selected only
 via `EMAIL_PROVIDER`. No account was created and no credentials, real or
 placeholder, were added anywhere.
 
-Every valid submission sends exactly one notification, both for a brand
+Every valid submission sends **two independent emails**, both for a brand
 new lead and for a re-submission that updates an existing one (see
 Duplicates above). Delivery order is fixed: **validate → save/update in
-Supabase → attempt the email** — never the other way around.
+Supabase → attempt the notification → attempt the confirmation** — never
+before the database write, and the two emails never gate each other: a
+failure sending one is logged and does not stop the other from being
+attempted (see `handleRequest` in `index.ts`).
 
 **Email failure never loses a lead.** If Supabase write fails, the API
-call fails (`500`) and nothing is sent. If Supabase succeeds but the email
-fails (provider down, misconfigured, etc.), the lead stays saved exactly
-as written, the API still returns its normal `200`/`201` success, and the
-failure is only logged server-side (`console.error`, safe message only —
-no stack trace or provider response body). The database is the single
-source of truth; a temporary email outage is never allowed to look like a
-lost submission.
+call fails (`500`) and neither email is sent. If Supabase succeeds but an
+email fails (provider down, misconfigured, etc.), the lead stays saved
+exactly as written, the API still returns its normal `200`/`201` success,
+and the failure is only logged server-side (`console.error`, safe message
+only — no stack trace or provider response body). The database is the
+single source of truth; a temporary email outage is never allowed to look
+like a lost submission.
+
+### 1. Internal notification — to `EARLY_ACCESS_NOTIFICATION_TO`
 
 Subject: `[homisuite] Nuova richiesta Early Access — {hotel_name}`
 
 Body (plain text + simple HTML, both generated by `buildNotificationEmail`
 in `index.ts`) includes hotel, email, role (human label), rooms range,
-main problem (human label), marketing consent (Sì/No), `utm_source`/
+main problem(s) (human labels, comma-joined when more than one is
+selected), marketing consent (Sì/No), `utm_source`/
 `utm_medium`/`utm_campaign`, `landing_path`, whether this is a new or
 updated lead, and a timestamp. User-controlled fields are HTML-escaped
-before being interpolated into the HTML body.
+before being interpolated into the HTML body. Sent `from` `EMAIL_FROM`.
+
+### 2. Confirmation — to the lead's own email address
+
+Subject: `Richiesta ricevuta — homisuite early access`. Sent `from`
+`EARLY_ACCESS_CONFIRMATION_FROM` (`info@homisuite.com`), **not**
+`EMAIL_FROM` — the internal notification and the visitor-facing
+confirmation are allowed to use different sending addresses, since one
+goes to staff and the other to an external inbox.
+
+Body (plain text + styled HTML, generated by `buildConfirmationEmail` in
+`index.ts`) reassures the visitor their request was received (or updated,
+on a re-submission — the copy branches on `isNew` the same way the
+internal notification does), and lists what happens next. It is styled to
+match the public landing (`Absnautilus/Homisuite-landing`): same purple
+gradient header, same copy tone, laid out as email-safe HTML (tables,
+inline styles, an Outlook/VML gradient fallback — modern CSS is not
+reliable in email clients). The logo image is served from that repo's
+public GitHub content via jsDelivr (`CONFIRMATION_LOGO_URL` in
+`index.ts`) since no `homisuite.com`-hosted asset exists yet; update that
+constant once one does. User-controlled fields are HTML-escaped the same
+way as the notification email.
 
 ## Privacy
 
@@ -296,8 +328,9 @@ from anything checked into this repository.
 | `SUPABASE_SERVICE_ROLE_KEY` | provided automatically | same as above |
 | `EARLY_ACCESS_ALLOWED_ORIGINS` | yes | comma-separated origins, see CORS above |
 | `EARLY_ACCESS_NOTIFICATION_TO` | yes | target value: `info@homisuite.com` |
-| `EMAIL_FROM` | yes | e.g. `homisuite <notifications@homisuite.com>` — needs a verified sending domain with whichever provider is used |
-| `EMAIL_PROVIDER` | no | defaults to `resend` |
+| `EMAIL_FROM` | yes | sender for the *internal* notification, e.g. `homisuite <notifications@homisuite.com>` — needs a verified sending domain with whichever provider is used |
+| `EARLY_ACCESS_CONFIRMATION_FROM` | yes | sender for the *lead-facing* confirmation, e.g. `homisuite <info@homisuite.com>` — same verified domain as `EMAIL_FROM`, can be a different address on it |
+| `EMAIL_PROVIDER` | no | defaults to `resend`, shared by both emails |
 | `RESEND_API_KEY` | yes, if `EMAIL_PROVIDER=resend` (the default) | never commit this |
 
 None of these were set on any real project by this change — see "Manual
@@ -357,17 +390,20 @@ Table Editor (or SQL Editor) against `public.early_access_signups`,
 authenticated as a project member — RLS doesn't apply to the dashboard's
 own privileged connection.
 
-## If the email notification fails
+## If the notification or confirmation email fails
 
 Nothing to do urgently: the lead is safely in
-`public.early_access_signups` regardless (see Email notification above).
-To recover:
+`public.early_access_signups` regardless (see Email notification and
+confirmation above). To recover:
 
 1. Check the function's logs (Supabase dashboard → Edge Functions →
    `early-access-signup` → Logs) for the `early-access-signup: notification
-   email failed ...` line — it names the failure (e.g. a Resend HTTP
-   status) without leaking the API key.
-2. Fix the underlying cause (expired/missing `RESEND_API_KEY`, unverified
-   sending domain, provider outage, etc.).
+   email failed ...` or `early-access-signup: confirmation email failed
+   ...` line — it names the failure (e.g. a Resend HTTP status) without
+   leaking the API key. The two are independent: one can fail while the
+   other succeeds.
+2. Fix the underlying cause (expired/missing `RESEND_API_KEY`, missing
+   `EMAIL_FROM` / `EARLY_ACCESS_CONFIRMATION_FROM`, unverified sending
+   domain, provider outage, etc.).
 3. No lead is ever lost or needs re-entry — it's already a row in the
    table; a missed notification is a visibility gap, not a data-loss one.
