@@ -9,7 +9,7 @@
 -- untouched by these policies.
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(8);
 
 insert into organizations (id, name, slug) values
   ('00000047-0000-0000-0000-000000000001', 'Test Org A', 'test-047-org-a'),
@@ -68,7 +68,7 @@ select throws_ok(
   'a receptionist without core.property.manage cannot upload a logo'
 );
 
--- UPDATE/DELETE policies gate visibility via USING, not a thrown error like
+-- UPDATE's policy gates visibility via USING, not a thrown error like
 -- INSERT's WITH CHECK: a row the caller's USING clause can't see is simply
 -- not matched, so this is an affected-row-count check, not throws_ok.
 with upd as (
@@ -79,13 +79,16 @@ with upd as (
 select is((select count(*)::int from upd), 0,
   'a receptionist without core.property.manage cannot replace the logo');
 
-with del as (
-  delete from storage.objects
-  where name = '00000047-0000-0000-0000-000000000011/logo.png'
-  returning 1
-)
-select is((select count(*)::int from del), 0,
-  'a receptionist without core.property.manage cannot delete the logo');
+-- No DELETE coverage here: real Supabase Storage unconditionally blocks a
+-- direct `delete from storage.objects` for every role, including
+-- service_role, via its own protect_delete trigger ("Direct deletion from
+-- storage tables is not allowed. Use the Storage API instead") -- this
+-- fires before RLS is even consulted, so pgTAP has no way to exercise
+-- property_logos_delete directly. The policy is exercised for real when the
+-- Storage API deletes an object on the app's behalf (see onLogoRemove in
+-- SettingsPage.tsx); confirmed the hard way, by this exact migration
+-- failing CI's real Supabase stack until these DELETE assertions were
+-- removed.
 
 set local request.jwt.claim.sub = '00000047-0000-0000-0000-000000000043';
 
@@ -99,11 +102,6 @@ set local request.jwt.claim.sub = '00000047-0000-0000-0000-000000000041';
 select lives_ok(
   $$ update storage.objects set metadata = '{"resized": true}'::jsonb where name = '00000047-0000-0000-0000-000000000011/logo.png' $$,
   'the property admin can replace their own property''s logo'
-);
-
-select lives_ok(
-  $$ delete from storage.objects where name = '00000047-0000-0000-0000-000000000011/logo.png' $$,
-  'the property admin can delete their own property''s logo'
 );
 
 select * from finish();

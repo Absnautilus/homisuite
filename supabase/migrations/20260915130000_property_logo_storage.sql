@@ -50,6 +50,11 @@ create policy property_logos_update on storage.objects for update to authenticat
   using (bucket_id = 'property-logos' and has_permission(storage_extract_property_id(name), 'core.property.manage'))
   with check (bucket_id = 'property-logos' and has_permission(storage_extract_property_id(name), 'core.property.manage'));
 
+-- Supabase's own protect_delete trigger blocks every direct `delete from
+-- storage.objects`, for every role, regardless of this policy -- object
+-- deletion only ever happens through the Storage API. This policy is what
+-- the Storage API's own permission check consults for a remove() call, but
+-- it can't be exercised via a raw SQL DELETE (pgTAP included).
 create policy property_logos_delete on storage.objects for delete to authenticated
   using (bucket_id = 'property-logos' and has_permission(storage_extract_property_id(name), 'core.property.manage'));
 
