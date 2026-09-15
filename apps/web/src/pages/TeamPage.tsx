@@ -19,6 +19,8 @@ const suggestedJobs = [
 type TeamState = { members: TeamMember[]; roles: CoreRole[]; jobTitles: JobTitle[]; canManage: boolean }
 const emptyTeam: TeamState = { members: [], roles: [], jobTitles: [], canManage: false }
 
+const UNASSIGNED_JOB_LABEL = 'Da assegnare'
+
 export function TeamPage() {
   const runtime = useModuleRuntime()
   const property = runtime.property
@@ -112,6 +114,83 @@ export function TeamPage() {
   const assignableRoles = team.roles.filter((role) => role.rank < (currentMember?.role.rank ?? 0))
   const propertyName = property?.name ?? 'Struttura'
 
+  // Grouped by Mansione (job title) -- the label already shown per-row in
+  // the "Mansione" column, not the Housekeeping "Reparto" field (a
+  // different, Housekeeping-only concept scoped to guest_requests
+  // visibility; see ModulesModal). Always groups: unlike Reparto, Mansione
+  // exists for every property regardless of which modules are active.
+  const memberGroups = useMemo(() => {
+    const byLabel = new Map<string, TeamMember[]>()
+    for (const member of team.members) {
+      const label = member.jobTitle?.name ?? UNASSIGNED_JOB_LABEL
+      const list = byLabel.get(label)
+      if (list) list.push(member)
+      else byLabel.set(label, [member])
+    }
+    return [...byLabel.entries()]
+      .sort(([left], [right]) => {
+        if (left === UNASSIGNED_JOB_LABEL) return 1
+        if (right === UNASSIGNED_JOB_LABEL) return -1
+        return left.localeCompare(right)
+      })
+      .map(([label, members]) => ({ key: label, label, members }))
+  }, [team.members])
+
+  function renderMemberRow(member: TeamMember) {
+    const isSelf = member.profile.id === runtime.profile?.id
+    const orgWide = member.membership.propertyId == null
+    return (
+      <div className="team-row" role="row" key={member.membership.id}>
+        <span className="team-person" role="cell"><span className="mini-avatar">{initials(member.profile.fullName)}</span><strong>{member.profile.fullName}</strong></span>
+        <span role="cell">
+          {roleLabel(member.role.slug, member.role.displayName)}
+          {member.membership.username ? <><br /><small className="muted">{member.membership.username}</small></> : null}
+        </span>
+        <span role="cell" className={member.jobTitle ? '' : 'muted'}>{member.jobTitle?.name ?? 'Da assegnare'}</span>
+        <span role="cell" className="team-status-cell">
+          <Switch
+            checked={member.membership.status === 'active'}
+            onChange={() => onToggleAccess(member)}
+            disabled={!team.canManage || isSelf || orgWide}
+            aria-label={`Stato accesso di ${member.profile.fullName}`}
+          />
+          {member.employmentStatus === 'inactive' ? <small className="muted">Fuori organico</small> : null}
+        </span>
+        <span role="cell" className="team-row-actions">
+          {team.canManage ? (
+            <>
+              <button className="row-action" type="button" onClick={() => setEditing(member)} aria-label={`Modifica ${member.profile.fullName}`}><Pencil size={15} /></button>
+              {member.membership.username ? (
+                <button className="row-action" type="button" onClick={() => setResettingPassword(member)} aria-label={`Reimposta pin di ${member.profile.fullName}`}><KeyRound size={15} /></button>
+              ) : <span className="row-action-slot" aria-hidden="true" />}
+              {housekeepingEntitled && !orgWide ? (
+                <button
+                  className="row-action"
+                  type="button"
+                  onClick={() => setModulesFor(member)}
+                  aria-label={`Moduli di ${member.profile.fullName}`}
+                  title="Moduli"
+                >
+                  <Boxes size={15} />
+                </button>
+              ) : <span className="row-action-slot" aria-hidden="true" />}
+              <button
+                className="row-action danger"
+                type="button"
+                onClick={() => onRemoveMember(member)}
+                disabled={isSelf || orgWide || removingId === member.membership.id}
+                aria-label={`Rimuovi ${member.profile.fullName}`}
+                title={isSelf ? 'Non puoi rimuovere te stesso' : orgWide ? 'Gli accessi organizzazione si gestiscono a livello di organizzazione' : undefined}
+              >
+                <Trash2 size={15} />
+              </button>
+            </>
+          ) : null}
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div className="page-stack shell-page team-page">
       <header className="page-heading split">
@@ -139,59 +218,15 @@ export function TeamPage() {
             <span role="columnheader">Stato</span>
             <span role="columnheader" aria-hidden="true" />
           </div>
-          {!loading && team.members.map((member) => {
-            const isSelf = member.profile.id === runtime.profile?.id
-            const orgWide = member.membership.propertyId == null
-            return (
-            <div className="team-row" role="row" key={member.membership.id}>
-              <span className="team-person" role="cell"><span className="mini-avatar">{initials(member.profile.fullName)}</span><strong>{member.profile.fullName}</strong></span>
-              <span role="cell">
-                {roleLabel(member.role.slug, member.role.displayName)}
-                {member.membership.username ? <><br /><small className="muted">{member.membership.username}</small></> : null}
-              </span>
-              <span role="cell" className={member.jobTitle ? '' : 'muted'}>{member.jobTitle?.name ?? 'Da assegnare'}</span>
-              <span role="cell" className="team-status-cell">
-                <Switch
-                  checked={member.membership.status === 'active'}
-                  onChange={() => onToggleAccess(member)}
-                  disabled={!team.canManage || isSelf || orgWide}
-                  aria-label={`Stato accesso di ${member.profile.fullName}`}
-                />
-                {member.employmentStatus === 'inactive' ? <small className="muted">Fuori organico</small> : null}
-              </span>
-              <span role="cell" className="team-row-actions">
-                {team.canManage ? (
-                  <>
-                    <button className="row-action" type="button" onClick={() => setEditing(member)} aria-label={`Modifica ${member.profile.fullName}`}><Pencil size={15} /></button>
-                    {member.membership.username ? (
-                      <button className="row-action" type="button" onClick={() => setResettingPassword(member)} aria-label={`Reimposta pin di ${member.profile.fullName}`}><KeyRound size={15} /></button>
-                    ) : <span className="row-action-slot" aria-hidden="true" />}
-                    {housekeepingEntitled && !orgWide ? (
-                      <button
-                        className="row-action"
-                        type="button"
-                        onClick={() => setModulesFor(member)}
-                        aria-label={`Moduli di ${member.profile.fullName}`}
-                        title="Moduli"
-                      >
-                        <Boxes size={15} />
-                      </button>
-                    ) : <span className="row-action-slot" aria-hidden="true" />}
-                    <button
-                      className="row-action danger"
-                      type="button"
-                      onClick={() => onRemoveMember(member)}
-                      disabled={isSelf || orgWide || removingId === member.membership.id}
-                      aria-label={`Rimuovi ${member.profile.fullName}`}
-                      title={isSelf ? 'Non puoi rimuovere te stesso' : orgWide ? 'Gli accessi organizzazione si gestiscono a livello di organizzazione' : undefined}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </>
-                ) : null}
-              </span>
+          {!loading && memberGroups.map((group) => (
+            <div key={group.key}>
+              <div className="team-group-heading" role="row">
+                <span role="columnheader">{group.label}</span>
+                <span className="status-chip">{group.members.length}</span>
+              </div>
+              {group.members.map(renderMemberRow)}
             </div>
-          )})}
+          ))}
         </div>
         {!loading && team.members.length === 0 ? <div className="team-empty"><Users size={22} /><p>Nessuna persona collegata a questa struttura.</p></div> : null}
       </section>
@@ -214,7 +249,7 @@ export function TeamPage() {
       <EditMemberModal member={editing} roles={assignableRoles} jobTitles={team.jobTitles.filter((job) => job.active)} currentProfileId={runtime.profile?.id ?? ''} propertyId={property?.id ?? ''} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await loadTeam({ silent: true }) }} />
       <ResetPasswordModal member={resettingPassword} onClose={() => setResettingPassword(null)} />
       <JobModal job={jobEditor} propertyId={property?.id ?? ''} onClose={() => setJobEditor(null)} onSaved={async () => { setJobEditor(null); await loadTeam({ silent: true }) }} />
-      <ModulesModal member={modulesFor} propertyId={property?.id ?? ''} onClose={() => setModulesFor(null)} />
+      <ModulesModal member={modulesFor} propertyId={property?.id ?? ''} onClose={() => { setModulesFor(null); void loadTeam({ silent: true }) }} />
       {confirmDialog}
     </div>
   )
@@ -368,6 +403,11 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
         setDepartment('reception')
       } else {
         await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
+        // Clears the now-meaningless department override too -- revoke on
+        // its own never touches this column (see current_staff_department()'s
+        // own note), so without this a revoked member would keep showing a
+        // stale department the next time Moduli is reopened for them.
+        await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: null })
       }
     } catch (cause) {
       setStatus(!next)
