@@ -40,6 +40,7 @@
 .team-row { display: grid; grid-template-columns: minmax(210px,1.45fr) minmax(135px,1fr) minmax(135px,1fr) 115px 192px; gap: 14px; align-items: center; min-height: 58px; padding: 0 20px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
 .team-row-actions { display: flex; justify-content: flex-end; gap: 4px; }
 .team-row-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.team-group-heading { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 20px; background: var(--surface-2); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .team-person { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .mini-avatar { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-size: 9px; font-weight: 800; }
 .muted { color: var(--muted); }
