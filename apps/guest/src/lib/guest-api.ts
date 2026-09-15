@@ -84,6 +84,26 @@ export async function listMyRequests(token: string): Promise<GuestRequest[]> {
   return data ?? []
 }
 
+export interface AvailableModule {
+  slug: string
+  display_name: string
+}
+
+// First step toward this hotel's guest experience becoming a real
+// directory of services instead of a single hardcoded Housekeeping flow:
+// which guest-facing modules (see modules.guest_facing) the hotel's mapped
+// Core property actually has enabled. Keyed by hotel_id, not a guest
+// session token -- same trust model as fetchMenu's request_categories
+// lookup below: which service categories a hotel offers isn't sensitive,
+// and no per-guest data is involved. Today this only ever returns
+// guest_requests; the caller (guest-app.tsx) skips the directory screen
+// entirely whenever there's exactly one.
+export async function fetchAvailableModules(): Promise<AvailableModule[]> {
+  const { data, error } = await supabase.rpc('guest_available_modules', { p_hotel_id: getHotelId() })
+  if (error) throw error
+  return data ?? []
+}
+
 export interface StayInfo {
   room_number: string
   guest_last_name: string
