@@ -222,14 +222,15 @@ export async function upsertLead(admin: AdminClient, lead: Lead, attempt = 0): P
 }
 
 // ---------------------------------------------------------------------------
-// Notification email -- no transactional email provider exists anywhere
-// else in this project (confirmed by searching the repo before adding
-// this); Resend is the default provider, chosen only via env, with no
-// credentials of any kind committed here. Swappable via EMAIL_PROVIDER so
-// a different provider doesn't mean touching this function's core logic.
+// Notification + confirmation email -- no transactional email provider
+// existed anywhere else in this project (confirmed by searching the repo
+// before adding this); Resend is the default provider, chosen only via
+// env, with no credentials of any kind committed here. Swappable via
+// EMAIL_PROVIDER so a different provider doesn't mean touching this
+// function's core logic.
 // ---------------------------------------------------------------------------
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -317,6 +318,191 @@ export async function sendNotificationEmail(
   throw new Error(`unsupported_email_provider_${provider}`)
 }
 
+// Confirmation email -- sent to the lead itself (not info@homisuite.com,
+// that's the notification above), styled to match the public landing
+// (Absnautilus/Homisuite-landing). The logo is served straight off that
+// repo's public GitHub content via jsDelivr rather than a homisuite.com
+// asset path, since none exists yet -- swap CONFIRMATION_LOGO_URL once
+// one does. Kept separate from buildNotificationEmail: different
+// audience, different tone (reassuring the visitor, not briefing staff).
+const CONFIRMATION_LOGO_URL = 'https://cdn.jsdelivr.net/gh/Absnautilus/Homisuite-landing@main/assets/homisuite-icon-256.png'
+
+export function buildConfirmationEmail(lead: Lead, isNew: boolean): { subject: string; text: string; html: string } {
+  const hotelName = escapeHtml(lead.hotel_name)
+  const introText = isNew
+    ? 'abbiamo ricevuto la tua richiesta di accesso anticipato a homisuite, la suite operativa pensata per hotel indipendenti. La tua struttura è stata registrata e il nostro team la esaminerà a breve.'
+    : 'abbiamo aggiornato la tua richiesta di accesso anticipato a homisuite con i nuovi dati che ci hai inviato. Il nostro team la esaminerà a breve.'
+  const introHtml = isNew
+    ? 'abbiamo ricevuto la tua richiesta di accesso anticipato a <strong>homisuite</strong>, la suite operativa pensata per hotel indipendenti. La tua struttura è stata registrata e il nostro team la esaminerà a breve.'
+    : 'abbiamo aggiornato la tua richiesta di accesso anticipato a <strong>homisuite</strong> con i nuovi dati che ci hai inviato. Il nostro team la esaminerà a breve.'
+
+  const text = [
+    'Richiesta ricevuta — homisuite early access',
+    '',
+    `Grazie per l'interesse verso homisuite da parte di ${lead.hotel_name}.`,
+    '',
+    `Ciao,\n\n${introText}`,
+    '',
+    'Cosa succede adesso:',
+    '1. Un membro del team homisuite esamina la tua richiesta.',
+    '2. Ti contattiamo via email per capire meglio le esigenze della tua struttura.',
+    "3. Se c'è un match, ti invitiamo a provare homisuite in anteprima.",
+    '',
+    'Nessuno spam: ti scriveremo solo per questa richiesta. Se hai scelto di ricevere aggiornamenti sul lancio, ti terremo aggiornato anche su novità e disponibilità del prodotto.',
+    '',
+    'A presto,',
+    'Il team homisuite',
+  ].join('\n')
+
+  const html = `<!doctype html>
+<html lang="it" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>Richiesta early access ricevuta — homisuite</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<style>table, td { font-family: Arial, sans-serif; }</style>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f0edff; }
+  a { color: #6f36dc; }
+  @media screen and (max-width: 600px) {
+    .email-container { width: 100% !important; }
+    .stack-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .hero-padding { padding: 28px 20px !important; }
+    .h1 { font-size: 22px !important; line-height: 1.25 !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#f0edff;">
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#f0edff;">
+    Abbiamo ricevuto la richiesta di early access per ${hotelName}. Ti contatteremo presto.
+  </div>
+  <center style="width:100%; background-color:#f0edff;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0edff;">
+      <tr>
+        <td align="center" style="padding: 32px 16px;">
+          <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+            <tr>
+              <td align="center" style="padding: 0 0 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding-right:10px;">
+                      <img src="${CONFIRMATION_LOGO_URL}" width="28" height="28" alt="homisuite" style="display:block; border-radius:8px;" />
+                    </td>
+                    <td style="font-family: Arial, Helvetica, sans-serif; font-size:18px; font-weight:800; color:#17182b;">homisuite</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="hero-padding" bgcolor="#7b3fe4" style="background-color:#7b3fe4; background-image:linear-gradient(135deg,#4e2a9f,#7e3ee4 55%,#9b55ee); border-radius: 22px 22px 0 0; padding: 36px 40px 32px;">
+                <!--[if mso]>
+                <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;">
+                <v:fill type="gradient" color="#4e2a9f" color2="#9b55ee" angle="45" />
+                <v:textbox inset="0,0,0,0">
+                <![endif]-->
+                <div>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#d8c9ff; padding-bottom:12px;">EARLY ACCESS</td></tr>
+                    <tr><td class="h1" style="font-family: Arial, Helvetica, sans-serif; font-size:26px; line-height:1.3; font-weight:800; color:#ffffff;">Richiesta ricevuta. Ti contatteremo presto.</td></tr>
+                    <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.6; color:#ede8ff; padding-top:12px;">Grazie per l'interesse verso homisuite da parte di <strong style="color:#ffffff;">${hotelName}</strong>.</td></tr>
+                  </table>
+                </div>
+                <!--[if mso]></v:textbox></v:rect><![endif]-->
+              </td>
+            </tr>
+            <tr>
+              <td class="stack-padding" bgcolor="#ffffff" style="background-color:#ffffff; padding: 32px 40px 8px; border-left:1px solid #e3ddfa; border-right:1px solid #e3ddfa;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:15px; line-height:1.65; color:#252842;">Ciao,<br /><br />${introHtml}</td></tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="stack-padding" bgcolor="#ffffff" style="background-color:#ffffff; padding: 20px 40px 8px; border-left:1px solid #e3ddfa; border-right:1px solid #e3ddfa;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f6f4ff; border-radius:16px;">
+                  <tr>
+                    <td style="padding: 22px 24px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#6f36dc; padding-bottom:12px;">Cosa succede adesso</td></tr>
+                        <tr>
+                          <td style="font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.7; color:#4a4e70;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                              <tr><td width="24" valign="top" style="font-weight:800; color:#6f36dc;">1.</td><td style="padding-bottom:10px;">Un membro del team homisuite esamina la tua richiesta.</td></tr>
+                              <tr><td width="24" valign="top" style="font-weight:800; color:#6f36dc;">2.</td><td style="padding-bottom:10px;">Ti contattiamo via email per capire meglio le esigenze della tua struttura.</td></tr>
+                              <tr><td width="24" valign="top" style="font-weight:800; color:#6f36dc;">3.</td><td>Se c'è un match, ti invitiamo a provare homisuite in anteprima.</td></tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="stack-padding" bgcolor="#ffffff" style="background-color:#ffffff; padding: 24px 40px 36px; border-left:1px solid #e3ddfa; border-right:1px solid #e3ddfa; border-bottom:1px solid #e3ddfa; border-radius: 0 0 22px 22px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.65; color:#4a4e70;">Nessuno spam: ti scriveremo solo per questa richiesta. Se hai scelto di ricevere aggiornamenti sul lancio, ti terremo aggiornato anche su novità e disponibilità del prodotto.</td></tr>
+                  <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.65; color:#252842; padding-top:20px;">A presto,<br /><strong>Il team homisuite</strong></td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+            <tr>
+              <td class="stack-padding" align="center" style="padding: 24px 40px 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr><td style="font-family: Arial, Helvetica, sans-serif; font-size:12px; line-height:1.6; color:#8a8fae; text-align:center;">homisuite — Creata da chi lavora in hotel, per chi lavora in hotel.<br />© 2026 homisuite. Questa è un'email transazionale inviata in risposta a una richiesta di early access.</td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>`
+
+  return { subject: 'Richiesta ricevuta — homisuite early access', text, html }
+}
+
+export async function sendConfirmationEmail(
+  lead: Lead,
+  isNew: boolean,
+  env = Deno.env,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const from = env.get('EARLY_ACCESS_CONFIRMATION_FROM')
+  if (!from) throw new Error('email_not_configured')
+
+  const provider = (env.get('EMAIL_PROVIDER') ?? 'resend').toLowerCase()
+  const message = buildConfirmationEmail(lead, isNew)
+
+  if (provider === 'resend') {
+    const apiKey = env.get('RESEND_API_KEY')
+    if (!apiKey) throw new Error('resend_api_key_missing')
+    const response = await fetchImpl('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [lead.email], subject: message.subject, text: message.text, html: message.html }),
+    })
+    if (!response.ok) throw new Error(`resend_request_failed_${response.status}`)
+    return
+  }
+
+  throw new Error(`unsupported_email_provider_${provider}`)
+}
+
 // ---------------------------------------------------------------------------
 // Request handling
 // ---------------------------------------------------------------------------
@@ -328,6 +514,7 @@ function json(body: unknown, status: number, headers: Record<string, string>): R
 export interface HandleRequestDeps {
   createAdminClient?: () => AdminClient
   sendEmail?: typeof sendNotificationEmail
+  sendConfirmation?: typeof sendConfirmationEmail
   env?: typeof Deno.env
 }
 
@@ -403,12 +590,21 @@ export async function handleRequest(request: Request, deps: HandleRequestDeps = 
   // outage must never look like a lost submission to either the visitor or
   // to this API's caller -- the database is the source of truth, so a
   // notification failure here is logged and swallowed, never surfaced as
-  // an API error and never a reason to touch the row just written.
+  // an API error and never a reason to touch the row just written. The two
+  // emails below are independent of each other too: a failure sending one
+  // must never stop the other from being attempted.
   const sendEmail = deps.sendEmail ?? sendNotificationEmail
   try {
     await sendEmail(lead, outcome.isNew, env)
   } catch (error) {
     console.error('early-access-signup: notification email failed', error instanceof Error ? error.message : error)
+  }
+
+  const sendConfirmation = deps.sendConfirmation ?? sendConfirmationEmail
+  try {
+    await sendConfirmation(lead, outcome.isNew, env)
+  } catch (error) {
+    console.error('early-access-signup: confirmation email failed', error instanceof Error ? error.message : error)
   }
 
   return outcome.isNew
