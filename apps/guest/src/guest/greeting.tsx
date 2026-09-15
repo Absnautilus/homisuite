@@ -1,4 +1,5 @@
-import { CalendarClock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { CalendarClock, Coffee, Mail, MapPin, MessageCircle, Phone, Wifi, Wine } from 'lucide-react'
 import { SectionCard } from '@/components/section-card'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StayInfo } from '@/lib/guest-api'
@@ -33,25 +34,63 @@ function formatCheckout(checkOutAt: string, hotelCheckOutTime: string | null): {
   }
 }
 
-export function GeneralInfoCard({ stay }: { stay: StayInfo }) {
+export function GreetingHeader({ stay }: { stay: StayInfo }) {
   const { t } = useLocale()
   const hour = new Date().getHours()
   const timeOfDay = hour < 18 ? t('greeting.morning') : t('greeting.evening')
-  const { date, time } = formatCheckout(stay.check_out_at, stay.hotel_check_out_time)
 
   return (
-    <SectionCard title={t('greeting.generalInfo')}>
+    <div className="rounded-lg border border-accent-soft-line bg-accent-soft px-4 py-3">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-white">
         {t('greeting.room')} {stay.room_number}
       </span>
-      <p className="mt-2.5 text-sm text-foreground">
+      <p className="mt-2 text-sm text-accent">
         {timeOfDay} {t('greeting.line', { name: stay.guest_last_name })}
       </p>
-      <div className="mt-2.5 flex items-center gap-1.5 text-xs text-muted">
-        <CalendarClock size={14} className="shrink-0" />
-        <span>
+    </div>
+  )
+}
+
+function InfoRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 text-xs text-muted">
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+export function GeneralInfoCard({ stay }: { stay: StayInfo }) {
+  const { t } = useLocale()
+  const { date, time } = formatCheckout(stay.check_out_at, stay.hotel_check_out_time)
+  const hasWifi = Boolean(stay.hotel_wifi_network || stay.hotel_wifi_password)
+
+  return (
+    <SectionCard title={t('greeting.generalInfo')}>
+      <div className="space-y-2.5">
+        <InfoRow icon={<CalendarClock size={14} />}>
           {t('greeting.checkoutLabel')}: {t('greeting.checkoutAt', { date, time })}
-        </span>
+        </InfoRow>
+        {hasWifi && (
+          <InfoRow icon={<Wifi size={14} />}>
+            {stay.hotel_wifi_network && <p className="font-medium text-foreground">{stay.hotel_wifi_network}</p>}
+            {stay.hotel_wifi_password && (
+              <p>
+                {t('greeting.wifiPassword')}: {stay.hotel_wifi_password}
+              </p>
+            )}
+          </InfoRow>
+        )}
+        {stay.hotel_breakfast_hours && (
+          <InfoRow icon={<Coffee size={14} />}>
+            {t('greeting.breakfast')}: {stay.hotel_breakfast_hours}
+          </InfoRow>
+        )}
+        {stay.hotel_bar_hours && (
+          <InfoRow icon={<Wine size={14} />}>
+            {t('greeting.bar')}: {stay.hotel_bar_hours}
+          </InfoRow>
+        )}
       </div>
     </SectionCard>
   )

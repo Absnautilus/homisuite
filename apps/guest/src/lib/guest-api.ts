@@ -116,6 +116,10 @@ export interface StayInfo {
   // hotel never set one -- see Greeting.tsx for the fallback to
   // check_out_at's own time-of-day.
   hotel_check_out_time: string | null
+  hotel_wifi_network: string | null
+  hotel_wifi_password: string | null
+  hotel_breakfast_hours: string | null
+  hotel_bar_hours: string | null
 }
 
 export async function getStayInfo(token: string): Promise<StayInfo | null> {

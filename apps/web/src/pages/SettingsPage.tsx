@@ -186,10 +186,18 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
       const website = String(form.get('website') ?? '').trim() || null
       const instagram = String(form.get('instagram') ?? '').trim() || null
       const facebook = String(form.get('facebook') ?? '').trim() || null
+      const wifiNetwork = String(form.get('wifiNetwork') ?? '').trim() || null
+      const wifiPassword = String(form.get('wifiPassword') ?? '').trim() || null
+      const breakfastHours = String(form.get('breakfastHours') ?? '').trim() || null
+      const barHours = String(form.get('barHours') ?? '').trim() || null
       await core.updateProperty(runtime.property.id, {
         name: String(form.get('name')),
         timezone,
-        settings: { ...runtime.property.settings, checkInTime, checkOutTime, address, phone, publicEmail, website, instagram, facebook },
+        settings: {
+          ...runtime.property.settings,
+          checkInTime, checkOutTime, address, phone, publicEmail, website, instagram, facebook,
+          wifiNetwork, wifiPassword, breakfastHours, barHours,
+        },
       })
       await onSaved()
     } catch { setError('Non è stato possibile aggiornare la struttura.'); setSaving(false) }
@@ -202,6 +210,10 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
   const websiteDefault = typeof runtime.property?.settings.website === 'string' ? runtime.property.settings.website : ''
   const instagramDefault = typeof runtime.property?.settings.instagram === 'string' ? runtime.property.settings.instagram : ''
   const facebookDefault = typeof runtime.property?.settings.facebook === 'string' ? runtime.property.settings.facebook : ''
+  const wifiNetworkDefault = typeof runtime.property?.settings.wifiNetwork === 'string' ? runtime.property.settings.wifiNetwork : ''
+  const wifiPasswordDefault = typeof runtime.property?.settings.wifiPassword === 'string' ? runtime.property.settings.wifiPassword : ''
+  const breakfastHoursDefault = typeof runtime.property?.settings.breakfastHours === 'string' ? runtime.property.settings.breakfastHours : ''
+  const barHoursDefault = typeof runtime.property?.settings.barHours === 'string' ? runtime.property.settings.barHours : ''
   return <Modal open={open} title="Informazioni struttura" description="Dati condivisi da tutti i moduli Homisuite." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="property-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
     <form className="modal-form" id="property-form" onSubmit={submit}>
       <div className="form-field">
@@ -230,6 +242,11 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
       <label className="form-field"><span>Sito web</span><input name="website" type="url" maxLength={200} defaultValue={websiteDefault} placeholder="https://tuohotel.it" /></label>
       <label className="form-field"><span>Instagram</span><input name="instagram" maxLength={200} defaultValue={instagramDefault} placeholder="@tuohotel" /></label>
       <label className="form-field"><span>Facebook</span><input name="facebook" maxLength={200} defaultValue={facebookDefault} placeholder="facebook.com/tuohotel" /></label>
+      <p className="form-section-title">Info per gli ospiti</p>
+      <label className="form-field"><span>Rete WiFi</span><input name="wifiNetwork" maxLength={100} defaultValue={wifiNetworkDefault} placeholder="Hotel-Guest" /></label>
+      <label className="form-field"><span>Password WiFi</span><input name="wifiPassword" maxLength={100} defaultValue={wifiPasswordDefault} placeholder="benvenuto2026" /></label>
+      <label className="form-field"><span>Orario colazione</span><input name="breakfastHours" maxLength={100} defaultValue={breakfastHoursDefault} placeholder="7:30 – 10:30" /></label>
+      <label className="form-field"><span>Orario bar</span><input name="barHours" maxLength={100} defaultValue={barHoursDefault} placeholder="11:00 – 23:00" /></label>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </form>
   </Modal>
