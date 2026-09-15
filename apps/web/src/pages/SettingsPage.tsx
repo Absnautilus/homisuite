@@ -137,22 +137,41 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
     try {
       const checkInTime = String(form.get('checkInTime') ?? '').trim() || null
       const checkOutTime = String(form.get('checkOutTime') ?? '').trim() || null
+      const address = String(form.get('address') ?? '').trim() || null
+      const phone = String(form.get('phone') ?? '').trim() || null
+      const publicEmail = String(form.get('publicEmail') ?? '').trim() || null
+      const website = String(form.get('website') ?? '').trim() || null
+      const instagram = String(form.get('instagram') ?? '').trim() || null
+      const facebook = String(form.get('facebook') ?? '').trim() || null
       await core.updateProperty(runtime.property.id, {
         name: String(form.get('name')),
         timezone,
-        settings: { ...runtime.property.settings, checkInTime, checkOutTime },
+        settings: { ...runtime.property.settings, checkInTime, checkOutTime, address, phone, publicEmail, website, instagram, facebook },
       })
       await onSaved()
     } catch { setError('Non è stato possibile aggiornare la struttura.'); setSaving(false) }
   }
   const checkInDefault = typeof runtime.property?.settings.checkInTime === 'string' ? runtime.property.settings.checkInTime : ''
   const checkOutDefault = typeof runtime.property?.settings.checkOutTime === 'string' ? runtime.property.settings.checkOutTime : ''
+  const addressDefault = typeof runtime.property?.settings.address === 'string' ? runtime.property.settings.address : ''
+  const phoneDefault = typeof runtime.property?.settings.phone === 'string' ? runtime.property.settings.phone : ''
+  const publicEmailDefault = typeof runtime.property?.settings.publicEmail === 'string' ? runtime.property.settings.publicEmail : ''
+  const websiteDefault = typeof runtime.property?.settings.website === 'string' ? runtime.property.settings.website : ''
+  const instagramDefault = typeof runtime.property?.settings.instagram === 'string' ? runtime.property.settings.instagram : ''
+  const facebookDefault = typeof runtime.property?.settings.facebook === 'string' ? runtime.property.settings.facebook : ''
   return <Modal open={open} title="Informazioni struttura" description="Dati condivisi da tutti i moduli Homisuite." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="property-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
     <form className="modal-form" id="property-form" onSubmit={submit}>
       <label className="form-field"><span>Nome struttura</span><input name="name" required minLength={2} maxLength={120} defaultValue={runtime.property?.name} /></label>
       <label className="form-field" htmlFor="property-timezone"><span>Fuso orario</span><Select id="property-timezone" name="timezone" value={timezone} onChange={setTimezone}><option value="Europe/Rome">Europa — Roma</option><option value="Europe/London">Europa — Londra</option><option value="Europe/Amsterdam">Europa — Amsterdam</option><option value="America/Mexico_City">America — Città del Messico</option><option value="America/New_York">America — New York</option></Select></label>
       <label className="form-field"><span>Orario check-in predefinito</span><input name="checkInTime" type="time" defaultValue={checkInDefault} /></label>
       <label className="form-field"><span>Orario check-out predefinito</span><input name="checkOutTime" type="time" defaultValue={checkOutDefault} /></label>
+      <p className="form-section-title">Contatti pubblici</p>
+      <label className="form-field"><span>Indirizzo</span><input name="address" maxLength={200} defaultValue={addressDefault} placeholder="Via delle Terme, 12 · 30100 Venezia" /></label>
+      <label className="form-field"><span>Telefono</span><input name="phone" type="tel" maxLength={40} defaultValue={phoneDefault} placeholder="+39 041 123 4567" /></label>
+      <label className="form-field"><span>Email pubblica</span><input name="publicEmail" type="email" maxLength={200} defaultValue={publicEmailDefault} placeholder="info@tuohotel.it" /></label>
+      <label className="form-field"><span>Sito web</span><input name="website" type="url" maxLength={200} defaultValue={websiteDefault} placeholder="https://tuohotel.it" /></label>
+      <label className="form-field"><span>Instagram</span><input name="instagram" maxLength={200} defaultValue={instagramDefault} placeholder="@tuohotel" /></label>
+      <label className="form-field"><span>Facebook</span><input name="facebook" maxLength={200} defaultValue={facebookDefault} placeholder="facebook.com/tuohotel" /></label>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </form>
   </Modal>
