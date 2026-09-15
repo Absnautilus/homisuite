@@ -58,11 +58,16 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
   }
 
   // A room with recorded stays is kept by the FK guard (see deleteRoom's
-  // comment) -- that's an expected outcome, so it's still hidden here
-  // without an error; the person asking to remove it doesn't need a
-  // Postgres constraint explained, and deactivating is the right next step.
-  // Any other failure (e.g. blocked by RLS) is a real error and must be
-  // surfaced instead of leaving the room silently un-deleted.
+  // comment) -- that's an expected outcome. From the person clicking
+  // "Elimina" it should still behave like a delete: the row leaves the
+  // list right away. It used to just vanish from view without the
+  // underlying room being touched at all, so it would reappear, still
+  // active, on the next reload -- the actual bug being fixed here. Now the
+  // room is deactivated for real first (the intended guardrail, per
+  // deleteRoom's own comment), so a reload shows it correctly as inactive
+  // rather than resurrecting it active. Any other failure (e.g. blocked by
+  // RLS) is a real error and must be surfaced instead of leaving the room
+  // silently un-deleted.
   async function onDelete(room: Room) {
     const ok = await confirm({
       title: t('staff.rooms.deleteTitle'),
@@ -76,7 +81,14 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
       setHiddenRoomIds((current) => new Set(current).add(room.id))
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
-        setHiddenRoomIds((current) => new Set(current).add(room.id))
+        try {
+          await setRoomActive(room.id, false)
+          setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: false } : r)) ?? current)
+          setHiddenRoomIds((current) => new Set(current).add(room.id))
+          setError(t('staff.rooms.deleteBlockedDeactivated'))
+        } catch {
+          setError(t('staff.rooms.deleteError'))
+        }
         return
       }
       setError(t('staff.rooms.deleteError'))
