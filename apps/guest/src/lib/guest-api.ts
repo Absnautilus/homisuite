@@ -88,6 +88,9 @@ export interface StayInfo {
   room_number: string
   guest_last_name: string
   check_out_at: string
+  hotel_name: string | null
+  hotel_phone: string | null
+  hotel_address: string | null
 }
 
 export async function getStayInfo(token: string): Promise<StayInfo | null> {
