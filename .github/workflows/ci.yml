@@ -65,6 +65,16 @@ jobs:
       - run: npm ci
       - run: npm run check:dedupe
 
+  early-access-function:
+    name: Edge Function — early-access-signup (Deno test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno test --allow-env --allow-read supabase/functions/early-access-signup
+
   database:
     name: Database — migrations + seed + pgTAP
     runs-on: ubuntu-latest
