@@ -394,6 +394,15 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
     }
   }
 
+  // 'reception' isn't a real work department -- it's the sentinel value
+  // current_staff_manages_front_desk() checks for full, unscoped visibility
+  // (see 20260914120000_housekeeping_department_override.sql). Surfacing it
+  // as a third peer option next to "Piani"/"Manutenzione" in one dropdown
+  // read as nonsensical, so the UI splits it into its own toggle instead;
+  // underneath, flipping it still just writes 'reception' or a real
+  // department through the same onDepartmentChange path.
+  const viewAllDepartments = department === 'reception'
+
   return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="button" onClick={onClose} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
       <>
@@ -402,13 +411,25 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
           <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label="Accesso a Housekeeping" />
         </div>
         {status && (
-          <Field label="Reparto in Housekeeping" htmlFor="modules-department">
-            <Select id="modules-department" name="department" value={department} onChange={(value) => void onDepartmentChange(value)} disabled={savingDepartment}>
-              <option value="reception">Reception (vede tutte le richieste)</option>
-              <option value="housekeeping">Piani</option>
-              <option value="maintenance">Manutenzione</option>
-            </Select>
-          </Field>
+          <>
+            <div className="module-access-row">
+              <span>Visualizza richieste di tutti i reparti</span>
+              <Switch
+                checked={viewAllDepartments}
+                onChange={() => void onDepartmentChange(viewAllDepartments ? 'housekeeping' : 'reception')}
+                disabled={savingDepartment}
+                aria-label="Visualizza richieste di tutti i reparti"
+              />
+            </div>
+            {!viewAllDepartments && (
+              <Field label="Reparto" htmlFor="modules-department">
+                <Select id="modules-department" name="department" value={department} onChange={(value) => void onDepartmentChange(value)} disabled={savingDepartment}>
+                  <option value="housekeeping">Piani</option>
+                  <option value="maintenance">Manutenzione</option>
+                </Select>
+              </Field>
+            )}
+          </>
         )}
       </>
     )}
