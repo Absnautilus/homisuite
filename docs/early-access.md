@@ -325,9 +325,11 @@ steps" below.
   confirming the service-role/Resend keys never appear in either client
   app's source.
 
-  Run locally:
+  Run locally, from inside the function's own directory (not the repo
+  root — see `deno.json`'s comment in CI for why this matters):
   ```
-  deno test --allow-env --allow-read supabase/functions/early-access-signup
+  cd supabase/functions/early-access-signup
+  deno test --allow-env --allow-read .
   ```
 
 ## Vercel configuration
