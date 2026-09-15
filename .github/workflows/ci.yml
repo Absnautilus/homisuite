@@ -65,6 +65,26 @@ jobs:
       - run: npm ci
       - run: npm run check:dedupe
 
+  early-access-function:
+    name: Edge Function — early-access-signup (Deno test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      # Run from inside the function's own directory, not the repo root:
+      # Deno resolves its config file (deno.json, here disabling
+      # node_modules-based resolution) by walking up from the *working
+      # directory*, not from the target path -- running this from the repo
+      # root would silently fall back to the outer npm workspace's
+      # package.json/node_modules instead, which don't exist in this job
+      # (no `npm ci` step, on purpose: this job has nothing to do with the
+      # JS workspaces) and fail with a "not found in the node_modules
+      # directory" error unrelated to the function's own code.
+      - working-directory: supabase/functions/early-access-signup
+        run: deno test --allow-env --allow-read .
+
   database:
     name: Database — migrations + seed + pgTAP
     runs-on: ubuntu-latest
