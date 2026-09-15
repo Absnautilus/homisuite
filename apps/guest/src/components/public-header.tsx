@@ -7,7 +7,7 @@ export function PublicHeader({ onLogout }: { onLogout?: () => void }) {
   const { t } = useLocale()
   return (
     <div className="mx-auto w-full max-w-xl px-4 pt-6">
-      <div className="flex items-center gap-1 rounded-full bg-accent py-1.5 pr-2 pl-3 text-white shadow-md">
+      <div className="flex items-center gap-1 rounded-full bg-navbar-bg py-1.5 pr-2 pl-3 text-navbar-text shadow-md">
         <span className="flex flex-1 items-center gap-2">
           <img src="/icon-192.png" alt="" className="h-5 w-5 rounded" />
           <span className="font-head text-sm font-extrabold">Homisuite</span>

@@ -12,6 +12,9 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-soft-line: var(--accent-soft-line);
 
+  --color-navbar-bg: var(--navbar-bg);
+  --color-navbar-text: var(--navbar-text);
+
   --color-wait-bg: var(--wait-bg);
   --color-wait-ink: var(--wait-ink);
   --color-wait-line: var(--wait-line);
@@ -61,6 +64,11 @@
   --accent-ink: #ffffff;
   --accent-soft: #f4e8fa;
   --accent-soft-line: #e4c7f2;
+
+  /* Matches apps/web's own --navbar-bg/--navbar-text exactly, so the guest
+     header reads as the same shell instead of its own purple-branded bar. */
+  --navbar-bg: #16182b;
+  --navbar-text: #ffffff;
 
   --wait-bg: #fff1d6;
   --wait-ink: #8a6416;
