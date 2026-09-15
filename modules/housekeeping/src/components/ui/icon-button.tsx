@@ -20,20 +20,27 @@ export function IconButton({
   tone,
   label,
   icon: Icon,
+  filled = false,
   className,
   ...props
 }: {
   tone: Tone
   label: string
   icon: ComponentType<{ className?: string }>
+  // Solid bg-accent/text-accent-ink instead of the usual transparent,
+  // hover-only tone -- matches button.tsx's own "primary" variant. Reserved
+  // for the one or two actions on a row that should read as the primary
+  // action (e.g. claim/complete), not a blanket per-tone style: most
+  // same-toned icon buttons (e.g. "segna reso") stay the quiet default.
+  filled?: boolean
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>) {
   return (
     <button
       type="button"
       aria-label={label}
       className={cn(
-        'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-muted transition-colors disabled:cursor-not-allowed disabled:opacity-35',
-        toneHoverClass[tone],
+        'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+        filled ? 'bg-accent text-accent-ink hover:brightness-[1.06] active:brightness-[.92]' : cn('bg-transparent text-muted', toneHoverClass[tone]),
         className,
       )}
       {...props}
