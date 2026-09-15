@@ -190,10 +190,10 @@ export function RequestRow({
                 <IconButton tone="neutral" icon={ArrowLeft} label={t('staff.row.revert')} disabled={pending} onClick={() => run(() => revertRequest(request.id, 'in_progress'))} />
               )}
               {request.status === 'requested' && (
-                <IconButton tone="hintPositive" icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(() => claimRequest(request.id, staffId))} />
+                <IconButton tone="hintPositive" filled icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(() => claimRequest(request.id, staffId))} />
               )}
               {request.status === 'in_progress' && (
-                <IconButton tone="ok" icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => completeRequest(request.id))} />
+                <IconButton tone="ok" filled icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => completeRequest(request.id))} />
               )}
             </div>
           )}

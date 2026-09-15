@@ -1,5 +1,32 @@
-import { Children, isValidElement, useEffect, useMemo, useRef, useState, type KeyboardEvent, type OptionHTMLAttributes, type ReactNode } from 'react'
+import { Children, isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type OptionHTMLAttributes, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
+
+// Fixed-position + portaled to <body>, computed from the trigger's own
+// viewport rect -- not just an absolutely-positioned child of .select-root.
+// A plain absolute panel gets clipped by any scrollable/overflow:hidden
+// ancestor (e.g. .modal-panel, which scrolls internally and is exactly
+// where this showed up: "Mansione" cut off mid-list inside the Team
+// modal). Flips above the trigger when there isn't enough room below.
+const PANEL_MAX_HEIGHT = 240
+const PANEL_GAP = 6
+
+// top/bottom are always both present (one numeric, one 'auto') -- .select-panel's
+// own CSS sets `top: calc(100% + 6px)`, so leaving one of them as `undefined`
+// (React then omits the inline property) would NOT cancel that rule: the fixed
+// element ends up constrained between the CSS class's `top` and our inline
+// `bottom`, collapsing its height instead of anchoring from one edge only.
+type PanelPosition = { left: number; width: number; top: number | 'auto'; bottom: number | 'auto' }
+
+function computePanelPosition(trigger: HTMLElement): PanelPosition {
+  const rect = trigger.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  const openUpward = spaceBelow < PANEL_MAX_HEIGHT + PANEL_GAP && spaceAbove > spaceBelow
+  return openUpward
+    ? { left: rect.left, width: rect.width, top: 'auto', bottom: window.innerHeight - rect.top + PANEL_GAP }
+    : { left: rect.left, width: rect.width, top: rect.bottom + PANEL_GAP, bottom: 'auto' }
+}
 
 interface SelectOptionProps extends OptionHTMLAttributes<HTMLOptionElement> {
   value: string
@@ -38,17 +65,39 @@ export function Select({
   )
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(0)
+  const [panelPosition, setPanelPosition] = useState<PanelPosition | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLUListElement>(null)
   const selectedIndex = options.findIndex((option) => option.value === value)
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
 
   useEffect(() => {
     if (!open) return
     function onPointerDown(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (rootRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [open])
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+    setPanelPosition(computePanelPosition(triggerRef.current))
+    function reposition() {
+      if (triggerRef.current) setPanelPosition(computePanelPosition(triggerRef.current))
+    }
+    // capture: true also catches scroll on a nested scrollable ancestor
+    // (e.g. .modal-panel itself), not just the window.
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
   }, [open])
 
   function commit(index: number) {
@@ -92,6 +141,7 @@ export function Select({
     <div ref={rootRef} className="select-root">
       <input type="hidden" name={name} value={value} required={required} disabled={disabled} />
       <button
+        ref={triggerRef}
         type="button"
         id={id}
         disabled={disabled}
@@ -108,8 +158,21 @@ export function Select({
         <span>{selected?.label ?? ''}</span>
         <ChevronDown size={16} className={open ? 'rotate' : undefined} aria-hidden="true" />
       </button>
-      {open && (
-        <ul role="listbox" className="select-panel">
+      {open && panelPosition && createPortal(
+        <ul
+          ref={panelRef}
+          role="listbox"
+          className="select-panel"
+          style={{
+            position: 'fixed',
+            left: panelPosition.left,
+            width: panelPosition.width,
+            top: panelPosition.top,
+            bottom: panelPosition.bottom,
+            right: 'auto',
+            zIndex: 1000,
+          }}
+        >
           {options.map((option, index) => (
             <li
               key={option.value}
@@ -124,7 +187,8 @@ export function Select({
               {option.value === value && <Check size={14} aria-hidden="true" />}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   )
