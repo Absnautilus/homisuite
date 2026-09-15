@@ -19,17 +19,7 @@ const suggestedJobs = [
 type TeamState = { members: TeamMember[]; roles: CoreRole[]; jobTitles: JobTitle[]; canManage: boolean }
 const emptyTeam: TeamState = { members: [], roles: [], jobTitles: [], canManage: false }
 
-// Persone is grouped by each member's Housekeeping department (the same
-// "Reparto" field set in the Moduli modal) when the module is active for
-// this org -- 'none' covers anyone without an active Housekeeping grant
-// (never toggled on, or revoked -- see ModulesModal.onToggle, which clears
-// housekeepingDepartment on revoke precisely so this bucket stays accurate).
-const HOUSEKEEPING_DEPARTMENT_GROUPS: { key: HousekeepingDepartment | 'none'; label: string }[] = [
-  { key: 'reception', label: 'Reception' },
-  { key: 'housekeeping', label: 'Piani' },
-  { key: 'maintenance', label: 'Manutenzione' },
-  { key: 'none', label: 'Nessun reparto Housekeeping' },
-]
+const UNASSIGNED_JOB_LABEL = 'Da assegnare'
 
 export function TeamPage() {
   const runtime = useModuleRuntime()
@@ -124,15 +114,27 @@ export function TeamPage() {
   const assignableRoles = team.roles.filter((role) => role.rank < (currentMember?.role.rank ?? 0))
   const propertyName = property?.name ?? 'Struttura'
 
-  // null outside a Housekeeping-entitled org: grouping "Persona"/"Piani"/
-  // "Manutenzione" only means something once the module exists there --
-  // otherwise Persone stays the single flat list it always was.
+  // Grouped by Mansione (job title) -- the label already shown per-row in
+  // the "Mansione" column, not the Housekeeping "Reparto" field (a
+  // different, Housekeeping-only concept scoped to guest_requests
+  // visibility; see ModulesModal). Always groups: unlike Reparto, Mansione
+  // exists for every property regardless of which modules are active.
   const memberGroups = useMemo(() => {
-    if (!housekeepingEntitled) return null
-    return HOUSEKEEPING_DEPARTMENT_GROUPS
-      .map((group) => ({ ...group, members: team.members.filter((member) => (member.housekeepingDepartment ?? 'none') === group.key) }))
-      .filter((group) => group.members.length > 0)
-  }, [housekeepingEntitled, team.members])
+    const byLabel = new Map<string, TeamMember[]>()
+    for (const member of team.members) {
+      const label = member.jobTitle?.name ?? UNASSIGNED_JOB_LABEL
+      const list = byLabel.get(label)
+      if (list) list.push(member)
+      else byLabel.set(label, [member])
+    }
+    return [...byLabel.entries()]
+      .sort(([left], [right]) => {
+        if (left === UNASSIGNED_JOB_LABEL) return 1
+        if (right === UNASSIGNED_JOB_LABEL) return -1
+        return left.localeCompare(right)
+      })
+      .map(([label, members]) => ({ key: label, label, members }))
+  }, [team.members])
 
   function renderMemberRow(member: TeamMember) {
     const isSelf = member.profile.id === runtime.profile?.id
@@ -216,19 +218,15 @@ export function TeamPage() {
             <span role="columnheader">Stato</span>
             <span role="columnheader" aria-hidden="true" />
           </div>
-          {!loading && (
-            memberGroups
-              ? memberGroups.map((group) => (
-                <div key={group.key}>
-                  <div className="team-group-heading" role="row">
-                    <span role="columnheader">{group.label}</span>
-                    <span className="status-chip">{group.members.length}</span>
-                  </div>
-                  {group.members.map(renderMemberRow)}
-                </div>
-              ))
-              : team.members.map(renderMemberRow)
-          )}
+          {!loading && memberGroups.map((group) => (
+            <div key={group.key}>
+              <div className="team-group-heading" role="row">
+                <span role="columnheader">{group.label}</span>
+                <span className="status-chip">{group.members.length}</span>
+              </div>
+              {group.members.map(renderMemberRow)}
+            </div>
+          ))}
         </div>
         {!loading && team.members.length === 0 ? <div className="team-empty"><Users size={22} /><p>Nessuna persona collegata a questa struttura.</p></div> : null}
       </section>
@@ -405,10 +403,10 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
         setDepartment('reception')
       } else {
         await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
-        // Clears the now-meaningless department override too, so a revoked
-        // member doesn't linger in Persone's per-reparto grouping under
-        // whatever department they last had -- see current_staff_department()'s
-        // own note that this column is never touched by revoke on its own.
+        // Clears the now-meaningless department override too -- revoke on
+        // its own never touches this column (see current_staff_department()'s
+        // own note), so without this a revoked member would keep showing a
+        // stale department the next time Moduli is reopened for them.
         await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: null })
       }
     } catch (cause) {
