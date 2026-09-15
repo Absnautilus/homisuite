@@ -87,7 +87,7 @@ const validPayload = () => ({
   hotel_name: 'Hotel Test',
   role: 'general_manager',
   rooms_range: '21-50',
-  main_problem: 'guest_requests',
+  main_problem: ['guest_requests'],
   marketing_consent: true,
   utm_source: 'google',
   utm_medium: 'cpc',
@@ -161,11 +161,39 @@ Deno.test('validateLead rejects an invalid rooms_range', () => {
 })
 
 Deno.test('validateLead rejects an invalid main_problem', () => {
-  assertEquals(validateLead({ ...validPayload(), main_problem: 'world_peace' }), null, 'a main_problem outside the whitelist must be rejected')
+  assertEquals(validateLead({ ...validPayload(), main_problem: ['world_peace'] }), null, 'a main_problem outside the whitelist must be rejected')
+})
+
+Deno.test('validateLead rejects an empty main_problem array', () => {
+  assertEquals(validateLead({ ...validPayload(), main_problem: [] }), null, 'at least one main_problem must be selected')
+})
+
+Deno.test('validateLead rejects a non-array main_problem', () => {
+  assertEquals(validateLead({ ...validPayload(), main_problem: 'guest_requests' }), null, 'main_problem must be an array, not a bare string')
+})
+
+Deno.test('validateLead rejects a main_problem array with one invalid entry among valid ones', () => {
+  assertEquals(
+    validateLead({ ...validPayload(), main_problem: ['guest_requests', 'world_peace'] }),
+    null,
+    'every entry must be in the whitelist',
+  )
+})
+
+Deno.test('validateLead accepts and dedupes multiple main_problem values', () => {
+  const lead = validateLead({ ...validPayload(), main_problem: ['guest_requests', 'shift_planning', 'guest_requests'] })
+  assert(lead !== null, 'multiple valid selections must validate')
+  assertEquals(lead!.main_problem, ['guest_requests', 'shift_planning'], 'duplicates are dropped, order otherwise kept')
 })
 
 Deno.test('validateLead rejects a non-boolean marketing_consent', () => {
   assertEquals(validateLead({ ...validPayload(), marketing_consent: 'yes' }), null, 'marketing_consent must be a real boolean')
+})
+
+Deno.test('buildNotificationEmail joins multiple main_problem labels', () => {
+  const lead: Lead = { ...validateLead(validPayload())!, main_problem: ['guest_requests', 'shift_planning'] }
+  const email = buildNotificationEmail(lead, true)
+  assert(email.text.includes('Richieste ospiti, Pianificazione turni'), 'every selected problem label must appear, joined')
 })
 
 Deno.test('isHoneypotTriggered: only a non-empty website field counts', () => {
@@ -218,7 +246,7 @@ Deno.test('upsertLead updates an existing lead instead of duplicating it, keepin
       hotel_name: 'Old Name',
       role: 'owner',
       rooms_range: '1-20',
-      main_problem: 'handover',
+      main_problem: ['handover'],
       marketing_consent: false,
       status: 'qualified',
       created_at: '2020-01-01T00:00:00.000Z',
@@ -312,8 +340,13 @@ Deno.test('handleRequest: invalid rooms_range -> 400', async () => {
 })
 
 Deno.test('handleRequest: invalid main_problem -> 400', async () => {
-  const response = await handleRequest(makeRequest({ ...validPayload(), main_problem: 'world_peace' }, { origin: ALLOWED_ORIGIN }), { env: testEnv })
+  const response = await handleRequest(makeRequest({ ...validPayload(), main_problem: ['world_peace'] }, { origin: ALLOWED_ORIGIN }), { env: testEnv })
   assertEquals(response.status, 400, 'an invalid main_problem must be rejected')
+})
+
+Deno.test('handleRequest: empty main_problem array -> 400', async () => {
+  const response = await handleRequest(makeRequest({ ...validPayload(), main_problem: [] }, { origin: ALLOWED_ORIGIN }), { env: testEnv })
+  assertEquals(response.status, 400, 'an empty main_problem selection must be rejected')
 })
 
 Deno.test('handleRequest: non-boolean marketing_consent -> 400', async () => {

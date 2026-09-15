@@ -42,7 +42,7 @@ export interface Lead {
   hotel_name: string
   role: (typeof ROLES)[number]
   rooms_range: (typeof ROOMS_RANGES)[number]
-  main_problem: (typeof MAIN_PROBLEMS)[number]
+  main_problem: (typeof MAIN_PROBLEMS)[number][]
   marketing_consent: boolean
   utm_source: string | null
   utm_medium: string | null
@@ -100,6 +100,20 @@ export function isHoneypotTriggered(payload: RawPayload): boolean {
   return typeof payload.website === 'string' && payload.website.trim().length > 0
 }
 
+// undefined = invalid (wrong type, empty, an unknown value, or a duplicate);
+// a real array otherwise. Order-insensitive on the caller's side (the
+// landing's multi-select), but the stored order is whatever the caller sent
+// with duplicates dropped.
+function readMainProblems(value: unknown): (typeof MAIN_PROBLEMS)[number][] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined
+  const seen = new Set<string>()
+  for (const item of value) {
+    if (typeof item !== 'string' || !(MAIN_PROBLEMS as readonly string[]).includes(item)) return undefined
+    seen.add(item)
+  }
+  return [...seen] as (typeof MAIN_PROBLEMS)[number][]
+}
+
 export function validateLead(payload: RawPayload): Lead | null {
   const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : ''
   if (!isEmail(email)) return null
@@ -113,8 +127,8 @@ export function validateLead(payload: RawPayload): Lead | null {
   const roomsRange = typeof payload.rooms_range === 'string' ? payload.rooms_range : ''
   if (!(ROOMS_RANGES as readonly string[]).includes(roomsRange)) return null
 
-  const mainProblem = typeof payload.main_problem === 'string' ? payload.main_problem : ''
-  if (!(MAIN_PROBLEMS as readonly string[]).includes(mainProblem)) return null
+  const mainProblem = readMainProblems(payload.main_problem)
+  if (!mainProblem) return null
 
   if (typeof payload.marketing_consent !== 'boolean') return null
 
@@ -133,7 +147,7 @@ export function validateLead(payload: RawPayload): Lead | null {
     hotel_name: hotelName,
     role: role as Lead['role'],
     rooms_range: roomsRange as Lead['rooms_range'],
-    main_problem: mainProblem as Lead['main_problem'],
+    main_problem: mainProblem,
     marketing_consent: payload.marketing_consent,
     utm_source: utmSource ?? null,
     utm_medium: utmMedium ?? null,
@@ -239,9 +253,13 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
+function problemLabels(mainProblem: Lead['main_problem']): string {
+  return mainProblem.map((problem) => PROBLEM_LABELS[problem] ?? problem).join(', ')
+}
+
 export function buildNotificationEmail(lead: Lead, isNew: boolean): { subject: string; text: string; html: string } {
   const roleLabel = ROLE_LABELS[lead.role] ?? lead.role
-  const problemLabel = PROBLEM_LABELS[lead.main_problem] ?? lead.main_problem
+  const problemLabel = problemLabels(lead.main_problem)
   const consentLabel = lead.marketing_consent ? 'Sì' : 'No'
   const kindLabel = isNew ? 'Nuovo lead' : 'Lead già esistente aggiornato'
   const timestamp = new Date().toISOString()
