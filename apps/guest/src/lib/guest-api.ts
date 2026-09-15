@@ -91,6 +91,11 @@ export interface StayInfo {
   hotel_name: string | null
   hotel_phone: string | null
   hotel_address: string | null
+  hotel_email: string | null
+  // "HH:MM" (Settings' "Orario check-out predefinito"), or null if the
+  // hotel never set one -- see Greeting.tsx for the fallback to
+  // check_out_at's own time-of-day.
+  hotel_check_out_time: string | null
 }
 
 export async function getStayInfo(token: string): Promise<StayInfo | null> {
