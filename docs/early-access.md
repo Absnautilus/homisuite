@@ -40,15 +40,28 @@ into the project.
 ## Endpoint
 
 ```
-POST https://<project-ref>.functions.supabase.co/early-access-signup
+POST https://<project-ref>.supabase.co/functions/v1/early-access-signup
 ```
 
-(The exact hostname depends on how the Supabase CLI/dashboard exposes
-functions for this project — check `supabase functions list` output. From
-the landing's point of view this is just an external URL it `fetch()`s; it
-is not literally `/api/early-access` because the landing and this backend
-are two separate deployments, and can't share a path namespace regardless
-of which technology backs the endpoint.)
+`<project-ref>` is this project's Supabase project ref (the same one
+`SUPABASE_PROJECT_REF` names in CI). From the landing's point of view this
+is just an external URL it `fetch()`s; it is not literally
+`/api/early-access` because the landing and this backend are two separate
+deployments and can't share a path namespace regardless of which
+technology backs the endpoint. The landing should be given this as one
+configured base URL (e.g. `VITE_HOMISUITE_API_BASE_URL =
+https://<project-ref>.supabase.co/functions/v1`) plus the fixed
+`/early-access-signup` path, not a hardcoded full URL.
+
+**No `Authorization` header is needed or expected.** Every other Edge
+Function in this project is called by an already-authenticated app user
+and defaults to the platform's standard `verify_jwt = true`; this one has
+no caller at all (an anonymous landing visitor), so `supabase/config.toml`
+explicitly sets `[functions.early-access-signup] verify_jwt = false` for
+it — otherwise the platform gateway would reject every request with `401`
+before this function's own code (CORS, honeypot, validation) ever runs.
+This setting must be in place, and the function (re)deployed with it,
+before the landing can get anything but a `401` from this endpoint.
 
 Request body (`application/json`):
 
@@ -329,8 +342,10 @@ build.
 Manual only, gated exactly like every other Edge Function in this project
 (`.github/workflows/deploy-functions.yml`): pick `early-access-signup` (or
 `all`) from the workflow's `function_name` input, type the project ref to
-confirm, run it. **This PR does not run that workflow** — nothing is
-deployed by merging it.
+confirm, run it. `supabase functions deploy` reads `verify_jwt` from
+`supabase/config.toml` (see Endpoint above) and applies it to the deployed
+function too — no separate flag needed. **This PR does not run that
+workflow** — nothing is deployed by merging it.
 
 ## Viewing leads in Supabase
 

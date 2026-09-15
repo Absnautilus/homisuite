@@ -21,3 +21,15 @@ site_url = "http://localhost:3000"
 additional_redirect_urls = []
 jwt_expiry = 3600
 enable_signup = false
+
+# Every other function here relies on the platform default (verify_jwt =
+# true) because every caller already has a real Supabase session -- see
+# each function's own "caller" client. early-access-signup is the first
+# function with no caller at all (an anonymous landing-page visitor): the
+# platform gateway would otherwise reject every request with 401 before
+# this function's own code -- CORS origin allowlist, honeypot, validation,
+# all of it -- ever runs. This is what actually authorizes the request
+# instead; see early-access-signup/index.ts's own CORS/validation comments
+# for the rest of that boundary.
+[functions.early-access-signup]
+verify_jwt = false
