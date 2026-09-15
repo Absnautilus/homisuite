@@ -101,11 +101,12 @@
 }
 
 * { box-sizing: border-box; }
-html { font-family: var(--f-body); scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
+html { font-family: var(--f-body); scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
 *::-webkit-scrollbar-thumb:hover { opacity: 0.85; }
+*::-webkit-scrollbar-button { display: none; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 h1, h2, h3, h4 { margin: 0; font-family: var(--f-head); }
 button, a, select, input { font: inherit; }
