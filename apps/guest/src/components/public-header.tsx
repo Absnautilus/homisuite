@@ -1,3 +1,4 @@
+import { LogOut } from 'lucide-react'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -21,11 +22,7 @@ export function PublicHeader({ onLogout }: { onLogout?: () => void }) {
             title={t('nav.logout')}
             className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <path d="M16 17l5-5-5-5" />
-              <path d="M21 12H9" />
-            </svg>
+            <LogOut size={16} />
           </button>
         )}
       </div>
