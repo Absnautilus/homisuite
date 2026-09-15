@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
@@ -123,12 +123,55 @@ function SettingRow({ title, detail, icon, muted = false, status, to, onClick }:
   return <div className={`settings-row settings-row-static${muted ? ' muted' : ''}`}>{content}</div>
 }
 
+const LOGO_BUCKET = 'property-logos'
+const LOGO_MAX_BYTES = 2 * 1024 * 1024
+
 function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
   const runtime = useModuleRuntime()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [timezone, setTimezone] = useState('Europe/Rome')
-  useEffect(() => { if (open) { setSaving(false); setError(null); setTimezone(runtime.property?.timezone ?? 'Europe/Rome') } }, [open, runtime.property?.timezone])
+  const [logoBusy, setLogoBusy] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (open) { setSaving(false); setError(null); setLogoError(null); setTimezone(runtime.property?.timezone ?? 'Europe/Rome') } }, [open, runtime.property?.timezone])
+
+  const logoUpdatedAt = typeof runtime.property?.settings.logoUpdatedAt === 'string' ? runtime.property.settings.logoUpdatedAt : null
+  const logoUrl = runtime.property && logoUpdatedAt
+    ? `${supabase.storage.from(LOGO_BUCKET).getPublicUrl(`${runtime.property.id}/logo.png`).data.publicUrl}?v=${encodeURIComponent(logoUpdatedAt)}`
+    : null
+
+  async function onLogoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (logoInputRef.current) logoInputRef.current.value = ''
+    if (!file || !runtime.property) return
+    if (file.type !== 'image/png') { setLogoError('Il logo deve essere un file PNG.'); return }
+    if (file.size > LOGO_MAX_BYTES) { setLogoError('Il file supera i 2 MB consentiti.'); return }
+    setLogoBusy(true); setLogoError(null)
+    try {
+      const { error: uploadError } = await supabase.storage.from(LOGO_BUCKET)
+        .upload(`${runtime.property.id}/logo.png`, file, { upsert: true, contentType: 'image/png' })
+      if (uploadError) throw uploadError
+      await core.updateProperty(runtime.property.id, {
+        name: runtime.property.name,
+        timezone: runtime.property.timezone,
+        settings: { ...runtime.property.settings, logoUpdatedAt: new Date().toISOString() },
+      })
+      await runtime.refresh()
+    } catch { setLogoError('Non è stato possibile caricare il logo.') } finally { setLogoBusy(false) }
+  }
+
+  async function onLogoRemove() {
+    if (!runtime.property) return
+    setLogoBusy(true); setLogoError(null)
+    try {
+      const { error: removeError } = await supabase.storage.from(LOGO_BUCKET).remove([`${runtime.property.id}/logo.png`])
+      if (removeError) throw removeError
+      const { logoUpdatedAt: _removed, ...settings } = runtime.property.settings
+      await core.updateProperty(runtime.property.id, { name: runtime.property.name, timezone: runtime.property.timezone, settings })
+      await runtime.refresh()
+    } catch { setLogoError('Non è stato possibile rimuovere il logo.') } finally { setLogoBusy(false) }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!runtime.property) return
@@ -161,6 +204,21 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
   const facebookDefault = typeof runtime.property?.settings.facebook === 'string' ? runtime.property.settings.facebook : ''
   return <Modal open={open} title="Informazioni struttura" description="Dati condivisi da tutti i moduli Homisuite." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="property-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
     <form className="modal-form" id="property-form" onSubmit={submit}>
+      <div className="form-field">
+        <span>Logo struttura</span>
+        <div className="logo-picker">
+          {logoUrl ? <img src={logoUrl} alt="" className="logo-picker-preview" /> : <div className="logo-picker-placeholder" aria-hidden="true" />}
+          <div className="logo-picker-actions">
+            <button className="btn btn-secondary" type="button" onClick={() => logoInputRef.current?.click()} disabled={logoBusy}>
+              {logoBusy ? 'Attendere…' : logoUrl ? 'Cambia logo' : 'Carica logo'}
+            </button>
+            {logoUrl ? <button className="link-button" type="button" onClick={onLogoRemove} disabled={logoBusy}>Rimuovi</button> : null}
+            <input ref={logoInputRef} type="file" accept="image/png" hidden onChange={onLogoChange} />
+          </div>
+        </div>
+        <small>PNG, sfondo trasparente consigliato · max 2 MB</small>
+        {logoError ? <p className="form-error" role="alert">{logoError}</p> : null}
+      </div>
       <label className="form-field"><span>Nome struttura</span><input name="name" required minLength={2} maxLength={120} defaultValue={runtime.property?.name} /></label>
       <label className="form-field" htmlFor="property-timezone"><span>Fuso orario</span><Select id="property-timezone" name="timezone" value={timezone} onChange={setTimezone}><option value="Europe/Rome">Europa — Roma</option><option value="Europe/London">Europa — Londra</option><option value="Europe/Amsterdam">Europa — Amsterdam</option><option value="America/Mexico_City">America — Città del Messico</option><option value="America/New_York">America — New York</option></Select></label>
       <label className="form-field"><span>Orario check-in predefinito</span><input name="checkInTime" type="time" defaultValue={checkInDefault} /></label>
