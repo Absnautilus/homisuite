@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, Minus, Plus } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Label, Textarea } from '@/components/ui/field'
@@ -137,7 +138,7 @@ function TypesList({
     <Card>
       <CardHeader className="flex items-center gap-2">
         <button type="button" onClick={onBack} className="cursor-pointer text-muted hover:text-foreground" aria-label={t('flow.back')}>
-          ←
+          <ArrowLeft size={18} />
         </button>
         <h2 className="text-sm font-semibold text-foreground">
           <AutoText text={category.name} translations={category.name_i18n} />
@@ -198,7 +199,7 @@ function ComposeForm({
     <Card>
       <CardHeader className="flex items-center gap-2">
         <button type="button" onClick={onBack} className="cursor-pointer text-muted hover:text-foreground" aria-label={t('flow.back')}>
-          ←
+          <ArrowLeft size={18} />
         </button>
         <h2 className="text-sm font-semibold text-foreground">
           <AutoText text={type.name} translations={type.name_i18n} />
@@ -215,12 +216,19 @@ function ComposeForm({
                 size="sm"
                 disabled={quantity <= 1}
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                aria-label={t('flow.quantityDecrease')}
               >
-                −
+                <Minus size={14} />
               </Button>
               <span className="w-8 text-center text-sm font-medium tabular-nums">{quantity}</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => setQuantity((q) => Math.min(10, q + 1))}>
-                +
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                aria-label={t('flow.quantityIncrease')}
+              >
+                <Plus size={14} />
               </Button>
             </div>
           </FieldGroup>
