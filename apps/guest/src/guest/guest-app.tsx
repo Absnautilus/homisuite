@@ -173,7 +173,7 @@ export function GuestApp() {
 
   return (
     <div className="min-h-screen bg-surface-2 pb-10" style={stay ? brandColorStyle(stay) : undefined}>
-      <PublicHeader onLogout={onLogout} hotelName={stay?.hotel_name} logoUrl={stay && getHotelLogoUrl(stay)} />
+      <PublicHeader onLogout={onLogout} hotelName={stay?.hotel_name} logoUrl={stay && getHotelLogoUrl(stay)} brandColor={stay?.hotel_brand_color} />
       <div className="mx-auto max-w-xl space-y-3 px-4 pt-4">
         {stay && <BrandedInfoBand stay={stay} />}
 
