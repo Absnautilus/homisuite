@@ -120,12 +120,29 @@ export interface StayInfo {
   hotel_wifi_password: string | null
   hotel_breakfast_hours: string | null
   hotel_bar_hours: string | null
+  // Storage path in the "property-logos" bucket, e.g. "<property_id>/logo.png"
+  // -- always resolved when the hotel has a Core mapping, whether or not a
+  // logo was actually uploaded there. hotel_logo_updated_at is the real
+  // "has a logo" signal (see getHotelLogoUrl below); hotel_logo_path alone
+  // is never enough to know a logo exists.
+  hotel_logo_path: string | null
+  hotel_logo_updated_at: string | null
 }
 
 export async function getStayInfo(token: string): Promise<StayInfo | null> {
   const { data, error } = await supabase.rpc('guest_stay_info', { p_token: token })
   if (error) throw error
   return data?.[0] ?? null
+}
+
+// Same "<bucket>/<path>?v=<logoUpdatedAt>" URL apps/web's own Settings page
+// builds for the staff-facing logo preview -- null whenever the hotel never
+// uploaded one, so the navbar can fall back to the generic Homisuite mark
+// instead of requesting a file that was never there.
+export function getHotelLogoUrl(stay: StayInfo): string | null {
+  if (!stay.hotel_logo_path || !stay.hotel_logo_updated_at) return null
+  const { data } = supabase.storage.from('property-logos').getPublicUrl(stay.hotel_logo_path)
+  return `${data.publicUrl}?v=${encodeURIComponent(stay.hotel_logo_updated_at)}`
 }
 
 export async function cancelMyRequest(token: string, requestId: string): Promise<GuestRequest> {

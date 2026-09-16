@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn'
 import { clearGuestToken, getGuestToken, setGuestToken } from '@/lib/guest-token'
 import {
   fetchAvailableModules,
+  getHotelLogoUrl,
   getStayInfo,
   isInvalidSessionError,
   listMyRequests,
@@ -171,7 +172,7 @@ export function GuestApp() {
 
   return (
     <div className="min-h-screen bg-surface-2 pb-10">
-      <PublicHeader onLogout={onLogout} />
+      <PublicHeader onLogout={onLogout} hotelName={stay?.hotel_name} logoUrl={stay && getHotelLogoUrl(stay)} />
       <div className="mx-auto max-w-xl space-y-3 px-4 pt-4">
         {stay && <GreetingHeader stay={stay} />}
         {stay && <GeneralInfoCard stay={stay} />}
@@ -214,6 +215,13 @@ export function GuestApp() {
         </SectionCard>
 
         {stay && <ContactsCard stay={stay} />}
+
+        <p className="pt-2 pb-4 text-center text-xs text-muted">
+          {t('footer.poweredBy')}{' '}
+          <a href="https://homisuite.com" target="_blank" rel="noreferrer" className="font-semibold hover:underline">
+            homisuite.com
+          </a>
+        </p>
       </div>
     </div>
   )
