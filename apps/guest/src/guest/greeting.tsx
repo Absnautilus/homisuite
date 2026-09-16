@@ -46,65 +46,63 @@ function formatCheckout(checkOutAt: string, hotelCheckOutTime: string | null): {
   }
 }
 
-export function GreetingHeader({ stay }: { stay: StayInfo }) {
-  const { t } = useLocale()
-  const hour = new Date().getHours()
-  const timeOfDay = hour < 18 ? t('greeting.morning') : t('greeting.evening')
-
+function BandRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-accent-soft-line bg-accent-soft px-4 py-3">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-sm font-semibold text-white">
-        {t('greeting.room')} {stay.room_number}
-      </span>
-      <p className="mt-2 text-base text-accent">
-        {timeOfDay} {t('greeting.line', { name: stay.guest_last_name })}
-      </p>
-    </div>
-  )
-}
-
-function InfoRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <div className="flex items-start gap-2 text-sm text-muted">
-      <span className="mt-0.5 shrink-0">{icon}</span>
+    <div className="flex items-start gap-2 py-1 text-sm text-muted">
+      <span className="mt-0.5 shrink-0 text-accent">{icon}</span>
       <div>{children}</div>
     </div>
   )
 }
 
-export function GeneralInfoCard({ stay }: { stay: StayInfo }) {
+// Replaces the old separate room-badge greeting strip + plain "Informazioni
+// generali" list with a single branded band: the hotel's accent color fills
+// the top (a visual anchor tying the guest app to the specific property,
+// not just Homisuite purple everywhere), with the stay's practical details
+// overlapping it in a white card below -- same data as before, just no
+// longer reading as a generic, hotel-agnostic list.
+export function BrandedInfoBand({ stay }: { stay: StayInfo }) {
   const { t } = useLocale()
+  const hour = new Date().getHours()
+  const timeOfDay = hour < 18 ? t('greeting.morning') : t('greeting.evening')
   const { date, time } = formatCheckout(stay.check_out_at, stay.hotel_check_out_time)
   const hasWifi = Boolean(stay.hotel_wifi_network || stay.hotel_wifi_password)
 
   return (
-    <SectionCard title={t('greeting.generalInfo')}>
-      <div className="space-y-2.5">
-        <InfoRow icon={<CalendarClock size={14} />}>
-          {t('greeting.checkoutLabel')}: {t('greeting.checkoutAt', { date, time })}
-        </InfoRow>
+    <div className="overflow-hidden rounded-lg border border-line">
+      <div className="bg-[linear-gradient(135deg,var(--accent),color-mix(in_srgb,var(--accent)_60%,#1b0c24))] px-4 pt-4 pb-9">
+        <p className="text-base font-extrabold text-white">{timeOfDay} {t('greeting.line', { name: stay.guest_last_name })}</p>
+        <p className="mt-1 text-sm text-white/80">
+          {stay.hotel_name ?? 'Homisuite'} · {t('greeting.room')} {stay.room_number}
+        </p>
+      </div>
+      <div className="relative -mt-5 mx-2 mb-2 space-y-0.5 rounded-lg bg-white p-3 shadow-md">
+        <BandRow icon={<CalendarClock size={14} />}>
+          {t('greeting.checkoutLabel')}{' '}
+          <span className="font-semibold text-foreground">{t('greeting.checkoutAt', { date, time })}</span>
+        </BandRow>
         {hasWifi && (
-          <InfoRow icon={<Wifi size={14} />}>
-            {stay.hotel_wifi_network && <p className="font-medium text-foreground">{stay.hotel_wifi_network}</p>}
+          <BandRow icon={<Wifi size={14} />}>
+            {stay.hotel_wifi_network && <p className="font-semibold text-foreground">{stay.hotel_wifi_network}</p>}
             {stay.hotel_wifi_password && (
               <p>
-                {t('greeting.wifiPassword')}: {stay.hotel_wifi_password}
+                {t('greeting.wifiPassword')}: <span className="font-semibold text-foreground">{stay.hotel_wifi_password}</span>
               </p>
             )}
-          </InfoRow>
+          </BandRow>
         )}
         {stay.hotel_breakfast_hours && (
-          <InfoRow icon={<Coffee size={14} />}>
-            {t('greeting.breakfast')}: {stay.hotel_breakfast_hours}
-          </InfoRow>
+          <BandRow icon={<Coffee size={14} />}>
+            {t('greeting.breakfast')} <span className="font-semibold text-foreground">{stay.hotel_breakfast_hours}</span>
+          </BandRow>
         )}
         {stay.hotel_bar_hours && (
-          <InfoRow icon={<Wine size={14} />}>
-            {t('greeting.bar')}: {stay.hotel_bar_hours}
-          </InfoRow>
+          <BandRow icon={<Wine size={14} />}>
+            {t('greeting.bar')} <span className="font-semibold text-foreground">{stay.hotel_bar_hours}</span>
+          </BandRow>
         )}
       </div>
-    </SectionCard>
+    </div>
   )
 }
 
