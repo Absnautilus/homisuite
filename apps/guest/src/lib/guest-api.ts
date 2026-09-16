@@ -120,6 +120,10 @@ export interface StayInfo {
   hotel_wifi_password: string | null
   hotel_breakfast_hours: string | null
   hotel_bar_hours: string | null
+  // Hex string ("#0f9d78", Settings' "Colore del marchio"), or null if the
+  // hotel never customized it -- see index.css's default --accent for the
+  // fallback.
+  hotel_brand_color: string | null
 }
 
 export async function getStayInfo(token: string): Promise<StayInfo | null> {
