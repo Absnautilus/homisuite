@@ -85,9 +85,15 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
   // request_types.category_id and guest_requests.request_type_id are plain
   // foreign keys with no ON DELETE clause (see admin-api.ts), so Postgres
   // rejects (23503) deleting a category that still has items, or an item any
-  // request -- current or historical -- still references. Same guardrail as
-  // rooms-page's deleteRoom: fall back to deactivating instead of leaving the
-  // row un-deleted and silently reappearing on the next reload.
+  // request -- current or historical -- still references. When the category
+  // is blocked by its own items (not by their request history), removing a
+  // category is expected to take its items with it -- so this cascades: try
+  // deleting every item in the category first (same delete-or-deactivate
+  // fallback as onRemoveItem for each one), then retry the category. It only
+  // still needs deactivating instead if some item couldn't actually be
+  // deleted (real request history), the same guardrail as rooms-page's
+  // deleteRoom -- never leaving a row un-deleted and silently reappearing on
+  // the next reload.
   async function onRemoveCategory(category: RequestCategoryAdmin) {
     const ok = await confirm({ title: t('staff.items.categoryRemoveTitle'), description: t('staff.items.categoryRemoveDesc', { name: category.name }), confirmLabel: t('staff.items.categoryRemoveConfirm') })
     if (!ok) return
@@ -96,18 +102,49 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
       await deleteRequestCategory(category.id)
       setRemovedCategoryIds((current) => new Set(current).add(category.id))
       push(t('common.toast.removed'), 'success')
+      return
     } catch (err) {
-      if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
-        try {
-          await setRequestCategoryActive(category.id, false)
-          setCategories((current) => current.map((c) => (c.id === category.id ? { ...c, active: false } : c)))
-          setRemovedCategoryIds((current) => new Set(current).add(category.id))
-          setError(t('staff.items.categoryRemoveBlockedDeactivated'))
-        } catch {
-          setError(t('staff.items.categoryRemoveError'))
-        }
+      if (!(err && typeof err === 'object' && 'code' in err && err.code === '23503')) {
+        setError(t('staff.items.categoryRemoveError'))
         return
       }
+    }
+
+    let allItemsGone = true
+    for (const item of types.filter((rt) => rt.category_id === category.id)) {
+      try {
+        await deleteRequestType(item.id)
+        setRemovedTypeIds((current) => new Set(current).add(item.id))
+      } catch (itemErr) {
+        allItemsGone = false
+        if (itemErr && typeof itemErr === 'object' && 'code' in itemErr && itemErr.code === '23503') {
+          try {
+            await setRequestTypeActive(item.id, false)
+            setTypes((current) => current.map((rt) => (rt.id === item.id ? { ...rt, active: false } : rt)))
+          } catch {
+            // leave it as-is; the category-level fallback below still covers it
+          }
+        }
+      }
+    }
+
+    if (allItemsGone) {
+      try {
+        await deleteRequestCategory(category.id)
+        setRemovedCategoryIds((current) => new Set(current).add(category.id))
+        push(t('common.toast.removed'), 'success')
+        return
+      } catch {
+        // some other caller re-added an item in the meantime -- fall through
+      }
+    }
+
+    try {
+      await setRequestCategoryActive(category.id, false)
+      setCategories((current) => current.map((c) => (c.id === category.id ? { ...c, active: false } : c)))
+      setRemovedCategoryIds((current) => new Set(current).add(category.id))
+      setError(t('staff.items.categoryRemoveBlockedDeactivated'))
+    } catch {
       setError(t('staff.items.categoryRemoveError'))
     }
   }
