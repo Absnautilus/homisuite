@@ -170,6 +170,24 @@ export async function setRequestTypeActive(id: string, active: boolean): Promise
   if (!data) throw new Error('request_type_active_update_not_applied')
 }
 
+// guest_requests.request_type_id has a plain foreign key with no ON DELETE
+// clause, so Postgres rejects (23503) deleting an item any request -- current
+// or historical -- still references. Same guardrail as deleteRoom: an item
+// with usage history should be deactivated, not deleted.
+export async function deleteRequestType(id: string): Promise<void> {
+  const { data, error } = await supabase.from('request_types').delete().eq('id', id).select('id').maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('request_type_delete_not_applied')
+}
+
+// request_types.category_id has the same plain foreign key -- deleting a
+// category still holding any items (active or not) hits the same 23503.
+export async function deleteRequestCategory(id: string): Promise<void> {
+  const { data, error } = await supabase.from('request_categories').delete().eq('id', id).select('id').maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('request_category_delete_not_applied')
+}
+
 export interface DepartmentStat {
   department: Department
   count: number
