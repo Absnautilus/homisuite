@@ -29,6 +29,8 @@ type Tab = 'new' | 'status'
 // modules.display_name is a Core-level, English, admin-facing label (e.g.
 // "Guest Requests"), not meant for the guest UI, hence this lookup instead
 // of using it directly.
+const CURRENT_YEAR = String(new Date().getFullYear())
+
 const MODULE_LABELS: Partial<Record<string, TranslationKey>> = {
   guest_requests: 'directory.housekeeping',
 }
@@ -216,12 +218,12 @@ export function GuestApp() {
 
         {stay && <ContactsCard stay={stay} />}
 
-        <p className="pt-2 pb-4 text-center text-xs text-muted">
-          {t('footer.poweredBy')}{' '}
+        <div className="flex items-center justify-between pt-2 pb-4 text-xs text-muted">
           <a href="https://homisuite.com" target="_blank" rel="noreferrer" className="font-semibold hover:underline">
             homisuite.com
           </a>
-        </p>
+          <span>{t('footer.copyright', { year: CURRENT_YEAR })}</span>
+        </div>
       </div>
     </div>
   )
