@@ -72,7 +72,10 @@ hotsflow/
 
 `packages/ui` starts empty. It is not pre-populated in anticipation of
 Turni — a component moves there only when a second module actually needs
-it, per the standing "no premature shared-component extraction" rule.
+it, per the standing "no premature shared-component extraction" rule. (It
+was first populated once `Toggle` and the dropdown open/close transition
+were already duplicated across workspaces — see `docs/ui-guidelines.md`
+for what it holds and the rule for adding to it.)
 
 ## Dependency direction (enforced, not just documented)
 

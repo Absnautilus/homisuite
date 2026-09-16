@@ -1,0 +1,42 @@
+/* `scale` on its own CSS property (not the `transform` shorthand) so this
+   composes safely with a consumer's own `transform`/`translate` used for
+   alignment (e.g. centering with translateX(-50%)) instead of clobbering it. */
+.ui-dropdown {
+  transform-origin: top right;
+  scale: 0.97;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    scale 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: scale, opacity;
+}
+.ui-dropdown[data-origin='top-left'] {
+  transform-origin: top left;
+}
+.ui-dropdown[data-origin='bottom-right'] {
+  transform-origin: bottom right;
+}
+.ui-dropdown[data-origin='bottom-left'] {
+  transform-origin: bottom left;
+}
+
+.ui-dropdown.is-open {
+  scale: 1;
+  opacity: 1;
+  pointer-events: auto;
+}
+.ui-dropdown.is-closing {
+  scale: 0.99;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    scale 120ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dropdown {
+    transition: none !important;
+  }
+}

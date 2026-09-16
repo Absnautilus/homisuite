@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { dropdownTransitionClassName, useDropdownTransition } from '@homisuite/ui'
 import { UI_SCALES, useUiScale, type UiScale } from '@/lib/ui-scale-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
@@ -19,6 +20,7 @@ export function TextSizeToggle({ dark = false, align = 'center' }: { dark?: bool
   const { t } = useLocale()
   const { scale, setScale } = useUiScale()
   const [open, setOpen] = useState(false)
+  const { state, mounted } = useDropdownTransition(open)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -45,11 +47,15 @@ export function TextSizeToggle({ dark = false, align = 'center' }: { dark?: bool
       >
         <TextSizeIcon className="h-4.5 w-4.5" />
       </button>
-      {open && (
+      {mounted && (
         <div
-          className={cn(
-            'absolute z-10 mt-2 flex items-end gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-lg',
-            align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+          data-origin={align === 'right' ? 'top-right' : 'top-left'}
+          className={dropdownTransitionClassName(
+            state,
+            cn(
+              'absolute z-10 mt-2 flex items-end gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-lg',
+              align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+            ),
           )}
         >
           {UI_SCALES.map((s) => (

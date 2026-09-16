@@ -1,0 +1,79 @@
+/* Toggle: a double-bounce thumb travel, gated so the "off" animation never
+   plays on mount (only a real click starts it) -- see toggle.tsx's `isInit`.
+   Colors come from each consumer's own theme tokens (--accent,
+   --line-strong), never hardcoded here, so the same component matches
+   apps/web's plain-CSS theme and the Tailwind-themed apps unmodified. */
+.ui-toggle {
+  --ui-toggle-travel: 17px;
+  --ui-toggle-dur: 350ms;
+  --ui-toggle-overshoot: 1px;
+  --ui-toggle-ease: cubic-bezier(0.34, 1.35, 0.64, 1);
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 23px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.ui-toggle[data-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.ui-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ui-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  translate: 0 0;
+  will-change: translate;
+}
+.ui-toggle[data-checked='true'] .ui-toggle-thumb {
+  translate: var(--ui-toggle-travel) 0;
+}
+.ui-toggle.ui-toggle-init[data-checked='true'] .ui-toggle-thumb {
+  animation: ui-toggle-on var(--ui-toggle-dur) var(--ui-toggle-ease) both;
+}
+.ui-toggle.ui-toggle-init[data-checked='false'] .ui-toggle-thumb {
+  animation: ui-toggle-off var(--ui-toggle-dur) var(--ui-toggle-ease) both;
+}
+@keyframes ui-toggle-on {
+  0% {
+    translate: 0 0;
+  }
+  55% {
+    translate: calc(var(--ui-toggle-travel) + var(--ui-toggle-overshoot)) 0;
+  }
+  100% {
+    translate: var(--ui-toggle-travel) 0;
+  }
+}
+@keyframes ui-toggle-off {
+  0% {
+    translate: var(--ui-toggle-travel) 0;
+  }
+  55% {
+    translate: calc(0px - var(--ui-toggle-overshoot)) 0;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-toggle-thumb {
+    animation: none !important;
+  }
+}

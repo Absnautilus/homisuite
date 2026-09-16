@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { Toggle } from '@homisuite/ui'
 import { cn } from '@/lib/cn'
 
 interface SwitchControlProps {
@@ -14,31 +15,8 @@ interface SwitchControlProps {
 // The bare toggle -- no label/description row. Used standalone (e.g. a
 // table cell where the row's own name column already labels it) and as the
 // control inside Switch below, so both share one visual implementation.
-export function SwitchControl({ checked, onCheckedChange, disabled = false, id, className, ...aria }: SwitchControlProps) {
-  return (
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onCheckedChange(!checked)}
-      className={cn(
-        'relative h-[23px] w-10 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-45',
-        checked ? 'border-accent bg-accent' : 'border-line-strong bg-line-strong',
-        className,
-      )}
-      {...aria}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'absolute left-[2px] top-[2px] h-[17px] w-[17px] rounded-full bg-white shadow-sm transition-transform',
-          checked && 'translate-x-[17px]',
-        )}
-      />
-    </button>
-  )
+export function SwitchControl({ className, ...props }: SwitchControlProps) {
+  return <Toggle className={className} {...props} />
 }
 
 interface SwitchProps {
