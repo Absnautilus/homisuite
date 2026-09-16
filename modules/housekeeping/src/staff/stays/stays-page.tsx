@@ -13,6 +13,7 @@ import { OperaImportPanel } from '@/staff/stays/opera-import-panel'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
 import { useConfirm } from '@/components/confirm-dialog'
+import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { tenantIntegrityErrorRef } from '@/lib/errors'
 
@@ -176,6 +177,7 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
 
 function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: Stay; rooms: Room[]; onChanged: () => Promise<void> }) {
   const { t } = useLocale()
+  const { push } = useToast()
   const [editingCheckout, setEditingCheckout] = useState(false)
   const [checkOut, setCheckOut] = useState(toLocalInputValue(stay.check_out_at))
   const [editingDetails, setEditingDetails] = useState(false)
@@ -212,12 +214,17 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
   // Returns whether the action actually succeeded so a caller chaining a
   // "close the inline editor" step can skip it on failure -- the person
   // should see the error and be able to retry, not lose what they typed.
-  async function run(action: () => Promise<void>): Promise<boolean> {
+  // successMessage, when given, surfaces as a toast once the action (and
+  // the reload it triggers) has actually gone through -- these actions used
+  // to leave the person guessing whether anything happened beyond the row
+  // quietly changing.
+  async function run(action: () => Promise<void>, successMessage?: string): Promise<boolean> {
     setPending(true)
     setActionError(null)
     try {
       await action()
       await onChanged()
+      if (successMessage) push(successMessage, 'success')
       return true
     } catch {
       setActionError(t('staff.stays.actionError'))
@@ -233,7 +240,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
       description: t('staff.stays.checkoutNowDesc', { room: stay.rooms?.room_number ?? '', name: stay.guest_last_name, pin: stay.guest_pin }),
       confirmLabel: t('staff.stays.checkoutNowConfirm'),
     })
-    if (ok) await run(() => checkOutStayNow(stay.id))
+    if (ok) await run(() => checkOutStayNow(stay.id), t('staff.stays.checkoutNowSuccess'))
   }
 
   async function onDeactivate() {
@@ -242,7 +249,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
       description: t('staff.stays.deactivateDesc', { room: stay.rooms?.room_number ?? '', name: stay.guest_last_name, pin: stay.guest_pin }),
       confirmLabel: t('staff.stays.deactivateConfirm'),
     })
-    if (ok) await run(() => cancelStay(stay.id))
+    if (ok) await run(() => cancelStay(stay.id), t('staff.stays.deactivateSuccess'))
   }
 
   return (
@@ -303,6 +310,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
                         checkInAt: new Date(detailsCheckIn).toISOString(),
                         checkOutAt: new Date(detailsCheckOut).toISOString(),
                       }),
+                      t('common.toast.saved'),
                     ).then((ok) => { if (ok) setEditingDetails(false) })
                   }
                 >
@@ -319,7 +327,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
               <Button
                 size="sm"
                 disabled={pending}
-                onClick={() => run(() => updateCheckout(stay.id, new Date(checkOut).toISOString())).then((ok) => { if (ok) setEditingCheckout(false) })}
+                onClick={() => run(() => updateCheckout(stay.id, new Date(checkOut).toISOString()), t('common.toast.saved')).then((ok) => { if (ok) setEditingCheckout(false) })}
               >
                 {t('staff.stays.save')}
               </Button>

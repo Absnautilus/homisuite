@@ -8,6 +8,7 @@ import type { TranslationKey } from '@/lib/i18n/dictionaries'
 import type { StaffRole } from '@/lib/types'
 import type { StaffProfile } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
+import { useToast } from '@/components/toast-context'
 import type { PlatformStaffManagementLink } from '@/public/HousekeepingModule'
 
 const ROLE_KEY: Record<StaffRole, TranslationKey> = {
@@ -33,6 +34,7 @@ export function OperatorsPage({
   hotelId?: string
 }) {
   const { t } = useLocale()
+  const { push } = useToast()
   const isMaster = profile.role === 'master'
   const [staff, setStaff] = useState<OperatorSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +63,7 @@ export function OperatorsPage({
     setStaff((current) => current?.map((p) => (p.id === person.id ? { ...p, active: next } : p)) ?? current)
     try {
       await setStaffActive(person.id, next)
+      push(t(next ? 'common.toast.activated' : 'common.toast.deactivated'), 'success')
     } catch {
       setStaff((current) => current?.map((p) => (p.id === person.id ? { ...p, active: person.active } : p)) ?? current)
       setError(t('staff.operators.toggleError'))

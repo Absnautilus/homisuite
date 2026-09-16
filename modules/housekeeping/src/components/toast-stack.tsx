@@ -1,5 +1,5 @@
 import type { Toast } from '@/hooks/use-toasts'
-import { Check, X } from 'lucide-react'
+import { AlertCircle, Check, X } from 'lucide-react'
 import { IconButton } from '@/components/ui/icon-button'
 import { useLocale } from '@/lib/i18n/locale-context'
 
@@ -44,6 +44,10 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
                 <path d="M12 9v4M12 17h.01" />
                 <path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L14 3.9a2 2 0 0 0-3.4 0Z" />
               </svg>
+            ) : toast.tone === 'success' ? (
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-ok-ink" />
+            ) : toast.tone === 'error' ? (
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-bad-ink" />
             ) : (
               <svg className="mt-0.5 h-4 w-4 shrink-0 text-prog-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />

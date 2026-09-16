@@ -8,7 +8,7 @@ export interface ToastCard {
 
 export interface Toast {
   id: string
-  tone: 'info' | 'warning'
+  tone: 'info' | 'warning' | 'success' | 'error'
   message?: string
   card?: ToastCard
 }
