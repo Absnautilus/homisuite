@@ -1,19 +1,44 @@
-import type { SVGProps } from 'react'
+import { lazy, Suspense, type ComponentType, type SVGProps } from 'react'
+import { MoreHorizontal } from 'lucide-react'
+import dynamicIconImports from 'lucide-react/dynamicIconImports'
 
-const paths: Record<string, string> = {
-  bed: 'M3 18v-7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7M3 18v2M21 18v2M3 14h18M7 11V9a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2',
-  shower: 'M6 3h9a3 3 0 0 1 3 3v1M4 9h16M8 13v1M12 13v1M16 13v1M8 17v1M12 17v1M16 17v1',
-  sparkles: 'M12 3v4M12 17v4M4 12h4M16 12h4M6.5 6.5l2 2M15.5 15.5l2 2M17.5 6.5l-2 2M8.5 15.5l-2 2',
-  wrench: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.83 2.83-2.12-2.12L14.7 6.3Z',
-  briefcase: 'M4 8h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18',
-  dots: 'M6 12h.01M12 12h.01M18 12h.01',
+type IconName = keyof typeof dynamicIconImports
+
+// request_categories.icon predates the full Lucide library being pickable
+// (see IconPicker) -- these are the original hand-picked short aliases,
+// kept resolving forever so categories saved before that existed don't
+// need a data migration. Was previously a hand-rolled SVG path map that
+// only approximated Lucide's real icons; now renders the real ones,
+// matching apps/guest's own CategoryIcon exactly.
+const LEGACY_ALIASES: Partial<Record<string, IconName>> = {
+  bed: 'bed-double',
+  shower: 'shower-head',
+  sparkles: 'sparkles',
+  wrench: 'wrench',
+  briefcase: 'briefcase',
+  dots: 'ellipsis',
+}
+
+// One lazy component per icon name, shared across every render/instance --
+// creating a fresh lazy() per render would re-suspend on every re-render
+// instead of resolving once and staying resolved.
+const cache = new Map<IconName, ComponentType<SVGProps<SVGSVGElement>>>()
+
+export function resolveIcon(icon: string | null): ComponentType<SVGProps<SVGSVGElement>> | null {
+  if (!icon) return null
+  const name = (LEGACY_ALIASES[icon] ?? icon) as IconName
+  if (!(name in dynamicIconImports)) return null
+  if (!cache.has(name)) {
+    cache.set(name, lazy(dynamicIconImports[name]))
+  }
+  return cache.get(name) ?? null
 }
 
 export function CategoryIcon({ icon, ...props }: { icon: string | null } & SVGProps<SVGSVGElement>) {
-  const d = paths[icon ?? 'dots'] ?? paths.dots
+  const Icon = resolveIcon(icon) ?? MoreHorizontal
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d={d} />
-    </svg>
+    <Suspense fallback={<MoreHorizontal {...props} />}>
+      <Icon {...props} />
+    </Suspense>
   )
 }

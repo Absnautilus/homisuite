@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Boxes, Sparkles, type LucideIcon } from 'lucide-react'
 import { PublicHeader } from '@/components/public-header'
 import { SectionCard } from '@/components/section-card'
+import { brandColorStyle } from '@/lib/brand-color'
 import { cn } from '@/lib/cn'
 import { clearGuestToken, getGuestToken, setGuestToken } from '@/lib/guest-token'
 import {
@@ -19,7 +20,7 @@ import type { TranslationKey } from '@/lib/i18n/dictionaries'
 import { LoginScreen } from '@/guest/login-screen'
 import { RequestFlow } from '@/guest/request-flow'
 import { StatusList } from '@/guest/status-list'
-import { ContactsCard, GeneralInfoCard, GreetingHeader } from '@/guest/greeting'
+import { BrandedInfoBand, ContactsCard } from '@/guest/greeting'
 
 type Tab = 'new' | 'status'
 
@@ -171,11 +172,10 @@ export function GuestApp() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-2 pb-10">
+    <div className="min-h-screen bg-surface-2 pb-10" style={stay ? brandColorStyle(stay) : undefined}>
       <PublicHeader onLogout={onLogout} hotelName={stay?.hotel_name} logoUrl={stay && getHotelLogoUrl(stay)} />
       <div className="mx-auto max-w-xl space-y-3 px-4 pt-4">
-        {stay && <GreetingHeader stay={stay} />}
-        {stay && <GeneralInfoCard stay={stay} />}
+        {stay && <BrandedInfoBand stay={stay} />}
 
         <SectionCard title={t('directory.title')}>
           {selectedModuleSlug === 'guest_requests' ? (

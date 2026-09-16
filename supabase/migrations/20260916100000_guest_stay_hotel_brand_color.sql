@@ -1,16 +1,20 @@
--- Widens guest_stay_info once more so the guest navbar can show the
--- hotel's own name and logo instead of generic Homisuite branding.
--- hotel_name is already returned (from the legacy hotel's own name); this
--- adds the storage path to the property's logo (same "property-logos"
--- bucket and "<property_id>/logo.png" convention apps/web's Settings page
--- already uses) plus its own logoUpdatedAt cache-buster, so the frontend
--- builds the exact same public URL apps/web does. hotel_logo_updated_at is
--- null whenever the hotel never uploaded a logo (or has no Core mapping),
--- which the guest UI treats as "no logo" and falls back to the generic
--- Homisuite mark -- never a broken image request.
+-- Widens guest_stay_info with the hotel's optional brand color (a hex
+-- string, apps/web's Settings page "Colore del marchio" field under
+-- properties.settings.brandColor), so the guest app can recolor its accent
+-- to match the property instead of always using Homisuite's default
+-- purple. Same bridge/null behavior as the rest of this function: absent
+-- when the hotel has no Core mapping or never set a custom color, in which
+-- case the guest app keeps its own default.
+--
+-- NOTE: another open, unapplied PR (guest navbar logo/name) also widens
+-- this same function with hotel_logo_path/hotel_logo_updated_at. Whichever
+-- of the two migrations is applied second must fold in the other's added
+-- columns too, or a bare CREATE FUNCTION here will silently drop them from
+-- the live function -- same DROP+CREATE hazard flagged in every prior
+-- widening of this function.
 --
 -- A function's return type can't change via CREATE OR REPLACE, so this
--- drops and recreates it, same as the previous widenings.
+-- drops and recreates it, same as every prior widening did.
 
 begin;
 
@@ -29,8 +33,7 @@ create function guest_stay_info(p_token text) returns table(
   hotel_wifi_password text,
   hotel_breakfast_hours text,
   hotel_bar_hours text,
-  hotel_logo_path text,
-  hotel_logo_updated_at text
+  hotel_brand_color text
 )
 language sql security definer stable set search_path = public, extensions as $$
   select
@@ -46,8 +49,7 @@ language sql security definer stable set search_path = public, extensions as $$
     p.settings ->> 'wifiPassword',
     p.settings ->> 'breakfastHours',
     p.settings ->> 'barHours',
-    case when p.id is not null then p.id::text || '/logo.png' else null end,
-    p.settings ->> 'logoUpdatedAt'
+    p.settings ->> 'brandColor'
   from guest_requests_guest_sessions gs
   join stays s on s.id = gs.stay_id
   join rooms r on r.id = s.room_id

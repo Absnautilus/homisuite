@@ -96,12 +96,13 @@ export interface RequestCategoryAdmin {
   name_i18n: Record<string, string>
   department: Department
   active: boolean
+  icon: string | null
 }
 
 export async function listMenu(hotelId: string): Promise<{ categories: RequestCategoryAdmin[]; types: RequestTypeAdmin[] }> {
   const categoriesRes = await supabase
     .from('request_categories')
-    .select('id, name, name_i18n, department, active')
+    .select('id, name, name_i18n, department, active, icon')
     .order('sort_order')
     .eq(...hotelFilter(hotelId))
   if (categoriesRes.error) throw categoriesRes.error
@@ -130,6 +131,11 @@ export async function setRequestCategoryActive(id: string, active: boolean): Pro
 
 export async function updateRequestCategoryTranslations(id: string, name_i18n: Record<string, string>): Promise<void> {
   const { error } = await supabase.from('request_categories').update({ name_i18n }).eq('id', id)
+  if (error) throw error
+}
+
+export async function updateRequestCategoryIcon(id: string, icon: string): Promise<void> {
+  const { error } = await supabase.from('request_categories').update({ icon }).eq('id', id)
   if (error) throw error
 }
 
