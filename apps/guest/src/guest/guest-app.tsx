@@ -30,6 +30,9 @@ type Tab = 'new' | 'status'
 const MODULE_LABELS: Partial<Record<string, TranslationKey>> = {
   guest_requests: 'directory.housekeeping',
 }
+const MODULE_DESCRIPTIONS: Partial<Record<string, TranslationKey>> = {
+  guest_requests: 'directory.housekeepingDescription',
+}
 const MODULE_ICONS: Partial<Record<string, LucideIcon>> = {
   guest_requests: Sparkles,
 }
@@ -174,16 +177,9 @@ export function GuestApp() {
         {stay && <GeneralInfoCard stay={stay} />}
 
         <SectionCard title={t('directory.title')}>
-          {availableModules === null ? (
-            <div className="flex justify-center py-4">
-              <div className="h-6 w-6 animate-spin rounded-full border-3 border-line-strong border-t-accent" />
-            </div>
-          ) : availableModules.length === 0 ? (
-            <p className="py-2 text-center text-sm text-muted">{t('directory.empty')}</p>
-          ) : selectedModuleSlug === null ? (
-            <ModuleDirectory modules={availableModules} onSelect={setSelectedModuleSlug} />
-          ) : selectedModuleSlug === 'guest_requests' ? (
+          {selectedModuleSlug === 'guest_requests' ? (
             <>
+              <ModuleHeading slug="guest_requests" />
               <div className="mb-5 flex gap-1 rounded-md bg-surface-2 p-1">
                 <TabButton active={tab === 'new'} onClick={() => setTab('new')}>
                   {t('tabs.new')}
@@ -206,10 +202,39 @@ export function GuestApp() {
                 <StatusList token={token} refreshKey={refreshKey} onSessionExpired={onSessionExpired} />
               )}
             </>
+          ) : availableModules === null ? (
+            <div className="flex justify-center py-4">
+              <div className="h-6 w-6 animate-spin rounded-full border-3 border-line-strong border-t-accent" />
+            </div>
+          ) : availableModules.length === 0 ? (
+            <p className="py-2 text-center text-sm text-muted">{t('directory.empty')}</p>
+          ) : selectedModuleSlug === null ? (
+            <ModuleDirectory modules={availableModules} onSelect={setSelectedModuleSlug} />
           ) : null}
         </SectionCard>
 
         {stay && <ContactsCard stay={stay} />}
+      </div>
+    </div>
+  )
+}
+
+// Shown above a module's own content -- with one guest-facing module this
+// is the only place its name/description appear at all (the directory grid
+// below is skipped entirely), so it can't be folded into ModuleDirectory.
+function ModuleHeading({ slug }: { slug: string }) {
+  const { t } = useLocale()
+  const Icon = MODULE_ICONS[slug] ?? Boxes
+  const label = MODULE_LABELS[slug]
+  const description = MODULE_DESCRIPTIONS[slug]
+  return (
+    <div className="mb-4 flex items-start gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <Icon size={20} />
+      </span>
+      <div>
+        <p className="text-base font-semibold text-foreground">{label ? t(label) : slug}</p>
+        {description && <p className="text-sm text-muted">{t(description)}</p>}
       </div>
     </div>
   )
@@ -234,7 +259,7 @@ function ModuleDirectory({ modules, onSelect }: { modules: AvailableModule[]; on
             className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-line bg-white p-5 text-center shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
           >
             <Icon className="h-7 w-7 text-accent" />
-            <span className="text-sm font-medium text-foreground">{label ? t(label) : module.display_name}</span>
+            <span className="text-base font-medium text-foreground">{label ? t(label) : module.display_name}</span>
           </button>
         )
       })}
@@ -248,7 +273,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       type="button"
       onClick={onClick}
       className={cn(
-        'flex-1 cursor-pointer rounded px-3 py-1.5 text-sm font-medium transition-colors',
+        'flex-1 cursor-pointer rounded px-3 py-2 text-base font-medium transition-colors',
         active ? 'bg-white text-foreground shadow-sm' : 'text-muted hover:text-foreground',
       )}
     >
