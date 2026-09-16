@@ -125,16 +125,67 @@ function SettingRow({ title, detail, icon, muted = false, status, to, onClick }:
 
 const LOGO_BUCKET = 'property-logos'
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
+const DEFAULT_BRAND_COLOR = '#9c4fc7'
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
+
+// Paired with a plain text input (see BrandColorField below) rather than the
+// swatch alone -- input[type=color] has no way to type or paste a known hex
+// value, only to pick one visually.
+function BrandColorField({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+  const [text, setText] = useState(value)
+  useEffect(() => setText(value), [value])
+
+  function onTextChange(next: string) {
+    setText(next)
+    if (HEX_COLOR_RE.test(next)) onChange(next)
+  }
+
+  return (
+    <div className="form-field">
+      <span>Colore del marchio</span>
+      <div className="brand-color-picker">
+        <input
+          type="color"
+          value={HEX_COLOR_RE.test(text) ? text : DEFAULT_BRAND_COLOR}
+          onChange={(e) => onTextChange(e.target.value)}
+          aria-label="Colore del marchio"
+        />
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          maxLength={7}
+          placeholder={DEFAULT_BRAND_COLOR}
+          spellCheck={false}
+        />
+        {value !== DEFAULT_BRAND_COLOR && (
+          <button type="button" className="link-button" onClick={() => onChange(DEFAULT_BRAND_COLOR)}>
+            Ripristina predefinito
+          </button>
+        )}
+      </div>
+      <small>Usato nell'app ospite al posto del viola Homisuite predefinito.</small>
+    </div>
+  )
+}
 
 function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
   const runtime = useModuleRuntime()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [timezone, setTimezone] = useState('Europe/Rome')
+  const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR)
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => { if (open) { setSaving(false); setError(null); setLogoError(null); setTimezone(runtime.property?.timezone ?? 'Europe/Rome') } }, [open, runtime.property?.timezone])
+  useEffect(() => {
+    if (!open) return
+    setSaving(false); setError(null); setLogoError(null)
+    setTimezone(runtime.property?.timezone ?? 'Europe/Rome')
+    const savedBrandColor = runtime.property?.settings.brandColor
+    setBrandColor(typeof savedBrandColor === 'string' && HEX_COLOR_RE.test(savedBrandColor) ? savedBrandColor : DEFAULT_BRAND_COLOR)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, runtime.property?.timezone])
 
   const logoUpdatedAt = typeof runtime.property?.settings.logoUpdatedAt === 'string' ? runtime.property.settings.logoUpdatedAt : null
   const logoUrl = runtime.property && logoUpdatedAt
@@ -197,6 +248,7 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
           ...runtime.property.settings,
           checkInTime, checkOutTime, address, phone, publicEmail, website, instagram, facebook,
           wifiNetwork, wifiPassword, breakfastHours, barHours,
+          brandColor: brandColor === DEFAULT_BRAND_COLOR ? null : brandColor,
         },
       })
       await onSaved()
@@ -247,6 +299,7 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
       <label className="form-field"><span>Password WiFi</span><input name="wifiPassword" maxLength={100} defaultValue={wifiPasswordDefault} placeholder="benvenuto2026" /></label>
       <label className="form-field"><span>Orario colazione</span><input name="breakfastHours" maxLength={100} defaultValue={breakfastHoursDefault} placeholder="7:30 – 10:30" /></label>
       <label className="form-field"><span>Orario bar</span><input name="barHours" maxLength={100} defaultValue={barHoursDefault} placeholder="11:00 – 23:00" /></label>
+      <BrandColorField value={brandColor} onChange={setBrandColor} />
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </form>
   </Modal>

@@ -131,6 +131,9 @@ body.modal-open { overflow: hidden; }
 .logo-picker-preview { width: 64px; height: 64px; border-radius: var(--r-sm); border: 1px solid var(--line); object-fit: cover; background: var(--surface-2); }
 .logo-picker-placeholder { width: 64px; height: 64px; border-radius: var(--r-sm); border: 1.5px dashed var(--line-strong); background: var(--surface-2); }
 .logo-picker-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.brand-color-picker { display: flex; align-items: center; gap: 10px; }
+.brand-color-picker input[type="color"] { width: 42px; min-height: 42px; padding: 3px; flex: 0 0 auto; cursor: pointer; }
+.brand-color-picker input[type="text"] { width: 110px; font-family: var(--mono); text-transform: uppercase; }
 
 .mode-toggle { display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 4px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
 .mode-toggle button { flex: 1; min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }

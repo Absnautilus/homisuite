@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Boxes, Sparkles, type LucideIcon } from 'lucide-react'
 import { PublicHeader } from '@/components/public-header'
 import { SectionCard } from '@/components/section-card'
+import { brandColorStyle } from '@/lib/brand-color'
 import { cn } from '@/lib/cn'
 import { clearGuestToken, getGuestToken, setGuestToken } from '@/lib/guest-token'
 import {
@@ -170,7 +171,7 @@ export function GuestApp() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-2 pb-10">
+    <div className="min-h-screen bg-surface-2 pb-10" style={stay ? brandColorStyle(stay) : undefined}>
       <PublicHeader onLogout={onLogout} />
       <div className="mx-auto max-w-xl space-y-3 px-4 pt-4">
         {stay && <BrandedInfoBand stay={stay} />}
