@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import type { CoreRole, HousekeepingDepartment, JobTitle, TeamMember } from '@homisuite/core-sdk'
+import { Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Modal } from '../components/Modal'
 import { PasswordField } from '../components/PasswordField'
@@ -302,9 +303,16 @@ function CreateProfileModal({ open, propertyId, roles, jobTitles, onClose, onCre
   }
 
   return <Modal open={open} title="Crea profilo" description="Crea un unico account Homisuite e collegalo alla struttura." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="create-profile-form" disabled={saving || roles.length === 0}>{saving ? 'Creazione…' : mode === 'email' ? 'Invia invito' : 'Crea profilo'}</button></>}>
-    <div className="mode-toggle" role="tablist" aria-label="Modalità di creazione">
-      <button type="button" role="tab" aria-selected={mode === 'email'} className={mode === 'email' ? 'active' : ''} onClick={() => { setMode('email'); setError(null) }}>Invito email</button>
-      <button type="button" role="tab" aria-selected={mode === 'credentials'} className={mode === 'credentials' ? 'active' : ''} onClick={() => { setMode('credentials'); setError(null) }}>Credenziali</button>
+    <div style={{ marginBottom: 4 }}>
+      <Tabs
+        aria-label="Modalità di creazione"
+        items={[
+          { value: 'email', label: 'Invito email' },
+          { value: 'credentials', label: 'Credenziali' },
+        ]}
+        value={mode}
+        onValueChange={(next) => { setMode(next as typeof mode); setError(null) }}
+      />
     </div>
     <form className="modal-form" id="create-profile-form" onSubmit={submit}>
       <Field label="Nome e cognome"><input name="name" required minLength={2} maxLength={120} autoComplete="name" /></Field>

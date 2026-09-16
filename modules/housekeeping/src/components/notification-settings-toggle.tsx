@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { dropdownTransitionClassName, useDropdownTransition } from '@homisuite/ui'
 import { getAlertVolume, playAlertSound, setAlertVolume, unlockAudio } from '@/lib/beep'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
@@ -6,6 +7,7 @@ import { cn } from '@/lib/cn'
 export function NotificationSettingsToggle({ dark = false, align = 'center' }: { dark?: boolean; align?: 'center' | 'right' } = {}) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
+  const { state, mounted } = useDropdownTransition(open)
   const [volume, setVolume] = useState(() => getAlertVolume())
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -41,11 +43,15 @@ export function NotificationSettingsToggle({ dark = false, align = 'center' }: {
       >
         {volume > 0 ? <IconBell className="h-4.5 w-4.5" /> : <IconBellMuted className="h-4.5 w-4.5" />}
       </button>
-      {open && (
+      {mounted && (
         <div
-          className={cn(
-            'absolute z-10 mt-2 w-56 rounded-2xl border border-line bg-white p-3 text-foreground shadow-lg',
-            align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+          data-origin={align === 'right' ? 'top-right' : 'top-left'}
+          className={dropdownTransitionClassName(
+            state,
+            cn(
+              'absolute z-10 mt-2 w-56 rounded-2xl border border-line bg-white p-3 text-foreground shadow-lg',
+              align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+            ),
           )}
         >
           <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">{t('staff.notifSettings.volume')}</p>

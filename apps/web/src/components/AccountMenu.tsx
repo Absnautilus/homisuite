@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { dropdownTransitionClassName, useDropdownTransition } from '@homisuite/ui'
 import { ChevronDown, Languages, LogOut, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../core/client'
@@ -6,6 +7,7 @@ import { LanguageToggle } from './LanguageToggle'
 
 export function AccountMenu({ name }: { name: string }) {
   const [open, setOpen] = useState(false)
+  const { state, mounted } = useDropdownTransition(open)
   const rootRef = useRef<HTMLDivElement>(null)
   const initials = name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase() || 'HF'
 
@@ -31,8 +33,8 @@ export function AccountMenu({ name }: { name: string }) {
         <span className="account-name">{name}</span>
         <ChevronDown size={15} />
       </button>
-      {open && (
-        <div className="account-popover" role="menu">
+      {mounted && (
+        <div className={dropdownTransitionClassName(state, 'account-popover')} data-origin="bottom-right" role="menu">
           <div className="account-popover-head">
             <span className="account-avatar large">{initials}</span>
             <div><strong>{name}</strong><small>Account Homisuite</small></div>

@@ -1,3 +1,5 @@
+import { Toggle } from '@homisuite/ui'
+
 export function Switch({
   checked,
   onChange,
@@ -9,17 +11,5 @@ export function Switch({
   disabled?: boolean
   'aria-label': string
 }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      className={`switch-control${checked ? ' on' : ''}`}
-      onClick={onChange}
-    >
-      <span className="switch-thumb" />
-    </button>
-  )
+  return <Toggle checked={checked} onCheckedChange={onChange} disabled={disabled} aria-label={ariaLabel} />
 }
