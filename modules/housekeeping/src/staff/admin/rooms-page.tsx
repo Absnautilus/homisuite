@@ -16,10 +16,12 @@ import {
 } from '@/components/ui/table'
 import { createRoom, deleteRoom, listRooms, setRoomActive, type Room } from '@/lib/admin-api'
 import { useConfirm } from '@/components/confirm-dialog'
+import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 
 export function RoomsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
+  const { push } = useToast()
   const [rooms, setRooms] = useState<Room[] | null>(null)
   const [hiddenRoomIds, setHiddenRoomIds] = useState<Set<string>>(new Set())
   const [roomNumber, setRoomNumber] = useState('')
@@ -51,6 +53,7 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
     setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: next } : r)) ?? current)
     try {
       await setRoomActive(room.id, next)
+      push(t(next ? 'common.toast.activated' : 'common.toast.deactivated'), 'success')
     } catch {
       setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: room.active } : r)) ?? current)
       setError(t('staff.rooms.toggleError'))
@@ -79,6 +82,7 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
     try {
       await deleteRoom(room.id)
       setHiddenRoomIds((current) => new Set(current).add(room.id))
+      push(t('common.toast.removed'), 'success')
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
         try {

@@ -8,9 +8,12 @@ import { Switch, SwitchControl } from '@/components/ui/switch'
 import { AutoText } from '@/components/auto-text'
 import { CategoryIcon } from '@/components/category-icon'
 import { IconPicker } from '@/components/icon-picker'
+import { useToast } from '@/components/toast-context'
 import {
   createRequestCategory,
   createRequestType,
+  deleteRequestCategory,
+  deleteRequestType,
   listMenu,
   setRequestCategoryActive,
   setRequestTypeActive,
@@ -30,6 +33,7 @@ const TRANSLATABLE_LOCALES = LOCALES.filter((l) => l.code !== 'it')
 
 export function ItemsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
+  const { push } = useToast()
   const [categories, setCategories] = useState<RequestCategoryAdmin[]>([])
   const [types, setTypes] = useState<RequestTypeAdmin[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +62,7 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
     setCategories((current) => current.map((c) => (c.id === category.id ? { ...c, active: next } : c)))
     try {
       await setRequestCategoryActive(category.id, next)
+      push(t(next ? 'common.toast.activated' : 'common.toast.deactivated'), 'success')
     } catch {
       setCategories((current) => current.map((c) => (c.id === category.id ? { ...c, active: category.active } : c)))
       setError(t('staff.items.toggleError'))
@@ -70,25 +75,65 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
     setTypes((current) => current.map((rt) => (rt.id === item.id ? { ...rt, active: next } : rt)))
     try {
       await setRequestTypeActive(item.id, next)
+      push(t(next ? 'common.toast.activated' : 'common.toast.deactivated'), 'success')
     } catch {
       setTypes((current) => current.map((rt) => (rt.id === item.id ? { ...rt, active: item.active } : rt)))
       setError(t('staff.items.toggleError'))
     }
   }
 
-  // Purely client-side, like Team's member removal -- no backend delete for
-  // request categories/types exists or is required here, this just hides
-  // the row from this list.
+  // request_types.category_id and guest_requests.request_type_id are plain
+  // foreign keys with no ON DELETE clause (see admin-api.ts), so Postgres
+  // rejects (23503) deleting a category that still has items, or an item any
+  // request -- current or historical -- still references. Same guardrail as
+  // rooms-page's deleteRoom: fall back to deactivating instead of leaving the
+  // row un-deleted and silently reappearing on the next reload.
   async function onRemoveCategory(category: RequestCategoryAdmin) {
     const ok = await confirm({ title: t('staff.items.categoryRemoveTitle'), description: t('staff.items.categoryRemoveDesc', { name: category.name }), confirmLabel: t('staff.items.categoryRemoveConfirm') })
     if (!ok) return
-    setRemovedCategoryIds((current) => new Set(current).add(category.id))
+    setError(null)
+    try {
+      await deleteRequestCategory(category.id)
+      setRemovedCategoryIds((current) => new Set(current).add(category.id))
+      push(t('common.toast.removed'), 'success')
+    } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
+        try {
+          await setRequestCategoryActive(category.id, false)
+          setCategories((current) => current.map((c) => (c.id === category.id ? { ...c, active: false } : c)))
+          setRemovedCategoryIds((current) => new Set(current).add(category.id))
+          setError(t('staff.items.categoryRemoveBlockedDeactivated'))
+        } catch {
+          setError(t('staff.items.categoryRemoveError'))
+        }
+        return
+      }
+      setError(t('staff.items.categoryRemoveError'))
+    }
   }
 
   async function onRemoveItem(item: RequestTypeAdmin) {
     const ok = await confirm({ title: t('staff.items.removeTitle'), description: t('staff.items.removeDesc', { name: item.name }), confirmLabel: t('staff.items.removeConfirm') })
     if (!ok) return
-    setRemovedTypeIds((current) => new Set(current).add(item.id))
+    setError(null)
+    try {
+      await deleteRequestType(item.id)
+      setRemovedTypeIds((current) => new Set(current).add(item.id))
+      push(t('common.toast.removed'), 'success')
+    } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
+        try {
+          await setRequestTypeActive(item.id, false)
+          setTypes((current) => current.map((rt) => (rt.id === item.id ? { ...rt, active: false } : rt)))
+          setRemovedTypeIds((current) => new Set(current).add(item.id))
+          setError(t('staff.items.removeBlockedDeactivated'))
+        } catch {
+          setError(t('staff.items.removeError'))
+        }
+        return
+      }
+      setError(t('staff.items.removeError'))
+    }
   }
 
   const activeCategories = categories.filter((c) => c.active)

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ToastStack } from '@/components/toast-stack'
+import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { cn } from '@/lib/cn'
 import { cancelRequest, claimRequest, fetchQueue, subscribeToQueue } from '@/lib/staff-api'
-import { useToasts } from '@/hooks/use-toasts'
 import { useRequestAlerts } from '@/hooks/use-request-alerts'
 import { playAlertSound } from '@/lib/beep'
 import { RequestRow } from '@/staff/request-row'
@@ -28,7 +27,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
   const [department, setDepartment] = useState<DepartmentFilter>('all')
   const [donePage, setDonePage] = useState(0)
   const [now, setNow] = useState(() => new Date())
-  const { toasts, push, pushCard, dismiss } = useToasts()
+  const { push, pushCard } = useToast()
   const knownIds = useRef<Set<string> | null>(null)
 
   const managesFrontDesk = profile.role === 'admin' || profile.role === 'master' || (profile.role === 'operatore' && profile.department === 'reception')
@@ -206,8 +205,6 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
           )}
         </div>
       )}
-
-      <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { unlockAudio } from '@/lib/beep'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
 import type { HousekeepingCapabilities, PlatformHotelSettings, PlatformStaffManagementLink } from '@/public/HousekeepingModule'
+import { ToastProvider } from '@/components/toast-context'
 import { StaffLogin } from '@/staff/staff-login'
 import { DashboardHeader } from '@/staff/dashboard-header'
 import { RequestQueue } from '@/staff/request-queue'
@@ -162,18 +163,20 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   )
 
   return (
-    <div className={embedded ? undefined : 'min-h-full bg-surface-2'}>
-      <DashboardHeader
-        profile={profile}
-        embedded={embedded}
-        basePath={embedded ? basePath : '/staff'}
-        capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed } : undefined}
-      />
-      {embedded ? (
-        <div className="pt-4">{routeContent}</div>
-      ) : (
-        <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">{routeContent}</main>
-      )}
-    </div>
+    <ToastProvider>
+      <div className={embedded ? undefined : 'min-h-full bg-surface-2'}>
+        <DashboardHeader
+          profile={profile}
+          embedded={embedded}
+          basePath={embedded ? basePath : '/staff'}
+          capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed } : undefined}
+        />
+        {embedded ? (
+          <div className="pt-4">{routeContent}</div>
+        ) : (
+          <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">{routeContent}</main>
+        )}
+      </div>
+    </ToastProvider>
   )
 }
