@@ -219,7 +219,8 @@ export function GuestApp() {
         {stay && <ContactsCard stay={stay} />}
 
         <div className="flex items-center justify-between pt-2 pb-4 text-xs text-muted">
-          <a href="https://homisuite.com" target="_blank" rel="noreferrer" className="font-semibold hover:underline">
+          <a href="https://homisuite.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 font-semibold hover:underline">
+            <img src="/icon-192.png" alt="" className="h-4 w-4 rounded-[3px]" />
             homisuite.com
           </a>
           <span>{t('footer.copyright', { year: CURRENT_YEAR })}</span>
