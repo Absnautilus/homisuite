@@ -1,19 +1,23 @@
--- Widens guest_stay_info with the hotel's public website (Settings'
--- "Sito web" field, under properties.settings.website), the last of
--- "Contatti pubblici" apps/web collects that the guest ContactsCard still
--- didn't surface -- phone/address/email were already exposed, the website
--- link was simply missing. Same bridge/null behavior as the rest of this
--- function.
+-- Widens guest_stay_info once more so the guest navbar can show the
+-- hotel's own name and logo instead of generic Homisuite branding.
+-- hotel_name is already returned (from the legacy hotel's own name); this
+-- adds the storage path to the property's logo (same "property-logos"
+-- bucket and "<property_id>/logo.png" convention apps/web's Settings page
+-- already uses) plus its own logoUpdatedAt cache-buster, so the frontend
+-- builds the exact same public URL apps/web does. hotel_logo_updated_at is
+-- null whenever the hotel never uploaded a logo (or has no Core mapping),
+-- which the guest UI treats as "no logo" and falls back to the generic
+-- Homisuite mark -- never a broken image request.
 --
--- Also folds in hotel_logo_path/hotel_logo_updated_at, added by
--- 20260916120000 (the guest navbar logo/name PR): both this migration and
--- that one were open in parallel and each did its own DROP+CREATE, so
--- whichever applies second must carry the other's columns forward or its
--- own bare CREATE FUNCTION would silently drop them -- same hazard flagged
--- in every prior widening. This one now applies after 20260916120000.
+-- Also folds in hotel_brand_color, added by 20260916100000 after this
+-- migration was originally authored: both were open in parallel and each
+-- did its own DROP+CREATE, so whichever applies second must carry the
+-- other's columns forward or its own bare CREATE FUNCTION would silently
+-- drop them. Renumbered to apply after 20260916100000 for exactly that
+-- reason.
 --
 -- A function's return type can't change via CREATE OR REPLACE, so this
--- drops and recreates it, same as every prior widening did.
+-- drops and recreates it, same as the previous widenings.
 
 begin;
 
@@ -34,8 +38,7 @@ create function guest_stay_info(p_token text) returns table(
   hotel_bar_hours text,
   hotel_brand_color text,
   hotel_logo_path text,
-  hotel_logo_updated_at text,
-  hotel_website text
+  hotel_logo_updated_at text
 )
 language sql security definer stable set search_path = public, extensions as $$
   select
@@ -53,8 +56,7 @@ language sql security definer stable set search_path = public, extensions as $$
     p.settings ->> 'barHours',
     p.settings ->> 'brandColor',
     case when p.id is not null then p.id::text || '/logo.png' else null end,
-    p.settings ->> 'logoUpdatedAt',
-    p.settings ->> 'website'
+    p.settings ->> 'logoUpdatedAt'
   from guest_requests_guest_sessions gs
   join stays s on s.id = gs.stay_id
   join rooms r on r.id = s.room_id
