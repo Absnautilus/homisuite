@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CalendarClock, Coffee, Mail, MapPin, Phone, Wifi, Wine } from 'lucide-react'
+import { CalendarClock, Coffee, Globe, Mail, MapPin, Phone, Wifi, Wine } from 'lucide-react'
 import { SectionCard } from '@/components/section-card'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StayInfo } from '@/lib/guest-api'
@@ -109,7 +109,7 @@ export function BrandedInfoBand({ stay }: { stay: StayInfo }) {
 export function ContactsCard({ stay }: { stay: StayInfo }) {
   const { t } = useLocale()
   const whatsappHref = buildWhatsappHref(stay.hotel_phone)
-  const hasHotelInfo = Boolean(stay.hotel_address || stay.hotel_phone || stay.hotel_email || whatsappHref)
+  const hasHotelInfo = Boolean(stay.hotel_address || stay.hotel_phone || stay.hotel_email || whatsappHref || stay.hotel_website)
   if (!hasHotelInfo) return null
 
   return (
@@ -155,6 +155,19 @@ export function ContactsCard({ stay }: { stay: StayInfo }) {
                 <WhatsAppIcon size={14} />
               </span>
               <span className="text-sm font-semibold text-foreground">WhatsApp</span>
+            </a>
+          )}
+          {stay.hotel_website && (
+            <a
+              href={stay.hotel_website}
+              target="_blank"
+              rel="noreferrer"
+              className="flex flex-col items-center gap-1.5 rounded-lg bg-surface-2 py-2.5 text-center transition-colors hover:bg-accent-soft"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-accent">
+                <Globe size={14} />
+              </span>
+              <span className="text-sm font-semibold text-foreground">{t('greeting.website')}</span>
             </a>
           )}
         </div>
