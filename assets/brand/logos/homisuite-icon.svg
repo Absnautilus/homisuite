@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Homisuite icon</title>
+  <desc id="desc">Purple rounded square with the Homisuite H and home monogram.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#B45CFF"/>
+      <stop offset="0.5" stop-color="#9D47F4"/>
+      <stop offset="1" stop-color="#7F2FE4"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.58" stop-color="#F5E9FF"/>
+      <stop offset="1" stop-color="#D9B5FA"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="960" height="960" rx="215" fill="url(#bg)"/>
+  <path d="M342 270V754 M682 270V754 M342 558L512 438L682 558" fill="none" stroke="url(#mark)" stroke-width="150" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
