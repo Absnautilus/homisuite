@@ -16,8 +16,20 @@ export const SUPABASE_ANON_KEY = required('VITE_SUPABASE_ANON_KEY', import.meta.
 // against the database and caches the result here.
 const HOTEL_ID_KEY = 'guest_hotel_id'
 const HOTEL_NAME_KEY = 'guest_hotel_name'
+const HOTEL_BRAND_COLOR_KEY = 'guest_hotel_brand_color'
+const HOTEL_LOGO_PATH_KEY = 'guest_hotel_logo_path'
+const HOTEL_LOGO_UPDATED_AT_KEY = 'guest_hotel_logo_updated_at'
 let cachedHotelId: string | null = null
 let cachedHotelName: string | null = null
+let cachedHotelBrandColor: string | null = null
+let cachedHotelLogoPath: string | null = null
+let cachedHotelLogoUpdatedAt: string | null = null
+
+export interface HotelBranding {
+  brandColor: string | null
+  logoPath: string | null
+  logoUpdatedAt: string | null
+}
 
 export function getHotelId(): string {
   if (!cachedHotelId) {
@@ -34,16 +46,41 @@ export function getHotelName(): string | null {
   return cachedHotelName
 }
 
+// Same "resolution hasn't happened yet or predates this" caveat as
+// getHotelName -- lets the pre-login LoginScreen brand itself the same way
+// PublicHeader does post-login (see brandColorStyle/getHotelLogoUrl).
+export function getHotelBrandColor(): string | null {
+  return cachedHotelBrandColor
+}
+
+export function getHotelLogoPath(): string | null {
+  return cachedHotelLogoPath
+}
+
+export function getHotelLogoUpdatedAt(): string | null {
+  return cachedHotelLogoUpdatedAt
+}
+
 // Called only by resolveHotelFromSlug once a slug has actually resolved to
-// a real hotel -- never with unverified user input. hotelName is best
-// effort: the stored-id fallback path in resolveHotelFromSlug may only have
-// a previously cached name (or none, for a visit that predates this).
-export function setResolvedHotel(hotelId: string, hotelName: string | null): void {
+// a real hotel -- never with unverified user input. hotelName/branding are
+// best effort: the stored-id fallback path in resolveHotelFromSlug may only
+// have previously cached values (or none, for a visit that predates this).
+export function setResolvedHotel(
+  hotelId: string,
+  hotelName: string | null,
+  branding: HotelBranding = { brandColor: null, logoPath: null, logoUpdatedAt: null },
+): void {
   cachedHotelId = hotelId
   cachedHotelName = hotelName
+  cachedHotelBrandColor = branding.brandColor
+  cachedHotelLogoPath = branding.logoPath
+  cachedHotelLogoUpdatedAt = branding.logoUpdatedAt
   try {
     localStorage.setItem(HOTEL_ID_KEY, hotelId)
     if (hotelName) localStorage.setItem(HOTEL_NAME_KEY, hotelName)
+    if (branding.brandColor) localStorage.setItem(HOTEL_BRAND_COLOR_KEY, branding.brandColor)
+    if (branding.logoPath) localStorage.setItem(HOTEL_LOGO_PATH_KEY, branding.logoPath)
+    if (branding.logoUpdatedAt) localStorage.setItem(HOTEL_LOGO_UPDATED_AT_KEY, branding.logoUpdatedAt)
   } catch {
     // localStorage unavailable (private mode, etc.) -- the id still works
     // for this visit, it just won't survive a reload without the URL slug.
@@ -63,6 +100,18 @@ export function getStoredHotelName(): string | null {
     return localStorage.getItem(HOTEL_NAME_KEY)
   } catch {
     return null
+  }
+}
+
+export function getStoredHotelBranding(): HotelBranding {
+  try {
+    return {
+      brandColor: localStorage.getItem(HOTEL_BRAND_COLOR_KEY),
+      logoPath: localStorage.getItem(HOTEL_LOGO_PATH_KEY),
+      logoUpdatedAt: localStorage.getItem(HOTEL_LOGO_UPDATED_AT_KEY),
+    }
+  } catch {
+    return { brandColor: null, logoPath: null, logoUpdatedAt: null }
   }
 }
 

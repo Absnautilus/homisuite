@@ -1,5 +1,14 @@
 import { supabase } from '@/lib/supabase'
-import { getHotelId, getHotelSlugFromPath, getStoredHotelId, getStoredHotelName, setResolvedHotel } from '@/lib/env'
+import {
+  getHotelId,
+  getHotelLogoPath,
+  getHotelLogoUpdatedAt,
+  getHotelSlugFromPath,
+  getStoredHotelBranding,
+  getStoredHotelId,
+  getStoredHotelName,
+  setResolvedHotel,
+} from '@/lib/env'
 import type { GuestRequest, RequestCategory, RequestType } from '@/lib/types'
 
 export function isInvalidSessionError(error: unknown): boolean {
@@ -18,9 +27,17 @@ export async function resolveHotelFromSlug(): Promise<boolean> {
       // A table-returning RPC comes back as an array of rows -- empty (not
       // an error) for an unknown or inactive slug.
       const { data, error } = await supabase.rpc('resolve_hotel_guest_slug', { p_slug: slug })
-      const row = Array.isArray(data) ? (data[0] as { id: string; name: string } | undefined) : undefined
+      const row = Array.isArray(data)
+        ? (data[0] as
+            | { id: string; name: string; brand_color: string | null; logo_path: string | null; logo_updated_at: string | null }
+            | undefined)
+        : undefined
       if (!error && row) {
-        setResolvedHotel(row.id, row.name)
+        setResolvedHotel(row.id, row.name, {
+          brandColor: row.brand_color,
+          logoPath: row.logo_path,
+          logoUpdatedAt: row.logo_updated_at,
+        })
         return true
       }
     } catch {
@@ -30,7 +47,7 @@ export async function resolveHotelFromSlug(): Promise<boolean> {
   }
   const stored = getStoredHotelId()
   if (stored) {
-    setResolvedHotel(stored, getStoredHotelName())
+    setResolvedHotel(stored, getStoredHotelName(), getStoredHotelBranding())
     return true
   }
   return false
@@ -144,10 +161,17 @@ export async function getStayInfo(token: string): Promise<StayInfo | null> {
 // builds for the staff-facing logo preview -- null whenever the hotel never
 // uploaded one, so the navbar can fall back to the generic Homisuite mark
 // instead of requesting a file that was never there.
-export function getHotelLogoUrl(stay: StayInfo): string | null {
+export function getHotelLogoUrl(stay: Pick<StayInfo, 'hotel_logo_path' | 'hotel_logo_updated_at'>): string | null {
   if (!stay.hotel_logo_path || !stay.hotel_logo_updated_at) return null
   const { data } = supabase.storage.from('property-logos').getPublicUrl(stay.hotel_logo_path)
   return `${data.publicUrl}?v=${encodeURIComponent(stay.hotel_logo_updated_at)}`
+}
+
+// Same URL, built from the slug-resolution cache (env.ts) instead of a
+// StayInfo row -- for the LoginScreen, which renders before a guest session
+// (and therefore a StayInfo) exists.
+export function getPreLoginHotelLogoUrl(): string | null {
+  return getHotelLogoUrl({ hotel_logo_path: getHotelLogoPath(), hotel_logo_updated_at: getHotelLogoUpdatedAt() })
 }
 
 export async function cancelMyRequest(token: string, requestId: string): Promise<GuestRequest> {
