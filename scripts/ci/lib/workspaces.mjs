@@ -57,7 +57,11 @@ export function listSourceFiles(dir) {
   return files
 }
 
-const IMPORT_RE = /(?:from|require\()\s*['"]([^'"]+)['"]/g
+// Covers static imports/exports (`from`), side-effect imports, dynamic
+// imports, and CommonJS require calls. Keeping extraction in one shared
+// helper lets the boundary and circular-dependency checks use the same
+// complete view of the workspace graph.
+const IMPORT_RE = /(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*|\bimport\s*)['"]([^'"]+)['"]/g
 
 export function extractImportSpecifiers(source) {
   const specifiers = []

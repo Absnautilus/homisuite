@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "test": "node --experimental-strip-types --test src/lib/hotel-query-scope.test.mjs src/lib/opera-import.test.mjs",
+    "test": "node --experimental-strip-types --test src/lib/hotel-query-scope.test.mjs src/lib/menu-removal.test.mjs src/lib/opera-import.test.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src"
   },

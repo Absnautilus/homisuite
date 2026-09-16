@@ -34,7 +34,6 @@ export function AutoText({ text, translations, className }: { text: string; tran
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, locale, manual, translations])
 
   return <span className={className}>{display}</span>

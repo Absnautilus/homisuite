@@ -8,7 +8,6 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   }
 
   override componentDidCatch(error: Error, info: { componentStack: string }) {
-    // eslint-disable-next-line no-console
     console.error('Unhandled error in the tree:', error, info.componentStack)
   }
 

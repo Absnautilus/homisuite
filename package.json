@@ -17,7 +17,7 @@
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "test:db": "supabase db reset && supabase test db",
-    "check:boundaries": "node scripts/ci/check-workspace-boundaries.mjs",
+    "check:boundaries": "node --test scripts/ci/lib/workspaces.test.mjs && node scripts/ci/check-workspace-boundaries.mjs",
     "check:circular": "node scripts/ci/check-circular-deps.mjs",
     "check:dedupe": "node scripts/ci/check-dependency-dedupe.mjs"
   },

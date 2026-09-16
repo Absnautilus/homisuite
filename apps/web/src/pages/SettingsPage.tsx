@@ -13,6 +13,7 @@ import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAc
 
 export function SettingsPage() {
   const runtime = useModuleRuntime()
+  const { hasPermission } = runtime
   const housekeepingAccess = useHousekeepingAccess()
   const propertyName = runtime.property?.name ?? 'Struttura'
   const profileName = runtime.profile?.fullName ?? 'Utente Homisuite'
@@ -22,7 +23,7 @@ export function SettingsPage() {
   const [securityOpen, setSecurityOpen] = useState(false)
   const [canManageProperty, setCanManageProperty] = useState(false)
 
-  useEffect(() => { void runtime.hasPermission('core.property.manage').then(setCanManageProperty).catch(() => setCanManageProperty(false)) }, [runtime.hasPermission])
+  useEffect(() => { void hasPermission('core.property.manage').then(setCanManageProperty).catch(() => setCanManageProperty(false)) }, [hasPermission])
 
   useEffect(() => {
     function syncLanguage(event: Event) {
@@ -218,7 +219,8 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
     try {
       const { error: removeError } = await supabase.storage.from(LOGO_BUCKET).remove([`${runtime.property.id}/logo.png`])
       if (removeError) throw removeError
-      const { logoUpdatedAt: _removed, ...settings } = runtime.property.settings
+      const settings = { ...runtime.property.settings }
+      delete settings.logoUpdatedAt
       await core.updateProperty(runtime.property.id, { name: runtime.property.name, timezone: runtime.property.timezone, settings })
       await runtime.refresh()
     } catch { setLogoError('Non è stato possibile rimuovere il logo.') } finally { setLogoBusy(false) }
