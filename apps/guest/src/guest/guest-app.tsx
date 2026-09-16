@@ -117,7 +117,6 @@ export function GuestApp() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
   // Hotel-scoped, not stay-scoped -- fetched as soon as there's a session,

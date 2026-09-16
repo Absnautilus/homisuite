@@ -24,6 +24,7 @@ const UNASSIGNED_JOB_LABEL = 'Da assegnare'
 
 export function TeamPage() {
   const runtime = useModuleRuntime()
+  const { hasPermission } = runtime
   const property = runtime.property
   const [team, setTeam] = useState<TeamState>(emptyTeam)
   const [loading, setLoading] = useState(true)
@@ -102,12 +103,12 @@ export function TeamPage() {
     try {
       const [members, roles, jobTitles, canManage] = await Promise.all([
         core.getTeamMembers(property.id), core.getPropertyRoles(), core.getJobTitles(property.id),
-        runtime.hasPermission('core.staff.manage'),
+        hasPermission('core.staff.manage'),
       ])
       setTeam({ members, roles, jobTitles, canManage })
     } catch (cause) { setError(readableError(cause)) }
     finally { if (!options?.silent) setLoading(false) }
-  }, [property, runtime.hasPermission])
+  }, [property, hasPermission])
 
   useEffect(() => { void loadTeam() }, [loadTeam])
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
+import { URL } from 'node:url'
 
 const config = JSON.parse(
   await readFile(new URL('../vercel.json', import.meta.url), 'utf8'),

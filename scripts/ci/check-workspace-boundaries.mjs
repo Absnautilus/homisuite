@@ -60,7 +60,10 @@ for (const ws of workspaces) {
         }
         continue
       }
-      const match = /^(@hotsflow\/[^/]+)(\/.*)?$/.exec(specifier)
+      // Parse any scoped package name, then let byName decide whether it is
+      // one of this repository's workspaces. This keeps the guard valid if
+      // the product or npm scope is renamed again.
+      const match = /^(@[^/]+\/[^/]+)(\/.*)?$/.exec(specifier)
       if (!match) continue
       const [, pkgName, subpath] = match
       if (pkgName === ws.pkg.name) continue // importing your own package name is fine

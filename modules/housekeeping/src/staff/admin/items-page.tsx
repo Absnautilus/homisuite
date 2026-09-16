@@ -25,6 +25,7 @@ import {
 } from '@/lib/admin-api'
 import { DEPARTMENTS } from '@/lib/constants'
 import { LOCALES } from '@/lib/i18n/locales'
+import { removeCategoryWithItems, removeMenuItem } from '@/lib/menu-removal'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { Department } from '@/lib/types'
@@ -99,52 +100,28 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
     if (!ok) return
     setError(null)
     try {
-      await deleteRequestCategory(category.id)
+      const result = await removeCategoryWithItems(category.id, types, {
+        deleteCategory: deleteRequestCategory,
+        deleteItem: deleteRequestType,
+        deactivateCategory: (id) => setRequestCategoryActive(id, false),
+        deactivateItem: (id) => setRequestTypeActive(id, false),
+      })
+      if (result.deletedItemIds.length > 0) {
+        setRemovedTypeIds((current) => new Set([...current, ...result.deletedItemIds]))
+      }
+      if (result.deactivatedItemIds.length > 0) {
+        const deactivatedIds = new Set(result.deactivatedItemIds)
+        setTypes((current) => current.map((item) => (deactivatedIds.has(item.id) ? { ...item, active: false } : item)))
+      }
       setRemovedCategoryIds((current) => new Set(current).add(category.id))
-      push(t('common.toast.removed'), 'success')
-      return
-    } catch (err) {
-      if (!(err && typeof err === 'object' && 'code' in err && err.code === '23503')) {
-        setError(t('staff.items.categoryRemoveError'))
-        return
-      }
-    }
-
-    let allItemsGone = true
-    for (const item of types.filter((rt) => rt.category_id === category.id)) {
-      try {
-        await deleteRequestType(item.id)
-        setRemovedTypeIds((current) => new Set(current).add(item.id))
-      } catch (itemErr) {
-        allItemsGone = false
-        if (itemErr && typeof itemErr === 'object' && 'code' in itemErr && itemErr.code === '23503') {
-          try {
-            await setRequestTypeActive(item.id, false)
-            setTypes((current) => current.map((rt) => (rt.id === item.id ? { ...rt, active: false } : rt)))
-          } catch {
-            // leave it as-is; the category-level fallback below still covers it
-          }
-        }
-      }
-    }
-
-    if (allItemsGone) {
-      try {
-        await deleteRequestCategory(category.id)
-        setRemovedCategoryIds((current) => new Set(current).add(category.id))
+      if (result.outcome === 'deleted') {
         push(t('common.toast.removed'), 'success')
-        return
-      } catch {
-        // some other caller re-added an item in the meantime -- fall through
+      } else {
+        setCategories((current) => current.map((item) => (item.id === category.id ? { ...item, active: false } : item)))
+        setError(t('staff.items.categoryRemoveBlockedDeactivated'))
       }
-    }
-
-    try {
-      await setRequestCategoryActive(category.id, false)
-      setCategories((current) => current.map((c) => (c.id === category.id ? { ...c, active: false } : c)))
-      setRemovedCategoryIds((current) => new Set(current).add(category.id))
-      setError(t('staff.items.categoryRemoveBlockedDeactivated'))
     } catch {
+      await reload().catch(() => undefined)
       setError(t('staff.items.categoryRemoveError'))
     }
   }
@@ -154,21 +131,18 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
     if (!ok) return
     setError(null)
     try {
-      await deleteRequestType(item.id)
-      setRemovedTypeIds((current) => new Set(current).add(item.id))
-      push(t('common.toast.removed'), 'success')
-    } catch (err) {
-      if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
-        try {
-          await setRequestTypeActive(item.id, false)
-          setTypes((current) => current.map((rt) => (rt.id === item.id ? { ...rt, active: false } : rt)))
-          setRemovedTypeIds((current) => new Set(current).add(item.id))
-          setError(t('staff.items.removeBlockedDeactivated'))
-        } catch {
-          setError(t('staff.items.removeError'))
-        }
-        return
+      const result = await removeMenuItem(item.id, {
+        deleteItem: deleteRequestType,
+        deactivateItem: (id) => setRequestTypeActive(id, false),
+      })
+      if (result === 'deactivated') {
+        setTypes((current) => current.map((currentItem) => (currentItem.id === item.id ? { ...currentItem, active: false } : currentItem)))
+        setError(t('staff.items.removeBlockedDeactivated'))
+      } else {
+        push(t('common.toast.removed'), 'success')
       }
+      setRemovedTypeIds((current) => new Set(current).add(item.id))
+    } catch {
       setError(t('staff.items.removeError'))
     }
   }

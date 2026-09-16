@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "lint": "eslint src tests e2e",
     "test": "node --experimental-strip-types --test src/pages/teamMemberPayload.test.mjs src/modules/housekeeping/resolveHousekeepingAccess.test.mjs tests/vercelConfig.test.mjs",
     "test:e2e": "playwright test",
     "typecheck": "tsc -b --pretty false",

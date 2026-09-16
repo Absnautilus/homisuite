@@ -11,6 +11,7 @@ import { useHousekeepingAccess } from './useHousekeepingAccess'
 // explain itself rather than fall through to a blank or ambiguous screen.
 export function HousekeepingModuleGate() {
   const runtime = useModuleRuntime()
+  const { hasPermission } = runtime
   const access = useHousekeepingAccess()
   const propertyId = runtime.property?.id ?? null
   const [canManage, setCanManage] = useState<boolean | null>(null)
@@ -26,7 +27,7 @@ export function HousekeepingModuleGate() {
   useEffect(() => {
     if (!propertyId) return
     let cancelled = false
-    void runtime.hasPermission('core.staff.manage')
+    void hasPermission('core.staff.manage')
       .then((value) => {
         if (!cancelled) setCanManage(value)
       })
@@ -36,7 +37,7 @@ export function HousekeepingModuleGate() {
     return () => {
       cancelled = true
     }
-  }, [propertyId, runtime.hasPermission])
+  }, [propertyId, hasPermission])
 
   if (access.status === 'loading' || canManage === null) {
     return <div className="runtime-state" role="status">Caricamento Housekeeping…</div>
