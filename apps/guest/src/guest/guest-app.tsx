@@ -18,7 +18,7 @@ import type { TranslationKey } from '@/lib/i18n/dictionaries'
 import { LoginScreen } from '@/guest/login-screen'
 import { RequestFlow } from '@/guest/request-flow'
 import { StatusList } from '@/guest/status-list'
-import { ContactsCard, GeneralInfoCard, GreetingHeader } from '@/guest/greeting'
+import { BrandedInfoBand, ContactsCard } from '@/guest/greeting'
 
 type Tab = 'new' | 'status'
 
@@ -173,8 +173,7 @@ export function GuestApp() {
     <div className="min-h-screen bg-surface-2 pb-10">
       <PublicHeader onLogout={onLogout} />
       <div className="mx-auto max-w-xl space-y-3 px-4 pt-4">
-        {stay && <GreetingHeader stay={stay} />}
-        {stay && <GeneralInfoCard stay={stay} />}
+        {stay && <BrandedInfoBand stay={stay} />}
 
         <SectionCard title={t('directory.title')}>
           {selectedModuleSlug === 'guest_requests' ? (
