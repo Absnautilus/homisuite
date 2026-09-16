@@ -3,8 +3,10 @@ import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label } from '@/components/ui/field'
-import { guestLogin } from '@/lib/guest-api'
-import { getHotelName } from '@/lib/env'
+import { getPreLoginHotelLogoUrl, guestLogin } from '@/lib/guest-api'
+import { getHotelBrandColor, getHotelName } from '@/lib/env'
+import { brandColorStyle } from '@/lib/brand-color'
+import { cn } from '@/lib/cn'
 import { useLocale } from '@/lib/i18n/locale-context'
 
 // apps/guest is its own deployment now, one shared domain for every hotel,
@@ -17,6 +19,10 @@ const STAFF_APP_URL = import.meta.env.VITE_STAFF_APP_URL as string | undefined
 export function LoginScreen({ onSuccess }: { onSuccess: (token: string) => void }) {
   const { t } = useLocale()
   const hotelName = getHotelName()
+  const brandColor = getHotelBrandColor()
+  const logoUrl = getPreLoginHotelLogoUrl()
+  const hasBrandColor = Boolean(brandColor)
+  const hasCustomLogo = Boolean(logoUrl)
   const [roomNumber, setRoomNumber] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -41,10 +47,17 @@ export function LoginScreen({ onSuccess }: { onSuccess: (token: string) => void 
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4" style={brandColorStyle({ hotel_brand_color: brandColor })}>
       <div className="w-full max-w-sm">
         <div className="rounded-lg border border-line bg-surface p-9 shadow-md">
-          <img src="/icon-192.png" alt="" className="mx-auto mb-4 h-[50px] w-[50px] rounded-md shadow-[0_8px_20px_-6px_var(--accent)]" />
+          <span
+            className={cn(
+              'mx-auto mb-4 flex h-[50px] w-[50px] items-center justify-center rounded-md shadow-[0_8px_20px_-6px_var(--accent)]',
+              !hasBrandColor && hasCustomLogo && 'bg-white p-1',
+            )}
+          >
+            <img src={logoUrl || '/icon-192.png'} alt="" className="h-full w-full rounded object-contain" />
+          </span>
           <div className="text-center text-[0.625rem] font-extrabold uppercase tracking-wider text-accent">Homisuite</div>
           <h1 className="text-center font-head text-[1.1875rem] font-extrabold text-foreground">
             {hotelName ? t('login.titleWithHotel', { hotel: hotelName }) : t('login.title')}
