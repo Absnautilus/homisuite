@@ -3,14 +3,26 @@ import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { useLocale } from '@/lib/i18n/locale-context'
 
-export function PublicHeader({ onLogout }: { onLogout?: () => void }) {
+export function PublicHeader({
+  onLogout,
+  hotelName,
+  logoUrl,
+}: {
+  onLogout?: () => void
+  // Both optional and both absent by default: the header renders generic
+  // Homisuite branding until the guest's stay (and with it the hotel's own
+  // name/logo) has loaded, rather than flashing a name and then a logo in
+  // separately.
+  hotelName?: string | null
+  logoUrl?: string | null
+}) {
   const { t } = useLocale()
   return (
     <div className="mx-auto w-full max-w-xl px-4 pt-6">
       <div className="flex items-center gap-1 rounded-full bg-navbar-bg py-1.5 pr-2 pl-3 text-navbar-text shadow-md">
-        <span className="flex flex-1 items-center gap-2">
-          <img src="/icon-192.png" alt="" className="h-5 w-5 rounded" />
-          <span className="font-head text-sm font-extrabold">Homisuite</span>
+        <span className="flex flex-1 items-center gap-2 overflow-hidden">
+          <img src={logoUrl || '/icon-192.png'} alt="" className="h-5 w-5 shrink-0 rounded object-contain" />
+          <span className="truncate font-head text-sm font-extrabold">{hotelName || 'Homisuite'}</span>
         </span>
         <TextSizeToggle dark align="right" />
         <LanguageToggle dark align="right" />
