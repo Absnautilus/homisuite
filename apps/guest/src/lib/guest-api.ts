@@ -124,6 +124,7 @@ export interface StayInfo {
   // hotel never customized it -- see index.css's default --accent for the
   // fallback.
   hotel_brand_color: string | null
+  hotel_website: string | null
 }
 
 export async function getStayInfo(token: string): Promise<StayInfo | null> {
