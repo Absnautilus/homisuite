@@ -177,6 +177,15 @@ export async function updateRequestCategoryTranslations(id: string, name_i18n: R
   if (error) throw error
 }
 
+// `name` isn't necessarily Italian -- it's just whatever text the category
+// was created with -- but it's the one language name_i18n never carries an
+// entry for (see NameTranslationsForm), so correcting it has to go through
+// this separate column update instead of updateRequestCategoryTranslations.
+export async function updateRequestCategoryName(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from('request_categories').update({ name }).eq('id', id)
+  if (error) throw error
+}
+
 export async function updateRequestCategoryIcon(id: string, icon: string): Promise<void> {
   const { error } = await supabase.from('request_categories').update({ icon }).eq('id', id)
   if (error) throw error
@@ -187,6 +196,18 @@ export async function updateRequestTypeTranslations(
   translations: { name_i18n: Record<string, string>; description_i18n: Record<string, string> },
 ): Promise<void> {
   const { error } = await supabase.from('request_types').update(translations).eq('id', id)
+  if (error) throw error
+}
+
+// Same reasoning as updateRequestCategoryName: name/description are the one
+// "language" name_i18n/description_i18n never cover.
+export async function updateRequestTypeName(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from('request_types').update({ name }).eq('id', id)
+  if (error) throw error
+}
+
+export async function updateRequestTypeDescription(id: string, description: string): Promise<void> {
+  const { error } = await supabase.from('request_types').update({ description }).eq('id', id)
   if (error) throw error
 }
 
