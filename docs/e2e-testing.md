@@ -1,10 +1,10 @@
 # End-to-end (browser) tests for `apps/web`
 
-First iteration, deliberately small: one smoke-test file
-(`apps/web/e2e/smoke.spec.ts`), Playwright, **local only** — not wired into
-CI yet. Covers two of the checks from `docs/architecture/monorepo.md`'s Test
-strategy section (login, shell load); the rest of that checklist is future
-work, added incrementally the same way.
+The browser suite lives in `apps/web/e2e/smoke.spec.ts`. CI runs it against
+the disposable Supabase stack created by the database job, after the complete
+migration, seed and pgTAP run. The fixture script creates only fictitious
+`@example.test` users and deterministic local rows; it never accepts or uses a
+hosted-project reference.
 
 ## Test 1: login form renders (no backend needed)
 
@@ -18,35 +18,35 @@ cd apps/web
 npm run test:e2e -- -g "shows the login form"
 ```
 
-## Test 2: real login reaches Home (needs a local Supabase stack)
+## Authenticated suite (needs a local Supabase stack)
 
 1. `supabase start` (from the repository root)
-2. Get the local service-role key: `supabase status` → copy the
-   "service_role key" value
-3. Provision the one fixed test user (idempotent, safe to re-run):
+2. Get the local URL, anon key and service-role key from `supabase status -o json`.
+3. Provision the deterministic fixtures (idempotent, safe to re-run):
    ```bash
-   SUPABASE_SERVICE_ROLE_KEY=<paste> node scripts/e2e/create-test-user.mjs
+   SUPABASE_URL=http://127.0.0.1:54321 \
+   SUPABASE_SERVICE_ROLE_KEY=<paste> \
+   node scripts/e2e/provision-fixtures.mjs
    ```
-   Creates `e2e-smoke@example.test` / `e2e-smoke-test-password-only` with an
-   org-wide admin membership on the seed data's "Organization A"
-   (`supabase/seed.sql`) — enough to reach a working Home page after login.
+   This creates an organization admin, a property-scoped receptionist with a
+   deterministic job title, a mapped Housekeeping hotel, one room and one
+   active stay.
 4. Point `apps/web/.env.local` at the same local stack (`supabase status`
    again for the URL and anon key):
    ```
    VITE_SUPABASE_URL=http://127.0.0.1:54321
    VITE_SUPABASE_ANON_KEY=<paste>
    ```
-5. Run it, with the test credentials as env vars (the test skips itself
-   when these aren't set, rather than failing):
+5. Run the suite:
    ```bash
    cd apps/web
-   E2E_TEST_EMAIL=e2e-smoke@example.test E2E_TEST_PASSWORD=e2e-smoke-test-password-only npm run test:e2e
+   npm run test:e2e
    ```
 
-## Known limitation
+The suite covers signed-out rendering, authenticated login/logout, property
+switching, Team administrator and read-only behavior, Housekeeping capability
+navigation with a real stay, category/item creation and cascade removal in
+Gestione, and authenticated unknown-route fallback.
 
-Test 2 has not been run end-to-end against a real local Supabase stack as
-part of writing it — the sandbox this was developed in has the Docker
-*client* but no running daemon, which `supabase start` requires. Test 1 was
-verified to actually pass there. Please run Test 2 yourself (or from CI,
-once that's wired up) before relying on it.
+CI is the authoritative full run because `ubuntu-latest` provides Docker.
+Developer machines without Docker can still run the signed-out test alone.

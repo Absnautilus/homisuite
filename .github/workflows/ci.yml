@@ -86,10 +86,17 @@ jobs:
         run: deno test --allow-env --allow-read .
 
   database:
+    # Keep the established check name so branch-protection rules continue to
+    # recognize this job after the browser coverage is added.
     name: Database — migrations + seed + pgTAP
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
       # The Supabase CLI's local stack is Docker-based. Not available in the
       # sandbox this project was developed in (see supabase/migrations'
       # comments on why src/types/database.ts was hand-written instead of
@@ -105,3 +112,36 @@ jobs:
         run: supabase db reset
       - name: Run pgTAP suite
         run: supabase test db
+      - name: Install workspace dependencies
+        run: npm ci
+      - name: Build Housekeeping module for the web dev server
+        run: npm run build --workspace=@homisuite/housekeeping-module
+      - name: Read local Supabase credentials
+        shell: bash
+        run: |
+          status_json="$(supabase status -o json)"
+          api_url="$(jq -r '.API_URL // empty' <<<"$status_json")"
+          anon_key="$(jq -r '.ANON_KEY // .PUBLISHABLE_KEY // empty' <<<"$status_json")"
+          service_role_key="$(jq -r '.SERVICE_ROLE_KEY // .SECRET_KEY // empty' <<<"$status_json")"
+          test -n "$api_url" && test -n "$anon_key" && test -n "$service_role_key"
+          echo "::add-mask::$anon_key"
+          echo "::add-mask::$service_role_key"
+          echo "SUPABASE_URL=$api_url" >> "$GITHUB_ENV"
+          echo "VITE_SUPABASE_URL=$api_url" >> "$GITHUB_ENV"
+          echo "VITE_SUPABASE_ANON_KEY=$anon_key" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$service_role_key" >> "$GITHUB_ENV"
+      - name: Provision local browser-test fixtures
+        run: node scripts/e2e/provision-fixtures.mjs
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run authenticated browser tests
+        working-directory: apps/web
+        run: npm run test:e2e
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
