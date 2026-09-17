@@ -108,8 +108,9 @@ test('organization admin can manage a Housekeeping request category and its item
   await expect(page.getByText(itemName, { exact: true })).toBeVisible()
 
   await categoryRow.getByRole('button', { name: 'Rimuovi' }).click()
-  await expect(page.getByText('Rimuovere questa categoria?')).toBeVisible()
-  await page.getByRole('button', { name: 'Rimuovi', exact: true }).click()
+  const confirmation = page.getByText('Rimuovere questa categoria?').locator('..')
+  await expect(confirmation).toBeVisible()
+  await confirmation.getByRole('button', { name: 'Rimuovi', exact: true }).click()
   await expect(categories.getByText(categoryName, { exact: true })).toHaveCount(0)
   await expect(page.getByText(itemName, { exact: true })).toHaveCount(0)
 })
