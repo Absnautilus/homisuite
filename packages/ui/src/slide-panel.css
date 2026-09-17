@@ -50,3 +50,19 @@
     animation: none !important;
   }
 }
+
+/* The lateral slide reads as a mobile/touch pattern (paging between peer
+   screens); on a desktop-width viewport, switching tabs by mouse/keyboard
+   doesn't carry that same "which direction did I just go" context, so the
+   motion just reads as visual noise. Swap instantly there instead, and
+   don't keep the outgoing pane mounted at all -- it would otherwise sit
+   frozen (no animation to move it out of the way) on top of the incoming
+   one for the rest of EXIT_DURATION_MS. */
+@media (min-width: 768px) {
+  .ui-slide-pane {
+    animation: none !important;
+  }
+  .ui-slide-pane-exit {
+    display: none;
+  }
+}
