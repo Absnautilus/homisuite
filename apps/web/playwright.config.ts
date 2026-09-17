@@ -1,22 +1,25 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Local-only for now (not wired into CI) -- see docs/e2e-testing.md for
-// what has to be running (a local Supabase stack) and how to provision the
-// one fixed test user the login smoke test needs.
+// CI runs the authenticated suite against its disposable local Supabase
+// stack. The same setup can be reproduced locally; see docs/e2e-testing.md.
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   reporter: 'list',
+  retries: process.env.CI ? 1 : 0,
+  timeout: 30_000,
   use: {
     baseURL: 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run dev -- --host 127.0.0.1',
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
+    timeout: 120_000,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 })

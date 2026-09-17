@@ -28,7 +28,14 @@ export function AccountMenu({ name }: { name: string }) {
 
   return (
     <div className="account-menu" ref={rootRef}>
-      <button className="account-trigger" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      <button
+        className="account-trigger"
+        type="button"
+        aria-label={`Menu account di ${name}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
         <span className="account-avatar">{initials}</span>
         <span className="account-name">{name}</span>
         <ChevronDown size={15} />
