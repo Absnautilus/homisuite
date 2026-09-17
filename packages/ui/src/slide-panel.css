@@ -1,0 +1,52 @@
+.ui-slide-viewport {
+  position: relative;
+  overflow: hidden;
+}
+
+.ui-slide-pane {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: forwards;
+  will-change: transform;
+}
+
+.ui-slide-pane-exit {
+  position: absolute;
+  inset: 0;
+}
+.ui-slide-pane-exit[data-direction='1'] {
+  animation-name: ui-slide-exit-forward;
+}
+.ui-slide-pane-exit[data-direction='-1'] {
+  animation-name: ui-slide-exit-backward;
+}
+
+.ui-slide-pane-enter[data-direction='1'] {
+  animation-name: ui-slide-enter-forward;
+}
+.ui-slide-pane-enter[data-direction='-1'] {
+  animation-name: ui-slide-enter-backward;
+}
+
+@keyframes ui-slide-exit-forward {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes ui-slide-enter-forward {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes ui-slide-exit-backward {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@keyframes ui-slide-enter-backward {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-slide-pane {
+    animation: none !important;
+  }
+}

@@ -157,7 +157,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     <Routes>
       <Route path="/" element={<RequestQueue profile={profile} />} />
       {staysAllowed && <Route path="/soggiorni" element={<StaysPage hotelId={profile.hotel_id} />} />}
-      {manageAllowed && <Route path="/admin/*" element={<AdminHome profile={profile} />} />}
+      {manageAllowed && <Route path="/admin/*" element={<AdminHome profile={profile} basePath="/admin" />} />}
       <Route path="*" element={<div className="rounded-lg border border-line bg-surface p-10 text-center text-sm text-muted">{t('staff.routeUnavailable')}</div>} />
     </Routes>
   )

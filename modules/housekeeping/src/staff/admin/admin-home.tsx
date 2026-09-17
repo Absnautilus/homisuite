@@ -1,4 +1,5 @@
-import { Link, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { SlidePanel } from '@homisuite/ui'
 import { cn } from '@/lib/cn'
 import { RoomsPage } from '@/staff/admin/rooms-page'
 import { OperatorsPage } from '@/staff/admin/operators-page'
@@ -13,7 +14,11 @@ import type { PlatformStaffManagementLink } from '@/public/HousekeepingModule'
 
 interface AdminHomeProps {
   profile: StaffProfile
-  basePath?: string
+  // No default: it must be the real absolute path AdminHome is mounted
+  // at (both callers already pass it explicitly) -- a wrong fallback
+  // here silently breaks tab matching/content resolution, which now
+  // share the same match() functions (see the `tabs` array below).
+  basePath: string
   embedded?: boolean
   platformStaffManagement?: PlatformStaffManagementLink
   /** Embedded mode only: scopes the operators roster to this hotel. */
@@ -35,44 +40,36 @@ const moreLabels = {
   ru: 'Ещё',
 } as const
 
-export function AdminHome({ profile, basePath = '/staff/admin', embedded = false, platformStaffManagement, hotelId }: AdminHomeProps) {
+export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId }: AdminHomeProps) {
   const { t, locale } = useLocale()
   const location = useLocation()
-  const primaryTabs = [
-    { to: basePath, label: t('staff.admin.tabStaff'), match: (p: string) => p === basePath || p === `${basePath}/` },
-    { to: `${basePath}/camere`, label: t('staff.admin.tabRooms'), match: (p: string) => p.startsWith(`${basePath}/camere`) },
-    { to: `${basePath}/menu`, label: t('staff.admin.tabMenu'), match: (p: string) => p.startsWith(`${basePath}/menu`) },
-    { to: `${basePath}/disponibilita`, label: t('staff.admin.tabAvailability'), match: (p: string) => p.startsWith(`${basePath}/disponibilita`) },
-  ]
-  const secondaryTabs = [
-    { to: `${basePath}/statistiche`, label: t('staff.admin.tabStats'), match: (p: string) => p.startsWith(`${basePath}/statistiche`) },
-    { to: `${basePath}/archivio`, label: t('staff.admin.tabArchive'), match: (p: string) => p.startsWith(`${basePath}/archivio`) },
-    { to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`) },
-  ]
-  const secondaryActive = secondaryTabs.some((tab) => tab.match(location.pathname))
   const operationalHotelId = hotelId ?? profile.hotel_id
-
-  const routes = embedded ? (
-    <Routes>
-      <Route index element={<OperatorsPage profile={profile} platformStaffManagement={platformStaffManagement} hotelId={hotelId} />} />
-      <Route path="camere" element={<RoomsPage hotelId={operationalHotelId} />} />
-      <Route path="menu" element={<ItemsPage hotelId={operationalHotelId} />} />
-      <Route path="disponibilita" element={<AvailabilityPage hotelId={operationalHotelId} />} />
-      <Route path="statistiche" element={<StatsPage hotelId={operationalHotelId} />} />
-      <Route path="archivio" element={<ArchivePage hotelId={operationalHotelId} />} />
-      <Route path="pms" element={<PmsIntegrationPage profile={profile} />} />
-    </Routes>
-  ) : (
-    <Routes>
-      <Route path="/" element={<OperatorsPage profile={profile} />} />
-      <Route path="/camere" element={<RoomsPage hotelId={operationalHotelId} />} />
-      <Route path="/menu" element={<ItemsPage hotelId={operationalHotelId} />} />
-      <Route path="/disponibilita" element={<AvailabilityPage hotelId={operationalHotelId} />} />
-      <Route path="/statistiche" element={<StatsPage hotelId={operationalHotelId} />} />
-      <Route path="/archivio" element={<ArchivePage hotelId={operationalHotelId} />} />
-      <Route path="/pms" element={<PmsIntegrationPage profile={profile} />} />
-    </Routes>
-  )
+  // One ordered, left-to-right list drives the nav (primary/secondary
+  // split below), which pane is active, and SlidePanel's slide direction
+  // (a tab later in this array slides in from the right, earlier from the
+  // left) -- all three read the same match()/order so they can't disagree.
+  const tabs = [
+    {
+      to: basePath,
+      label: t('staff.admin.tabStaff'),
+      match: (p: string) => p === basePath || p === `${basePath}/`,
+      element: embedded ? (
+        <OperatorsPage profile={profile} platformStaffManagement={platformStaffManagement} hotelId={hotelId} />
+      ) : (
+        <OperatorsPage profile={profile} />
+      ),
+    },
+    { to: `${basePath}/camere`, label: t('staff.admin.tabRooms'), match: (p: string) => p.startsWith(`${basePath}/camere`), element: <RoomsPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/menu`, label: t('staff.admin.tabMenu'), match: (p: string) => p.startsWith(`${basePath}/menu`), element: <ItemsPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/disponibilita`, label: t('staff.admin.tabAvailability'), match: (p: string) => p.startsWith(`${basePath}/disponibilita`), element: <AvailabilityPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/statistiche`, label: t('staff.admin.tabStats'), match: (p: string) => p.startsWith(`${basePath}/statistiche`), element: <StatsPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/archivio`, label: t('staff.admin.tabArchive'), match: (p: string) => p.startsWith(`${basePath}/archivio`), element: <ArchivePage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> },
+  ]
+  const primaryTabs = tabs.slice(0, 4)
+  const secondaryTabs = tabs.slice(4)
+  const secondaryActive = secondaryTabs.some((tab) => tab.match(location.pathname))
+  const activeTab = tabs.find((tab) => tab.match(location.pathname))
 
   return (
     <div className="min-w-0">
@@ -135,7 +132,9 @@ export function AdminHome({ profile, basePath = '/staff/admin', embedded = false
           </div>
         </details>
       </nav>
-      {routes}
+      <SlidePanel activeKey={activeTab?.to ?? location.pathname} order={tabs.map((tab) => tab.to)}>
+        {activeTab?.element ?? null}
+      </SlidePanel>
     </div>
   )
 }
