@@ -91,7 +91,8 @@ test('organization admin can manage a Housekeeping request category and its item
 
   await expect(page.getByRole('heading', { name: 'Menu richieste' })).toBeVisible()
   await page.getByLabel('Nome categoria').fill('E2E Comfort')
-  await page.getByLabel('E2E Reception').check()
+  await page.locator('label').filter({ hasText: 'E2E Reception' }).click()
+  await expect(page.getByLabel('E2E Reception')).toBeChecked()
   await page.getByRole('button', { name: 'Aggiungi categoria', exact: true }).click()
 
   const categories = page.getByRole('table', { name: 'Menu richieste' })
