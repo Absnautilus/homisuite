@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { SlidePanel } from '@homisuite/ui'
 import { cn } from '@/lib/cn'
@@ -70,6 +71,27 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
   const secondaryTabs = tabs.slice(4)
   const secondaryActive = secondaryTabs.some((tab) => tab.match(location.pathname))
   const activeTab = tabs.find((tab) => tab.match(location.pathname))
+  const secondaryDetailsRef = useRef<HTMLDetailsElement>(null)
+
+  // <details> has no native outside-click-to-close behavior -- unlike the
+  // popovers elsewhere in this module (icon-picker.tsx, mansioni-picker.tsx),
+  // which all close on an outside click/Escape via this same pattern.
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (secondaryDetailsRef.current && !secondaryDetailsRef.current.contains(event.target as Node)) {
+        secondaryDetailsRef.current.removeAttribute('open')
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') secondaryDetailsRef.current?.removeAttribute('open')
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
 
   return (
     <div className="min-w-0">
@@ -92,7 +114,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
             )
           })}
         </div>
-        <details className="group relative shrink-0">
+        <details ref={secondaryDetailsRef} className="group relative shrink-0">
           <summary
             className={cn(
               'admin-tab flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden',

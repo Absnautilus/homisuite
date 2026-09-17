@@ -21,7 +21,10 @@ import {
   setRequestCategoryActive,
   setRequestTypeActive,
   updateRequestCategoryIcon,
+  updateRequestCategoryName,
   updateRequestCategoryTranslations,
+  updateRequestTypeDescription,
+  updateRequestTypeName,
   updateRequestTypeTranslations,
   type JobTitleOption,
   type RequestCategoryAdmin,
@@ -34,6 +37,7 @@ import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
 
 const TRANSLATABLE_LOCALES = LOCALES.filter((l) => l.code !== 'it')
+const IT_LOCALE = LOCALES.find((l) => l.code === 'it')!
 
 export function ItemsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
@@ -187,18 +191,45 @@ function CategoryRow({ category, jobTitles, onToggle, onRemove, onSaved }: { cat
   const jobTitleNames = category.job_title_ids
     .map((id) => jobTitles.find((jt) => jt.id === id)?.name)
     .filter((name): name is string => Boolean(name))
-  return <><tr><td className="relative px-4 py-2"><button type="button" title={t('staff.items.iconChange')} onClick={() => setPickerOpen((v) => !v)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-line bg-surface-2 text-muted transition-colors hover:border-accent-soft-line hover:bg-accent-soft hover:text-accent"><CategoryIcon icon={category.icon} className="h-[17px] w-[17px]" /></button>{pickerOpen && <IconPicker value={category.icon} onSave={onIconSave} onClose={() => setPickerOpen(false)} />}</td><td className="px-4 py-2 font-medium text-foreground"><AutoText text={category.name} translations={category.name_i18n} /></td><td className="relative px-4 py-2"><button type="button" onClick={() => setMansioniOpen((v) => !v)} className="flex max-w-[220px] flex-wrap items-center gap-1 text-left">{jobTitleNames.length > 0 ? jobTitleNames.map((name) => <span key={name} className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">{name}</span>) : <span className="text-xs text-muted underline decoration-dotted">{t('staff.items.categoryJobTitlesNone')}</span>}</button>{mansioniOpen && <MansioniPicker jobTitles={jobTitles} value={category.job_title_ids} onSave={onMansioniSave} onClose={() => setMansioniOpen(false)} />}</td><td className="px-4 py-2"><SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} /></td><td className="px-4 py-2 text-right whitespace-nowrap"><div className="flex justify-end gap-2"><IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => setOpen((v) => !v)} /><IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} /></div></td></tr>{open && <tr><td colSpan={5} className="bg-surface-2 px-4 py-3"><NameTranslationsForm baseName={category.name} initial={category.name_i18n} onSave={async (name_i18n) => { await updateRequestCategoryTranslations(category.id, name_i18n); await onSaved() }} /></td></tr>}</>
+  return <><tr><td className="relative px-4 py-2"><button type="button" title={t('staff.items.iconChange')} onClick={() => setPickerOpen((v) => !v)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-line bg-surface-2 text-muted transition-colors hover:border-accent-soft-line hover:bg-accent-soft hover:text-accent"><CategoryIcon icon={category.icon} className="h-[17px] w-[17px]" /></button>{pickerOpen && <IconPicker value={category.icon} onSave={onIconSave} onClose={() => setPickerOpen(false)} />}</td><td className="px-4 py-2 font-medium text-foreground"><AutoText text={category.name} translations={category.name_i18n} /></td><td className="relative px-4 py-2"><button type="button" onClick={() => setMansioniOpen((v) => !v)} className="flex max-w-[220px] flex-wrap items-center gap-1 text-left">{jobTitleNames.length > 0 ? jobTitleNames.map((name) => <span key={name} className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">{name}</span>) : <span className="text-xs text-muted underline decoration-dotted">{t('staff.items.categoryJobTitlesNone')}</span>}</button>{mansioniOpen && <MansioniPicker jobTitles={jobTitles} value={category.job_title_ids} onSave={onMansioniSave} onClose={() => setMansioniOpen(false)} />}</td><td className="px-4 py-2"><SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} /></td><td className="px-4 py-2 text-right whitespace-nowrap"><div className="flex justify-end gap-2"><IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => setOpen((v) => !v)} /><IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} /></div></td></tr>{open && <tr><td colSpan={5} className="bg-surface-2 px-4 py-3"><NameTranslationsForm baseName={category.name} initial={category.name_i18n} onSave={async (name_i18n) => { await updateRequestCategoryTranslations(category.id, name_i18n); await onSaved() }} onSaveBaseName={async (name) => { await updateRequestCategoryName(category.id, name); await onSaved() }} /></td></tr>}</>
 }
 
 function ItemRow({ item, onToggle, onRemove, onSaved }: { item: RequestTypeAdmin; onToggle: () => void; onRemove: () => void; onSaved: () => Promise<void> }) {
   const { t } = useLocale(); const [open, setOpen] = useState(false)
-  return <><tr><td className="px-4 py-2 font-medium text-foreground"><AutoText text={item.name} translations={item.name_i18n} /></td><td className="px-4 py-2 text-muted">{item.description ? <AutoText text={item.description} translations={item.description_i18n} /> : '—'}</td><td className="px-4 py-2 tabular-nums text-muted">{item.available_quantity ?? '—'}</td><td className="px-4 py-2"><SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} /></td><td className="px-4 py-2 text-right whitespace-nowrap"><div className="flex justify-end gap-2"><IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => setOpen((v) => !v)} /><IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} /></div></td></tr>{open && <tr><td colSpan={5} className="bg-surface-2 px-4 py-3"><div className="space-y-4"><NameTranslationsForm label={t('staff.items.name')} baseName={item.name} initial={item.name_i18n} onSave={async (name_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n, description_i18n: item.description_i18n }); await onSaved() }} />{item.description && <NameTranslationsForm label={t('staff.items.description')} baseName={item.description} initial={item.description_i18n} onSave={async (description_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n: item.name_i18n, description_i18n }); await onSaved() }} />}</div></td></tr>}</>
+  return <><tr><td className="px-4 py-2 font-medium text-foreground"><AutoText text={item.name} translations={item.name_i18n} /></td><td className="px-4 py-2 text-muted">{item.description ? <AutoText text={item.description} translations={item.description_i18n} /> : '—'}</td><td className="px-4 py-2 tabular-nums text-muted">{item.available_quantity ?? '—'}</td><td className="px-4 py-2"><SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} /></td><td className="px-4 py-2 text-right whitespace-nowrap"><div className="flex justify-end gap-2"><IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => setOpen((v) => !v)} /><IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} /></div></td></tr>{open && <tr><td colSpan={5} className="bg-surface-2 px-4 py-3"><div className="space-y-4"><NameTranslationsForm label={t('staff.items.name')} baseName={item.name} initial={item.name_i18n} onSave={async (name_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n, description_i18n: item.description_i18n }); await onSaved() }} onSaveBaseName={async (name) => { await updateRequestTypeName(item.id, name); await onSaved() }} />{item.description && <NameTranslationsForm label={t('staff.items.description')} baseName={item.description} initial={item.description_i18n} onSave={async (description_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n: item.name_i18n, description_i18n }); await onSaved() }} onSaveBaseName={async (description) => { await updateRequestTypeDescription(item.id, description); await onSaved() }} />}</div></td></tr>}</>
 }
 
-function NameTranslationsForm({ label, baseName, initial, onSave }: { label?: string; baseName: string; initial: Record<string, string>; onSave: (values: Record<string, string>) => Promise<void> }) {
-  const { t } = useLocale(); const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(TRANSLATABLE_LOCALES.map((l) => [l.code, initial[l.code] ?? '']))); const [pending, setPending] = useState(false); const [saved, setSaved] = useState(false)
-  async function onSubmit(e: React.FormEvent) { e.preventDefault(); setPending(true); setSaved(false); try { const cleaned = Object.fromEntries(Object.entries(values).filter(([, v]) => v.trim() !== '')); await onSave(cleaned); setSaved(true) } finally { setPending(false) } }
-  return <form onSubmit={onSubmit}><p className="mb-2 text-xs font-semibold text-muted">{label ? `${t('staff.items.translations')} — ${label}` : t('staff.items.translations')}<span className="ml-1.5 font-normal text-line-strong">({baseName})</span></p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{TRANSLATABLE_LOCALES.map((l) => <div key={l.code}><Label htmlFor={`tr-${l.code}-${baseName}`}>{l.label}</Label><Input id={`tr-${l.code}-${baseName}`} value={values[l.code] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [l.code]: e.target.value }))} placeholder={baseName} /></div>)}</div><div className="mt-2 flex items-center gap-2"><Button type="submit" size="sm" disabled={pending}>{pending ? t('staff.items.translationsSaving') : t('staff.items.translationsSave')}</Button>{saved && !pending && <span className="text-xs text-ok-ink">{t('staff.items.translationsSaved')}</span>}</div></form>
+function NameTranslationsForm({
+  label,
+  baseName,
+  initial,
+  onSave,
+  onSaveBaseName,
+}: {
+  label?: string
+  baseName: string
+  initial: Record<string, string>
+  onSave: (values: Record<string, string>) => Promise<void>
+  // name_i18n/description_i18n never carry an 'it' entry -- baseName itself
+  // plays that role, but until now nothing let an admin correct it when it
+  // was typed wrong or, e.g., isn't actually Italian to begin with.
+  onSaveBaseName?: (value: string) => Promise<void>
+}) {
+  const { t } = useLocale()
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(TRANSLATABLE_LOCALES.map((l) => [l.code, initial[l.code] ?? ''])))
+  const [baseValue, setBaseValue] = useState(baseName)
+  const [pending, setPending] = useState(false)
+  const [saved, setSaved] = useState(false)
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault(); setPending(true); setSaved(false)
+    try {
+      const cleaned = Object.fromEntries(Object.entries(values).filter(([, v]) => v.trim() !== ''))
+      const trimmedBase = baseValue.trim()
+      await Promise.all([onSave(cleaned), onSaveBaseName && trimmedBase !== baseName ? onSaveBaseName(trimmedBase) : Promise.resolve()])
+      setSaved(true)
+    } finally { setPending(false) }
+  }
+  return <form onSubmit={onSubmit}><p className="mb-2 text-xs font-semibold text-muted">{label ? `${t('staff.items.translations')} — ${label}` : t('staff.items.translations')}</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{onSaveBaseName && <div><Label htmlFor={`tr-it-${baseName}`}>{IT_LOCALE.label}</Label><Input id={`tr-it-${baseName}`} required value={baseValue} onChange={(e) => setBaseValue(e.target.value)} /></div>}{TRANSLATABLE_LOCALES.map((l) => <div key={l.code}><Label htmlFor={`tr-${l.code}-${baseName}`}>{l.label}</Label><Input id={`tr-${l.code}-${baseName}`} value={values[l.code] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [l.code]: e.target.value }))} placeholder={baseValue} /></div>)}</div><div className="mt-2 flex items-center gap-2"><Button type="submit" size="sm" disabled={pending}>{pending ? t('staff.items.translationsSaving') : t('staff.items.translationsSave')}</Button>{saved && !pending && <span className="text-xs text-ok-ink">{t('staff.items.translationsSaved')}</span>}</div></form>
 }
 
 function NewCategoryForm({ jobTitles, onCreated }: { jobTitles: JobTitleOption[]; onCreated: () => Promise<void> }) {
