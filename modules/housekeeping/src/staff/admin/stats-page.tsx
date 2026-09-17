@@ -64,8 +64,8 @@ export function StatsPage({ hotelId }: { hotelId: string }) {
               <h2 className="mb-4 text-sm font-semibold text-foreground">{t('staff.stats.byDepartment')}</h2>
               <BarList
                 rows={stats.byDepartment.map((d) => ({
-                  key: d.department,
-                  label: t(`department.${d.department}` as const),
+                  key: d.department ?? 'none',
+                  label: d.department ? t(`department.${d.department}` as const) : t('department.none'),
                   minutes: d.avgMinutes,
                   count: d.count,
                 }))}
