@@ -99,7 +99,8 @@ test('organization admin can manage a Housekeeping request category and its item
   const categoryRow = categories.getByRole('row').filter({ hasText: 'E2E Comfort' })
   await expect(categoryRow).toContainText('E2E Reception')
 
-  await page.getByLabel('Categoria').selectOption({ label: 'E2E Comfort' })
+  await page.getByRole('button', { name: 'Categoria *', exact: true }).click()
+  await page.getByRole('option', { name: 'E2E Comfort' }).click()
   await page.getByLabel('Nome', { exact: true }).fill('E2E Cuscino')
   await page.getByRole('button', { name: 'Aggiungi elemento' }).click()
   await expect(page.getByText('E2E Cuscino', { exact: true })).toBeVisible()
