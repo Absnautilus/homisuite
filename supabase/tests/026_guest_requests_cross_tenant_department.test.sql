@@ -1,123 +1,194 @@
--- Fase 2 Step 7 — DEPARTMENT ISOLATION.
--- Own department visible, a different department not, reception sees the
--- shared front-desk queue, property_admin/organization_admin bypass the
--- filter entirely (positive check, not just absence of denial), and the
--- documented "department NULL" case: structurally impossible for a
--- receptionist (staff_profiles_department_matches_role forbids it), and a
--- no-op for admin/master since they bypass the filter regardless of what
--- current_staff_department() returns for them.
+-- Fase 2 Step 7 — REQUEST VISIBILITY, REWRITTEN for
+-- 20260917120000_request_categories_job_titles: the department-scoped
+-- queue (a fixed reception/housekeeping/maintenance/porter enum) is
+-- replaced by mansione-based routing (property_job_titles, the same
+-- per-property job titles Team already manages). This file keeps its
+-- original number/role in the suite (guest_requests visibility isolation)
+-- but its assertions now cover the new mechanism: own mansione visible, a
+-- different mansione not, a sees_full_queue mansione sees everything,
+-- admin/master bypass entirely (positive check, not just absence of
+-- denial), a category with no mansione linked is invisible to everyone but
+-- admin/master/sees_full_queue, and a staff member with no job title at
+-- all fails closed.
 begin;
 create extension if not exists pgtap;
-select plan(9);
+select plan(11);
 
 insert into hotels (id, name, timezone, active) values
   ('00000026-0000-0000-0000-00000000ff01', 'Hotel Uno', 'Europe/Rome', true);
 select backfill_legacy_property_mapping();
 select backfill_guest_requests_entitlement();
 
-insert into request_categories (id, hotel_id, name, department) values
-  ('00000026-0000-0000-0000-000000000c01', '00000026-0000-0000-0000-00000000ff01', 'Housekeeping', 'housekeeping'),
-  ('00000026-0000-0000-0000-000000000c02', '00000026-0000-0000-0000-00000000ff01', 'Maintenance', 'maintenance');
+-- Categories deliberately created with no department at all (nullable as
+-- of this migration) -- the new, intended shape going forward.
+insert into request_categories (id, hotel_id, name) values
+  ('00000026-0000-0000-0000-000000000c01', '00000026-0000-0000-0000-00000000ff01', 'Pulizie'),
+  ('00000026-0000-0000-0000-000000000c02', '00000026-0000-0000-0000-00000000ff01', 'Manutenzione'),
+  ('00000026-0000-0000-0000-000000000c03', '00000026-0000-0000-0000-00000000ff01', 'Non Assegnata');
 insert into request_types (id, category_id, name) values
   ('00000026-0000-0000-0000-0000000fee01', '00000026-0000-0000-0000-000000000c01', 'Asciugamani'),
-  ('00000026-0000-0000-0000-0000000fee02', '00000026-0000-0000-0000-000000000c02', 'Riparazione');
+  ('00000026-0000-0000-0000-0000000fee02', '00000026-0000-0000-0000-000000000c02', 'Riparazione'),
+  ('00000026-0000-0000-0000-0000000fee03', '00000026-0000-0000-0000-000000000c03', 'Voce Orfana');
+
+insert into property_job_titles (id, property_id, name, sees_full_queue)
+select '00000026-0000-0000-0000-0000000aa001', m.platform_property_id, 'Governante', false
+from legacy_property_mapping m where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01';
+insert into property_job_titles (id, property_id, name, sees_full_queue)
+select '00000026-0000-0000-0000-0000000aa002', m.platform_property_id, 'Tecnico', false
+from legacy_property_mapping m where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01';
+insert into property_job_titles (id, property_id, name, sees_full_queue)
+select '00000026-0000-0000-0000-0000000aa003', m.platform_property_id, 'Reception', true
+from legacy_property_mapping m where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01';
+
+insert into request_category_job_titles (category_id, job_title_id) values
+  ('00000026-0000-0000-0000-000000000c01', '00000026-0000-0000-0000-0000000aa001'), -- Pulizie -> Governante
+  ('00000026-0000-0000-0000-000000000c02', '00000026-0000-0000-0000-0000000aa002'); -- Manutenzione -> Tecnico
+-- 'Non Assegnata' deliberately has no linked job title at all.
 
 insert into rooms (id, hotel_id, room_number) values
   ('00000026-0000-0000-0000-0000000fa001', '00000026-0000-0000-0000-00000000ff01', '101'),
-  ('00000026-0000-0000-0000-0000000fa002', '00000026-0000-0000-0000-00000000ff01', '102');
+  ('00000026-0000-0000-0000-0000000fa002', '00000026-0000-0000-0000-00000000ff01', '102'),
+  ('00000026-0000-0000-0000-0000000fa003', '00000026-0000-0000-0000-00000000ff01', '103');
 
-insert into guest_requests (id, hotel_id, room_number, request_type_id, quantity, assigned_department, status) values
-  ('00000026-0000-0000-0000-00000000ba01', '00000026-0000-0000-0000-00000000ff01', '101', '00000026-0000-0000-0000-0000000fee01', 1, 'housekeeping', 'requested'),
-  ('00000026-0000-0000-0000-00000000ba02', '00000026-0000-0000-0000-00000000ff01', '102', '00000026-0000-0000-0000-0000000fee02', 1, 'maintenance', 'requested');
+-- Inserted via the trigger's own resolution (assigned_job_title_ids left
+-- at its default '{}' here), not hardcoded, so this also exercises
+-- guest_requests_before_insert's new lookup end-to-end.
+insert into guest_requests (id, hotel_id, room_number, request_type_id, quantity, status) values
+  ('00000026-0000-0000-0000-00000000ba01', '00000026-0000-0000-0000-00000000ff01', '101', '00000026-0000-0000-0000-0000000fee01', 1, 'requested'),
+  ('00000026-0000-0000-0000-00000000ba02', '00000026-0000-0000-0000-00000000ff01', '102', '00000026-0000-0000-0000-0000000fee02', 1, 'requested'),
+  ('00000026-0000-0000-0000-00000000ba03', '00000026-0000-0000-0000-00000000ff01', '103', '00000026-0000-0000-0000-0000000fee03', 1, 'requested');
+
+select is(
+  (select assigned_job_title_ids from guest_requests where id = '00000026-0000-0000-0000-00000000ba01'),
+  array['00000026-0000-0000-0000-0000000aa001']::uuid[],
+  'guest_requests_before_insert resolved the Pulizie request''s assigned_job_title_ids from its category'
+);
 
 insert into auth.users (id) values
-  ('00000026-0000-0000-0000-000000000a01'), -- receptionist, department=housekeeping
-  ('00000026-0000-0000-0000-000000000a02'), -- receptionist, department=reception
-  ('00000026-0000-0000-0000-000000000a03'); -- property_admin
+  ('00000026-0000-0000-0000-000000000a01'), -- Governante
+  ('00000026-0000-0000-0000-000000000a02'), -- Tecnico
+  ('00000026-0000-0000-0000-000000000a03'), -- Reception (sees_full_queue)
+  ('00000026-0000-0000-0000-000000000a04'), -- property_admin
+  ('00000026-0000-0000-0000-000000000a05'); -- operatore with no job title assigned
+
+insert into profiles (id, full_name) values
+  ('00000026-0000-0000-0000-000000000a01', 'Governante Uno'),
+  ('00000026-0000-0000-0000-000000000a02', 'Tecnico Uno'),
+  ('00000026-0000-0000-0000-000000000a03', 'Reception Uno'),
+  ('00000026-0000-0000-0000-000000000a04', 'PA Uno'),
+  ('00000026-0000-0000-0000-000000000a05', 'Senza Mansione');
 
 insert into staff_profiles (id, hotel_id, auth_user_id, name, role, department, active, login_username) values
-  ('00000026-0000-0000-0000-000000000101', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a01', 'Rec Housekeeping', 'operatore', 'housekeeping', true, 'test026.rec1'),
-  ('00000026-0000-0000-0000-000000000102', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a02', 'Rec Reception', 'operatore', 'reception', true, 'test026.rec2'),
-  ('00000026-0000-0000-0000-000000000103', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a03', 'PA Uno', 'admin', null, true, null);
-select backfill_staff_identity();
+  ('00000026-0000-0000-0000-000000000101', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a01', 'Governante Uno', 'operatore', 'housekeeping', true, 'test026.gov1'),
+  ('00000026-0000-0000-0000-000000000102', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a02', 'Tecnico Uno', 'operatore', 'maintenance', true, 'test026.tec1'),
+  ('00000026-0000-0000-0000-000000000103', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a03', 'Reception Uno', 'operatore', 'reception', true, 'test026.rec1'),
+  ('00000026-0000-0000-0000-000000000104', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a04', 'PA Uno', 'admin', null, true, null),
+  ('00000026-0000-0000-0000-000000000105', '00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a05', 'Senza Mansione', 'operatore', 'housekeeping', true, 'test026.none1');
 
--- own department visible, a different department not
+insert into memberships (profile_id, property_id, role_id, status)
+select '00000026-0000-0000-0000-000000000a01', m.platform_property_id, r.id, 'active'
+from legacy_property_mapping m, roles r
+where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01' and r.slug = 'receptionist';
+insert into memberships (profile_id, property_id, role_id, status)
+select '00000026-0000-0000-0000-000000000a02', m.platform_property_id, r.id, 'active'
+from legacy_property_mapping m, roles r
+where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01' and r.slug = 'receptionist';
+insert into memberships (profile_id, property_id, role_id, status)
+select '00000026-0000-0000-0000-000000000a03', m.platform_property_id, r.id, 'active'
+from legacy_property_mapping m, roles r
+where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01' and r.slug = 'receptionist';
+insert into memberships (profile_id, property_id, role_id, status)
+select '00000026-0000-0000-0000-000000000a04', m.platform_property_id, r.id, 'active'
+from legacy_property_mapping m, roles r
+where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01' and r.slug = 'property_admin';
+insert into memberships (profile_id, property_id, role_id, status)
+select '00000026-0000-0000-0000-000000000a05', m.platform_property_id, r.id, 'active'
+from legacy_property_mapping m, roles r
+where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01' and r.slug = 'receptionist';
+
+insert into property_staff_details (property_id, profile_id, job_title_id)
+select m.platform_property_id, '00000026-0000-0000-0000-000000000a01', '00000026-0000-0000-0000-0000000aa001'
+from legacy_property_mapping m where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01';
+insert into property_staff_details (property_id, profile_id, job_title_id)
+select m.platform_property_id, '00000026-0000-0000-0000-000000000a02', '00000026-0000-0000-0000-0000000aa002'
+from legacy_property_mapping m where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01';
+insert into property_staff_details (property_id, profile_id, job_title_id)
+select m.platform_property_id, '00000026-0000-0000-0000-000000000a03', '00000026-0000-0000-0000-0000000aa003'
+from legacy_property_mapping m where m.legacy_hotel_id = '00000026-0000-0000-0000-00000000ff01';
+-- a04 (property_admin) and a05 (no job title) deliberately get no
+-- property_staff_details row at all.
+
+-- ### own mansione visible, a different mansione not ###
 set local role authenticated;
 set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a01';
 select is(
-  (select count(*)::int from guest_requests where assigned_department = 'housekeeping'),
+  (select count(*)::int from guest_requests where id = '00000026-0000-0000-0000-00000000ba01'),
   1,
-  'receptionist (department=housekeeping) sees the housekeeping request'
+  'Governante sees the Pulizie request (their own mansione)'
 );
 select is(
-  (select count(*)::int from guest_requests where assigned_department = 'maintenance'),
+  (select count(*)::int from guest_requests where id = '00000026-0000-0000-0000-00000000ba02'),
   0,
-  'the same receptionist does NOT see the maintenance request'
+  'Governante does NOT see the Manutenzione request (a different mansione)'
+);
+select is(
+  (select count(*)::int from guest_requests where id = '00000026-0000-0000-0000-00000000ba03'),
+  0,
+  'Governante does NOT see the unassigned-category request either'
+);
+-- mutation + re-SELECT under the same role, per house style
+select lives_ok(
+  $$ update guest_requests set status = 'in_progress' where id = '00000026-0000-0000-0000-00000000ba01' $$,
+  'Governante can update their own-mansione request'
+);
+select is(
+  (select status from guest_requests where id = '00000026-0000-0000-0000-00000000ba01'),
+  'in_progress',
+  'the update actually persisted'
 );
 reset role;
 
--- reception sees the shared front-desk queue (both requests, via
--- current_staff_manages_front_desk()'s reception branch)
 set local role authenticated;
 set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a02';
 select is(
-  (select count(*)::int from guest_requests),
-  2,
-  'a reception-department receptionist manages the front desk and sees both requests, regardless of department'
+  (select count(*)::int from guest_requests where id = '00000026-0000-0000-0000-00000000ba02'),
+  1,
+  'Tecnico sees the Manutenzione request (their own mansione)'
+);
+select is(
+  (select count(*)::int from guest_requests where id = '00000026-0000-0000-0000-00000000ba01'),
+  0,
+  'Tecnico does NOT see the Pulizie request'
 );
 reset role;
 
--- property_admin bypasses the department filter entirely — positive check
+-- ### a sees_full_queue mansione sees everything ###
 set local role authenticated;
 set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a03';
 select is(
-  (select count(*)::int from guest_requests where assigned_department = 'housekeeping'),
-  1,
-  'property_admin (bypasses department filter) sees the housekeeping request'
-);
-select is(
-  (select count(*)::int from guest_requests where assigned_department = 'maintenance'),
-  1,
-  'the same property_admin also sees the maintenance request — full bypass, not just "not denied"'
+  (select count(*)::int from guest_requests),
+  3,
+  'Reception (sees_full_queue) sees all three requests regardless of mansione'
 );
 reset role;
 
--- department NULL: found while writing this test that
--- staff_profiles_department_matches_role does NOT actually forbid this —
--- `role = 'operatore' AND department IN (...)` evaluates to NULL (not
--- FALSE) when department IS NULL, and a CHECK constraint treats a NULL
--- result as satisfied (only an explicit FALSE is a violation). Confirmed
--- empirically below: the insert succeeds. This is a genuine, pre-existing
--- gap in the legacy constraint, not introduced by this migration — noted
--- here rather than silently assumed away, but NOT fixed (out of scope:
--- fixing a legacy CHECK constraint is a schema change to a table this
--- phase does not touch, and the row-level access behavior below shows the
--- actual authorization outcome is still correctly fail-closed regardless).
-insert into auth.users (id) values ('00000026-0000-0000-0000-000000000a99');
-select lives_ok(
-  $$ insert into staff_profiles (hotel_id, auth_user_id, name, role, department, login_username)
-     values ('00000026-0000-0000-0000-00000000ff01', '00000026-0000-0000-0000-000000000a99', 'Dept Nullo', 'operatore', null, 'test026.deptnull') $$,
-  'staff_profiles_department_matches_role does NOT actually reject operatore+NULL department (three-valued CHECK logic) -- reachable, not impossible'
-);
-select backfill_staff_identity();
+-- ### admin bypasses entirely -- positive check ###
 set local role authenticated;
-set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a99';
+set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a04';
+select is(
+  (select count(*)::int from guest_requests),
+  3,
+  'property_admin (bypasses the mansione filter) sees all three requests too'
+);
+reset role;
+
+-- ### fails closed: no job title assigned at all ###
+set local role authenticated;
+set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a05';
 select is(
   (select count(*)::int from guest_requests),
   0,
-  'a receptionist with department IS NULL sees 0 guest_requests rows -- fails closed via the same NULL-in-predicate semantics, not by the constraint'
-);
-reset role;
-
--- for admin/master, department IS null by constraint, but it's never
--- consulted — they bypass the filter via current_staff_manages_front_desk()
--- regardless of what current_staff_department() returns
-set local role authenticated;
-set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a03';
-select is(current_staff_department(), null, 'property_admin''s current_staff_department() is (legitimately) null');
-select ok(
-  current_staff_manages_front_desk(),
-  'and current_staff_manages_front_desk() is still true for them regardless — the null department is never relied upon'
+  'an operatore with no job title assigned sees 0 requests -- fails closed, not open'
 );
 reset role;
 

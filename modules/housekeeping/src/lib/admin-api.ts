@@ -94,9 +94,29 @@ export interface RequestCategoryAdmin {
   id: string
   name: string
   name_i18n: Record<string, string>
-  department: Department
+  // Kept for historical/display purposes (old rows, stats grouping) --
+  // no longer collected when creating a category; job_title_ids is what
+  // actually routes/gates a category's requests now (see
+  // 20260917120000_request_categories_job_titles).
+  department: Department | null
   active: boolean
   icon: string | null
+  job_title_ids: string[]
+}
+
+export interface JobTitleOption {
+  id: string
+  name: string
+}
+
+// The module only ever knows the legacy hotelId, never the Core property_id
+// (and legacy_property_mapping itself has no policies for authenticated at
+// all) -- this RPC bridges that, same shape as the other guest_requests_*
+// bridge functions.
+export async function listPropertyJobTitles(hotelId: string): Promise<JobTitleOption[]> {
+  const { data, error } = await supabase.rpc('guest_requests_property_job_titles', { p_hotel_id: hotelId })
+  if (error) throw error
+  return data ?? []
 }
 
 export async function listMenu(hotelId: string): Promise<{ categories: RequestCategoryAdmin[]; types: RequestTypeAdmin[] }> {
@@ -106,21 +126,44 @@ export async function listMenu(hotelId: string): Promise<{ categories: RequestCa
     .order('sort_order')
     .eq(...hotelFilter(hotelId))
   if (categoriesRes.error) throw categoriesRes.error
-  const categories = categoriesRes.data ?? []
-  if (categories.length === 0) return { categories, types: [] }
+  const categoryRows = categoriesRes.data ?? []
+  if (categoryRows.length === 0) return { categories: [], types: [] }
 
-  const typesRes = await supabase
-    .from('request_types')
-    .select('*')
-    .in('category_id', categories.map((category) => category.id))
-    .order('sort_order')
+  const [typesRes, jobTitlesRes] = await Promise.all([
+    supabase.from('request_types').select('*').in('category_id', categoryRows.map((category) => category.id)).order('sort_order'),
+    supabase.from('request_category_job_titles').select('category_id, job_title_id').in('category_id', categoryRows.map((category) => category.id)),
+  ])
   if (typesRes.error) throw typesRes.error
+  if (jobTitlesRes.error) throw jobTitlesRes.error
+
+  const jobTitleIdsByCategory = new Map<string, string[]>()
+  for (const row of jobTitlesRes.data ?? []) {
+    const list = jobTitleIdsByCategory.get(row.category_id) ?? []
+    list.push(row.job_title_id)
+    jobTitleIdsByCategory.set(row.category_id, list)
+  }
+  const categories = categoryRows.map((category) => ({ ...category, job_title_ids: jobTitleIdsByCategory.get(category.id) ?? [] }))
+
   return { categories, types: typesRes.data ?? [] }
 }
 
-export async function createRequestCategory(input: { name: string; department: Department }): Promise<void> {
-  const { error } = await supabase.from('request_categories').insert({ name: input.name, department: input.department })
+export async function createRequestCategory(input: { name: string; jobTitleIds: string[] }): Promise<void> {
+  const { data, error } = await supabase.from('request_categories').insert({ name: input.name }).select('id').single()
   if (error) throw error
+  await setCategoryJobTitles(data.id, input.jobTitleIds)
+}
+
+// Replaces the full set of mansioni linked to a category with exactly the
+// given list -- simplest correct approach at this scale (a handful of job
+// titles per category), no need to diff client-side.
+export async function setCategoryJobTitles(categoryId: string, jobTitleIds: string[]): Promise<void> {
+  const del = await supabase.from('request_category_job_titles').delete().eq('category_id', categoryId)
+  if (del.error) throw del.error
+  if (jobTitleIds.length === 0) return
+  const ins = await supabase
+    .from('request_category_job_titles')
+    .insert(jobTitleIds.map((jobTitleId) => ({ category_id: categoryId, job_title_id: jobTitleId })))
+  if (ins.error) throw ins.error
 }
 
 export async function setRequestCategoryActive(id: string, active: boolean): Promise<void> {
@@ -189,7 +232,10 @@ export async function deleteRequestCategory(id: string): Promise<void> {
 }
 
 export interface DepartmentStat {
-  department: Department
+  // null groups requests whose category never had a department (the
+  // now-standard shape for a category routed by mansioni instead) --
+  // display it as "not set" rather than dropping those rows from the stats.
+  department: Department | null
   count: number
   avgMinutes: number
 }
@@ -230,7 +276,7 @@ export async function fetchCompletionStats(hotelId: string): Promise<StatsSummar
     .not('completed_at', 'is', null)
   if (error) throw error
   const rows = (data ?? []) as unknown as {
-    assigned_department: Department
+    assigned_department: Department | null
     created_at: string
     accepted_at: string | null
     completed_at: string
@@ -251,7 +297,7 @@ export async function fetchCompletionStats(hotelId: string): Promise<StatsSummar
   const overallAvgWaitMinutes = withAcceptance.length > 0 ? avg(withAcceptance.map((r) => minutesBetween(r.created_at, r.accepted_at))) : null
   const overallAvgExecMinutes = withAcceptance.length > 0 ? avg(withAcceptance.map((r) => minutesBetween(r.accepted_at, r.completed_at))) : null
 
-  const byDeptGroups = new Map<Department, number[]>()
+  const byDeptGroups = new Map<Department | null, number[]>()
   for (const r of rows) {
     const list = byDeptGroups.get(r.assigned_department) ?? []
     list.push(totalMinutesFor(r))

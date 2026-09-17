@@ -8,6 +8,12 @@
 -- had nothing to check against. property_staff_details.housekeeping_department
 -- gives an admin an explicit, Core-side way to scope (or widen) that,
 -- independent of the free-text "Mansione" job title.
+--
+-- "Front desk" here is proven against `stays`, not `guest_requests` --
+-- as of 20260917120000_request_categories_job_titles, guest_requests
+-- visibility is mansione-based and no longer reads current_staff_department()/
+-- current_staff_manages_front_desk() at all (see
+-- 026_guest_requests_cross_tenant_department.test.sql for that).
 begin;
 create extension if not exists pgtap;
 select plan(9);
@@ -29,6 +35,12 @@ insert into rooms (id, hotel_id, room_number) values
 insert into guest_requests (id, hotel_id, room_number, request_type_id, quantity, assigned_department, status) values
   ('00000046-0000-0000-0000-00000000ba01', '00000046-0000-0000-0000-00000000ff01', '101', '00000046-0000-0000-0000-0000000fee01', 1, 'housekeeping', 'requested'),
   ('00000046-0000-0000-0000-00000000ba02', '00000046-0000-0000-0000-00000000ff01', '102', '00000046-0000-0000-0000-0000000fee02', 1, 'maintenance', 'requested');
+-- A stay, not a guest_request, is what actually still exercises
+-- current_staff_manages_front_desk() as of 20260917120000_request_categories_job_titles
+-- (guest_requests visibility is mansione-based now, unrelated to this
+-- override -- see 026_guest_requests_cross_tenant_department.test.sql).
+insert into stays (id, hotel_id, room_id, guest_last_name, check_in_at, check_out_at) values
+  ('00000046-0000-0000-0000-00000000ba03', '00000046-0000-0000-0000-00000000ff01', '00000046-0000-0000-0000-0000000fa001', 'Rossi', now() - interval '1 day', now() + interval '1 day');
 
 -- the Team-bridged member: role forced to 'admin' (as
 -- grant-housekeeping-access always does), department left unset -- exactly
@@ -60,7 +72,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '00000046-0000-0000-0000-000000000a01';
 select is(current_staff_role(), 'operatore'::staff_role, 'the bridged member''s Core-derived role is operatore (receptionist rank), not admin -- the legacy role column is not consulted');
 select is(current_staff_department(), null, 'with no override and no legacy department, current_staff_department() is null');
-select is((select count(*)::int from guest_requests), 0, 'reproduces the bug: sees zero requests with no department resolvable');
+select is((select count(*)::int from stays), 0, 'reproduces the bug: sees zero stays with no department resolvable (front-desk gate)');
 reset role;
 
 -- The row itself is created here as the connecting (superuser) role, not
@@ -103,7 +115,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '00000046-0000-0000-0000-000000000a01';
 select is(current_staff_department(), 'reception'::department, 'the override now resolves through current_staff_department()');
 select ok(current_staff_manages_front_desk(), 'reception override makes the bridged member front-desk');
-select is((select count(*)::int from guest_requests), 2, 'now sees both requests (housekeeping and maintenance) as front desk');
+select is((select count(*)::int from stays), 1, 'now sees the stay as front desk');
 reset role;
 
 -- ### narrowing instead: property_admin scopes them to housekeeping only ###
@@ -115,8 +127,8 @@ reset role;
 
 set local role authenticated;
 set local request.jwt.claim.sub = '00000046-0000-0000-0000-000000000a01';
-select is((select count(*)::int from guest_requests where assigned_department = 'housekeeping'), 1, 'narrowed to housekeeping: sees the housekeeping request');
-select is((select count(*)::int from guest_requests where assigned_department = 'maintenance'), 0, 'narrowed to housekeeping: does NOT see the maintenance request');
+select ok(not current_staff_manages_front_desk(), 'narrowed to housekeeping: no longer front-desk (department is not reception)');
+select is((select count(*)::int from stays), 0, 'narrowed to housekeeping: no longer sees the stay');
 reset role;
 
 select * from finish();
