@@ -85,31 +85,33 @@ test('organization admin can navigate the mapped Housekeeping stay', async ({ pa
   await expect(page.getByText(/Camera 101 · Rossi/)).toBeVisible()
 })
 
-test('organization admin can manage a Housekeeping request category and its item', async ({ page }) => {
+test('organization admin can manage a Housekeeping request category and its item', async ({ page }, testInfo) => {
+  const categoryName = `E2E Comfort ${testInfo.retry}`
+  const itemName = `E2E Cuscino ${testInfo.retry}`
   await login(page, ORG_ADMIN_EMAIL)
   await page.goto('/housekeeping/admin/menu')
 
   await expect(page.getByRole('heading', { name: 'Menu richieste' })).toBeVisible()
-  await page.getByLabel('Nome categoria').fill('E2E Comfort')
+  await page.getByLabel('Nome categoria').fill(categoryName)
   await page.locator('label').filter({ hasText: 'E2E Reception' }).click()
   await expect(page.getByLabel('E2E Reception')).toBeChecked()
   await page.getByRole('button', { name: 'Aggiungi categoria', exact: true }).click()
 
   const categories = page.getByRole('table', { name: 'Menu richieste' })
-  const categoryRow = categories.getByRole('row').filter({ hasText: 'E2E Comfort' })
+  const categoryRow = categories.getByRole('row').filter({ hasText: categoryName })
   await expect(categoryRow).toContainText('E2E Reception')
 
   await page.getByRole('button', { name: 'Categoria *', exact: true }).click()
-  await page.getByRole('option', { name: 'E2E Comfort' }).click()
-  await page.getByLabel('Nome', { exact: true }).fill('E2E Cuscino')
+  await page.getByRole('option', { name: categoryName, exact: true }).click()
+  await page.getByRole('textbox', { name: 'Nome *', exact: true }).fill(itemName)
   await page.getByRole('button', { name: 'Aggiungi elemento' }).click()
-  await expect(page.getByText('E2E Cuscino', { exact: true })).toBeVisible()
+  await expect(page.getByText(itemName, { exact: true })).toBeVisible()
 
   await categoryRow.getByRole('button', { name: 'Rimuovi' }).click()
   await expect(page.getByText('Rimuovere questa categoria?')).toBeVisible()
   await page.getByRole('button', { name: 'Rimuovi', exact: true }).click()
-  await expect(categories.getByText('E2E Comfort', { exact: true })).toHaveCount(0)
-  await expect(page.getByText('E2E Cuscino', { exact: true })).toHaveCount(0)
+  await expect(categories.getByText(categoryName, { exact: true })).toHaveCount(0)
+  await expect(page.getByText(itemName, { exact: true })).toHaveCount(0)
 })
 
 test('receptionist can read Housekeeping without its management tab', async ({ page }) => {
