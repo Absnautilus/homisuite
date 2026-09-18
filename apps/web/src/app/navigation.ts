@@ -1,4 +1,4 @@
-import { Boxes, CalendarDays, Home, Hotel, Settings, Users, Wrench } from 'lucide-react'
+import { Boxes, CalendarDays, Home, Hotel, Settings, UtensilsCrossed, Users, Wrench } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export type ShellNavItem = {
@@ -11,6 +11,7 @@ export type ShellNavItem = {
 export const shellNavigation: ShellNavItem[] = [
   { label: 'Home', path: '/', icon: Home, kind: 'platform' },
   { label: 'Housekeeping', path: '/housekeeping', icon: Hotel, kind: 'module' },
+  { label: 'Ristorazione', path: '/dining', icon: UtensilsCrossed, kind: 'module' },
   { label: 'Turni', path: '/turni', icon: CalendarDays, kind: 'module' },
   { label: 'Transfer', path: '/transfer', icon: Wrench, kind: 'module' },
   { label: 'Moduli', path: '/modules', icon: Boxes, kind: 'platform' },

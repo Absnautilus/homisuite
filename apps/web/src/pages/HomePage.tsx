@@ -1,10 +1,12 @@
-import { ArrowRight, CalendarDays, Hotel, Wrench } from 'lucide-react'
+import { ArrowRight, CalendarDays, Hotel, UtensilsCrossed, Wrench } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
+import { useDiningAccess } from '../modules/dining/useDiningAccess'
 
 const moduleCatalog = [
   { slug: 'guest_requests', title: 'Housekeeping', description: 'Richieste ospiti e operatività camere.', path: '/housekeeping', icon: Hotel },
+  { slug: 'dining', title: 'Ristorazione', description: 'Ristoranti convenzionati e prenotazioni.', path: '/dining', icon: UtensilsCrossed },
   { slug: 'shifts', title: 'Turni', description: 'Pianificazione e copertura dei turni.', path: '/turni', icon: CalendarDays },
   { slug: 'transfers', title: 'Transfer', description: 'Gestione transfer e spostamenti ospiti.', path: '/transfer', icon: Wrench },
 ]
@@ -14,10 +16,12 @@ export function HomePage() {
   // Same compatibility check as the nav (see ShellLayout/useHousekeepingAccess):
   // an entitled-but-unusable Housekeeping tile is a dead end, not a shortcut.
   const housekeepingAccess = useHousekeepingAccess()
+  const diningAccess = useDiningAccess()
   const enabled = new Set(runtime.entitlements.filter((item) => item.enabled).map((item) => item.slug))
   const modules = moduleCatalog.filter((module) => {
     if (!enabled.has(module.slug)) return false
     if (module.slug === 'guest_requests') return housekeepingAccess.status === 'compatible'
+    if (module.slug === 'dining') return diningAccess.status === 'compatible'
     return true
   })
 

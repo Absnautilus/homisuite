@@ -4,12 +4,14 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { shellNavigation } from '../app/navigation'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
+import { useDiningAccess } from '../modules/dining/useDiningAccess'
 import { LoginScreen } from './LoginScreen'
 import { PropertySwitcher } from './PropertySwitcher'
 import { AccountMenu } from './AccountMenu'
 
 const moduleSlugByPath: Record<string, string> = {
   '/housekeeping': 'guest_requests',
+  '/dining': 'dining',
   '/turni': 'shifts',
   '/transfer': 'transfers',
 }
@@ -20,6 +22,8 @@ export function ShellLayout() {
   // to satisfy the rules of hooks -- its own loading/error states resolve to
   // "not compatible yet" and simply keep Housekeeping out of nav until known.
   const housekeepingAccess = useHousekeepingAccess()
+  // Same reasoning, same three-step check, for Dining.
+  const diningAccess = useDiningAccess()
   const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
@@ -33,6 +37,7 @@ export function ShellLayout() {
     if (item.kind !== 'module') return false
     if (!enabledSlugs.has(moduleSlugByPath[item.path])) return false
     if (item.path === '/housekeeping') return housekeepingAccess.status === 'compatible'
+    if (item.path === '/dining') return diningAccess.status === 'compatible'
     return true
   })
   const home = shellNavigation.find((item) => item.path === '/')

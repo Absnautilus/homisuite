@@ -7,6 +7,7 @@ import { getAccessibleProperties, getMembership, updateProperty } from './member
 import { hasPermission } from './permissions'
 import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
+import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, updateJobTitle, updateTeamMember } from './team'
 
 export interface CoreClient {
@@ -21,6 +22,7 @@ export interface CoreClient {
   getEnabledModules: (propertyId: string) => Promise<ModuleEntitlement[]>
   getGuestRequestsLegacyHotelId: (propertyId: string) => Promise<string | null>
   getGuestRequestsSlugForProperty: (propertyId: string) => Promise<string | null>
+  getDiningLegacyHotelId: (propertyId: string) => Promise<string | null>
   getTeamMembers: (propertyId: string) => Promise<TeamMember[]>
   getPropertyRoles: () => Promise<CoreRole[]>
   getJobTitles: (propertyId: string) => Promise<JobTitle[]>
@@ -52,6 +54,7 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     getEnabledModules: (propertyId) => getEnabledModules(raw, propertyId),
     getGuestRequestsLegacyHotelId: (propertyId) => getGuestRequestsLegacyHotelId(raw, propertyId),
     getGuestRequestsSlugForProperty: (propertyId) => getGuestRequestsSlugForProperty(raw, propertyId),
+    getDiningLegacyHotelId: (propertyId) => getDiningLegacyHotelId(raw, propertyId),
     getTeamMembers: (propertyId) => getTeamMembers(raw, propertyId),
     getPropertyRoles: () => getPropertyRoles(raw),
     getJobTitles: (propertyId) => getJobTitles(raw, propertyId),

@@ -4,7 +4,7 @@
 -- policy must treat that identically to an explicit enabled=false row.
 begin;
 create extension if not exists pgtap;
-select plan(20);
+select plan(22);
 
 insert into hotels (id, name, timezone, active) values
   ('00000058-0000-0000-0000-00000000ff01', 'Hotel Con Dining', 'Europe/Rome', true),
@@ -60,6 +60,31 @@ where m.legacy_hotel_id = '00000058-0000-0000-0000-00000000ff02' and r.slug = 'p
 select ok(hotel_has_module('00000058-0000-0000-0000-00000000ff01', 'dining'), 'hotel A has the dining module enabled');
 select ok(not hotel_has_module('00000058-0000-0000-0000-00000000ff02', 'dining'), 'hotel B never bought the dining module');
 select ok(not hotel_has_module('00000000-0000-0000-0000-000000000000', 'dining'), 'a nonexistent hotel resolves false, not an error');
+
+-- ### legacy_hotel_for_property -- the frontend's property_id -> hotel_id
+--     bridge, gated the same way (access + this specific module).
+--     legacy_property_mapping has no grants for authenticated at all (only
+--     SECURITY DEFINER functions may read it), so the property ids are
+--     captured here, as superuser, before switching role. ###
+select platform_property_id as property_a from legacy_property_mapping where legacy_hotel_id = '00000058-0000-0000-0000-00000000ff01' \gset
+select platform_property_id as property_b from legacy_property_mapping where legacy_hotel_id = '00000058-0000-0000-0000-00000000ff02' \gset
+
+set local role authenticated;
+set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000a01';
+select is(
+  legacy_hotel_for_property(:'property_a', 'dining'),
+  '00000058-0000-0000-0000-00000000ff01'::uuid,
+  'admin A resolves hotel A''s own legacy hotel_id for the dining module'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000a04';
+select is(
+  legacy_hotel_for_property(:'property_b', 'dining'),
+  null::uuid,
+  'admin B resolves nothing for the dining module -- hotel B never bought it'
+);
+reset role;
 
 -- ### admin @ hotel A can build the directory ###
 set local role authenticated;

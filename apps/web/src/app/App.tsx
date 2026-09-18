@@ -6,6 +6,7 @@ import { TeamPage } from '../pages/TeamPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { HousekeepingModuleGate } from '../modules/housekeeping/HousekeepingModuleGate'
+import { DiningModuleGate } from '../modules/dining/DiningModuleGate'
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
       <Route element={<ShellLayout />}>
         <Route index element={<HomePage />} />
         <Route path="housekeeping/*" element={<HousekeepingModuleGate />} />
+        <Route path="dining" element={<DiningModuleGate />} />
         <Route path="turni" element={<PlaceholderPage title="Turni" />} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
         <Route path="modules" element={<PlaceholderPage title="Moduli" />} />

@@ -95,6 +95,31 @@ revoke all on function current_staff_hotel_for_module(text) from public;
 grant execute on function current_staff_hotel_for_module(text) to authenticated;
 
 -- ---------------------------------------------------------------------------
+-- legacy_hotel_for_property — the frontend-facing counterpart of
+-- current_staff_hotel_for_module(): the app shell knows the caller's Core
+-- property_id (from ModuleRuntimeContext), not the legacy hotel_id its
+-- queries against this module's tables need, and has to resolve that
+-- before it can even ask "does this hotel have an operational profile for
+-- me?" (the same three-step check useHousekeepingAccess does, mirrored by
+-- a new useDiningAccess). Same generalization as above, applied to
+-- guest_requests_legacy_hotel_for_property()
+-- (20260906072119_guest_requests_runtime_property_mapping.sql), which
+-- hardcodes 'guest_requests' the same way current_staff_hotel() did.
+-- ---------------------------------------------------------------------------
+create function legacy_hotel_for_property(p_property_id uuid, p_module_slug text) returns uuid
+language sql stable security definer set search_path = public as $$
+  select m.legacy_hotel_id
+  from legacy_property_mapping m
+  where m.platform_property_id = p_property_id
+    and has_property_access(p_property_id)
+    and has_module(p_property_id, p_module_slug)
+  limit 1;
+$$;
+
+revoke all on function legacy_hotel_for_property(uuid, text) from public;
+grant execute on function legacy_hotel_for_property(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- dining_categories — admin-customizable, same shape as request_categories
 -- ---------------------------------------------------------------------------
 create table dining_categories (
