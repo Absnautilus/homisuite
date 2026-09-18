@@ -2,7 +2,7 @@ import { LockKeyhole } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import type { ShiftPlanningUnit } from '../preview/fixtures'
 
-const DAYS = [
+const WEEK_DAYS = [
   { weekday: 'Lun', day: '19' },
   { weekday: 'Mar', day: '20' },
   { weekday: 'Mer', day: '21' },
@@ -14,10 +14,20 @@ const DAYS = [
 
 interface ScheduleGridProps {
   unit: ShiftPlanningUnit
+  view: 'month' | 'week'
 }
 
-export function ScheduleGrid({ unit }: ScheduleGridProps) {
+const MONTH_WEEKDAYS = ['Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom', 'Lun']
+
+export function ScheduleGrid({ unit, view }: ScheduleGridProps) {
   const codeMap = new Map(unit.codes.map((code) => [code.code, code]))
+  const days = view === 'week'
+    ? WEEK_DAYS
+    : Array.from({ length: 30 }, (_, index) => ({
+        weekday: MONTH_WEEKDAYS[index % MONTH_WEEKDAYS.length],
+        day: String(index + 1),
+        weekend: [4, 5].includes(index % 7),
+      }))
 
   return (
     <div className="shift-grid-scroll" tabIndex={0} aria-label={`Tabella turni ${unit.name}`}>
@@ -25,7 +35,7 @@ export function ScheduleGrid({ unit }: ScheduleGridProps) {
         <thead>
           <tr>
             <th className="shift-person-column">Persona</th>
-            {DAYS.map((day) => (
+            {days.map((day) => (
               <th className={day.weekend ? 'is-weekend' : undefined} key={day.day}>
                 <span>{day.weekday}</span>
                 <strong>{day.day}</strong>
@@ -43,13 +53,15 @@ export function ScheduleGrid({ unit }: ScheduleGridProps) {
                   <small>{person.assignmentProfile}</small>
                 </span>
               </th>
-              {(unit.assignments[person.id] ?? []).map((code, index) => {
+              {days.map((day, index) => {
+                const weeklyAssignments = unit.assignments[person.id] ?? []
+                const code = weeklyAssignments[index % Math.max(weeklyAssignments.length, 1)] ?? 'R'
                 const definition = codeMap.get(code)
                 return (
-                  <td key={`${person.id}-${DAYS[index]?.day ?? index}`}>
+                  <td key={`${person.id}-${day.day}`}>
                     <div
                       className="shift-cell"
-                      aria-label={`${person.name}, ${DAYS[index]?.weekday} ${DAYS[index]?.day}: ${definition?.label ?? code}`}
+                      aria-label={`${person.name}, ${day.weekday} ${day.day}: ${definition?.label ?? code}`}
                       title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`}
                       style={{
                         '--shift-color': definition?.color ?? '#9AA0A6',

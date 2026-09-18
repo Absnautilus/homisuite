@@ -13,6 +13,8 @@ export interface ShiftPerson {
   jobTitle: string
   assignmentProfile: string
   includedBy: 'job-title' | 'manual'
+  restMode: 'fixed' | 'rotating'
+  restDays?: string
 }
 
 export interface ShiftRuleSummary {
@@ -65,12 +67,12 @@ export const shiftPreviewProperties: ShiftPreviewProperty[] = [
         ruleSetVersion: 1,
         codes: receptionCodes,
         people: [
-          { id: 'ana', name: 'Ana Beatrice', initials: 'AB', jobTitle: 'Receptionist', assignmentProfile: 'Diurno', includedBy: 'job-title' },
-          { id: 'hamza', name: 'Hamza', initials: 'HA', jobTitle: 'Receptionist', assignmentProfile: 'Turnante', includedBy: 'job-title' },
-          { id: 'farouk', name: 'Farouk', initials: 'FA', jobTitle: 'Receptionist', assignmentProfile: 'Notturno', includedBy: 'job-title' },
-          { id: 'giulia', name: 'Giulia', initials: 'GI', jobTitle: 'Receptionist', assignmentProfile: 'Diurno', includedBy: 'job-title' },
-          { id: 'marta', name: 'Marta', initials: 'MA', jobTitle: 'Front Office Manager', assignmentProfile: 'FOM', includedBy: 'job-title' },
-          { id: 'luca', name: 'Luca', initials: 'LU', jobTitle: 'Receptionist', assignmentProfile: 'Turnante', includedBy: 'manual' },
+          { id: 'ana', name: 'Ana Beatrice', initials: 'AB', jobTitle: 'Receptionist', assignmentProfile: 'Diurno', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'hamza', name: 'Hamza', initials: 'HA', jobTitle: 'Receptionist', assignmentProfile: 'Turnante', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'farouk', name: 'Farouk', initials: 'FA', jobTitle: 'Receptionist', assignmentProfile: 'Notturno', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'giulia', name: 'Giulia', initials: 'GI', jobTitle: 'Receptionist', assignmentProfile: 'Diurno', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'marta', name: 'Marta', initials: 'MA', jobTitle: 'Front Office Manager', assignmentProfile: 'FOM', includedBy: 'job-title', restMode: 'fixed', restDays: 'Dom + Lun' },
+          { id: 'luca', name: 'Luca', initials: 'LU', jobTitle: 'Receptionist', assignmentProfile: 'Turnante', includedBy: 'manual', restMode: 'fixed', restDays: 'Sab + Dom' },
         ],
         assignments: {
           ana: ['A1', 'A1', 'R', 'R', 'C1', 'C1', 'CE'],
@@ -101,10 +103,10 @@ export const shiftPreviewProperties: ShiftPreviewProperty[] = [
           { code: 'F', label: 'Ferie', time: '', color: '#C9A227', textColor: '#282014' },
         ],
         people: [
-          { id: 'sara', name: 'Sara', initials: 'SA', jobTitle: 'Governante', assignmentProfile: 'Coordinamento', includedBy: 'job-title' },
-          { id: 'elena', name: 'Elena', initials: 'EL', jobTitle: 'Cameriere/a ai piani', assignmentProfile: 'Piani', includedBy: 'job-title' },
-          { id: 'nadia', name: 'Nadia', initials: 'NA', jobTitle: 'Cameriere/a ai piani', assignmentProfile: 'Piani', includedBy: 'job-title' },
-          { id: 'ines', name: 'Ines', initials: 'IN', jobTitle: 'Cameriere/a ai piani', assignmentProfile: 'Piani', includedBy: 'manual' },
+          { id: 'sara', name: 'Sara', initials: 'SA', jobTitle: 'Governante', assignmentProfile: 'Diurno', includedBy: 'job-title', restMode: 'fixed', restDays: 'Sab + Dom' },
+          { id: 'elena', name: 'Elena', initials: 'EL', jobTitle: 'Cameriere/a ai piani', assignmentProfile: 'Diurno', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'nadia', name: 'Nadia', initials: 'NA', jobTitle: 'Cameriere/a ai piani', assignmentProfile: 'Turnante', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'ines', name: 'Ines', initials: 'IN', jobTitle: 'Cameriere/a ai piani', assignmentProfile: 'Diurno', includedBy: 'manual', restMode: 'fixed', restDays: 'Dom + Lun' },
         ],
         assignments: {
           sara: ['GOV', 'GOV', 'GOV', 'GOV', 'GOV', 'R', 'R'],
@@ -138,9 +140,9 @@ export const shiftPreviewProperties: ShiftPreviewProperty[] = [
           { code: 'R', label: 'Riposo', time: '', color: '#9AA0A6' },
         ],
         people: [
-          { id: 'alba', name: 'Alba', initials: 'AL', jobTitle: 'Receptionist', assignmentProfile: 'Standard', includedBy: 'job-title' },
-          { id: 'marco', name: 'Marco', initials: 'MR', jobTitle: 'Receptionist', assignmentProfile: 'Standard', includedBy: 'job-title' },
-          { id: 'noemi', name: 'Noemi', initials: 'NO', jobTitle: 'Receptionist', assignmentProfile: 'Notte', includedBy: 'manual' },
+          { id: 'alba', name: 'Alba', initials: 'AL', jobTitle: 'Receptionist', assignmentProfile: 'Diurno', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'marco', name: 'Marco', initials: 'MR', jobTitle: 'Receptionist', assignmentProfile: 'Turnante', includedBy: 'job-title', restMode: 'rotating' },
+          { id: 'noemi', name: 'Noemi', initials: 'NO', jobTitle: 'Receptionist', assignmentProfile: 'Notturno', includedBy: 'manual', restMode: 'fixed', restDays: 'Sab + Dom' },
         ],
         assignments: {
           alba: ['M', 'M', 'R', 'R', 'S', 'S', 'M'],
