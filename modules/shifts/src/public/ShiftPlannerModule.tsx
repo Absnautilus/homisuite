@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, ShieldCheck } from 'lucide-react'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
-import { EmployeesPanel, PersonalPanel, RequestsPanel, RulesPanel } from './PlannerPanels'
+import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
 
 export interface ShiftPlannerCapabilities { view: boolean; manage: boolean; manageRequests: boolean }
@@ -83,7 +83,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
       {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className="shift-status-chip is-draft">Bozza</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview}>Assegna automaticamente</button><button type="button" disabled={preview}>Imposta riposi</button><button type="button" disabled={preview}>Rendi definitivo</button><button className="is-primary" type="button" disabled={preview}>Salva turni</button></> : null}</div></div><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><i style={{ background: code.color }} /><strong>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section></> : null}
       {tab === 'employees' ? <EmployeesPanel property={property} /> : null}
       {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} /></> : null}
-      {tab === 'mine' ? <PersonalPanel /> : null}{tab === 'preferences' ? <PersonalPanel preferences /> : null}
+      {tab === 'mine' ? <MyShiftsPanel unit={unit} /> : null}{tab === 'preferences' ? <PersonalPanel /> : null}
       {tab === 'swaps' ? <RequestsPanel kind="swaps" /> : null}{tab === 'absences' ? <RequestsPanel kind="absences" /> : null}{tab === 'preassignments' ? <RequestsPanel kind="preassignments" /> : null}
     </div>
   </div>
