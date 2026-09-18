@@ -1,7 +1,8 @@
 # Turni module architecture
 
-Status: proposed contract for preview and T1. The current database PR remains
-draft until this contract is reflected in its schema and pgTAP coverage.
+Status: accepted T0.5 product contract. The fixture-only preview validates this
+contract; database implementation and pgTAP coverage remain T1 work and must
+not be inferred from the preview.
 
 ## Product model
 
@@ -162,4 +163,3 @@ Before finalizing T1, a read-only mock preview must demonstrate:
 8. desktop and mobile behavior.
 
 The preview uses fixtures only and performs no Supabase reads or writes.
-
