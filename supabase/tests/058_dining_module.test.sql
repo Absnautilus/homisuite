@@ -4,7 +4,7 @@
 -- policy must treat that identically to an explicit enabled=false row.
 begin;
 create extension if not exists pgtap;
-select plan(19);
+select plan(20);
 
 insert into hotels (id, name, timezone, active) values
   ('00000058-0000-0000-0000-00000000ff01', 'Hotel Con Dining', 'Europe/Rome', true),
@@ -66,13 +66,18 @@ set local role authenticated;
 set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000a01';
 insert into dining_categories (id, hotel_id, name) values
   ('00000058-0000-0000-0000-000000000c01', '00000058-0000-0000-0000-00000000ff01', 'Fine dining');
-insert into restaurants (id, hotel_id, category_id, name, is_external, maps_url) values
-  ('00000058-0000-0000-0000-0000000da001', '00000058-0000-0000-0000-00000000ff01', '00000058-0000-0000-0000-000000000c01', 'Trattoria Da Mario', true, 'https://maps.google.com/?q=trattoria-da-mario');
+insert into restaurants (id, hotel_id, category_id, name, is_external, maps_url, website_url, requires_online_booking) values
+  ('00000058-0000-0000-0000-0000000da001', '00000058-0000-0000-0000-00000000ff01', '00000058-0000-0000-0000-000000000c01', 'Trattoria Da Mario', true, 'https://maps.google.com/?q=trattoria-da-mario', 'https://trattoriadamario.example', true);
 insert into restaurant_hours (restaurant_id, day_of_week, opens_at, closes_at) values
   ('00000058-0000-0000-0000-0000000da001', 1, '12:00', '15:00'),
   ('00000058-0000-0000-0000-0000000da001', 1, '19:00', '23:00');
 reset role;
 select is((select count(*)::int from restaurant_hours where restaurant_id = '00000058-0000-0000-0000-0000000da001'), 2, 'two opening intervals for the same day were both created (lunch + dinner)');
+select is(
+  (select row(website_url, requires_online_booking) from restaurants where id = '00000058-0000-0000-0000-0000000da001'),
+  row('https://trattoriadamario.example'::text, true::boolean),
+  'website_url and requires_online_booking were saved for the restaurant'
+);
 
 -- ### housekeeping operatore cannot write the directory (admin-only) ###
 set local role authenticated;

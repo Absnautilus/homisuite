@@ -126,8 +126,15 @@ create table restaurants (
   -- never validated as a real Maps URL (Fase 1 decision: no Maps API key,
   -- no format constraint beyond being a link).
   maps_url text,
+  website_url text,
   phone text,
   address text,
+  -- Some restaurants only take bookings through their own website (not by
+  -- phone/concierge) -- surfaced so staff know to point the guest there
+  -- instead of creating a reservation request themselves. A directory
+  -- entry, not an integration: nothing here reads or writes the
+  -- restaurant's own site.
+  requires_online_booking boolean not null default false,
   active boolean not null default true,
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
