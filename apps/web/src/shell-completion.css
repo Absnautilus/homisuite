@@ -179,3 +179,31 @@ body.modal-open { overflow: hidden; }
   .modal-backdrop { padding: 0; align-items: end; }
   .modal-panel { width: 100%; max-height: 92vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 }
+
+.switch-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.switch-field > span { text-transform: none; font-weight: 600; font-size: 12.5px; color: var(--ink-2); letter-spacing: normal; }
+
+.dining-page > .ui-tabs { margin-bottom: 4px; }
+
+.dining-restaurant-list { display: grid; gap: 10px; padding: 0 20px 20px; }
+.dining-restaurant-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 16px; box-shadow: none; }
+.dining-restaurant-row > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; }
+.dining-restaurant-row strong { flex-basis: 100%; font-size: 13.5px; }
+.dining-restaurant-links { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2px; }
+.dining-restaurant-links a { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
+.dining-restaurant-links a:hover { text-decoration: underline; }
+.dining-restaurant-actions { display: flex; gap: 2px; flex: 0 0 auto; }
+
+.dining-hours-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 2px; }
+.dining-hours-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.dining-hours-list li.muted { border-bottom: 0; padding: 4px 0; }
+.dining-hours-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dining-hours-form .select-root { flex: 1 1 150px; }
+.dining-hours-form input[type="time"] { min-height: 42px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); }
+
+.dining-reservations-table { border-top: 1px solid var(--line); overflow-x: auto; }
+.dining-reservations-row { display: grid; grid-template-columns: 96px 110px 76px 140px 64px 150px 50px 130px minmax(170px,1fr) minmax(170px,1fr); gap: 10px; align-items: center; min-height: 54px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 12px; min-width: 1340px; }
+.dining-reservations-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.dining-reservations-row.cancelled { background: var(--red-bg); color: var(--red-ink); }
+.dining-reservations-row.cancelled .select-trigger { background: transparent; border-color: rgba(178,58,58,.22); color: inherit; }
+.dining-reservations-empty { padding: 24px 20px; text-align: center; }
