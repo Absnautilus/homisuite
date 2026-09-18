@@ -36,9 +36,18 @@
 .shift-property-field { min-width: 255px; }
 .shift-field { display: grid; gap: 7px; }
 .shift-field > span:first-child { color: var(--shift-muted); font-size: 12px; font-weight: 750; text-transform: uppercase; }
-.shift-select-wrap { position: relative; }
-.shift-select-wrap select { appearance: none; background: white; border: 1px solid var(--shift-line); border-radius: 12px; color: var(--shift-ink); min-height: 44px; padding: 0 42px 0 13px; width: 100%; }
-.shift-select-wrap svg { pointer-events: none; position: absolute; right: 13px; top: 14px; }
+.shift-scenario-select { position: relative; }
+.shift-scenario-trigger { align-items: center; background: white; border: 1px solid var(--shift-line); border-radius: 12px; color: var(--shift-ink); cursor: pointer; display: flex; gap: 12px; justify-content: space-between; min-height: 46px; padding: 0 13px 0 15px; text-align: left; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; width: 100%; }
+.shift-scenario-trigger:hover { background: #fcfbfe; border-color: #d8c4e7; }
+.shift-scenario-trigger svg { color: var(--shift-muted); flex: 0 0 auto; transition: transform 200ms cubic-bezier(.22,1,.36,1); }
+.shift-scenario-select.is-open .shift-scenario-trigger { border-color: #bd8bdc; box-shadow: 0 0 0 3px #eadcf4; }
+.shift-scenario-select.is-open .shift-scenario-trigger svg { transform: rotate(180deg); }
+.shift-scenario-menu { animation: shift-select-enter 180ms cubic-bezier(.22,1,.36,1); background: white; border: 1px solid var(--shift-line); border-radius: 13px; box-shadow: 0 18px 46px #24203b24; display: grid; gap: 3px; left: 0; min-width: 100%; padding: 5px; position: absolute; top: calc(100% + 7px); z-index: 20; }
+.shift-scenario-menu button { align-items: center; background: transparent; border: 0; border-radius: 9px; color: var(--shift-ink); cursor: pointer; display: flex; gap: 12px; justify-content: space-between; min-height: 42px; padding: 0 10px; text-align: left; white-space: nowrap; width: 100%; }
+.shift-scenario-menu button:hover, .shift-scenario-menu button:focus-visible { background: #f5eff9; outline: none; }
+.shift-scenario-menu button.is-selected { background: #eee3f6; color: #6f3e91; font-weight: 750; }
+.shift-scenario-menu button svg { color: var(--shift-accent); }
+@keyframes shift-select-enter { from { opacity: 0; transform: translateY(-5px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 .shift-unit-bar, .shift-toolbar { align-items: center; display: flex; gap: 16px; justify-content: space-between; }
 .shift-unit-bar { border-bottom: 1px solid var(--shift-line); }
@@ -131,7 +140,7 @@
 .shift-period-control > button { align-items: center; background: #f0f1f8; border: 0; border-radius: 999px; cursor: pointer; display: inline-flex; height: 38px; justify-content: center; width: 38px; }
 .shift-period-control strong { min-width: 120px; }
 .shift-status-chip.is-draft { background: #fff0ce; color: #916215; }
-.shift-calendar-actions > button, .shift-view-segment button { background: #eeeef8; border: 0; border-radius: 10px; color: var(--shift-ink); font-size: 12px; font-weight: 750; min-height: 40px; padding: 0 13px; }
+.shift-calendar-actions > button, .shift-view-segment button { background: #eeeef8; border: 0; border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 750; min-height: 40px; padding: 0 13px; }
 .shift-calendar-actions > button.is-primary { background: var(--shift-accent); color: white; }
 .shift-calendar-actions > button:disabled { cursor: not-allowed; opacity: .58; }
 .shift-view-segment { background: #f1f1f7; border-radius: 11px; padding: 3px; }

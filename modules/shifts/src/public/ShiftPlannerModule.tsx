@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, ShieldCheck } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, ShieldCheck } from 'lucide-react'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
 import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
@@ -75,7 +75,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   return <div className="shift-root">
     {preview ? <div className="shift-preview-banner" role="status"><Eye size={16} /><span><strong>Anteprima interattiva</strong> · dati fittizi, nessuna modifica viene salvata</span></div> : null}
     <header className="shift-header"><div><p className="shift-eyebrow">{property.name}</p><h1>Turni</h1><p>Il Planner originale, integrato con persone, mansioni e strutture Homisuite.</p></div><div className="shift-header-actions">
-      {preview ? <label className="shift-field shift-property-field"><span>Scenario</span><span className="shift-select-wrap"><select value={property.id} onChange={(event) => changeProperty(event.target.value)}>{previewProperties.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.name}</option>)}</select><ChevronDown size={16} aria-hidden="true" /></span></label> : null}
+      {preview ? <ScenarioSelect properties={previewProperties} value={property.id} onChange={changeProperty} /> : null}
       {preview ? <button className="shift-view-toggle" type="button" onClick={togglePreviewRole}>{readOnly ? <Eye size={15} /> : <ShieldCheck size={15} />}Vista {readOnly ? 'dipendente' : 'responsabile'}</button> : null}
     </div></header>
     <nav className="shift-main-tabs" aria-label="Sezioni Turni"><div ref={navContainerRef} className="shift-main-tabs-scroll" role="tablist"><i className="shift-tab-highlight" aria-hidden="true" style={{ left: navHighlight.left, width: navHighlight.width, opacity: navHighlight.ready ? 1 : 0 }} /><div className="shift-main-tab-buttons">{visibleTabs.map((item) => <button ref={(element) => { if (element) navButtonRefs.current[item.id] = element }} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? 'is-active' : undefined} onClick={() => changeTab(item.id)} key={item.id}>{item.label}</button>)}</div></div></nav>
@@ -85,6 +85,55 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
       {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} /></> : null}
       {tab === 'mine' ? <MyShiftsPanel unit={unit} /> : null}{tab === 'preferences' ? <PersonalPanel /> : null}
       {tab === 'swaps' ? <RequestsPanel kind="swaps" /> : null}{tab === 'absences' ? <RequestsPanel kind="absences" /> : null}{tab === 'preassignments' ? <RequestsPanel kind="preassignments" /> : null}
+    </div>
+  </div>
+}
+
+function ScenarioSelect({ properties, value, onChange }: { properties: ShiftPreviewProperty[]; value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, properties.findIndex((property) => property.id === value)))
+  const rootRef = useRef<HTMLDivElement>(null)
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const selected = properties.find((property) => property.id === value) ?? properties[0]
+
+  useEffect(() => {
+    if (!open) return
+    const selectedIndex = Math.max(0, properties.findIndex((property) => property.id === value))
+    setActiveIndex(selectedIndex)
+    optionRefs.current[selectedIndex]?.focus()
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick)
+  }, [open, properties, value])
+
+  function choose(propertyId: string) {
+    onChange(propertyId)
+    setOpen(false)
+  }
+
+  function moveFocus(nextIndex: number) {
+    const normalized = (nextIndex + properties.length) % properties.length
+    setActiveIndex(normalized)
+    optionRefs.current[normalized]?.focus()
+  }
+
+  return <div className="shift-field shift-property-field" ref={rootRef}>
+    <span id="shift-scenario-label">Scenario</span>
+    <div className={`shift-scenario-select${open ? ' is-open' : ''}`}>
+      <button className="shift-scenario-trigger" type="button" aria-labelledby="shift-scenario-label shift-scenario-value" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)} onKeyDown={(event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true) }
+      }}><span id="shift-scenario-value">{selected?.name}</span><ChevronDown size={17} aria-hidden="true" /></button>
+      {open ? <div className="shift-scenario-menu" role="listbox" aria-labelledby="shift-scenario-label">
+        {properties.map((property, index) => <button ref={(element) => { optionRefs.current[index] = element }} type="button" role="option" aria-selected={property.id === value} className={property.id === value ? 'is-selected' : undefined} key={property.id} onClick={() => choose(property.id)} onMouseEnter={() => setActiveIndex(index)} onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') { event.preventDefault(); moveFocus(activeIndex + 1) }
+          if (event.key === 'ArrowUp') { event.preventDefault(); moveFocus(activeIndex - 1) }
+          if (event.key === 'Home') { event.preventDefault(); moveFocus(0) }
+          if (event.key === 'End') { event.preventDefault(); moveFocus(properties.length - 1) }
+          if (event.key === 'Escape') { event.preventDefault(); setOpen(false); rootRef.current?.querySelector<HTMLButtonElement>('.shift-scenario-trigger')?.focus() }
+        }}><span>{property.name}</span>{property.id === value ? <Check size={16} aria-hidden="true" /> : null}</button>)}
+      </div> : null}
     </div>
   </div>
 }
