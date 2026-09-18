@@ -61,3 +61,18 @@ export const CONFIRMATION_STATUS_LABELS: Record<ConfirmationStatus, string> = {
 }
 
 export const DAY_LABELS = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
+
+export type ChangeLogAction = 'created' | 'updated' | 'deleted'
+export type ChangeLogEntityType = 'category' | 'restaurant' | 'hours' | 'reservation'
+
+export interface ChangeLogEntry {
+  id: string
+  hotel_id: string
+  entity_type: ChangeLogEntityType
+  entity_id: string
+  action: ChangeLogAction
+  actor_profile_id: string | null
+  actor_name: string
+  summary: string
+  created_at: string
+}

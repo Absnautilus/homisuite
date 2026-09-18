@@ -115,9 +115,10 @@ body.modal-open { overflow: hidden; }
 .module-access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
 .form-field { display: grid; gap: 6px; }
 .form-field > span { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-.form-field input, .form-field select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); }
+.form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; }
 .form-field input[readonly], .form-field select:disabled { background: var(--surface-2); color: var(--muted); }
 .form-field input[readonly] { font-family: var(--mono); font-size: 12.5px; }
+.form-field textarea { padding: 9px 11px; resize: vertical; }
 .form-section-title { margin: 4px 0 0; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .form-field small { color: var(--muted); font-size: 10.5px; }
 .link-button { border: 0; background: transparent; padding: 0; color: var(--red-ink); font-size: 11.5px; font-weight: 700; cursor: pointer; }
@@ -183,7 +184,14 @@ body.modal-open { overflow: hidden; }
 .switch-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
 .switch-field > span { text-transform: none; font-weight: 600; font-size: 12.5px; color: var(--ink-2); letter-spacing: normal; }
 
-.dining-page > .ui-tabs { margin-bottom: 4px; }
+/* Same visual spec as Housekeeping's own admin-tab nav (housekeeping-theme.css)
+   for a consistent feel between the two modules -- a rounded pill container
+   holding flat, rectangular tabs where the active one lifts onto the page's
+   own surface color with a soft shadow, rather than a colored accent pill. */
+.dining-tab-nav { display: inline-flex; width: fit-content; max-width: 100%; gap: 4px; padding: 4px; border-radius: var(--r-md); background: var(--surface-2); overflow-x: auto; }
+.dining-tab { flex: 0 0 auto; min-height: 40px; padding: 7px 13px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background 165ms ease, color 120ms ease, box-shadow 165ms ease; }
+.dining-tab:hover { color: var(--ink); }
+.dining-tab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
 
 .dining-restaurant-list { display: grid; gap: 10px; padding: 0 20px 20px; }
 .dining-restaurant-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 16px; box-shadow: none; }
@@ -208,3 +216,7 @@ body.modal-open { overflow: hidden; }
 .dining-reservations-row.cancelled { background: var(--red-bg); color: var(--red-ink); }
 .dining-reservations-row.cancelled .select-trigger { background: transparent; border-color: rgba(178,58,58,.22); color: inherit; }
 .dining-reservations-empty { padding: 24px 20px; text-align: center; }
+
+.dining-change-log { border-top: 1px solid var(--line); overflow-x: auto; }
+.dining-change-log-row { display: grid; grid-template-columns: 150px 160px 1fr; gap: 14px; align-items: center; min-height: 48px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 12.5px; min-width: 560px; }
+.dining-change-log-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }

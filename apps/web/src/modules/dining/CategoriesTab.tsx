@@ -105,6 +105,7 @@ function CategoryModal({ category, hotelId, onClose, onSaved, onDelete }: {
       open={Boolean(category)}
       title={existing ? 'Modifica categoria' : 'Nuova categoria'}
       onClose={onClose}
+      dismissible={false}
       footer={(
         <>
           {existing ? <button className="btn btn-danger push-left" type="button" onClick={() => void onDelete(existing)} disabled={saving}>Elimina</button> : null}
