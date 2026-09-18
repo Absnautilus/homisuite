@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(62);
+select plan(64);
 
 -- ---------------------------------------------------------------------------
 -- Reference data and tenant fixtures
@@ -129,9 +129,9 @@ select ok(
   'immutable rule sets expose no update or delete grant'
 );
 select is(
-  (select visibility_scope from shift_planning_units where id = '00000058-0000-0000-0000-000000000071'),
-  'members_only',
-  'planning units default to member-only visibility'
+  (select member_visibility_scope from shift_planning_units where id = '00000058-0000-0000-0000-000000000071'),
+  'own_unit',
+  'planning-unit members default to seeing only their own unit'
 );
 
 select throws_ok(
@@ -356,14 +356,18 @@ select is(
   'swap approval is persisted'
 );
 
-update shift_planning_units set visibility_scope = 'property_wide'
-where id = '00000058-0000-0000-0000-000000000073';
+update shift_planning_units set member_visibility_scope = 'all_units'
+where id = '00000058-0000-0000-0000-000000000071';
 set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000042';
-select is((select count(*)::int from shift_planning_units), 2, 'property-wide setting exposes the second unit to non-members');
-select is((select count(*)::int from shifts), 4, 'property-wide setting exposes the second unit schedule');
-select is((select count(*)::int from shift_preferences), 1, 'property-wide visibility does not expose peer preferences');
-select is((select count(*)::int from shift_absence_requests), 1, 'property-wide visibility does not expose peer absence requests');
-select is((select count(*)::int from shift_notifications), 1, 'property-wide visibility does not expose peer notifications');
+select is((select count(*)::int from shift_planning_units), 2, 'all-units setting lets members of the configured source unit see the other unit');
+select is((select count(*)::int from shifts), 4, 'all-units setting lets source-unit members see the other unit schedule');
+select is((select count(*)::int from shift_preferences), 1, 'all-units visibility does not expose peer preferences');
+select is((select count(*)::int from shift_absence_requests), 1, 'all-units visibility does not expose peer absence requests');
+select is((select count(*)::int from shift_notifications), 1, 'all-units visibility does not expose peer notifications');
+
+set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000043';
+select is((select count(*)::int from shift_planning_units), 1, 'the setting is directional: members of another own-unit group still see only their unit');
+select is((select count(*)::int from shifts), 1, 'the other own-unit group still sees only its own schedule');
 
 set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000045';
 select ok(has_permission('00000058-0000-0000-0000-000000000011', 'shifts.manage'), 'organization admin inherits Turni management for an entitled property');

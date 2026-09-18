@@ -62,8 +62,8 @@ create table shift_planning_units (
   name text not null check (char_length(trim(name)) between 1 and 80),
   slug text not null check (slug = lower(slug) and slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
   status text not null default 'active' check (status in ('active', 'inactive')),
-  visibility_scope text not null default 'members_only'
-    check (visibility_scope in ('members_only', 'property_wide')),
+  member_visibility_scope text not null default 'own_unit'
+    check (member_visibility_scope in ('own_unit', 'all_units')),
   created_by uuid references profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -392,8 +392,8 @@ revoke all on function owns_shift_staff_profile(uuid, uuid) from public, anon;
 grant execute on function owns_shift_staff_profile(uuid, uuid) to authenticated;
 
 -- A capability opens the module; this helper narrows ordinary staff to their
--- units. Managers see every unit in the property. A unit administrator may
--- explicitly make one unit's operational roster and calendar property-wide.
+-- own units. Managers see every unit in the property. A unit administrator
+-- may let the members of one source unit see all other units in the property.
 create function can_view_shift_planning_unit(p_property_id uuid, p_planning_unit_id uuid)
 returns boolean
 language sql stable security definer set search_path = '' as $$
@@ -401,23 +401,20 @@ language sql stable security definer set search_path = '' as $$
     public.has_permission(p_property_id, 'shifts.manage')
     or exists (
       select 1
-      from public.shift_planning_units unit
-      where unit.property_id = p_property_id
-        and unit.id = p_planning_unit_id
+      from public.shift_unit_members member
+      join public.shift_staff_profiles staff
+        on staff.property_id = member.property_id
+       and staff.id = member.staff_profile_id
+      join public.shift_planning_units source_unit
+        on source_unit.property_id = member.property_id
+       and source_unit.id = member.planning_unit_id
+      where member.property_id = p_property_id
+        and member.active
+        and staff.active
+        and staff.profile_id = (select auth.uid())
         and (
-          unit.visibility_scope = 'property_wide'
-          or exists (
-            select 1
-            from public.shift_unit_members member
-            join public.shift_staff_profiles staff
-              on staff.property_id = member.property_id
-             and staff.id = member.staff_profile_id
-            where member.property_id = p_property_id
-              and member.planning_unit_id = p_planning_unit_id
-              and member.active
-              and staff.active
-              and staff.profile_id = (select auth.uid())
-          )
+          member.planning_unit_id = p_planning_unit_id
+          or source_unit.member_visibility_scope = 'all_units'
         )
     )
   );
@@ -576,7 +573,7 @@ create policy shift_push_subscriptions_delete on shift_push_subscriptions for de
   using (profile_id = (select auth.uid()) and has_permission(property_id, 'shifts.view'));
 
 comment on table shift_planning_units is 'Independent Turni schedules inside one property; never a separate tenant.';
-comment on column shift_planning_units.visibility_scope is 'members_only limits operational roster/calendar reads to active unit members and managers; property_wide opens them to property actors with shifts.view.';
+comment on column shift_planning_units.member_visibility_scope is 'own_unit limits this unit members to their own operational roster/calendar; all_units lets them read every unit in the same property when they also hold shifts.view.';
 comment on table shift_staff_profiles is 'Turni operational settings linked to Core staff identity; owns no credentials or software role.';
 comment on table shift_rule_sets is 'Immutable-by-convention versioned scheduling-engine input; activation is held by the planning unit pointer.';
 comment on table shifts is 'Property- and unit-scoped schedule assignments. Legacy Planner rows are not copied by this migration.';
