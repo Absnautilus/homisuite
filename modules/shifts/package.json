@@ -1,0 +1,41 @@
+{
+  "name": "@homisuite/shifts-module",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/shifts-module.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/shifts-module.js"
+    },
+    "./style.css": "./dist/shifts-module.css"
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "node --experimental-strip-types --test src/preview/fixtures.test.mjs src/domain/icsExport.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "preview": "vite --host 127.0.0.1"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0"
+  },
+  "peerDependencies": {
+    "react": ">=19.1.0 <20",
+    "react-dom": ">=19.1.0 <20"
+  },
+  "devDependencies": {
+    "@homisuite/config": "*",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.0.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "~5.7.0",
+    "vite": "^7.1.5",
+    "vite-plugin-dts": "^4.5.0"
+  }
+}

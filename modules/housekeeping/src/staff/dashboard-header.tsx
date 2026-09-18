@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import type { SVGProps } from 'react'
+import { useEffect, useRef, useState, type Ref, type SVGProps } from 'react'
 import type { HousekeepingCapabilities } from '@/public/HousekeepingModule'
 import { LogoMark } from '@/components/logo'
 import { LanguageToggle } from '@/components/language-toggle'
@@ -32,13 +32,14 @@ export function DashboardHeader({ profile, embedded = false, basePath = '/staff'
   const adminPath = `${basePath}/admin`
 
   if (embedded) {
+    const tabs = [
+      { to: requestPath, label: t('staff.nav.requests'), active: location.pathname === requestPath || location.pathname === `${requestPath}/` },
+      ...(staysAllowed ? [{ to: staysPath, label: t('staff.nav.stays'), active: location.pathname.startsWith(staysPath) }] : []),
+      ...(manageAllowed ? [{ to: adminPath, label: t('staff.nav.admin'), active: location.pathname.startsWith(adminPath) }] : []),
+    ]
     return (
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <nav className="flex w-fit gap-0.5 rounded-full bg-surface-2 p-[3px]" aria-label={t('staff.nav.requests')}>
-          <TabLink to={requestPath} label={t('staff.nav.requests')} active={location.pathname === requestPath || location.pathname === `${requestPath}/`} />
-          {staysAllowed && <TabLink to={staysPath} label={t('staff.nav.stays')} active={location.pathname.startsWith(staysPath)} />}
-          {manageAllowed && <TabLink to={adminPath} label={t('staff.nav.admin')} active={location.pathname.startsWith(adminPath)} />}
-        </nav>
+        <AnimatedEmbeddedTabs tabs={tabs} label={t('staff.nav.requests')} />
         <div className="flex items-center gap-1">
           <OnDutyToggle profile={profile} dark={false} />
           <NotificationSettingsToggle align="right" />
@@ -78,8 +79,34 @@ export function DashboardHeader({ profile, embedded = false, basePath = '/staff'
   )
 }
 
-function TabLink({ to, label, active }: { to: string; label: string; active: boolean }) {
-  return <Link to={to} className={cn('inline-flex min-h-11 items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors', active ? 'bg-white text-foreground shadow-sm' : 'text-muted hover:text-foreground')}>{label}</Link>
+function AnimatedEmbeddedTabs({ tabs, label }: { tabs: Array<{ to: string; label: string; active: boolean }>; label: string }) {
+  const navRef = useRef<HTMLElement>(null)
+  const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
+  const [highlight, setHighlight] = useState({ left: 0, width: 0, ready: false })
+  const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.active))
+
+  useEffect(() => {
+    function measure() {
+      const nav = navRef.current
+      const link = linkRefs.current[activeIndex]
+      if (!nav || !link) return
+      const navRect = nav.getBoundingClientRect()
+      const linkRect = link.getBoundingClientRect()
+      setHighlight({ left: linkRect.left - navRect.left, width: linkRect.width, ready: true })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [activeIndex, tabs.length])
+
+  return <nav ref={navRef} className="hk-embedded-tabs" aria-label={label}>
+    <i className="hk-embedded-tab-highlight" aria-hidden="true" style={{ left: highlight.left, width: highlight.width, opacity: highlight.ready ? 1 : 0 }} />
+    {tabs.map((tab, index) => <TabLink ref={(element) => { linkRefs.current[index] = element }} key={tab.to} {...tab} />)}
+  </nav>
+}
+
+function TabLink({ to, label, active, ref }: { to: string; label: string; active: boolean; ref?: Ref<HTMLAnchorElement> }) {
+  return <Link ref={ref} to={to} className={cn('hk-embedded-tab', active && 'active')} aria-current={active ? 'page' : undefined}>{label}</Link>
 }
 
 function NavLink({ to, label, icon: Icon, active }: { to: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element; active: boolean }) {
