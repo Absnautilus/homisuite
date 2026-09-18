@@ -57,7 +57,9 @@ export function ReservationsTab({ hotelId, staffProfileId }: ReservationsTabProp
         {restaurants.length > 0 ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
       </div>
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
-      {!loading && restaurants.length === 0 ? <p className="muted">Crea prima un ristorante nella scheda "Ristoranti".</p> : null}
+      {!loading && restaurants.length === 0 ? (
+        <p className="muted dining-empty-hint">Crea prima un ristorante nella scheda "Ristoranti".</p>
+      ) : (
       <div className="dining-reservations-table" role="table" aria-label="Prenotazioni">
         <div className="dining-reservations-row dining-reservations-head" role="row">
           <span role="columnheader">Data</span>
@@ -98,8 +100,9 @@ export function ReservationsTab({ hotelId, staffProfileId }: ReservationsTabProp
             <span role="cell">{reservation.staff_notes ?? '—'}</span>
           </div>
         ))}
-        {!loading && reservations.length === 0 && restaurants.length > 0 ? <div className="dining-reservations-empty muted">Nessuna prenotazione registrata.</div> : null}
+        {!loading && reservations.length === 0 ? <div className="dining-reservations-empty muted">Nessuna prenotazione registrata.</div> : null}
       </div>
+      )}
       <CreateReservationModal
         open={createOpen}
         restaurants={restaurants}

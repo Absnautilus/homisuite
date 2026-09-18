@@ -201,6 +201,7 @@ body.modal-open { overflow: hidden; }
 .dining-hours-form .select-root { flex: 1 1 150px; }
 .dining-hours-form input[type="time"] { min-height: 42px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); }
 
+.dining-empty-hint { margin: 0; padding: 0 20px 20px; }
 .dining-reservations-table { border-top: 1px solid var(--line); overflow-x: auto; }
 .dining-reservations-row { display: grid; grid-template-columns: 96px 110px 76px 140px 64px 150px 50px 130px minmax(170px,1fr) minmax(170px,1fr); gap: 10px; align-items: center; min-height: 54px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 12px; min-width: 1340px; }
 .dining-reservations-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
