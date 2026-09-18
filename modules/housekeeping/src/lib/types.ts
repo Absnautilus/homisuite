@@ -49,4 +49,5 @@ export interface GuestRequest {
   priority: number
   archived_at: string | null
   returned_at: string | null
+  urgent: boolean
 }

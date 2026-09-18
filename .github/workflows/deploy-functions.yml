@@ -18,6 +18,7 @@ on:
           - reset-team-member-password
           - grant-housekeeping-access
           - early-access-signup
+          - notify-request-event
           - all
       confirm_project_ref:
         description: "Type the target Supabase project ref to confirm (must match the SUPABASE_PROJECT_REF repo variable exactly)"

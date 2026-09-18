@@ -6,7 +6,7 @@ import { cancelRequest, claimRequest, fetchQueue, subscribeToQueue } from '@/lib
 import { useRequestAlerts } from '@/hooks/use-request-alerts'
 import { playAlertSound } from '@/lib/beep'
 import { RequestRow } from '@/staff/request-row'
-import { InProgressColumn } from '@/staff/in-progress-column'
+import { ReorderableColumn } from '@/staff/reorderable-column'
 import { NewRequestForm } from '@/staff/new-request-form'
 import { DEPARTMENTS } from '@/lib/constants'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -153,11 +153,14 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
                   {t('staff.queue.emptyNewShort')}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {pending.map((request) => (
-                    <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="active" />
-                  ))}
-                </div>
+                <ReorderableColumn
+                  items={pending}
+                  now={now}
+                  staffId={profile.id}
+                  canReorder={canReorder}
+                  canFlagUrgent={managesFrontDesk}
+                  onReordered={reload}
+                />
               )}
             </section>
             <section className="min-w-0">
@@ -170,7 +173,14 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
                   {t('staff.queue.emptyInProgressShort')}
                 </div>
               ) : (
-                <InProgressColumn items={inProgress} now={now} staffId={profile.id} canReorder={canReorder} onReordered={reload} />
+                <ReorderableColumn
+                  items={inProgress}
+                  now={now}
+                  staffId={profile.id}
+                  canReorder={canReorder}
+                  canFlagUrgent={managesFrontDesk}
+                  onReordered={reload}
+                />
               )}
             </section>
           </div>

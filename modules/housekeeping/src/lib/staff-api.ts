@@ -152,6 +152,20 @@ export async function reassignRequest(id: string, department: Department) {
   if (error) throw error
 }
 
+// Edits the free-form fields a staff member can get wrong when logging a
+// request by hand (wrong room, wrong count, a typo in the note) — not
+// request_type_id, which drives assigned_department and would need its own
+// re-routing logic rather than a plain field edit.
+export async function updateRequest(id: string, patch: { room_number: string; quantity: number | null; note: string | null }) {
+  const { error } = await supabase.from('guest_requests').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+export async function setRequestUrgent(id: string, urgent: boolean) {
+  const { error } = await supabase.from('guest_requests').update({ urgent }).eq('id', id)
+  if (error) throw error
+}
+
 // Staff-reported issue, not tied to a guest. The client sends the selected
 // hotel explicitly; the DB trigger still derives assigned_department and
 // independently validates the room, menu item, and staff tenant references.

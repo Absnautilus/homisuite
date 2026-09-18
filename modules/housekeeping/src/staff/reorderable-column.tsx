@@ -21,17 +21,24 @@ import type { QueuedRequest } from '@/lib/staff-types'
 // stop. The actual reorder is computed once, at drop, and applied as one
 // state update — so during the gesture there's only ever one thing
 // changing on screen.
-export function InProgressColumn({
+//
+// Status-agnostic on purpose: the queue renders one of these per column
+// ("nuove" and "in carico"), each with its own item list — priority is
+// scoped per (hotel_id, status), so reordering one column never touches
+// the other's order.
+export function ReorderableColumn({
   items,
   now,
   staffId,
   canReorder,
+  canFlagUrgent,
   onReordered,
 }: {
   items: QueuedRequest[]
   now: Date
   staffId: string
   canReorder: boolean
+  canFlagUrgent: boolean
   onReordered: () => Promise<void>
 }) {
   const [order, setOrder] = useState(items)
@@ -192,6 +199,7 @@ export function InProgressColumn({
               staffId={staffId}
               mode="active"
               canReorder={canReorder}
+              canFlagUrgent={canFlagUrgent}
               onMoveUp={i > 0 ? () => moveAdjacent(order, i, -1, onReordered) : undefined}
               onMoveDown={i < order.length - 1 ? () => moveAdjacent(order, i, 1, onReordered) : undefined}
               onDragPointerDown={canReorder ? (e) => onHandlePointerDown(e, request.id) : undefined}
