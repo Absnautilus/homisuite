@@ -15,6 +15,7 @@
   "dependencies": {
     "@homisuite/core-sdk": "*",
     "@homisuite/housekeeping-module": "*",
+    "@homisuite/shifts-module": "*",
     "@homisuite/ui": "*",
     "@supabase/supabase-js": "^2.112.3",
     "lucide-react": "^0.468.0",

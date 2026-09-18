@@ -27,6 +27,12 @@ A technical module boundary now exists in the Planner repository: Homisuite can 
 
 Core continues to own identity, property access, roles/permissions and module entitlement. Turni owns its business tables.
 
+Turni is no longer modeled as one property-wide reception roster. A property
+can own multiple **planning units** (for example Reception and Housekeeping),
+each with selected Core job titles, its own members, shift catalogue and a
+versioned rule set. See `docs/architecture/shifts-module.md` for the definitive
+product and data contract.
+
 Every Turni-owned business row must be property-scoped. The canonical rule is:
 
 ```text
@@ -41,14 +47,16 @@ The module must never infer tenant scope from a module-local user row, an email 
 
 Do not reuse Core `profiles` as the Planner employee/business record. Core profiles are platform identity; Planner profiles contain module-specific fields such as employee type, rest rotation, annual quotas, operational ordering and shift extras.
 
-Create a Turni-owned employee table, recommended name `shift_staff_profiles`:
+Create a Turni-owned employee table, recommended name `shift_staff_profiles`.
+It contains property-level scheduling metadata only. Unit eligibility and the
+assignment profile belong to `shift_unit_members`, because one person may take
+part in multiple schedules:
 
 ```text
 shift_staff_profiles
 - id uuid primary key
 - property_id uuid not null references properties(id)
 - profile_id uuid not null references profiles(id)
-- employee_type
 - rest_type
 - fixed_rest_day
 - rotation_slot
@@ -63,6 +71,18 @@ shift_staff_profiles
 - created_at
 - unique(property_id, profile_id)
 ```
+
+Add the configuration layer before operational tables:
+
+- `shift_planning_units`
+- `shift_unit_job_titles`
+- `shift_unit_members`
+- `shift_codes`
+- `shift_rule_sets`
+
+Every operational row also carries `planning_unit_id`. A separate physical
+table per department/job title is explicitly rejected: the UI presents one
+table per planning unit while the database remains normalized.
 
 Core role/membership remains authoritative for authorization. The legacy Planner `is_admin` flag is migration input only and must not remain an independent security authority.
 
@@ -80,11 +100,12 @@ Create shared-project Turni tables with a mandatory `property_id` on each tenant
 - `shift_settings`
 - Turni push subscriptions should use either a module-owned property-scoped table or a later shared notification contract; do not collide with Housekeeping's current `push_subscriptions` table by name.
 
-All uniqueness constraints that are currently global must include `property_id`. Examples:
+All uniqueness constraints that are currently global must include
+`property_id` and, for unit-owned data, `planning_unit_id`. Examples:
 
 ```text
-shifts: unique(property_id, staff_profile_id, year, month, day)
-shift_month_states: primary key(property_id, year, month)
+shifts: unique(property_id, planning_unit_id, staff_profile_id, shift_date)
+shift_month_states: primary key(property_id, planning_unit_id, month_start)
 shift_settings: primary key(property_id, key)
 shift_preferences: primary key(property_id, staff_profile_id)
 ```
@@ -128,11 +149,14 @@ Migration order:
 
 1. identify the target Homisuite property (currently the Palazzo Veneziano operational dataset unless explicitly changed);
 2. reconcile all legacy employee identities;
-3. insert `shift_staff_profiles`;
-4. copy historical shifts using the identity map and target `property_id`;
-5. copy month states, preferences, settings and request data;
-6. reconcile row counts and broken references;
-7. only after successful reconciliation, enable the `shifts` entitlement and point the shell module at the shared client.
+3. create the Palazzo Veneziano Reception planning unit and the immutable
+   `palazzo-veneziano-reception@1` rule-set snapshot;
+4. insert `shift_staff_profiles` and unit memberships;
+5. copy historical shifts using the identity map, target `property_id` and
+   Reception `planning_unit_id`;
+6. copy month states, preferences, settings and request data;
+7. reconcile row counts and broken references;
+8. only after successful reconciliation, enable the `shifts` entitlement and point the shell module at the shared client.
 
 Minimum reconciliation gates:
 
@@ -167,9 +191,18 @@ The shell must fail closed when:
 
 Completed in Planner Turni: injectable Supabase client, embeddable entry point, library build and embedded chrome suppression.
 
+### T0.5 — contract and mock preview
+
+Inventory the existing Palazzo Venezia rules, define planning units/job-title
+selection/versioned rule sets and validate the UI with fixture-only Palazzo and
+generic-hotel scenarios. No production data access.
+
 ### T1 — additive shared schema
 
-Add Turni-owned property-scoped tables, permissions and RLS to the Homisuite repository, with pgTAP regression tests. No legacy data is modified.
+Add Turni-owned property- and planning-unit-scoped tables, permissions and RLS
+to the Homisuite repository, with pgTAP regression tests. No legacy data is
+modified. The existing draft PR must be revised to the T0.5 contract before it
+can leave draft state.
 
 ### T2 — migration tooling and rehearsal
 

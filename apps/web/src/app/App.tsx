@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ShellLayout } from '../components/ShellLayout'
 import { HomePage } from '../pages/HomePage'
@@ -7,6 +8,11 @@ import { SettingsPage } from '../pages/SettingsPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { HousekeepingModuleGate } from '../modules/housekeeping/HousekeepingModuleGate'
 import { DiningModuleGate } from '../modules/dining/DiningModuleGate'
+
+const ShiftPlannerPreviewPage = lazy(async () => {
+  const module = await import('../modules/shifts/ShiftPlannerPreviewPage')
+  return { default: module.ShiftPlannerPreviewPage }
+})
 
 export function App() {
   return (
@@ -19,7 +25,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="housekeeping/*" element={<HousekeepingModuleGate />} />
         <Route path="dining" element={<DiningModuleGate />} />
-        <Route path="turni" element={<PlaceholderPage title="Turni" />} />
+        <Route path="turni" element={<Suspense fallback={<main className="runtime-state">Caricamento Turni…</main>}><ShiftPlannerPreviewPage /></Suspense>} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
         <Route path="modules" element={<PlaceholderPage title="Moduli" />} />
         <Route path="team" element={<TeamPage />} />
