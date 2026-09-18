@@ -66,7 +66,7 @@ export function RestaurantsTab({ hotelId, canManage }: RestaurantsTabProps) {
         {canManage && categories.length > 0 ? <button className="secondary-action" type="button" onClick={() => setEditing('new')}><Plus size={16} /> Nuovo ristorante</button> : null}
       </div>
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
-      {!loading && categories.length === 0 ? <p className="muted">Crea prima una categoria nella scheda "Categorie".</p> : null}
+      {!loading && categories.length === 0 ? <p className="muted dining-empty-hint">Crea prima una categoria nella scheda "Categorie".</p> : null}
       <div className="dining-restaurant-list">
         {restaurants.map((restaurant) => (
           <div className="shell-card dining-restaurant-row" key={restaurant.id}>
