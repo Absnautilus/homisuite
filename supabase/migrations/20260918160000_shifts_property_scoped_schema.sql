@@ -426,13 +426,16 @@ $$;
 create function can_view_shift_staff_profile(p_property_id uuid, p_staff_profile_id uuid)
 returns boolean
 language sql stable security definer set search_path = '' as $$
-  select public.has_permission(p_property_id, 'shifts.manage') or exists (
-    select 1
-    from public.shift_unit_members member
-    where member.property_id = p_property_id
-      and member.staff_profile_id = p_staff_profile_id
-      and member.active
-      and public.can_view_shift_planning_unit(member.property_id, member.planning_unit_id)
+  select public.has_permission(p_property_id, 'shifts.view') and (
+    public.has_permission(p_property_id, 'shifts.manage')
+    or exists (
+      select 1
+      from public.shift_unit_members member
+      where member.property_id = p_property_id
+        and member.staff_profile_id = p_staff_profile_id
+        and member.active
+        and public.can_view_shift_planning_unit(member.property_id, member.planning_unit_id)
+    )
   );
 $$;
 
@@ -573,6 +576,7 @@ create policy shift_push_subscriptions_delete on shift_push_subscriptions for de
   using (profile_id = (select auth.uid()) and has_permission(property_id, 'shifts.view'));
 
 comment on table shift_planning_units is 'Independent Turni schedules inside one property; never a separate tenant.';
+comment on column shift_planning_units.visibility_scope is 'members_only limits operational roster/calendar reads to active unit members and managers; property_wide opens them to property actors with shifts.view.';
 comment on table shift_staff_profiles is 'Turni operational settings linked to Core staff identity; owns no credentials or software role.';
 comment on table shift_rule_sets is 'Immutable-by-convention versioned scheduling-engine input; activation is held by the planning unit pointer.';
 comment on table shifts is 'Property- and unit-scoped schedule assignments. Legacy Planner rows are not copied by this migration.';
