@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ArrowRightLeft, CalendarCheck, ChevronLeft, ChevronRight, Download, GripVertical, Palmtree, SlidersHorizontal } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
+import { ShiftSelect } from './ShiftSelect'
 
 type PersonDraft = {
   unitId: string
@@ -48,10 +49,10 @@ export function EmployeesPanel({ property }: { property: ShiftPreviewProperty })
             return (
               <tr key={person.id}>
                 <th scope="row"><GripVertical size={15} aria-hidden="true" /><span className="shift-avatar">{person.initials}</span><span><strong>{person.name}</strong><small>{person.jobTitle}</small></span></th>
-                <td><select aria-label={`Unità di ${person.name}`} value={draft.unitId} onChange={(event) => update(person.id, { unitId: event.target.value })}>{property.units.map((unit) => <option value={unit.id} key={unit.id}>{unit.name}</option>)}</select></td>
-                <td><select aria-label={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(event) => update(person.id, { assignmentProfile: event.target.value })}><option>Diurno</option><option>Turnante</option><option>Notturno</option><option>Direttore</option><option>FOM</option></select></td>
-                <td><select aria-label={`Riposo di ${person.name}`} value={draft.restMode} onChange={(event) => update(person.id, { restMode: event.target.value as PersonDraft['restMode'] })}><option value="rotating">Rotante</option><option value="fixed">Fisso</option></select></td>
-                <td><select aria-label={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(event) => update(person.id, { restDays: event.target.value })}><option value="">—</option><option>Sab + Dom</option><option>Dom + Lun</option><option>Lun + Mar</option></select></td>
+                <td><ShiftSelect ariaLabel={`Unità di ${person.name}`} value={draft.unitId} onChange={(unitId) => update(person.id, { unitId })} options={property.units.map((unit) => ({ value: unit.id, label: unit.name }))} /></td>
+                <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => update(person.id, { assignmentProfile })} options={['Diurno', 'Turnante', 'Notturno', 'Direttore', 'FOM'].map((label) => ({ value: label, label }))} /></td>
+                <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => update(person.id, { restMode: restMode as PersonDraft['restMode'] })} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
+                <td><ShiftSelect ariaLabel={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(restDays) => update(person.id, { restDays })} options={[{ value: '', label: '—' }, ...['Sab + Dom', 'Dom + Lun', 'Lun + Mar'].map((label) => ({ value: label, label }))]} /></td>
                 <td><span className="shift-status-chip">{person.includedBy === 'manual' ? 'Manuale' : 'Da Team'}</span></td>
               </tr>
             )
