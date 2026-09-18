@@ -166,6 +166,7 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
       title="Aggiungi prenotazione"
       description="Per una prenotazione presa telefonicamente o di persona."
       onClose={onClose}
+      dismissible={false}
       footer={(
         <>
           <button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button>
@@ -185,8 +186,8 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
         <label className="form-field"><span>Ora</span><input name="reservation_time" type="time" required /></label>
         <label className="form-field"><span>Numero persone</span><input name="party_size" type="number" min={1} max={50} required defaultValue={2} /></label>
         <label className="form-field"><span>N. prenotazione</span><input name="booking_reference" maxLength={40} /></label>
-        <label className="form-field"><span>Richieste particolari</span><textarea name="special_requests" rows={2} maxLength={500} /></label>
-        <label className="form-field"><span>Note interne</span><textarea name="staff_notes" rows={2} maxLength={500} /></label>
+        <label className="form-field"><span>Richieste particolari</span><textarea name="special_requests" rows={2} maxLength={500} spellCheck={false} /></label>
+        <label className="form-field"><span>Note interne</span><textarea name="staff_notes" rows={2} maxLength={500} spellCheck={false} /></label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
       </form>
     </Modal>

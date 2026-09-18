@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ConfirmationStatus, DiningCategory, ReservationRequest, Restaurant, RestaurantHour } from './types'
+import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, ReservationRequest, Restaurant, RestaurantHour } from './types'
 
 // Untyped SupabaseClient, same as HousekeepingModule's own `supabase` prop:
 // the shared Database type (core-sdk) doesn't know about this module's
@@ -132,4 +132,15 @@ export async function updateReservation(
 export async function deleteReservation(client: SupabaseClient, id: string): Promise<void> {
   const { error } = await client.from('restaurant_reservation_requests').delete().eq('id', id)
   if (error) throw error
+}
+
+export async function listChangeLog(client: SupabaseClient, hotelId: string): Promise<ChangeLogEntry[]> {
+  const { data, error } = await client
+    .from('dining_change_log')
+    .select('*')
+    .eq('hotel_id', hotelId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error) throw error
+  return data as ChangeLogEntry[]
 }

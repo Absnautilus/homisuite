@@ -7,9 +7,18 @@ type ModalProps = PropsWithChildren<{
   description?: string
   footer?: ReactNode
   onClose: () => void
+  /**
+   * false disables the backdrop-click/Escape shortcuts, leaving only the
+   * explicit close button and footer actions -- for a form where losing
+   * whatever was typed to one stray click or key press is a real cost
+   * (e.g. a multi-field create/edit form), not just a minor inconvenience.
+   * Defaults to true (the original behaviour) so every existing caller is
+   * unaffected.
+   */
+  dismissible?: boolean
 }>
 
-export function Modal({ open, title, description, footer, onClose, children }: ModalProps) {
+export function Modal({ open, title, description, footer, onClose, dismissible = true, children }: ModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const onCloseRef = useRef(onClose)
@@ -24,7 +33,7 @@ export function Modal({ open, title, description, footer, onClose, children }: M
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onCloseRef.current()
+        if (dismissible) onCloseRef.current()
         return
       }
       if (event.key !== 'Tab' || !panelRef.current) return
@@ -55,11 +64,11 @@ export function Modal({ open, title, description, footer, onClose, children }: M
       window.removeEventListener('keydown', onKeyDown)
       previousFocus?.focus()
     }
-  }, [open])
+  }, [open, dismissible])
 
   if (!open) return null
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (dismissible && event.target === event.currentTarget) onClose() }}>
       <section ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <header className="modal-header">
           <div><h2 id={titleId}>{title}</h2>{description ? <p>{description}</p> : null}</div>

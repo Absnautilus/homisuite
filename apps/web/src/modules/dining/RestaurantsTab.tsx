@@ -160,6 +160,7 @@ function RestaurantModal({ restaurant, categories, hotelId, onClose, onSaved }: 
       open={Boolean(restaurant)}
       title={existing ? 'Modifica ristorante' : 'Nuovo ristorante'}
       onClose={onClose}
+      dismissible={false}
       footer={(
         <>
           <button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button>
@@ -174,7 +175,7 @@ function RestaurantModal({ restaurant, categories, hotelId, onClose, onSaved }: 
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </Select>
         </label>
-        <label className="form-field"><span>Descrizione</span><textarea name="description" rows={2} maxLength={500} defaultValue={existing?.description ?? ''} /></label>
+        <label className="form-field"><span>Descrizione</span><textarea name="description" rows={2} maxLength={500} spellCheck={false} defaultValue={existing?.description ?? ''} /></label>
         <label className="form-field switch-field"><span>Ristorante convenzionato (esterno)</span><Switch checked={isExternal} onChange={() => setIsExternal((v) => !v)} aria-label="Ristorante esterno" /></label>
         <label className="form-field switch-field"><span>Prenotazione richiesta solo dal sito del ristorante</span><Switch checked={requiresOnlineBooking} onChange={() => setRequiresOnlineBooking((v) => !v)} aria-label="Prenotazione solo online" /></label>
         <label className="form-field"><span>Link Google Maps</span><input name="maps_url" type="url" placeholder="https://maps.google.com/…" defaultValue={existing?.maps_url ?? ''} /></label>
