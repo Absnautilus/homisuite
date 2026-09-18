@@ -113,3 +113,47 @@
   color: var(--foreground);
   box-shadow: var(--shadow-sm);
 }
+
+.hk-root .hk-embedded-tabs {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.hk-root .hk-embedded-tab-highlight {
+  position: absolute;
+  inset-block: 3px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+  transition: left 320ms cubic-bezier(.22,1,.36,1), width 320ms cubic-bezier(.22,1,.36,1), opacity 160ms ease;
+}
+
+.hk-root .hk-embedded-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: .875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 200ms ease, transform 180ms ease;
+}
+
+.hk-root .hk-embedded-tab:hover { color: var(--foreground); transform: translateY(-1px); }
+.hk-root .hk-embedded-tab.active { color: var(--foreground); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-root .hk-embedded-tab-highlight,
+  .hk-root .hk-embedded-tab { transition: none; }
+  .hk-root .hk-embedded-tab:hover { transform: none; }
+}

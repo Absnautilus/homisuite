@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500;700&display=swap');
+
 .shift-root {
   --shift-ink: #17182b;
   --shift-muted: #737a9d;
@@ -123,14 +125,14 @@
 
 .shift-header-actions { align-items: end; display: flex; gap: 10px; }
 .shift-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
-.shift-main-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; margin-bottom: 20px; overflow: hidden; padding: 5px; }
+.shift-main-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; font-family: 'Roboto', sans-serif; margin-bottom: 20px; overflow: hidden; padding: 5px; }
 .shift-main-tabs-scroll { overflow-x: auto; position: relative; scrollbar-width: none; }
 .shift-main-tabs-scroll::-webkit-scrollbar { display: none; }
 .shift-main-tab-buttons { display: flex; gap: 3px; position: relative; z-index: 1; }
 .shift-tab-highlight { background: white; border-radius: 10px; bottom: 0; box-shadow: 0 4px 12px #29254614; pointer-events: none; position: absolute; top: 0; transition: left 320ms cubic-bezier(.22,1,.36,1), width 320ms cubic-bezier(.22,1,.36,1), opacity 160ms ease; z-index: 0; }
-.shift-main-tabs button { background: transparent; border: 0; border-radius: 10px; color: var(--shift-muted); cursor: pointer; flex: 1 0 auto; font-size: 12px; font-weight: 750; min-height: 40px; padding: 0 14px; transition: background-color 180ms ease, color 180ms ease, transform 180ms ease; }
+.shift-main-tabs button { background: transparent; border: 0; border-radius: 10px; color: var(--shift-muted); cursor: pointer; flex: 1 0 auto; font-size: 13px; font-weight: 500; letter-spacing: .01em; min-height: 40px; padding: 0 18px; transition: background-color 180ms ease, color 280ms ease, transform 180ms ease; }
 .shift-main-tabs button:hover { color: var(--shift-ink); transform: translateY(-1px); }
-.shift-main-tabs button.is-active { color: var(--shift-ink); }
+.shift-main-tabs button.is-active { color: var(--shift-ink); font-weight: 700; }
 .shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform 380ms cubic-bezier(.22,1,.36,1), opacity 300ms ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
 @media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-tab-highlight, .shift-main-tabs button { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
@@ -254,6 +256,7 @@
   .shift-my-calendar-header { align-items: stretch; grid-template-columns: 1fr; }
   .shift-my-period { justify-content: space-between; }
   .shift-export-button { justify-self: stretch; justify-content: center; }
+  .shift-main-tabs button { font-size: 12.5px; padding-inline: 14px; }
 }
 
 @media (max-width: 420px) {
