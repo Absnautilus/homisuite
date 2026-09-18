@@ -5,6 +5,14 @@
 // auto-reject the request. /housekeeping, not /staff -- the embedded module
 // mounts at that path in this shell (HousekeepingModuleGate's basePath),
 // unlike the original standalone Housekeeping app's own /staff route.
+//
+// data.data.type distinguishes what triggered the push (added for
+// notify-request-event: 'priority_changed' / 'urgent_flagged', alongside
+// notify-new-request's own pings) -- defaults to 'new_request' when absent
+// so every payload sent before this type existed keeps behaving exactly as
+// before. Only a brand-new, unclaimed request makes sense to accept/reject
+// straight from the notification; the other event types are informational
+// and just open the queue on tap.
 self.addEventListener('push', (event) => {
   let data = { title: 'Homisuite', body: 'Nuova richiesta', data: {} }
   try {
@@ -13,17 +21,21 @@ self.addEventListener('push', (event) => {
     // ignore malformed payloads, fall back to the defaults above
   }
 
+  const isNewRequest = (data.data?.type ?? 'new_request') === 'new_request'
+
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/icon-192.png',
       badge: '/favicon-48x48.png',
       data: data.data,
-      actions: [
-        { action: 'accept', title: 'Accetta richiesta' },
-        { action: 'reject', title: 'Rifiuta richiesta' },
-      ],
-      requireInteraction: true,
+      actions: isNewRequest
+        ? [
+            { action: 'accept', title: 'Accetta richiesta' },
+            { action: 'reject', title: 'Rifiuta richiesta' },
+          ]
+        : [],
+      requireInteraction: isNewRequest,
     }),
   )
 })
