@@ -368,7 +368,7 @@ where property_id = '00000058-0000-0000-0000-000000000011'
   and staff_profile_id = '00000058-0000-0000-0000-000000000082';
 set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000042';
 select throws_ok(
-  $$insert into shift_preferences (property_id, planning_unit_id, staff_profile_id, preference_date, preference_kind)
+  $$insert into shift_preferences (property_id, planning_unit_id, staff_profile_id, preference_date, preference)
     values ('00000058-0000-0000-0000-000000000011', '00000058-0000-0000-0000-000000000071', '00000058-0000-0000-0000-000000000082', '2026-10-07', 'prefer_off')$$,
   '42501', null,
   'an inactive unit member cannot create preferences for the former unit'
