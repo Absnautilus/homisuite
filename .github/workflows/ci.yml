@@ -93,7 +93,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/notify-new-request/index.ts supabase/functions/notify-request-event/index.ts
+      - run: deno check --node-modules-dir=auto supabase/functions/notify-new-request/index.ts supabase/functions/notify-request-event/index.ts
 
   database:
     # Keep the established check name so branch-protection rules continue to
