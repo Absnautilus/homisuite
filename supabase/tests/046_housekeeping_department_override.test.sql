@@ -16,7 +16,7 @@
 -- 026_guest_requests_cross_tenant_department.test.sql for that).
 begin;
 create extension if not exists pgtap;
-select plan(9);
+select plan(12);
 
 insert into hotels (id, name, timezone, active) values
   ('00000046-0000-0000-0000-00000000ff01', 'Hotel Quarantasei', 'Europe/Rome', true);
@@ -72,6 +72,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '00000046-0000-0000-0000-000000000a01';
 select is(current_staff_role(), 'operatore'::staff_role, 'the bridged member''s Core-derived role is operatore (receptionist rank), not admin -- the legacy role column is not consulted');
 select is(current_staff_department(), null, 'with no override and no legacy department, current_staff_department() is null');
+select ok(not current_staff_sees_full_queue(), 'without an override or full-queue mansione, the member does not see the full request queue');
 select is((select count(*)::int from stays), 0, 'reproduces the bug: sees zero stays with no department resolvable (front-desk gate)');
 reset role;
 
@@ -115,6 +116,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '00000046-0000-0000-0000-000000000a01';
 select is(current_staff_department(), 'reception'::department, 'the override now resolves through current_staff_department()');
 select ok(current_staff_manages_front_desk(), 'reception override makes the bridged member front-desk');
+select ok(current_staff_sees_full_queue(), 'the same reception sentinel now grants the member the full request queue');
 select is((select count(*)::int from stays), 1, 'now sees the stay as front desk');
 reset role;
 
@@ -128,6 +130,7 @@ reset role;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000046-0000-0000-0000-000000000a01';
 select ok(not current_staff_manages_front_desk(), 'narrowed to housekeeping: no longer front-desk (department is not reception)');
+select ok(not current_staff_sees_full_queue(), 'without the reception sentinel, request visibility returns to mansione scope');
 select is((select count(*)::int from stays), 0, 'narrowed to housekeeping: no longer sees the stay');
 reset role;
 

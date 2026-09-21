@@ -147,23 +147,20 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
           <TableHead>
             <tr>
               <TableHeaderCell>{t('staff.rooms.colRoom')}</TableHeaderCell>
-              <TableHeaderCell>{t('staff.rooms.colStatus')}</TableHeaderCell>
-              <TableHeaderCell className="w-px" />
+              <TableHeaderCell className="w-px"><span className="sr-only">{t('staff.rooms.colStatus')}</span></TableHeaderCell>
             </tr>
           </TableHead>
           <TableBody>
             {visibleRooms?.map((room) => (
               <TableRow key={room.id}>
                 <TableCell className="font-medium text-foreground">{room.room_number}</TableCell>
-                <TableCell>
-                  <SwitchControl
-                    checked={room.active}
-                    onCheckedChange={() => onToggle(room)}
-                    aria-label={room.active ? t('staff.rooms.deactivate') : t('staff.rooms.reactivate')}
-                  />
-                </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex items-center justify-end gap-2">
+                    <SwitchControl
+                      checked={room.active}
+                      onCheckedChange={() => onToggle(room)}
+                      aria-label={room.active ? t('staff.rooms.deactivate') : t('staff.rooms.reactivate')}
+                    />
                     <IconButton
                       tone="danger"
                       icon={Trash2}
