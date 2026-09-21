@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import type { CoreRole, HousekeepingDepartment, JobTitle, TeamMember } from '@homisuite/core-sdk'
+import type { CoreRole, JobTitle, TeamMember } from '@homisuite/core-sdk'
 import { Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Modal } from '../components/Modal'
@@ -373,15 +373,20 @@ function ResetPasswordModal({ member, onClose }: { member: TeamMember | null; on
 // second module would extend, not a Housekeeping-only special case.
 function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | null; propertyId: string; onClose: () => void }) {
   const [status, setStatus] = useState<boolean | null>(null)
-  const [department, setDepartment] = useState<HousekeepingDepartment>('reception')
+  const [viewAllRequests, setViewAllRequests] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [savingDepartment, setSavingDepartment] = useState(false)
+  const [savingVisibility, setSavingVisibility] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!member) { setStatus(null); setError(null); return }
-    setDepartment(member.housekeepingDepartment ?? 'reception')
+    if (!member) {
+      setStatus(null)
+      setViewAllRequests(false)
+      setError(null)
+      return
+    }
+    setViewAllRequests(member.housekeepingDepartment === 'reception')
     setLoading(true)
     setError(null)
     core.getHousekeepingAccessStatus(member.membership.id)
@@ -390,12 +395,6 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
       .finally(() => setLoading(false))
   }, [member])
 
-  // Optimistic: the switch flips immediately on click instead of waiting
-  // for grant-housekeeping-access's own multi-step round trip (several
-  // sequential Postgres calls inside that one Edge Function invocation),
-  // which read as "lentissimo" with the switch stuck disabled -- and
-  // disabled is exactly what shows the browser's not-allowed cursor for
-  // that whole wait. Reverts only if the call actually fails.
   async function onToggle() {
     if (!member || status === null || saving) return
     const next = !status
@@ -405,18 +404,24 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
     try {
       if (next) {
         await core.grantHousekeepingAccess({ membershipId: member.membership.id })
-        // Reception by default -- matches the front-desk visibility a
-        // Team-bridged member has always been meant to have. The picker
-        // below lets an admin narrow it to a single department afterwards.
-        await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: 'reception' })
-        setDepartment('reception')
+        // New Housekeeping grants start scoped to the member's mansione.
+        // Full queue visibility is a separate explicit choice below.
+        await core.updateTeamMember({
+          membershipId: member.membership.id,
+          profileId: member.profile.id,
+          propertyId,
+          housekeepingDepartment: null,
+        })
+        setViewAllRequests(false)
       } else {
         await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
-        // Clears the now-meaningless department override too -- revoke on
-        // its own never touches this column (see current_staff_department()'s
-        // own note), so without this a revoked member would keep showing a
-        // stale department the next time Moduli is reopened for them.
-        await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: null })
+        await core.updateTeamMember({
+          membershipId: member.membership.id,
+          profileId: member.profile.id,
+          propertyId,
+          housekeepingDepartment: null,
+        })
+        setViewAllRequests(false)
       }
     } catch (cause) {
       setStatus(!next)
@@ -426,33 +431,31 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
     }
   }
 
-  async function onDepartmentChange(value: string) {
-    if (!member || savingDepartment) return
-    const next = value as HousekeepingDepartment
-    const previous = department
-    setDepartment(next)
-    setSavingDepartment(true)
+  async function onViewAllRequestsChange() {
+    if (!member || savingVisibility) return
+    const next = !viewAllRequests
+    setViewAllRequests(next)
+    setSavingVisibility(true)
     setError(null)
     try {
-      await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: next })
+      // 'reception' is retained only as an internal compatibility sentinel.
+      // The UI no longer exposes departments: request routing is based on
+      // mansioni, while this one override means "see the whole queue".
+      await core.updateTeamMember({
+        membershipId: member.membership.id,
+        profileId: member.profile.id,
+        propertyId,
+        housekeepingDepartment: next ? 'reception' : null,
+      })
     } catch (cause) {
-      setDepartment(previous)
+      setViewAllRequests(!next)
       setError(readableError(cause))
     } finally {
-      setSavingDepartment(false)
+      setSavingVisibility(false)
     }
   }
 
-  // 'reception' isn't a real work department -- it's the sentinel value
-  // current_staff_manages_front_desk() checks for full, unscoped visibility
-  // (see 20260914120000_housekeeping_department_override.sql). Surfacing it
-  // as a third peer option next to "Piani"/"Manutenzione" in one dropdown
-  // read as nonsensical, so the UI splits it into its own toggle instead;
-  // underneath, flipping it still just writes 'reception' or a real
-  // department through the same onDepartmentChange path.
-  const viewAllDepartments = department === 'reception'
-
-  return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="button" onClick={onClose} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
+  return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="button" onClick={onClose} disabled={saving || savingVisibility}>{saving || savingVisibility ? 'Salvataggio…' : 'Salva'}</button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
       <>
         <div className="module-access-row">
@@ -460,25 +463,15 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
           <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label="Accesso a Housekeeping" />
         </div>
         {status && (
-          <>
-            <div className="module-access-row">
-              <span>Visualizza richieste di tutti i reparti</span>
-              <Switch
-                checked={viewAllDepartments}
-                onChange={() => void onDepartmentChange(viewAllDepartments ? 'housekeeping' : 'reception')}
-                disabled={savingDepartment}
-                aria-label="Visualizza richieste di tutti i reparti"
-              />
-            </div>
-            {!viewAllDepartments && (
-              <Field label="Reparto" htmlFor="modules-department">
-                <Select id="modules-department" name="department" value={department} onChange={(value) => void onDepartmentChange(value)} disabled={savingDepartment}>
-                  <option value="housekeeping">Piani</option>
-                  <option value="maintenance">Manutenzione</option>
-                </Select>
-              </Field>
-            )}
-          </>
+          <div className="module-access-row">
+            <span>Visualizza tutte le richieste</span>
+            <Switch
+              checked={viewAllRequests}
+              onChange={() => void onViewAllRequestsChange()}
+              disabled={savingVisibility}
+              aria-label="Visualizza tutte le richieste"
+            />
+          </div>
         )}
       </>
     )}
