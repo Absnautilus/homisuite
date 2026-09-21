@@ -272,6 +272,8 @@ create table shift_swap_requests (
   decided_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  constraint shift_swap_requests_offered_shift_requires_target_check
+    check (offered_shift_id is null or target_staff_profile_id is not null),
   foreign key (property_id, planning_unit_id)
     references shift_planning_units(property_id, id) on delete cascade,
   foreign key (property_id, requester_staff_profile_id)
@@ -390,6 +392,34 @@ $$;
 
 revoke all on function owns_shift_staff_profile(uuid, uuid) from public, anon;
 grant execute on function owns_shift_staff_profile(uuid, uuid) to authenticated;
+
+-- Personal scheduling input is writable only while the actor is an active
+-- member of the unit. The broader ownership helper above intentionally stays
+-- unit-agnostic so former members can still read their own historical data.
+create function owns_active_shift_unit_membership(
+  p_property_id uuid,
+  p_planning_unit_id uuid,
+  p_staff_profile_id uuid
+)
+returns boolean
+language sql stable security definer set search_path = '' as $$
+  select public.has_permission(p_property_id, 'shifts.view') and exists (
+    select 1
+    from public.shift_unit_members member
+    join public.shift_staff_profiles staff
+      on staff.property_id = member.property_id
+     and staff.id = member.staff_profile_id
+    where member.property_id = p_property_id
+      and member.planning_unit_id = p_planning_unit_id
+      and member.staff_profile_id = p_staff_profile_id
+      and member.active
+      and staff.active
+      and staff.profile_id = (select auth.uid())
+  );
+$$;
+
+revoke all on function owns_active_shift_unit_membership(uuid, uuid, uuid) from public, anon;
+grant execute on function owns_active_shift_unit_membership(uuid, uuid, uuid) to authenticated;
 
 -- A capability opens the module; this helper narrows ordinary staff to their
 -- own units. Managers see every unit in the property. A unit administrator
@@ -539,21 +569,21 @@ create policy shift_preassignments_delete on shift_preassignments for delete to 
 -- dedicated RPC in the runtime phase so unrelated audit fields cannot be
 -- rewritten alongside the status.
 create policy shift_preferences_insert on shift_preferences for insert to authenticated
-  with check (owns_shift_staff_profile(property_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'));
+  with check (owns_active_shift_unit_membership(property_id, planning_unit_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'));
 create policy shift_preferences_update on shift_preferences for update to authenticated
-  using (owns_shift_staff_profile(property_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'))
-  with check (owns_shift_staff_profile(property_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'));
+  using (owns_active_shift_unit_membership(property_id, planning_unit_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'))
+  with check (owns_active_shift_unit_membership(property_id, planning_unit_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'));
 create policy shift_preferences_delete on shift_preferences for delete to authenticated
-  using (owns_shift_staff_profile(property_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'));
+  using (owns_active_shift_unit_membership(property_id, planning_unit_id, staff_profile_id) or has_permission(property_id, 'shifts.manage'));
 
 create policy shift_absence_requests_insert on shift_absence_requests for insert to authenticated
-  with check ((owns_shift_staff_profile(property_id, staff_profile_id) and status = 'pending') or has_permission(property_id, 'shifts.requests.manage'));
+  with check ((owns_active_shift_unit_membership(property_id, planning_unit_id, staff_profile_id) and status = 'pending') or has_permission(property_id, 'shifts.requests.manage'));
 create policy shift_absence_requests_update on shift_absence_requests for update to authenticated
   using (has_permission(property_id, 'shifts.requests.manage'))
   with check (has_permission(property_id, 'shifts.requests.manage'));
 
 create policy shift_swap_requests_insert on shift_swap_requests for insert to authenticated
-  with check ((owns_shift_staff_profile(property_id, requester_staff_profile_id) and status = 'pending') or has_permission(property_id, 'shifts.requests.manage'));
+  with check ((owns_active_shift_unit_membership(property_id, planning_unit_id, requester_staff_profile_id) and status = 'pending') or has_permission(property_id, 'shifts.requests.manage'));
 create policy shift_swap_requests_update on shift_swap_requests for update to authenticated
   using (has_permission(property_id, 'shifts.requests.manage'))
   with check (has_permission(property_id, 'shifts.requests.manage'));
