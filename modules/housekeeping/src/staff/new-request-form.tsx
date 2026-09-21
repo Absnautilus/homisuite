@@ -132,7 +132,7 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
                   size="sm"
                   disabled={quantity <= 1}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  aria-label={t('flow.quantityDecrease')}
+                  aria-label={`${t('flow.quantity')} -`}
                   className="h-8 w-8 px-0"
                 >
                   <Minus size={14} />
@@ -144,7 +144,7 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
                   size="sm"
                   disabled={quantity >= 10}
                   onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-                  aria-label={t('flow.quantityIncrease')}
+                  aria-label={`${t('flow.quantity')} +`}
                   className="h-8 w-8 px-0"
                 >
                   <Plus size={14} />
