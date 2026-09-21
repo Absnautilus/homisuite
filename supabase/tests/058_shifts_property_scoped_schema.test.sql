@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(64);
+select plan(70);
 
 -- ---------------------------------------------------------------------------
 -- Reference data and tenant fixtures
@@ -169,6 +169,12 @@ select throws_ok(
     values ('00000058-0000-0000-0000-000000000011', '00000058-0000-0000-0000-000000000071', '00000058-0000-0000-0000-000000000082', '00000058-0000-0000-0000-000000000111', '00000058-0000-0000-0000-000000000084')$$,
   '23503', null,
   'a swap request cannot target staff from another property'
+);
+select throws_ok(
+  $$insert into shift_swap_requests (property_id, planning_unit_id, requester_staff_profile_id, requested_shift_id, offered_shift_id)
+    values ('00000058-0000-0000-0000-000000000011', '00000058-0000-0000-0000-000000000071', '00000058-0000-0000-0000-000000000082', '00000058-0000-0000-0000-000000000111', '00000058-0000-0000-0000-000000000113')$$,
+  '23514', null,
+  'an offered shift requires an explicit target staff member'
 );
 
 -- ---------------------------------------------------------------------------
@@ -354,6 +360,47 @@ select is(
   (select status from shift_swap_requests where id = '00000058-0000-0000-0000-000000000151'),
   'approved',
   'swap approval is persisted'
+);
+
+update shift_unit_members set active = false
+where property_id = '00000058-0000-0000-0000-000000000011'
+  and planning_unit_id = '00000058-0000-0000-0000-000000000071'
+  and staff_profile_id = '00000058-0000-0000-0000-000000000082';
+set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000042';
+select throws_ok(
+  $$insert into shift_preferences (property_id, planning_unit_id, staff_profile_id, preference_date, preference_kind)
+    values ('00000058-0000-0000-0000-000000000011', '00000058-0000-0000-0000-000000000071', '00000058-0000-0000-0000-000000000082', '2026-10-07', 'prefer_off')$$,
+  '42501', null,
+  'an inactive unit member cannot create preferences for the former unit'
+);
+select throws_ok(
+  $$insert into shift_absence_requests (property_id, planning_unit_id, staff_profile_id, starts_on, ends_on, absence_kind)
+    values ('00000058-0000-0000-0000-000000000011', '00000058-0000-0000-0000-000000000071', '00000058-0000-0000-0000-000000000082', '2026-10-07', '2026-10-07', 'leave')$$,
+  '42501', null,
+  'an inactive unit member cannot create absence requests for the former unit'
+);
+select throws_ok(
+  $$insert into shift_swap_requests (property_id, planning_unit_id, requester_staff_profile_id, requested_shift_id, target_staff_profile_id, offered_shift_id)
+    values ('00000058-0000-0000-0000-000000000011', '00000058-0000-0000-0000-000000000071', '00000058-0000-0000-0000-000000000082', '00000058-0000-0000-0000-000000000111', '00000058-0000-0000-0000-000000000081', '00000058-0000-0000-0000-000000000113')$$,
+  '42501', null,
+  'an inactive unit member cannot open swap requests for the former unit'
+);
+select is(
+  (select count(*)::int from shift_preferences where staff_profile_id = '00000058-0000-0000-0000-000000000082'),
+  1,
+  'an inactive unit member retains read access to their historical preferences'
+);
+set local request.jwt.claim.sub = '00000058-0000-0000-0000-000000000041';
+update shift_unit_members set active = true
+where property_id = '00000058-0000-0000-0000-000000000011'
+  and planning_unit_id = '00000058-0000-0000-0000-000000000071'
+  and staff_profile_id = '00000058-0000-0000-0000-000000000082';
+select ok(
+  (select active from shift_unit_members
+   where property_id = '00000058-0000-0000-0000-000000000011'
+     and planning_unit_id = '00000058-0000-0000-0000-000000000071'
+     and staff_profile_id = '00000058-0000-0000-0000-000000000082'),
+  'manager can reactivate the unit membership after the access test'
 );
 
 update shift_planning_units set member_visibility_scope = 'all_units'
