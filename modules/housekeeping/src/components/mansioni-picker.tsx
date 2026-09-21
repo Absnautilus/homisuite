@@ -12,7 +12,7 @@ const PICKER_MAX_HEIGHT = 320
 const PICKER_GAP = 6
 const VIEWPORT_GUTTER = 8
 
-type PickerPosition = { left: number; top: number | 'auto'; bottom: number | 'auto' }
+type PickerPosition = { left: number; top: number | 'auto'; bottom: number | 'auto'; maxHeight: number }
 
 function computePickerPosition(anchor: HTMLElement): PickerPosition {
   const rect = anchor.getBoundingClientRect()
@@ -24,9 +24,14 @@ function computePickerPosition(anchor: HTMLElement): PickerPosition {
     Math.max(VIEWPORT_GUTTER, window.innerWidth - PICKER_WIDTH - VIEWPORT_GUTTER),
   )
 
+  const available = Math.max(
+    96,
+    (openUpward ? spaceAbove : spaceBelow) - PICKER_GAP - VIEWPORT_GUTTER,
+  )
+  const maxHeight = Math.min(PICKER_MAX_HEIGHT, available)
   return openUpward
-    ? { left, top: 'auto', bottom: window.innerHeight - rect.top + PICKER_GAP }
-    : { left, top: rect.bottom + PICKER_GAP, bottom: 'auto' }
+    ? { left, top: 'auto', bottom: window.innerHeight - rect.top + PICKER_GAP, maxHeight }
+    : { left, top: rect.bottom + PICKER_GAP, bottom: 'auto', maxHeight }
 }
 
 export function MansioniPicker({
@@ -118,6 +123,8 @@ export function MansioniPicker({
         width: PICKER_WIDTH,
         top: position.top,
         bottom: position.bottom,
+        maxHeight: position.maxHeight,
+        overflowY: 'auto',
         zIndex: 1000,
       }}
     >
