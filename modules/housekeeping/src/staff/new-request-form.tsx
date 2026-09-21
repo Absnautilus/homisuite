@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Minus, Plus } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Label, Select, Textarea } from '@/components/ui/field'
@@ -19,6 +20,7 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
   const [categoryId, setCategoryId] = useState('')
   const [typeId, setTypeId] = useState('')
   const [note, setNote] = useState('')
+  const [quantity, setQuantity] = useState(1)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,11 +38,17 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
   }, [open, hotelId])
 
   const typesForCategory = types.filter((t) => t.category_id === categoryId)
+  const selectedType = useMemo(() => types.find((t) => t.id === typeId) ?? null, [types, typeId])
 
   useEffect(() => {
     setTypeId(typesForCategory[0]?.id ?? '')
+    setQuantity(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId])
+
+  useEffect(() => {
+    setQuantity(1)
+  }, [typeId])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -49,7 +57,7 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
     setPending(true)
     setError(null)
     try {
-      await createStaffRequest({ hotelId, roomNumber: room.room_number, requestTypeId: typeId, note: note.trim() || null, staffId })
+      await createStaffRequest({ hotelId, roomNumber: room.room_number, requestTypeId: typeId, quantity: selectedType?.allows_quantity ? quantity : null, note: note.trim() || null, staffId })
       setNote('')
       setOpen(false)
       onCreated()
@@ -114,6 +122,36 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
               </Select>
             </FieldGroup>
           </div>
+          {selectedType?.allows_quantity && (
+            <FieldGroup>
+              <Label>{t('flow.quantity')}</Label>
+              <div className="flex h-11 w-fit items-center gap-2 rounded-sm border border-line bg-surface px-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={quantity <= 1}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  aria-label={`${t('flow.quantity')} -`}
+                  className="h-8 w-8 px-0"
+                >
+                  <Minus size={14} />
+                </Button>
+                <span className="w-8 text-center text-sm font-semibold tabular-nums">{quantity}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={quantity >= 10}
+                  onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                  aria-label={`${t('flow.quantity')} +`}
+                  className="h-8 w-8 px-0"
+                >
+                  <Plus size={14} />
+                </Button>
+              </div>
+            </FieldGroup>
+          )}
           <FieldGroup>
             <Label htmlFor="sr-note">{t('staff.newRequest.notes')}</Label>
             <Textarea id="sr-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('staff.newRequest.notesPlaceholder')} />

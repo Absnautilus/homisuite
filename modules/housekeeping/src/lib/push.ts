@@ -11,19 +11,7 @@ function urlBase64ToUint8Array(base64url: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
 }
 
-// Requests notification permission, registers the service worker, subscribes
-// to Web Push (or reuses an existing subscription), saves it, then flips
-// on_duty on. Throws 'permission_denied' if the user declines the browser
-// prompt — callers should surface that as an explanation, not a generic error.
-export async function goOnDuty(staffId: string): Promise<void> {
-  if (!PUSH_SUPPORTED) {
-    await setOnDuty(true)
-    return
-  }
-
-  const permission = await Notification.requestPermission()
-  if (permission !== 'granted') throw new Error('permission_denied')
-
+async function ensurePushSubscription(staffId: string): Promise<void> {
   const registration = await navigator.serviceWorker.register('/sw.js')
   await navigator.serviceWorker.ready
 
@@ -38,7 +26,36 @@ export async function goOnDuty(staffId: string): Promise<void> {
   const json = subscription.toJSON()
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) throw new Error('invalid_subscription')
   await savePushSubscription(staffId, { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth })
+}
 
+// Rebinds the current launch context to the staff member whenever possible.
+// This deliberately does not inspect display-mode or installation source:
+// a normal browser tab, an installed PWA, "Add to Home Screen", a desktop
+// shortcut, or any other shortcut all use the same Web Push path as long as
+// the browser/OS exposes Service Worker + PushManager for that context.
+// No permission prompt is triggered here because browsers require that to
+// originate from a user gesture. If permission was already granted, a fresh
+// shortcut/app context gets its own subscription automatically on launch.
+export async function syncOnDutyPushSubscription(staffId: string): Promise<boolean> {
+  if (!PUSH_SUPPORTED || typeof Notification === 'undefined' || Notification.permission !== 'granted') return false
+  await ensurePushSubscription(staffId)
+  return true
+}
+
+// Requests notification permission, registers the service worker, subscribes
+// to Web Push (or reuses an existing subscription), saves it, then flips
+// on_duty on. Throws 'permission_denied' if the user declines the browser
+// prompt — callers should surface that as an explanation, not a generic error.
+export async function goOnDuty(staffId: string): Promise<void> {
+  if (!PUSH_SUPPORTED) {
+    await setOnDuty(true)
+    return
+  }
+
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') throw new Error('permission_denied')
+
+  await ensurePushSubscription(staffId)
   await setOnDuty(true)
 }
 

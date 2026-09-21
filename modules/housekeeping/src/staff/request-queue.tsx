@@ -103,18 +103,22 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
         <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
-        <div className="flex gap-1 rounded-md bg-surface-2 p-1 sm:w-fit">
-          <TabButton active={tab === 'active'} onClick={() => setTab('active')}>
-            {t('staff.queue.tabActive')} ({active.length})
-          </TabButton>
-          <TabButton active={tab === 'done'} onClick={() => setTab('done')}>
-            {t('staff.queue.tabDone')}
-          </TabButton>
-        </div>
       </div>
 
+      <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
+        <div className="flex justify-end border-b border-line bg-surface px-4 py-3">
+          <div className="flex gap-1 rounded-md bg-surface-2 p-1 sm:w-fit">
+            <TabButton active={tab === 'active'} onClick={() => setTab('active')}>
+              {t('staff.queue.tabActive')} ({active.length})
+            </TabButton>
+            <TabButton active={tab === 'done'} onClick={() => setTab('done')}>
+              {t('staff.queue.tabDone')}
+            </TabButton>
+          </div>
+        </div>
+        <div className="p-4 sm:p-5">
       {loadError ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">
           {t('staff.queue.loadError', { error: loadError })}
@@ -127,6 +131,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
             icon={<IconInboxEmpty className="h-6 w-6" />}
             title={t('staff.queue.emptyActiveTitle')}
             description={t('staff.queue.emptyActiveDesc')}
+            className="rounded-none border-0 bg-transparent py-10 shadow-none"
           />
         ) : (
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
@@ -175,7 +180,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
           </div>
         )
       ) : done.length === 0 ? (
-        <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} />
+        <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} className="rounded-none border-0 bg-transparent py-10 shadow-none" />
       ) : (
         <div className="space-y-3">
           {donePageItems.map((request) => (
@@ -204,6 +209,8 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
           )}
         </div>
       )}
+        </div>
+      </section>
     </div>
   )
 }
