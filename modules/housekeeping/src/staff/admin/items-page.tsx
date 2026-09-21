@@ -171,10 +171,10 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
       {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
       <NewCategoryForm jobTitles={jobTitles} onCreated={reload} />
       <div className="overflow-x-auto rounded-lg border border-line bg-white">
-        <table aria-label={t('staff.items.title')} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colIcon')}</th><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colJobTitles')}</th><th className="px-4 py-2 text-right">{t('staff.items.colDelete')}</th></tr></thead><tbody className="divide-y divide-line">{visibleCategories.map((category) => <CategoryRow key={category.id} category={category} jobTitles={jobTitles} onToggle={() => onToggleCategory(category)} onRemove={() => onRemoveCategory(category)} onSaved={reload} />)}</tbody></table>
+        <table aria-label={t('staff.items.title')} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colIcon')}</th><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colJobTitles')}</th><th className="w-px px-4 py-2 text-right"><span className="sr-only">{t('staff.items.colDelete')}</span></th></tr></thead><tbody className="divide-y divide-line">{visibleCategories.map((category) => <CategoryRow key={category.id} category={category} jobTitles={jobTitles} onToggle={() => onToggleCategory(category)} onRemove={() => onRemoveCategory(category)} onSaved={reload} />)}</tbody></table>
       </div>
       <NewItemForm categories={activeCategories} onCreated={reload} />
-      <div className="space-y-6">{visibleCategories.map((category) => { const items = visibleTypes.filter((rt) => rt.category_id === category.id); if (items.length === 0) return null; const headingId = `category-${category.id}`; return <div key={category.id}><h2 id={headingId} className="mb-2 text-sm font-semibold text-muted"><AutoText text={category.name} translations={category.name_i18n} /></h2><div className="overflow-x-auto rounded-lg border border-line bg-white"><table aria-labelledby={headingId} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colDescription')}</th><th className="px-4 py-2">{t('staff.items.colQuantity')}</th><th className="px-4 py-2 text-right">{t('staff.items.colDelete')}</th></tr></thead><tbody className="divide-y divide-line">{items.map((item) => <ItemRow key={item.id} item={item} categories={visibleCategories} onToggle={() => onToggleItem(item)} onRemove={() => onRemoveItem(item)} onSaved={reload} />)}</tbody></table></div></div> })}</div>
+      <div className="space-y-6">{visibleCategories.map((category) => { const items = visibleTypes.filter((rt) => rt.category_id === category.id); if (items.length === 0) return null; const headingId = `category-${category.id}`; return <div key={category.id}><h2 id={headingId} className="mb-2 text-sm font-semibold text-muted"><AutoText text={category.name} translations={category.name_i18n} /></h2><div className="overflow-x-auto rounded-lg border border-line bg-white"><table aria-labelledby={headingId} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colDescription')}</th><th className="px-4 py-2">{t('staff.items.colQuantity')}</th><th className="w-px px-4 py-2 text-right"><span className="sr-only">{t('staff.items.colDelete')}</span></th></tr></thead><tbody className="divide-y divide-line">{items.map((item) => <ItemRow key={item.id} item={item} categories={visibleCategories} onToggle={() => onToggleItem(item)} onRemove={() => onRemoveItem(item)} onSaved={reload} />)}</tbody></table></div></div> })}</div>
     </div>
   )
 }
@@ -221,27 +221,35 @@ function CategoryRow({ category, jobTitles, onToggle, onRemove, onSaved }: { cat
           {mansioniOpen && <MansioniPicker anchorRef={mansioniTriggerRef} jobTitles={jobTitles} value={category.job_title_ids} onSave={onMansioniSave} onClose={() => setMansioniOpen(false)} />}
         </td>
         <td className="px-4 py-2 text-right whitespace-nowrap">
-          <div className="flex items-center justify-end gap-2">
-            <SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
-            <IconButton
-              tone="neutral"
-              icon={Pencil}
-              label={t('staff.row.edit')}
-              onClick={() => {
-                setTranslationsOpen(false)
-                setEditOpen((v) => !v)
-              }}
-            />
-            <IconButton
-              tone="neutral"
-              icon={Languages}
-              label={t('staff.items.translations')}
-              onClick={() => {
-                setEditOpen(false)
-                setTranslationsOpen((v) => !v)
-              }}
-            />
-            <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+          <div className="flex items-center justify-end gap-1">
+            <span className="flex w-10 justify-center">
+              <SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
+            </span>
+            <span className="flex w-10 justify-center">
+              <IconButton
+                tone="neutral"
+                icon={Pencil}
+                label={t('staff.row.edit')}
+                onClick={() => {
+                  setTranslationsOpen(false)
+                  setEditOpen((v) => !v)
+                }}
+              />
+            </span>
+            <span className="flex w-10 justify-center">
+              <IconButton
+                tone="neutral"
+                icon={Languages}
+                label={t('staff.items.translations')}
+                onClick={() => {
+                  setEditOpen(false)
+                  setTranslationsOpen((v) => !v)
+                }}
+              />
+            </span>
+            <span className="flex w-10 justify-center">
+              <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+            </span>
           </div>
         </td>
       </tr>
@@ -292,27 +300,35 @@ function ItemRow({
         <td className="px-4 py-2 text-muted">{item.description ? <AutoText text={item.description} translations={item.description_i18n} /> : '—'}</td>
         <td className="px-4 py-2 tabular-nums text-muted">{item.available_quantity ?? '—'}</td>
         <td className="px-4 py-2 text-right whitespace-nowrap">
-          <div className="flex items-center justify-end gap-2">
-            <SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
-            <IconButton
-              tone="neutral"
-              icon={Pencil}
-              label={t('staff.row.edit')}
-              onClick={() => {
-                setTranslationsOpen(false)
-                setEditOpen((v) => !v)
-              }}
-            />
-            <IconButton
-              tone="neutral"
-              icon={Languages}
-              label={t('staff.items.translations')}
-              onClick={() => {
-                setEditOpen(false)
-                setTranslationsOpen((v) => !v)
-              }}
-            />
-            <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+          <div className="flex items-center justify-end gap-1">
+            <span className="flex w-10 justify-center">
+              <SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
+            </span>
+            <span className="flex w-10 justify-center">
+              <IconButton
+                tone="neutral"
+                icon={Pencil}
+                label={t('staff.row.edit')}
+                onClick={() => {
+                  setTranslationsOpen(false)
+                  setEditOpen((v) => !v)
+                }}
+              />
+            </span>
+            <span className="flex w-10 justify-center">
+              <IconButton
+                tone="neutral"
+                icon={Languages}
+                label={t('staff.items.translations')}
+                onClick={() => {
+                  setEditOpen(false)
+                  setTranslationsOpen((v) => !v)
+                }}
+              />
+            </span>
+            <span className="flex w-10 justify-center">
+              <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+            </span>
           </div>
         </td>
       </tr>
