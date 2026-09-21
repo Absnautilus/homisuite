@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
-import { Languages, Trash2 } from 'lucide-react'
+import { Languages, Pencil, Trash2 } from 'lucide-react'
 import { FieldError, FieldGroup, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { Switch, SwitchControl } from '@/components/ui/switch'
 import { AutoText } from '@/components/auto-text'
@@ -23,6 +23,7 @@ import {
   updateRequestCategoryIcon,
   updateRequestCategoryName,
   updateRequestCategoryTranslations,
+  updateRequestType,
   updateRequestTypeDescription,
   updateRequestTypeName,
   updateRequestTypeTranslations,
@@ -173,30 +174,295 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
         <table aria-label={t('staff.items.title')} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colIcon')}</th><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colJobTitles')}</th><th className="px-4 py-2 text-right">{t('staff.items.colDelete')}</th></tr></thead><tbody className="divide-y divide-line">{visibleCategories.map((category) => <CategoryRow key={category.id} category={category} jobTitles={jobTitles} onToggle={() => onToggleCategory(category)} onRemove={() => onRemoveCategory(category)} onSaved={reload} />)}</tbody></table>
       </div>
       <NewItemForm categories={activeCategories} onCreated={reload} />
-      <div className="space-y-6">{visibleCategories.map((category) => { const items = visibleTypes.filter((rt) => rt.category_id === category.id); if (items.length === 0) return null; const headingId = `category-${category.id}`; return <div key={category.id}><h2 id={headingId} className="mb-2 text-sm font-semibold text-muted"><AutoText text={category.name} translations={category.name_i18n} /></h2><div className="overflow-x-auto rounded-lg border border-line bg-white"><table aria-labelledby={headingId} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colDescription')}</th><th className="px-4 py-2">{t('staff.items.colQuantity')}</th><th className="px-4 py-2 text-right">{t('staff.items.colDelete')}</th></tr></thead><tbody className="divide-y divide-line">{items.map((item) => <ItemRow key={item.id} item={item} onToggle={() => onToggleItem(item)} onRemove={() => onRemoveItem(item)} onSaved={reload} />)}</tbody></table></div></div> })}</div>
+      <div className="space-y-6">{visibleCategories.map((category) => { const items = visibleTypes.filter((rt) => rt.category_id === category.id); if (items.length === 0) return null; const headingId = `category-${category.id}`; return <div key={category.id}><h2 id={headingId} className="mb-2 text-sm font-semibold text-muted"><AutoText text={category.name} translations={category.name_i18n} /></h2><div className="overflow-x-auto rounded-lg border border-line bg-white"><table aria-labelledby={headingId} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colDescription')}</th><th className="px-4 py-2">{t('staff.items.colQuantity')}</th><th className="px-4 py-2 text-right">{t('staff.items.colDelete')}</th></tr></thead><tbody className="divide-y divide-line">{items.map((item) => <ItemRow key={item.id} item={item} categories={activeCategories} onToggle={() => onToggleItem(item)} onRemove={() => onRemoveItem(item)} onSaved={reload} />)}</tbody></table></div></div> })}</div>
     </div>
   )
 }
 
 function CategoryRow({ category, jobTitles, onToggle, onRemove, onSaved }: { category: RequestCategoryAdmin; jobTitles: JobTitleOption[]; onToggle: () => void; onRemove: () => void; onSaved: () => Promise<void> }) {
-  const { t } = useLocale(); const [open, setOpen] = useState(false); const [pickerOpen, setPickerOpen] = useState(false); const [mansioniOpen, setMansioniOpen] = useState(false); const iconTriggerRef = useRef<HTMLButtonElement>(null); const mansioniTriggerRef = useRef<HTMLButtonElement>(null)
+  const { t } = useLocale()
+  const [translationsOpen, setTranslationsOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [mansioniOpen, setMansioniOpen] = useState(false)
+  const iconTriggerRef = useRef<HTMLButtonElement>(null)
+  const mansioniTriggerRef = useRef<HTMLButtonElement>(null)
+
   async function onIconSave(icon: string) {
     await updateRequestCategoryIcon(category.id, icon)
     await onSaved()
   }
+
   async function onMansioniSave(jobTitleIds: string[]) {
     await setCategoryJobTitles(category.id, jobTitleIds)
     await onSaved()
   }
+
   const jobTitleNames = category.job_title_ids
     .map((id) => jobTitles.find((jt) => jt.id === id)?.name)
     .filter((name): name is string => Boolean(name))
-  return <><tr><td className="px-4 py-2"><button ref={iconTriggerRef} type="button" title={t('staff.items.iconChange')} onClick={() => setPickerOpen((v) => !v)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-line bg-surface-2 text-muted transition-colors hover:border-accent-soft-line hover:bg-accent-soft hover:text-accent"><CategoryIcon icon={category.icon} className="h-[17px] w-[17px]" /></button>{pickerOpen && <IconPicker anchorRef={iconTriggerRef} value={category.icon} onSave={onIconSave} onClose={() => setPickerOpen(false)} />}</td><td className="px-4 py-2 font-medium text-foreground"><AutoText text={category.name} translations={category.name_i18n} /></td><td className="px-4 py-2"><button ref={mansioniTriggerRef} type="button" onClick={() => setMansioniOpen((v) => !v)} className="flex max-w-[220px] flex-wrap items-center gap-1 text-left">{jobTitleNames.length > 0 ? jobTitleNames.map((name) => <span key={name} className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">{name}</span>) : <span className="text-xs text-muted underline decoration-dotted">{t('staff.items.categoryJobTitlesNone')}</span>}</button>{mansioniOpen && <MansioniPicker anchorRef={mansioniTriggerRef} jobTitles={jobTitles} value={category.job_title_ids} onSave={onMansioniSave} onClose={() => setMansioniOpen(false)} />}</td><td className="px-4 py-2 text-right whitespace-nowrap"><div className="flex items-center justify-end gap-2"><IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => setOpen((v) => !v)} /><SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} /><IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} /></div></td></tr>{open && <tr><td colSpan={4} className="bg-surface-2 px-4 py-3"><NameTranslationsForm baseName={category.name} initial={category.name_i18n} onSave={async (name_i18n) => { await updateRequestCategoryTranslations(category.id, name_i18n); await onSaved() }} onSaveBaseName={async (name) => { await updateRequestCategoryName(category.id, name); await onSaved() }} /></td></tr>}</>
+
+  return (
+    <>
+      <tr>
+        <td className="px-4 py-2">
+          <button ref={iconTriggerRef} type="button" title={t('staff.items.iconChange')} onClick={() => setPickerOpen((v) => !v)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-line bg-surface-2 text-muted transition-colors hover:border-accent-soft-line hover:bg-accent-soft hover:text-accent">
+            <CategoryIcon icon={category.icon} className="h-[17px] w-[17px]" />
+          </button>
+          {pickerOpen && <IconPicker anchorRef={iconTriggerRef} value={category.icon} onSave={onIconSave} onClose={() => setPickerOpen(false)} />}
+        </td>
+        <td className="px-4 py-2 font-medium text-foreground"><AutoText text={category.name} translations={category.name_i18n} /></td>
+        <td className="px-4 py-2">
+          <button ref={mansioniTriggerRef} type="button" onClick={() => setMansioniOpen((v) => !v)} className="flex max-w-[220px] flex-wrap items-center gap-1 text-left">
+            {jobTitleNames.length > 0
+              ? jobTitleNames.map((name) => <span key={name} className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">{name}</span>)
+              : <span className="text-xs text-muted underline decoration-dotted">{t('staff.items.categoryJobTitlesNone')}</span>}
+          </button>
+          {mansioniOpen && <MansioniPicker anchorRef={mansioniTriggerRef} jobTitles={jobTitles} value={category.job_title_ids} onSave={onMansioniSave} onClose={() => setMansioniOpen(false)} />}
+        </td>
+        <td className="px-4 py-2 text-right whitespace-nowrap">
+          <div className="flex items-center justify-end gap-2">
+            <SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
+            <IconButton
+              tone="neutral"
+              icon={Pencil}
+              label={t('staff.row.edit')}
+              onClick={() => {
+                setTranslationsOpen(false)
+                setEditOpen((v) => !v)
+              }}
+            />
+            <IconButton
+              tone="neutral"
+              icon={Languages}
+              label={t('staff.items.translations')}
+              onClick={() => {
+                setEditOpen(false)
+                setTranslationsOpen((v) => !v)
+              }}
+            />
+            <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+          </div>
+        </td>
+      </tr>
+      {editOpen && (
+        <tr>
+          <td colSpan={4} className="bg-surface-2 px-4 py-3">
+            <CategoryEditForm category={category} onCancel={() => setEditOpen(false)} onSaved={onSaved} />
+          </td>
+        </tr>
+      )}
+      {translationsOpen && (
+        <tr>
+          <td colSpan={4} className="bg-surface-2 px-4 py-3">
+            <NameTranslationsForm
+              baseName={category.name}
+              initial={category.name_i18n}
+              onSave={async (name_i18n) => { await updateRequestCategoryTranslations(category.id, name_i18n); await onSaved() }}
+              onSaveBaseName={async (name) => { await updateRequestCategoryName(category.id, name); await onSaved() }}
+            />
+          </td>
+        </tr>
+      )}
+    </>
+  )
 }
 
-function ItemRow({ item, onToggle, onRemove, onSaved }: { item: RequestTypeAdmin; onToggle: () => void; onRemove: () => void; onSaved: () => Promise<void> }) {
-  const { t } = useLocale(); const [open, setOpen] = useState(false)
-  return <><tr><td className="px-4 py-2 font-medium text-foreground"><AutoText text={item.name} translations={item.name_i18n} /></td><td className="px-4 py-2 text-muted">{item.description ? <AutoText text={item.description} translations={item.description_i18n} /> : '—'}</td><td className="px-4 py-2 tabular-nums text-muted">{item.available_quantity ?? '—'}</td><td className="px-4 py-2 text-right whitespace-nowrap"><div className="flex items-center justify-end gap-2"><IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => setOpen((v) => !v)} /><SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} /><IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} /></div></td></tr>{open && <tr><td colSpan={4} className="bg-surface-2 px-4 py-3"><div className="space-y-4"><NameTranslationsForm label={t('staff.items.name')} baseName={item.name} initial={item.name_i18n} onSave={async (name_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n, description_i18n: item.description_i18n }); await onSaved() }} onSaveBaseName={async (name) => { await updateRequestTypeName(item.id, name); await onSaved() }} />{item.description && <NameTranslationsForm label={t('staff.items.description')} baseName={item.description} initial={item.description_i18n} onSave={async (description_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n: item.name_i18n, description_i18n }); await onSaved() }} onSaveBaseName={async (description) => { await updateRequestTypeDescription(item.id, description); await onSaved() }} />}</div></td></tr>}</>
+function ItemRow({
+  item,
+  categories,
+  onToggle,
+  onRemove,
+  onSaved,
+}: {
+  item: RequestTypeAdmin
+  categories: RequestCategoryAdmin[]
+  onToggle: () => void
+  onRemove: () => void
+  onSaved: () => Promise<void>
+}) {
+  const { t } = useLocale()
+  const [translationsOpen, setTranslationsOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+
+  return (
+    <>
+      <tr>
+        <td className="px-4 py-2 font-medium text-foreground"><AutoText text={item.name} translations={item.name_i18n} /></td>
+        <td className="px-4 py-2 text-muted">{item.description ? <AutoText text={item.description} translations={item.description_i18n} /> : '—'}</td>
+        <td className="px-4 py-2 tabular-nums text-muted">{item.available_quantity ?? '—'}</td>
+        <td className="px-4 py-2 text-right whitespace-nowrap">
+          <div className="flex items-center justify-end gap-2">
+            <SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
+            <IconButton
+              tone="neutral"
+              icon={Pencil}
+              label={t('staff.row.edit')}
+              onClick={() => {
+                setTranslationsOpen(false)
+                setEditOpen((v) => !v)
+              }}
+            />
+            <IconButton
+              tone="neutral"
+              icon={Languages}
+              label={t('staff.items.translations')}
+              onClick={() => {
+                setEditOpen(false)
+                setTranslationsOpen((v) => !v)
+              }}
+            />
+            <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+          </div>
+        </td>
+      </tr>
+      {editOpen && (
+        <tr>
+          <td colSpan={4} className="bg-surface-2 px-4 py-3">
+            <ItemEditForm item={item} categories={categories} onCancel={() => setEditOpen(false)} onSaved={onSaved} />
+          </td>
+        </tr>
+      )}
+      {translationsOpen && (
+        <tr>
+          <td colSpan={4} className="bg-surface-2 px-4 py-3">
+            <div className="space-y-4">
+              <NameTranslationsForm
+                label={t('staff.items.name')}
+                baseName={item.name}
+                initial={item.name_i18n}
+                onSave={async (name_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n, description_i18n: item.description_i18n }); await onSaved() }}
+                onSaveBaseName={async (name) => { await updateRequestTypeName(item.id, name); await onSaved() }}
+              />
+              {item.description && (
+                <NameTranslationsForm
+                  label={t('staff.items.description')}
+                  baseName={item.description}
+                  initial={item.description_i18n}
+                  onSave={async (description_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n: item.name_i18n, description_i18n }); await onSaved() }}
+                  onSaveBaseName={async (description) => { await updateRequestTypeDescription(item.id, description); await onSaved() }}
+                />
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+function CategoryEditForm({ category, onCancel, onSaved }: { category: RequestCategoryAdmin; onCancel: () => void; onSaved: () => Promise<void> }) {
+  const { t } = useLocale()
+  const [name, setName] = useState(category.name)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setPending(true)
+    setError(null)
+    try {
+      await updateRequestCategoryName(category.id, trimmed)
+      await onSaved()
+      onCancel()
+    } catch {
+      setError(t('staff.items.toggleError'))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <FieldGroup className="mb-0">
+        <Label htmlFor={`category-edit-${category.id}`} required>{t('staff.items.categoryName')}</Label>
+        <Input id={`category-edit-${category.id}`} required value={name} onChange={(e) => setName(e.target.value)} />
+      </FieldGroup>
+      <FieldError>{error ?? undefined}</FieldError>
+      <div className="flex justify-end gap-2 border-t border-line pt-3">
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={pending}>{t('staff.items.iconCancel')}</Button>
+        <Button type="submit" size="sm" disabled={pending || !name.trim()}>{pending ? t('staff.items.iconSaving') : t('staff.items.iconSave')}</Button>
+      </div>
+    </form>
+  )
+}
+
+function ItemEditForm({
+  item,
+  categories,
+  onCancel,
+  onSaved,
+}: {
+  item: RequestTypeAdmin
+  categories: RequestCategoryAdmin[]
+  onCancel: () => void
+  onSaved: () => Promise<void>
+}) {
+  const { t } = useLocale()
+  const [categoryId, setCategoryId] = useState(item.category_id)
+  const [name, setName] = useState(item.name)
+  const [description, setDescription] = useState(item.description ?? '')
+  const [allowsQuantity, setAllowsQuantity] = useState(item.allows_quantity)
+  const [availableQuantity, setAvailableQuantity] = useState(item.available_quantity === null ? '' : String(item.available_quantity))
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setPending(true)
+    setError(null)
+    try {
+      await updateRequestType({
+        id: item.id,
+        categoryId,
+        name: name.trim(),
+        description: description.trim() || null,
+        allowsQuantity,
+        availableQuantity: availableQuantity.trim() ? Number(availableQuantity) : null,
+      })
+      await onSaved()
+      onCancel()
+    } catch {
+      setError(t('staff.items.addError'))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FieldGroup className="mb-0">
+          <Label htmlFor={`item-edit-category-${item.id}`} required>{t('staff.items.category')}</Label>
+          <Select id={`item-edit-category-${item.id}`} required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            {categories.map((category) => <option key={category.id} value={category.id}><AutoText text={category.name} translations={category.name_i18n} /></option>)}
+          </Select>
+        </FieldGroup>
+        <FieldGroup className="mb-0">
+          <Label htmlFor={`item-edit-name-${item.id}`} required>{t('staff.items.name')}</Label>
+          <Input id={`item-edit-name-${item.id}`} required value={name} onChange={(e) => setName(e.target.value)} />
+        </FieldGroup>
+      </div>
+      <FieldGroup className="mb-0">
+        <Label htmlFor={`item-edit-description-${item.id}`}>{t('staff.items.description')}</Label>
+        <Textarea id={`item-edit-description-${item.id}`} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+      </FieldGroup>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FieldGroup className="mb-0">
+          <Label htmlFor={`item-edit-quantity-${item.id}`}>{t('staff.items.availableQuantity')}</Label>
+          <Input id={`item-edit-quantity-${item.id}`} type="number" min={0} value={availableQuantity} onChange={(e) => setAvailableQuantity(e.target.value)} />
+        </FieldGroup>
+        <Switch id={`item-edit-allows-quantity-${item.id}`} checked={allowsQuantity} onCheckedChange={setAllowsQuantity} label={t('staff.items.allowsQuantity')} className="self-end" />
+      </div>
+      <FieldError>{error ?? undefined}</FieldError>
+      <div className="flex justify-end gap-2 border-t border-line pt-3">
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={pending}>{t('staff.items.iconCancel')}</Button>
+        <Button type="submit" size="sm" disabled={pending || !categoryId || !name.trim()}>{pending ? t('staff.items.iconSaving') : t('staff.items.iconSave')}</Button>
+      </div>
+    </form>
+  )
 }
 
 function NameTranslationsForm({
