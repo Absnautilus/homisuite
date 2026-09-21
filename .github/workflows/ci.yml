@@ -85,6 +85,16 @@ jobs:
       - working-directory: supabase/functions/early-access-signup
         run: deno test --allow-env --allow-read .
 
+  housekeeping-push-functions:
+    name: Edge Functions — Housekeeping push (Deno check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check --node-modules-dir=auto supabase/functions/notify-new-request/index.ts supabase/functions/notify-request-event/index.ts
+
   database:
     # Keep the established check name so branch-protection rules continue to
     # recognize this job after the browser coverage is added.

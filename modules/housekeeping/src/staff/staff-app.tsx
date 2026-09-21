@@ -3,7 +3,6 @@ import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { cancelRequest, claimRequest, fetchMyProfile } from '@/lib/staff-api'
 import { unlockAudio } from '@/lib/beep'
-import { syncOnDutyPushSubscription } from '@/lib/push'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
 import type { HousekeepingCapabilities, PlatformHotelSettings, PlatformStaffManagementLink } from '@/public/HousekeepingModule'
@@ -80,18 +79,6 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     document.addEventListener('pointerdown', onFirstPointer)
     return () => document.removeEventListener('pointerdown', onFirstPointer)
   }, [])
-
-  useEffect(() => {
-    if (!profile?.active || !profile.on_duty) return
-    // Re-save the subscription for the launch context. This matters for
-    // installed/home-screen/desktop shortcuts, which can have a distinct
-    // browser context even though they point at the same Homisuite origin.
-    void syncOnDutyPushSubscription(profile.id).catch(() => {
-      // Silent here: permission may not have been granted in this context
-      // yet. The explicit "in servizio" action remains the user-gesture path
-      // that can request it.
-    })
-  }, [profile?.active, profile?.id, profile?.on_duty])
 
   useEffect(() => {
     const claimId = searchParams.get('claim')

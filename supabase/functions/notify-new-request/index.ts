@@ -10,11 +10,16 @@ type GuestRequestRecord = {
   id?: unknown
   hotel_id?: unknown
   room_number?: unknown
+  request_type_id?: unknown
+  created_by_staff?: unknown
+  quantity?: unknown
+  note?: unknown
   assigned_job_title_ids?: unknown
 }
 
 type Body = {
   type?: unknown
+  table?: unknown
   record?: unknown
 }
 
@@ -33,13 +38,16 @@ Deno.serve(async (request: Request) => {
     }
 
     const body = (await request.json()) as Body
-    const eventType = body.type === 'urgent_flagged' ? 'urgent_flagged' : body.type === 'priority_changed' ? 'priority_changed' : null
+    if (body.type !== 'INSERT' || body.table !== 'guest_requests') return json({ skipped: 'not_an_insert' }, 200)
+
     const record = body.record as GuestRequestRecord | undefined
     const requestId = readUuid(record?.id)
     const hotelId = readUuid(record?.hotel_id)
+    const requestTypeId = readUuid(record?.request_type_id)
     const roomNumber = typeof record?.room_number === 'string' ? record.room_number : null
+    const createdByStaff = readUuid(record?.created_by_staff)
     const assignedJobTitleIds = readUuidArray(record?.assigned_job_title_ids)
-    if (!eventType || !requestId || !hotelId || !roomNumber) return json({ error: 'invalid_payload' }, 400)
+    if (!requestId || !hotelId || !requestTypeId || !roomNumber) return json({ error: 'invalid_payload' }, 400)
 
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -47,30 +55,44 @@ Deno.serve(async (request: Request) => {
     const { data: recipients, error: recipientError } = await admin.rpc('housekeeping_push_recipient_profiles', {
       p_hotel_id: hotelId,
       p_assigned_job_title_ids: assignedJobTitleIds,
-      p_exclude_staff_id: null,
+      p_exclude_staff_id: createdByStaff,
     })
     if (recipientError) {
-      console.error('notify-request-event: recipient lookup failed', recipientError)
+      console.error('notify-new-request: recipient lookup failed', recipientError)
       return json({ error: 'recipient_lookup_failed' }, 500)
     }
 
     const profileIds = [...new Set((recipients ?? []).map((row: { profile_id: string }) => row.profile_id))]
     if (profileIds.length === 0) return json({ ok: true, sent: 0, reason: 'no_recipients' }, 200)
 
-    const { data: subscriptions, error: subscriptionsError } = await admin
-      .from('device_push_subscriptions')
-      .select('endpoint, p256dh, auth')
-      .in('profile_id', profileIds)
+    const [{ data: requestType }, { data: subscriptions, error: subscriptionsError }] = await Promise.all([
+      admin
+        .from('request_types')
+        .select('name, request_categories(name)')
+        .eq('id', requestTypeId)
+        .maybeSingle(),
+      admin
+        .from('device_push_subscriptions')
+        .select('endpoint, p256dh, auth')
+        .in('profile_id', profileIds),
+    ])
     if (subscriptionsError) {
-      console.error('notify-request-event: subscription lookup failed', subscriptionsError)
+      console.error('notify-new-request: subscription lookup failed', subscriptionsError)
       return json({ error: 'subscription_lookup_failed' }, 500)
     }
 
-    const title = eventType === 'urgent_flagged' ? 'Richiesta urgente' : 'Priorità aggiornata'
+    const itemName = requestType?.name ?? 'Richiesta'
+    const categoryName = (requestType?.request_categories as { name?: string } | null)?.name ?? null
+    const quantity = typeof record?.quantity === 'number' && Number.isFinite(record.quantity) ? record.quantity : null
+    const note = typeof record?.note === 'string' && record.note.trim() ? record.note.trim() : null
+
+    const title = categoryName ? `Camera ${roomNumber} · ${categoryName}` : `Camera ${roomNumber} · Nuova richiesta`
+    const bodyLines = [itemName + (quantity ? ` × ${quantity}` : '')]
+    if (note) bodyLines.push(note)
     const payload = JSON.stringify({
       title,
-      body: `Camera ${roomNumber}`,
-      data: { requestId, type: eventType, url: '/housekeeping' },
+      body: bodyLines.join('\n'),
+      data: { requestId, type: 'new_request', url: `/housekeeping?claim=${requestId}` },
     })
 
     let sent = 0
@@ -93,7 +115,7 @@ Deno.serve(async (request: Request) => {
           if (statusCode === 404 || statusCode === 410) {
             await admin.from('device_push_subscriptions').delete().eq('endpoint', subscription.endpoint as string)
           } else {
-            console.error('notify-request-event: push failed', statusCode, error)
+            console.error('notify-new-request: push failed', statusCode, error)
           }
         }
       }),
@@ -101,7 +123,7 @@ Deno.serve(async (request: Request) => {
 
     return json({ ok: true, sent, recipients: profileIds.length, subscriptions: subscriptions?.length ?? 0 }, 200)
   } catch (error) {
-    console.error('notify-request-event failed', error)
+    console.error('notify-new-request failed', error)
     return json({ error: 'unexpected_error' }, 500)
   }
 })

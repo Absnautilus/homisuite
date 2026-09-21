@@ -4,17 +4,17 @@ import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
 import type { StaffProfile } from '@/lib/staff-types'
 
-// Only operatori get push notifications about new requests (admin/master
-// don't work a physical shift), so the toggle only appears for them. Keeps
-// its own on_duty state seeded from the profile rather than bubbling changes
-// up — nothing else in the dashboard needs to know the current value.
+// In embedded Homisuite mode the legacy staff_profiles.role no longer tells
+// us whether somebody is an operational user: Team-bridged receptionists are
+// intentionally represented as legacy "admin" rows. Any active Housekeeping
+// member may therefore opt into a shift; on_duty is an explicit operational
+// choice, not an authorization role.
 export function OnDutyToggle({ profile, dark = true }: { profile: StaffProfile; dark?: boolean }) {
   const { t } = useLocale()
   const [onDuty, setOnDuty] = useState(profile.on_duty)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (profile.role !== 'operatore') return null
 
   async function onClick() {
     setPending(true)
@@ -24,7 +24,7 @@ export function OnDutyToggle({ profile, dark = true }: { profile: StaffProfile; 
         await goOffDuty()
         setOnDuty(false)
       } else {
-        await goOnDuty(profile.id)
+        await goOnDuty()
         setOnDuty(true)
       }
     } catch (err) {

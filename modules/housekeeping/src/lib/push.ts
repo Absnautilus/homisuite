@@ -11,7 +11,7 @@ function urlBase64ToUint8Array(base64url: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
 }
 
-async function ensurePushSubscription(staffId: string): Promise<void> {
+async function ensurePushSubscription(): Promise<void> {
   const registration = await navigator.serviceWorker.register('/sw.js')
   await navigator.serviceWorker.ready
 
@@ -25,28 +25,14 @@ async function ensurePushSubscription(staffId: string): Promise<void> {
 
   const json = subscription.toJSON()
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) throw new Error('invalid_subscription')
-  await savePushSubscription(staffId, { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth })
+  await savePushSubscription({ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth })
 }
 
-// Rebinds the current launch context to the staff member whenever possible.
-// This deliberately does not inspect display-mode or installation source:
-// a normal browser tab, an installed PWA, "Add to Home Screen", a desktop
-// shortcut, or any other shortcut all use the same Web Push path as long as
-// the browser/OS exposes Service Worker + PushManager for that context.
-// No permission prompt is triggered here because browsers require that to
-// originate from a user gesture. If permission was already granted, a fresh
-// shortcut/app context gets its own subscription automatically on launch.
-export async function syncOnDutyPushSubscription(staffId: string): Promise<boolean> {
-  if (!PUSH_SUPPORTED || typeof Notification === 'undefined' || Notification.permission !== 'granted') return false
-  await ensurePushSubscription(staffId)
-  return true
-}
-
-// Requests notification permission, registers the service worker, subscribes
-// to Web Push (or reuses an existing subscription), saves it, then flips
-// on_duty on. Throws 'permission_denied' if the user declines the browser
-// prompt — callers should surface that as an explanation, not a generic error.
-export async function goOnDuty(staffId: string): Promise<void> {
+// "In servizio" is the explicit user gesture that enables Housekeeping
+// notifications on this device. The subscription is stored in the Core
+// device_push_subscriptions registry, shared with the shell's notification
+// preference, while on_duty remains the operational gate used by the sender.
+export async function goOnDuty(): Promise<void> {
   if (!PUSH_SUPPORTED) {
     await setOnDuty(true)
     return
@@ -55,14 +41,13 @@ export async function goOnDuty(staffId: string): Promise<void> {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('permission_denied')
 
-  await ensurePushSubscription(staffId)
+  await ensurePushSubscription()
   await setOnDuty(true)
 }
 
-// Only flips on_duty off — that alone is what stops notify-new-request from
-// sending anything (it filters on on_duty=true), so there's no need to tear
-// down the browser subscription too. Leaving it in place means going back
-// on duty later doesn't need a fresh permission prompt.
+// Going off duty deliberately keeps the device subscription. It may be used
+// by other Homisuite modules, while Housekeeping itself stops sending because
+// its recipient query requires on_duty=true.
 export async function goOffDuty(): Promise<void> {
   await setOnDuty(false)
 }
