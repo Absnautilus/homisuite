@@ -7,11 +7,9 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
-import { DEPARTMENTS } from '@/lib/constants'
-import type { Department } from '@/lib/types'
 import { formatElapsed, formatTime } from '@/lib/format'
-import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequest, revertRequest, setRequestUrgent, updateRequest } from '@/lib/staff-api'
-import type { QueuedRequest } from '@/lib/staff-types'
+import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, revertRequest, setRequestUrgent, updateRequest } from '@/lib/staff-api'
+import type { QueueJobTitle, QueuedRequest } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useLocale } from '@/lib/i18n/locale-context'
 
@@ -22,6 +20,7 @@ export function RequestRow({
   mode,
   canReorder = false,
   canFlagUrgent = false,
+  jobTitles,
   onMoveUp,
   onMoveDown,
   onDragPointerDown,
@@ -34,6 +33,7 @@ export function RequestRow({
   mode: 'active' | 'done'
   canReorder?: boolean
   canFlagUrgent?: boolean
+  jobTitles: QueueJobTitle[]
   onMoveUp?: () => void
   onMoveDown?: () => void
   onDragPointerDown?: (e: ReactPointerEvent<HTMLButtonElement>) => void
@@ -190,7 +190,9 @@ export function RequestRow({
           )}
           {!editing && (
             <div className="flex shrink-0 items-center gap-1">
-              <IconButton tone="neutral" icon={Pencil} label={t('staff.row.edit')} disabled={pending} onClick={startEdit} />
+              {request.created_by_staff && (
+                <IconButton tone="neutral" icon={Pencil} label={t('staff.row.edit')} disabled={pending} onClick={startEdit} />
+              )}
               {canFlagUrgent && mode === 'active' && (
                 <IconButton
                   tone="danger"
@@ -245,7 +247,10 @@ export function RequestRow({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {request.accepted_by_staff && <Avatar name={request.accepted_by_staff.name} />}
           <StatusBadge status={request.status} label={t(`statusLabel.${request.status}` as const)} />
-          <Badge>{t(`department.${request.assigned_department}`)}</Badge>
+          {request.assigned_job_title_ids.map((jobTitleId) => {
+            const jobTitle = jobTitles.find((item) => item.id === jobTitleId)
+            return jobTitle ? <Badge key={jobTitleId}>{jobTitle.name}</Badge> : null
+          })}
           {request.urgent && (
             <Badge className="border border-bad-ink/25 bg-bad-bg text-bad-ink">
               <AlertTriangle className="mr-1 h-3 w-3" />
@@ -270,14 +275,15 @@ export function RequestRow({
             {mode === 'active' && (
               <div className="flex flex-wrap items-center gap-2">
                 <Select
-                  value={request.assigned_department}
-                  disabled={pending}
-                  onChange={(e) => run(() => reassignRequest(request.id, e.target.value as Department))}
-                  className="w-auto py-1 text-xs"
+                  value={request.assigned_job_title_ids.length === 1 ? request.assigned_job_title_ids[0] : ''}
+                  disabled={pending || jobTitles.length === 0}
+                  onChange={(e) => run(() => reassignRequestToJobTitle(request.id, e.target.value))}
+                  className="min-w-36 w-auto py-1 text-xs"
                 >
-                  {DEPARTMENTS.map((value) => (
-                    <option key={value} value={value}>
-                      {t(`department.${value}`)}
+                  <option value="" disabled>Mansione</option>
+                  {jobTitles.map((jobTitle) => (
+                    <option key={jobTitle.id} value={jobTitle.id}>
+                      {jobTitle.name}
                     </option>
                   ))}
                 </Select>
