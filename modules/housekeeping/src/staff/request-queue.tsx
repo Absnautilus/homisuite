@@ -2,20 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { cn } from '@/lib/cn'
-import { cancelRequest, claimRequest, fetchQueue, subscribeToQueue } from '@/lib/staff-api'
+import { cancelRequest, claimRequest, fetchQueue, listQueueJobTitles, subscribeToQueue } from '@/lib/staff-api'
 import { useRequestAlerts } from '@/hooks/use-request-alerts'
 import { playAlertSound } from '@/lib/beep'
 import { RequestRow } from '@/staff/request-row'
 import { ReorderableColumn } from '@/staff/reorderable-column'
 import { NewRequestForm } from '@/staff/new-request-form'
-import { DEPARTMENTS } from '@/lib/constants'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { getErrorMessage } from '@/lib/errors'
-import type { Department } from '@/lib/types'
-import type { QueuedRequest, StaffProfile } from '@/lib/staff-types'
+import type { QueueJobTitle, QueuedRequest, StaffProfile } from '@/lib/staff-types'
 
 type Tab = 'active' | 'done'
-type DepartmentFilter = 'all' | Department
 
 const DONE_PAGE_SIZE = 15
 
@@ -24,8 +21,8 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('active')
-  const [department, setDepartment] = useState<DepartmentFilter>('all')
   const [donePage, setDonePage] = useState(0)
+  const [jobTitles, setJobTitles] = useState<QueueJobTitle[]>([])
   const [now, setNow] = useState(() => new Date())
   const { push, pushCard } = useToast()
   const knownIds = useRef<Set<string> | null>(null)
@@ -35,9 +32,13 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
 
   const reload = useCallback(async () => {
     try {
-      const data = await fetchQueue(profile.hotel_id)
+      const [data, jobTitleOptions] = await Promise.all([
+        fetchQueue(profile.hotel_id),
+        listQueueJobTitles(profile.hotel_id),
+      ])
       setLoadError(null)
       setQueue(data)
+      setJobTitles(jobTitleOptions)
 
       if (knownIds.current === null) {
         knownIds.current = new Set(data.map((r) => r.id))
@@ -75,24 +76,15 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    setDonePage(0)
-  }, [department])
-
-  const filtered = useMemo(
-    () => (department === 'all' ? (queue ?? []) : (queue ?? []).filter((r) => r.assigned_department === department)),
-    [queue, department],
-  )
-
-  const pending = filtered.filter((r) => r.status === 'requested')
-  const inProgress = filtered.filter((r) => r.status === 'in_progress')
+  const pending = (queue ?? []).filter((r) => r.status === 'requested')
+  const inProgress = (queue ?? []).filter((r) => r.status === 'in_progress')
   const active = [...pending, ...inProgress]
   const done = useMemo(
     () =>
-      filtered
+      (queue ?? [])
         .filter((r) => r.status === 'completed' || r.status === 'cancelled')
         .sort((a, b) => new Date(b.completed_at ?? b.created_at).getTime() - new Date(a.completed_at ?? a.created_at).getTime()),
-    [filtered],
+    [queue],
   )
 
   const doneTotalPages = Math.max(1, Math.ceil(done.length / DONE_PAGE_SIZE))
@@ -107,13 +99,8 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <h1 className="font-head text-2xl font-bold tracking-tight text-foreground">{t('staff.queue.title')}</h1>
-          <p className="mt-1 text-sm text-muted">
-            {managesFrontDesk || !profile.department
-              ? t('staff.queue.subtitle')
-              : t('staff.queue.subtitleOwnDept', { department: t(`department.${profile.department}`) })}
-          </p>
+          <p className="mt-1 text-sm text-muted">{t('staff.queue.subtitle')}</p>
         </div>
-        {managesFrontDesk && <DepartmentFilterBar value={department} onChange={setDepartment} />}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -159,6 +146,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
                   staffId={profile.id}
                   canReorder={canReorder}
                   canFlagUrgent={managesFrontDesk}
+                  jobTitles={jobTitles}
                   onReordered={reload}
                 />
               )}
@@ -179,6 +167,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
                   staffId={profile.id}
                   canReorder={canReorder}
                   canFlagUrgent={managesFrontDesk}
+                  jobTitles={jobTitles}
                   onReordered={reload}
                 />
               )}
@@ -190,7 +179,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
       ) : (
         <div className="space-y-3">
           {donePageItems.map((request) => (
-            <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="done" />
+            <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="done" jobTitles={jobTitles} />
           ))}
           {doneTotalPages > 1 && (
             <div className="flex items-center justify-center gap-3 pt-2">
@@ -215,28 +204,6 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-function DepartmentFilterBar({ value, onChange }: { value: DepartmentFilter; onChange: (d: DepartmentFilter) => void }) {
-  const { t } = useLocale()
-  const options: DepartmentFilter[] = ['all', ...DEPARTMENTS]
-  return (
-    <div className="flex flex-wrap gap-1.5 lg:justify-end">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={cn(
-            'cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-            value === opt ? 'border-accent bg-accent text-white' : 'border-line bg-surface text-muted hover:border-accent-soft-line hover:text-foreground',
-          )}
-        >
-          {opt === 'all' ? t('staff.queue.filterAll') : t(`department.${opt}`)}
-        </button>
-      ))}
     </div>
   )
 }

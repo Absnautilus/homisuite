@@ -21,3 +21,8 @@ export interface QueuedRequest extends GuestRequest {
   } | null
   accepted_by_staff: { name: string } | null
 }
+
+export interface QueueJobTitle {
+  id: string
+  name: string
+}

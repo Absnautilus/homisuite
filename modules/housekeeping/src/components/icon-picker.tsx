@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import dynamicIconImports from 'lucide-react/dynamicIconImports'
 import { CategoryIcon } from '@/components/category-icon'
 import { Button } from '@/components/ui/button'
@@ -6,29 +7,45 @@ import { FieldError, Input } from '@/components/ui/field'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
 
-// The full Lucide set (1500+ names) -- searched by substring on its own
-// kebab-case name (Lucide has no per-icon keywords/synonyms shipped), and
-// capped per search so typing "a" doesn't render hundreds of lazy icons at
-// once. A handful shown before any search covers the categories this app
-// ships with today.
 const ALL_ICON_NAMES = Object.keys(dynamicIconImports)
 const DEFAULT_ICON_NAMES = ['bed-double', 'shower-head', 'sparkles', 'wrench', 'briefcase', 'ellipsis']
 const MAX_RESULTS = 60
-// How long the "Salvato" confirmation stays up before the picker closes
-// itself -- long enough to register as feedback, short enough that closing
-// doesn't feel like a second step the staff member has to trigger.
 const SAVED_CLOSE_DELAY_MS = 900
+const PICKER_WIDTH = 288
+const PICKER_MAX_HEIGHT = 390
+const PICKER_GAP = 6
+const VIEWPORT_GUTTER = 8
+
+type PickerPosition = { left: number; top: number | 'auto'; bottom: number | 'auto'; maxHeight: number }
+
+function computePickerPosition(anchor: HTMLElement): PickerPosition {
+  const rect = anchor.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  const openUpward = spaceBelow < PICKER_MAX_HEIGHT + PICKER_GAP && spaceAbove > spaceBelow
+  const left = Math.min(
+    Math.max(VIEWPORT_GUTTER, rect.left),
+    Math.max(VIEWPORT_GUTTER, window.innerWidth - PICKER_WIDTH - VIEWPORT_GUTTER),
+  )
+  const available = Math.max(
+    112,
+    (openUpward ? spaceAbove : spaceBelow) - PICKER_GAP - VIEWPORT_GUTTER,
+  )
+  const maxHeight = Math.min(PICKER_MAX_HEIGHT, available)
+
+  return openUpward
+    ? { left, top: 'auto', bottom: window.innerHeight - rect.top + PICKER_GAP, maxHeight }
+    : { left, top: rect.bottom + PICKER_GAP, bottom: 'auto', maxHeight }
+}
 
 export function IconPicker({
+  anchorRef,
   value,
   onSave,
   onClose,
 }: {
+  anchorRef: RefObject<HTMLElement | null>
   value: string | null
-  // Only called once the staff member clicks Salva, not on every click in
-  // the grid -- picking an icon used to save (and close the popover)
-  // immediately, which made it too easy to change a category's icon by
-  // accident with no way to tell it had already happened.
   onSave: (icon: string) => Promise<void>
   onClose: () => void
 }) {
@@ -38,12 +55,15 @@ export function IconPicker({
   const [pending, setPending] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [position, setPosition] = useState<PickerPosition | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (pending) return
     function onPointerDown(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onClose()
+      const target = e.target as Node
+      if (rootRef.current?.contains(target) || anchorRef.current?.contains(target)) return
+      onClose()
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -54,7 +74,21 @@ export function IconPicker({
       document.removeEventListener('mousedown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [onClose, pending])
+  }, [anchorRef, onClose, pending])
+
+  useLayoutEffect(() => {
+    if (!anchorRef.current) return
+    const reposition = () => {
+      if (anchorRef.current) setPosition(computePickerPosition(anchorRef.current))
+    }
+    reposition()
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [anchorRef])
 
   function onPick(name: string) {
     setSelected(name)
@@ -81,8 +115,23 @@ export function IconPicker({
   const names = (trimmed ? ALL_ICON_NAMES.filter((name) => name.includes(trimmed)) : DEFAULT_ICON_NAMES).slice(0, MAX_RESULTS)
   const canSave = selected !== null && selected !== value && !pending
 
-  return (
-    <div ref={rootRef} className="absolute z-20 mt-1.5 w-72 rounded-lg border border-line bg-surface p-3 shadow-lg">
+  if (!position) return null
+
+  return createPortal(
+    <div
+      ref={rootRef}
+      className="rounded-lg border border-line bg-surface p-3 shadow-lg"
+      style={{
+        position: 'fixed',
+        left: position.left,
+        width: PICKER_WIDTH,
+        top: position.top,
+        bottom: position.bottom,
+        maxHeight: position.maxHeight,
+        overflowY: 'auto',
+        zIndex: 1000,
+      }}
+    >
       <Input
         autoFocus
         value={query}
@@ -119,6 +168,7 @@ export function IconPicker({
         </Button>
       </div>
       <FieldError>{error ?? undefined}</FieldError>
-    </div>
+    </div>,
+    document.body,
   )
 }

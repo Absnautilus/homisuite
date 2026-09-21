@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { RequestRow } from '@/staff/request-row'
 import { swapPriority } from '@/lib/staff-api'
 import { cn } from '@/lib/cn'
-import type { QueuedRequest } from '@/lib/staff-types'
+import type { QueueJobTitle, QueuedRequest } from '@/lib/staff-types'
 
 // The up/down arrows already let anyone bump one request at a time; this
 // adds drag-to-reorder as a faster way to do the same thing. Both write
@@ -32,6 +32,7 @@ export function ReorderableColumn({
   staffId,
   canReorder,
   canFlagUrgent,
+  jobTitles,
   onReordered,
 }: {
   items: QueuedRequest[]
@@ -39,6 +40,7 @@ export function ReorderableColumn({
   staffId: string
   canReorder: boolean
   canFlagUrgent: boolean
+  jobTitles: QueueJobTitle[]
   onReordered: () => Promise<void>
 }) {
   const [order, setOrder] = useState(items)
@@ -200,6 +202,7 @@ export function ReorderableColumn({
               mode="active"
               canReorder={canReorder}
               canFlagUrgent={canFlagUrgent}
+              jobTitles={jobTitles}
               onMoveUp={i > 0 ? () => moveAdjacent(order, i, -1, onReordered) : undefined}
               onMoveDown={i < order.length - 1 ? () => moveAdjacent(order, i, 1, onReordered) : undefined}
               onDragPointerDown={canReorder ? (e) => onHandlePointerDown(e, request.id) : undefined}

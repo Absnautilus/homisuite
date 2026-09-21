@@ -1,7 +1,6 @@
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import type { Department } from '@/lib/types'
-import type { QueuedRequest, StaffProfile } from '@/lib/staff-types'
+import type { QueueJobTitle, QueuedRequest, StaffProfile } from '@/lib/staff-types'
 import { usernameToEmail } from '@/lib/operator-login'
 import { hotelFilter, realtimeHotelFilter } from '@/lib/hotel-query-scope'
 
@@ -147,8 +146,14 @@ export async function savePushSubscription(staffId: string, sub: { endpoint: str
   if (error) throw error
 }
 
-export async function reassignRequest(id: string, department: Department) {
-  const { error } = await supabase.from('guest_requests').update({ assigned_department: department }).eq('id', id)
+export async function listQueueJobTitles(hotelId: string): Promise<QueueJobTitle[]> {
+  const { data, error } = await supabase.rpc('guest_requests_property_job_titles', { p_hotel_id: hotelId })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function reassignRequestToJobTitle(id: string, jobTitleId: string) {
+  const { error } = await supabase.from('guest_requests').update({ assigned_job_title_ids: [jobTitleId] }).eq('id', id)
   if (error) throw error
 }
 
