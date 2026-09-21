@@ -63,8 +63,6 @@ join modules m on m.slug = v.module_slug;
 -- actually migrates (see docs/module-integration.md), these are stand-ins.
 -- ---------------------------------------------------------------------------
 insert into permissions (slug, module_id)
-select 'shifts.use', id from modules where slug = 'shifts'
-union all
 select 'transfers.use', id from modules where slug = 'transfers'
 union all
 select 'guest_requests.view', id from modules where slug = 'guest_requests'
@@ -73,20 +71,17 @@ on conflict (slug) do nothing;
 -- role_permissions for these demo permissions — the four system roles
 -- already have their core.* grants from migration 0009; this only adds the
 -- module-specific ones on top.
--- organization_admin / property_admin / manager: every module.
--- receptionist: transfers + guest_requests only, no shifts
---   ("Receptionist -> puo usare Transfers -> puo vedere Guest Requests ->
---   non puo modificare configurazione hotel").
+-- Turni permissions are canonical migration-owned reference data; this seed
+-- keeps only the remaining illustrative permissions for older demo modules.
+-- organization_admin / property_admin / manager: Transfers + Guest Requests.
+-- receptionist: the same two demo permissions.
 insert into role_permissions (role_id, permission_id)
 select r.id, p.id from roles r, permissions p
 where (r.slug, p.slug) in (
-  ('organization_admin', 'shifts.use'),
   ('organization_admin', 'transfers.use'),
   ('organization_admin', 'guest_requests.view'),
-  ('property_admin', 'shifts.use'),
   ('property_admin', 'transfers.use'),
   ('property_admin', 'guest_requests.view'),
-  ('manager', 'shifts.use'),
   ('manager', 'transfers.use'),
   ('manager', 'guest_requests.view'),
   ('receptionist', 'transfers.use'),
