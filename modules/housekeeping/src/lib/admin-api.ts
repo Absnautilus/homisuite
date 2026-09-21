@@ -211,6 +211,30 @@ export async function updateRequestTypeDescription(id: string, description: stri
   if (error) throw error
 }
 
+export async function updateRequestType(input: {
+  id: string
+  categoryId: string
+  name: string
+  description: string | null
+  allowsQuantity: boolean
+  availableQuantity: number | null
+}): Promise<void> {
+  const { data, error } = await supabase
+    .from('request_types')
+    .update({
+      category_id: input.categoryId,
+      name: input.name,
+      description: input.description,
+      allows_quantity: input.allowsQuantity,
+      available_quantity: input.availableQuantity,
+    })
+    .eq('id', input.id)
+    .select('id')
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('request_type_update_not_applied')
+}
+
 export async function createRequestType(input: {
   categoryId: string
   name: string
