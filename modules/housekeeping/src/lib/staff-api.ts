@@ -135,14 +135,17 @@ export async function setOnDuty(onDuty: boolean) {
   if (error) throw error
 }
 
-// Upserts on endpoint (unique across the table) rather than inserting, so a
-// browser that already has a subscription from a previous login just gets
-// re-pointed at the current staff row instead of erroring on the unique
-// constraint.
-export async function savePushSubscription(staffId: string, sub: { endpoint: string; p256dh: string; auth: string }) {
+// Housekeeping now uses the Core per-device push registry too. That keeps
+// one browser subscription per signed-in profile instead of maintaining a
+// second module-local registry keyed to legacy staff_profiles.
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string }) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('not_authenticated')
   const { error } = await supabase
-    .from('push_subscriptions')
-    .upsert({ staff_id: staffId, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, { onConflict: 'endpoint' })
+    .from('device_push_subscriptions')
+    .upsert({ profile_id: user.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, { onConflict: 'endpoint' })
   if (error) throw error
 }
 
