@@ -40,8 +40,10 @@ export interface GuestRequest {
   request_type_id: string
   quantity: number | null
   note: string | null
+  created_by_staff: string | null
   status: RequestStatus
-  assigned_department: Department
+  assigned_department: Department | null
+  assigned_job_title_ids: string[]
   accepted_by: string | null
   created_at: string
   accepted_at: string | null
