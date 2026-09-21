@@ -14,16 +14,21 @@ interface SelectOption { value: string; label: ReactNode; disabled: boolean }
 
 const SELECT_PANEL_MAX_HEIGHT = 240
 const SELECT_PANEL_GAP = 6
-type SelectPanelPosition = { left: number; width: number; top: number | 'auto'; bottom: number | 'auto' }
+type SelectPanelPosition = { left: number; width: number; top: number | 'auto'; bottom: number | 'auto'; maxHeight: number }
 
 function computeSelectPanelPosition(trigger: HTMLElement): SelectPanelPosition {
   const rect = trigger.getBoundingClientRect()
   const spaceBelow = window.innerHeight - rect.bottom
   const spaceAbove = rect.top
   const openUpward = spaceBelow < SELECT_PANEL_MAX_HEIGHT + SELECT_PANEL_GAP && spaceAbove > spaceBelow
+  const available = Math.max(
+    72,
+    (openUpward ? spaceAbove : spaceBelow) - SELECT_PANEL_GAP - 8,
+  )
+  const maxHeight = Math.min(SELECT_PANEL_MAX_HEIGHT, available)
   return openUpward
-    ? { left: rect.left, width: rect.width, top: 'auto', bottom: window.innerHeight - rect.top + SELECT_PANEL_GAP }
-    : { left: rect.left, width: rect.width, top: rect.bottom + SELECT_PANEL_GAP, bottom: 'auto' }
+    ? { left: rect.left, width: rect.width, top: 'auto', bottom: window.innerHeight - rect.top + SELECT_PANEL_GAP, maxHeight }
+    : { left: rect.left, width: rect.width, top: rect.bottom + SELECT_PANEL_GAP, bottom: 'auto', maxHeight }
 }
 
 export function Select({ children, value, onChange, disabled, required, className, id, name }: SelectHTMLAttributes<HTMLSelectElement>) {
@@ -138,6 +143,7 @@ export function Select({ children, value, onChange, disabled, required, classNam
             top: panelPosition.top,
             bottom: panelPosition.bottom,
             right: 'auto',
+            maxHeight: panelPosition.maxHeight,
             zIndex: 1000,
           }}
         >
