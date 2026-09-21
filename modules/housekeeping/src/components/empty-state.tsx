@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
+import { cn } from '@/lib/cn'
 
-export function EmptyState({ icon, title, description, action }: { icon: ReactNode; title: string; description?: string; action?: ReactNode }) {
+export function EmptyState({ icon, title, description, action, className }: { icon: ReactNode; title: string; description?: string; action?: ReactNode; className?: string }) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-line bg-surface px-6 py-13 text-center">
+    <div className={cn('flex flex-col items-center rounded-lg border border-line bg-surface px-6 py-13 text-center', className)}>
       <div className="mb-4 flex h-13 w-13 items-center justify-center rounded-2xl bg-surface-2 text-muted">{icon}</div>
       <p className="font-head text-sm font-bold text-foreground">{title}</p>
       {description && <p className="mt-1.5 max-w-64 text-xs leading-relaxed text-muted">{description}</p>}
