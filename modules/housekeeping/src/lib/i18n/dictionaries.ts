@@ -260,7 +260,7 @@ export const dictionaries = {
     'staff.items.colQuantity': 'Quantità in hotel',
     'staff.items.colStatus': 'Stato',
     'staff.items.deactivate': 'Disattiva',
-    'staff.items.remove': 'Rimuovi',
+    'staff.items.remove': 'Elimina',
     'staff.items.translations': 'Traduzioni',
     'staff.items.translationsSave': 'Salva traduzioni',
     'staff.items.translationsSaving': 'Salvataggio…',
