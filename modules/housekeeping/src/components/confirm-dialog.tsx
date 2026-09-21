@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocale } from '@/lib/i18n/locale-context'
 
 export interface ConfirmOptions {
@@ -30,7 +31,8 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
     setPending(null)
   }
 
-  const dialog = pending ? (
+  const dialog = pending && typeof document !== 'undefined'
+    ? createPortal((
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 px-4" onClick={() => settle(false)}>
       <div
         className="w-full max-w-[340px] rounded-lg border border-line bg-surface p-7 text-center shadow-lg"
@@ -78,7 +80,8 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
         </div>
       </div>
     </div>
-  ) : null
+  ), document.body)
+    : null
 
   return [dialog, confirm]
 }
