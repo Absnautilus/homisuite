@@ -42,7 +42,7 @@ export interface GuestRequest {
   note: string | null
   created_by_staff: string | null
   status: RequestStatus
-  assigned_department: Department | null
+  assigned_department: Department
   assigned_job_title_ids: string[]
   accepted_by: string | null
   created_at: string
