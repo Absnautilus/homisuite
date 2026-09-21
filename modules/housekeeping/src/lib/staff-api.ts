@@ -174,11 +174,12 @@ export async function setRequestUrgent(id: string, urgent: boolean) {
 // Staff-reported issue, not tied to a guest. The client sends the selected
 // hotel explicitly; the DB trigger still derives assigned_department and
 // independently validates the room, menu item, and staff tenant references.
-export async function createStaffRequest(input: { hotelId: string; roomNumber: string; requestTypeId: string; note: string | null; staffId: string }) {
+export async function createStaffRequest(input: { hotelId: string; roomNumber: string; requestTypeId: string; quantity: number | null; note: string | null; staffId: string }) {
   const { error } = await supabase.from('guest_requests').insert({
     hotel_id: input.hotelId,
     room_number: input.roomNumber,
     request_type_id: input.requestTypeId,
+    quantity: input.quantity,
     note: input.note,
     created_by_staff: input.staffId,
   })
