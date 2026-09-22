@@ -71,7 +71,7 @@ insert into guest_requests (id, hotel_id, room_number, request_type_id, status) 
 set local role authenticated;
 set local request.jwt.claim.sub = '00000062-0000-0000-0000-000000000a01';
 select lives_ok(
-  $update guest_requests set priority = priority + 1, urgent = true where id = '00000062-0000-0000-0000-00000000ba01'$,
+  $$ update guest_requests set priority = priority + 1, urgent = true where id = '00000062-0000-0000-0000-00000000ba01' $$,
   'Reception can change priority and flag urgent on the same row (both triggers fire)'
 );
 reset role;
