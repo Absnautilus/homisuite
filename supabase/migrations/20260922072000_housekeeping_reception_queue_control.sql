@@ -100,6 +100,31 @@ create trigger guest_requests_guard_queue_control
   before update on guest_requests
   for each row execute function guard_housekeeping_queue_control();
 
+-- Queue visibility is operational, not hierarchical. A Core property_admin
+-- who works outside Reception must not gain a full queue merely because
+-- current_staff_role() maps rank 30 to legacy 'admin'. Reception/full-queue
+-- and assigned mansione are the only visibility routes.
+drop policy if exists guest_requests_select_hotel on guest_requests;
+create policy guest_requests_select_hotel on guest_requests for select to authenticated
+  using (
+    hotel_id = current_staff_hotel()
+    and (
+      current_staff_sees_full_queue()
+      or current_staff_job_title_id() = any(assigned_job_title_ids)
+    )
+  );
+
+drop policy if exists guest_requests_update_hotel on guest_requests;
+create policy guest_requests_update_hotel on guest_requests for update to authenticated
+  using (
+    hotel_id = current_staff_hotel()
+    and (
+      current_staff_sees_full_queue()
+      or current_staff_job_title_id() = any(assigned_job_title_ids)
+    )
+  )
+  with check (hotel_id = current_staff_hotel());
+
 -- Deleting a request is never an operational action.
 drop policy if exists guest_requests_delete_hotel on guest_requests;
 create policy guest_requests_delete_hotel on guest_requests for delete to authenticated
