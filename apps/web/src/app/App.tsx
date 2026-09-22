@@ -11,9 +11,9 @@ import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { HousekeepingModuleGate } from '../modules/housekeeping/HousekeepingModuleGate'
 import { DiningModuleGate } from '../modules/dining/DiningModuleGate'
 
-const ShiftPlannerPreviewPage = lazy(async () => {
-  const module = await import('../modules/shifts/ShiftPlannerPreviewPage')
-  return { default: module.ShiftPlannerPreviewPage }
+const ShiftPlannerPage = lazy(async () => {
+  const module = await import('../modules/shifts/ShiftPlannerPage')
+  return { default: module.ShiftPlannerPage }
 })
 
 export function App() {
@@ -27,7 +27,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="housekeeping/*" element={<HousekeepingModuleGate />} />
         <Route path="dining" element={<DiningModuleGate />} />
-        <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPreviewPage /></Suspense>} />
+        <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
         <Route path="modules" element={<ModulesPage />} />
         <Route path="team" element={<TeamPage />} />
