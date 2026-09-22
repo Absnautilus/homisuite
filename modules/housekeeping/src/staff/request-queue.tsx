@@ -16,7 +16,7 @@ type Tab = 'active' | 'done'
 
 const DONE_PAGE_SIZE = 15
 
-export function RequestQueue({ profile }: { profile: StaffProfile }) {
+export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfile; canManageQueue: boolean }) {
   const { t } = useLocale()
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
   // role is not an authorization signal here; department is. Porters and
   // other operational units can work requests assigned to them, but cannot
   // reprioritize, flag urgent, reassign, edit, cancel or reopen requests.
-  const managesFrontDesk = profile.department === 'reception'
+  const managesFrontDesk = canManageQueue
   const canReorder = managesFrontDesk
 
   const reload = useCallback(async () => {
