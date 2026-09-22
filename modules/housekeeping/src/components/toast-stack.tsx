@@ -59,8 +59,9 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
             <span className="flex-1 py-0.5">{toast.message}</span>
             <button
               type="button"
+              aria-label={t('common.toast.dismiss')}
               onClick={() => onDismiss(toast.id)}
-              className="shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-1.5 text-muted transition-colors hover:text-accent"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-muted transition-colors hover:text-accent"
             >
               <X className="h-3.5 w-3.5" />
             </button>

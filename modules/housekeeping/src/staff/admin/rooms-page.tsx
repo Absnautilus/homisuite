@@ -142,38 +142,42 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
         </CardBody>
       </Card>
 
-      <TableFrame>
-        <Table>
-          <TableHead>
-            <tr>
-              <TableHeaderCell>{t('staff.rooms.colRoom')}</TableHeaderCell>
-              <TableHeaderCell className="w-px"><span className="sr-only">{t('staff.rooms.colStatus')}</span></TableHeaderCell>
-            </tr>
-          </TableHead>
-          <TableBody>
-            {visibleRooms?.map((room) => (
-              <TableRow key={room.id}>
-                <TableCell className="font-medium text-foreground">{room.room_number}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <SwitchControl
-                      checked={room.active}
-                      onCheckedChange={() => onToggle(room)}
-                      aria-label={room.active ? t('staff.rooms.deactivate') : t('staff.rooms.reactivate')}
-                    />
-                    <IconButton
-                      tone="danger"
-                      icon={Trash2}
-                      label={t('staff.rooms.delete')}
-                      onClick={() => onDelete(room)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableFrame>
+      {rooms === null ? (
+        <p role="status" className="text-sm text-muted">{t('staff.rooms.loading')}</p>
+      ) : (
+        <TableFrame>
+          <Table>
+            <TableHead>
+              <tr>
+                <TableHeaderCell>{t('staff.rooms.colRoom')}</TableHeaderCell>
+                <TableHeaderCell className="w-px"><span className="sr-only">{t('staff.rooms.colStatus')}</span></TableHeaderCell>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {visibleRooms?.map((room) => (
+                <TableRow key={room.id}>
+                  <TableCell className="font-medium text-foreground">{room.room_number}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <SwitchControl
+                        checked={room.active}
+                        onCheckedChange={() => onToggle(room)}
+                        aria-label={room.active ? t('staff.rooms.deactivate') : t('staff.rooms.reactivate')}
+                      />
+                      <IconButton
+                        tone="danger"
+                        icon={Trash2}
+                        label={t('staff.rooms.delete')}
+                        onClick={() => onDelete(room)}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableFrame>
+      )}
     </div>
   )
 }

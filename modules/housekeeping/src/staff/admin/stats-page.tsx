@@ -14,7 +14,10 @@ export function StatsPage({ hotelId }: { hotelId: string }) {
   useEffect(() => {
     fetchCompletionStats(hotelId)
       .then(setStats)
-      .catch((err) => setError(getErrorMessage(err)))
+      .catch((err) => {
+        console.error(err)
+        setError(getErrorMessage(err))
+      })
   }, [hotelId])
 
   return (
@@ -25,7 +28,7 @@ export function StatsPage({ hotelId }: { hotelId: string }) {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.stats.loadError', { error })}</div>
+        <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.stats.loadError')}</div>
       ) : stats === null ? (
         <p className="text-sm text-muted">{t('staff.stats.loading')}</p>
       ) : stats.overallCount === 0 ? (

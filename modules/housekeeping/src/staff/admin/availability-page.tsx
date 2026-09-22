@@ -13,7 +13,10 @@ export function AvailabilityPage({ hotelId }: { hotelId: string }) {
   useEffect(() => {
     fetchItemAvailability(hotelId)
       .then(setItems)
-      .catch((err) => setError(getErrorMessage(err)))
+      .catch((err) => {
+        console.error(err)
+        setError(getErrorMessage(err))
+      })
   }, [hotelId])
 
   return (
@@ -24,13 +27,13 @@ export function AvailabilityPage({ hotelId }: { hotelId: string }) {
       </div>
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.availability.loadError', { error })}</div>
+        <div role="alert" className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.availability.loadError')}</div>
       ) : items === null ? (
         <p role="status" className="text-sm text-muted">{t('staff.availability.loading')}</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-muted">{t('staff.availability.empty')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-line bg-white">
+        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
           <table aria-label={t('staff.availability.title')} className="w-full min-w-max text-sm">
             <thead className="bg-surface-2 text-left text-xs uppercase text-muted">
               <tr>

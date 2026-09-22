@@ -236,7 +236,7 @@ export function RequestRow({
                       disabled={!onMoveUp}
                       onClick={onMoveUp}
                       aria-label={t('staff.row.moveUp')}
-                      className="cursor-pointer leading-none text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
+                      className="flex h-6 w-9 cursor-pointer items-center justify-center leading-none text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       ▲
                     </button>
@@ -245,7 +245,7 @@ export function RequestRow({
                       disabled={!onMoveDown}
                       onClick={onMoveDown}
                       aria-label={t('staff.row.moveDown')}
-                      className="cursor-pointer leading-none text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
+                      className="flex h-6 w-9 cursor-pointer items-center justify-center leading-none text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       ▼
                     </button>

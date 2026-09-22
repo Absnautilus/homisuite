@@ -63,6 +63,7 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
         }
       }
     } catch (err) {
+      console.error(err)
       setLoadError(getErrorMessage(err))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,7 +129,7 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
         <div className="p-4 sm:p-5">
       {loadError ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">
-          {t('staff.queue.loadError', { error: loadError })}
+          {t('staff.queue.loadError')}
         </div>
       ) : queue === null ? (
         <p className="text-sm text-muted">{t('staff.queue.loading')}</p>
@@ -201,7 +202,7 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
                 type="button"
                 disabled={clampedDonePage === 0}
                 onClick={() => setDonePage((p) => Math.max(0, p - 1))}
-                className="cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t('staff.queue.donePagePrev')}
               </button>
@@ -210,7 +211,7 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
                 type="button"
                 disabled={clampedDonePage >= doneTotalPages - 1}
                 onClick={() => setDonePage((p) => Math.min(doneTotalPages - 1, p + 1))}
-                className="cursor-pointer rounded-md border border-line bg-white px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t('staff.queue.donePageNext')}
               </button>
@@ -231,7 +232,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       className={cn(
         'flex-1 cursor-pointer whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
-        active ? 'bg-white text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+        active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
       )}
     >
       {children}
