@@ -80,17 +80,19 @@ export async function loadLiveShiftData(
   const ruleSets = (rulesResult.data ?? []) as Row[]
   const shifts = (shiftsResult.data ?? []) as Row[]
 
+  const assignmentDates = Array.from({ length: Math.round((nextMonth.getTime() - new Date(`${monthStart}T00:00:00Z`).getTime()) / 86400000) }, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`)
+
   const projectedUnits: ShiftPlanningUnit[] = (units as Row[]).map((unit) => {
     const unitMembers = members.filter((member) => member.planning_unit_id === unit.id)
     const activeRule = ruleSets.find((rule) => rule.id === unit.current_rule_set_id)
     const rules = activeRule?.rules ?? {}
     const assignments: Record<string, string[]> = {}
+    const lockedAssignments: Record<string, string[]> = {}
 
     for (const member of unitMembers) {
-      assignments[member.staff_profile_id] = shifts
-        .filter((shift) => shift.planning_unit_id === unit.id && shift.staff_profile_id === member.staff_profile_id)
-        .sort((a, b) => String(a.shift_date).localeCompare(String(b.shift_date)))
-        .map((shift) => shift.shift_codes?.code ?? 'R')
+      const memberShifts = shifts.filter((shift) => shift.planning_unit_id === unit.id && shift.staff_profile_id === member.staff_profile_id)
+      assignments[member.staff_profile_id] = assignmentDates.map((date) => memberShifts.find((shift) => shift.shift_date === date)?.shift_codes?.code ?? '')
+      lockedAssignments[member.staff_profile_id] = memberShifts.filter((shift) => shift.locked).map((shift) => shift.shift_date)
     }
 
     return {
@@ -124,6 +126,8 @@ export async function loadLiveShiftData(
         }
       }),
       assignments,
+      assignmentDates,
+      lockedAssignments,
       rules: {
         coverage: Array.isArray(rules.coverage) ? rules.coverage.map(String) : [],
         hard: Array.isArray(rules.hard) ? rules.hard.map(String) : [],
