@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { FieldError } from '@/components/ui/field'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
+import { getHkPortalTarget } from '@/lib/portal-target'
 import type { JobTitleOption } from '@/lib/admin-api'
 
 const SAVED_CLOSE_DELAY_MS = 900
@@ -157,6 +158,6 @@ export function MansioniPicker({
       </div>
       <FieldError>{error ?? undefined}</FieldError>
     </div>,
-    document.body,
+    getHkPortalTarget(),
   )
 }

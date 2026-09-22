@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
+import { PageState } from '../../components/PageState'
 import { useDiningAccess } from './useDiningAccess'
 import { DiningPage } from './DiningPage'
 
@@ -37,32 +38,35 @@ export function DiningModuleGate() {
   }, [access, propertyId, runtime])
 
   if (access.status === 'loading' || (access.status === 'compatible' && canManage === null)) {
-    return <div className="runtime-state" role="status">Caricamento Ristorazione…</div>
+    return <PageState kind="loading" title="Caricamento Ristorazione…" />
   }
 
   if (access.status === 'not-entitled') {
-    return <div className="runtime-state">Ristorazione non è abilitata per questa struttura.</div>
+    return <PageState kind="unavailable" title="Ristorazione non è abilitata per questa struttura." />
   }
 
   if (access.status === 'no-mapping') {
-    return <div className="runtime-state">Ristorazione non è ancora collegata a questa struttura.</div>
+    return <PageState kind="unavailable" title="Ristorazione non è ancora collegata a questa struttura." />
   }
 
   if (access.status === 'no-profile') {
     return (
-      <div className="runtime-state">
-        Non hai un profilo operativo per questa struttura.
-        <small>Gli accessi operativi si gestiscono da Team.</small>
-      </div>
+      <PageState
+        kind="unavailable"
+        title="Non hai un profilo operativo per questa struttura."
+        description="Gli accessi operativi si gestiscono da Team."
+      />
     )
   }
 
   if (access.status === 'error') {
     return (
-      <div className="runtime-state" role="alert">
-        <strong>Impossibile caricare Ristorazione.</strong>
-        <small style={{ maxWidth: 720, textAlign: 'center', overflowWrap: 'anywhere' }}>{access.message || 'Errore sconosciuto'}</small>
-      </div>
+      <PageState
+        kind="error"
+        title="Impossibile caricare Ristorazione."
+        description="Riprova tra qualche istante. Se il problema continua, contatta l'assistenza."
+        action={{ label: 'Ricarica', onClick: () => window.location.reload() }}
+      />
     )
   }
 

@@ -73,13 +73,19 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
           .maybeSingle()
         if (cancelled) return
         if (error) {
+          // Logged, not shown -- HousekeepingModuleGate keeps the user-facing
+          // message generic (see PageState there) so a raw Postgres/PostgREST
+          // error never reaches the screen.
+          console.error('useHousekeepingAccess', errorMessage(error))
           setState({ status: 'error', message: errorMessage(error) })
           return
         }
         setState(resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: Boolean(data) }))
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setState({ status: 'error', message: errorMessage(cause) })
+        if (cancelled) return
+        console.error('useHousekeepingAccess', errorMessage(cause))
+        setState({ status: 'error', message: errorMessage(cause) })
       })
 
     return () => {

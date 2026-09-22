@@ -72,13 +72,19 @@ export function useDiningAccess(): DiningAccessState {
           .maybeSingle() as { data: { id: string } | null; error: Error | null }
         if (cancelled) return
         if (error) {
+          // Logged, not shown -- DiningModuleGate keeps the user-facing
+          // message generic (see PageState there) so a raw Postgres/PostgREST
+          // error never reaches the screen.
+          console.error('useDiningAccess', errorMessage(error))
           setState({ status: 'error', message: errorMessage(error) })
           return
         }
         setState(resolveDiningAccess({ entitled: true, legacyHotelId: hotelId, staffProfileId: data?.id ?? null }))
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setState({ status: 'error', message: errorMessage(cause) })
+        if (cancelled) return
+        console.error('useDiningAccess', errorMessage(cause))
+        setState({ status: 'error', message: errorMessage(cause) })
       })
 
     return () => {

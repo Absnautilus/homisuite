@@ -1,6 +1,6 @@
-.sidebar-account { margin-top: auto; padding-top: 16px; }
+.sidebar-account { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--navbar-border); }
 .account-menu { position: relative; }
-.account-trigger { width: 100%; display: flex; align-items: center; gap: 9px; border: 1px solid var(--navbar-border); background: var(--navbar-surface); color: var(--navbar-text); border-radius: var(--r-sm); padding: 8px 9px; cursor: pointer; }
+.account-trigger { width: 100%; display: flex; align-items: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navbar-text); border-radius: var(--r-sm); padding: 8px 9px; cursor: pointer; }
 .account-trigger:hover { background: var(--navbar-surface-hover); }
 .account-avatar { width: 26px; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; flex: 0 0 auto; }
 .account-avatar.large { width: 34px; height: 34px; font-size: 11px; }
@@ -16,13 +16,10 @@
 .account-menu-row.danger { color: var(--red-ink); border-top: 1px solid var(--line); }
 .account-language-row { justify-content: space-between; }
 .account-language-row > span { display: flex; gap: 8px; align-items: center; }
-.page-stack { display: grid; gap: 22px; }
+/* .page-stack / .page-heading / .eyebrow / .section-heading live in
+   styles.css now -- one canonical page-scaffolding definition for the
+   whole Shell instead of two near-identical copies. */
 .shell-page { max-width: 1040px; margin: 0 auto; }
-.page-heading { display: grid; gap: 6px; }
-.page-heading.split, .section-heading.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-.page-heading h1 { font-size: clamp(1.8rem, 3vw, 2.35rem); letter-spacing: -0.04em; }
-.page-heading p, .section-heading p { margin: 0; color: var(--muted); }
-.eyebrow { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .shell-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
 .primary-action, .secondary-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 14px; border-radius: var(--r-sm); font-weight: 700; }
 .primary-action { border: 0; background: var(--accent); color: var(--accent-ink); }
@@ -32,9 +29,6 @@
 .team-principle-card { display: flex; align-items: flex-start; gap: 13px; padding: 18px; background: rgba(255,255,255,.78); backdrop-filter: var(--glass-blur); border-color: var(--glass-border); }
 .icon-tile { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
 .team-principle-card p { margin: 3px 0 0; color: var(--muted); }
-.section-heading { padding: 18px 20px 14px; }
-.section-heading h2 { font-size: 1rem; }
-.section-heading p { margin-top: 3px; font-size: 12.5px; }
 .status-chip { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 10.5px; font-weight: 700; }
 .team-table { border-top: 1px solid var(--line); }
 .team-row { display: grid; grid-template-columns: minmax(210px,1.45fr) minmax(135px,1fr) minmax(135px,1fr) 115px 192px; gap: 14px; align-items: center; min-height: 58px; padding: 0 20px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
@@ -51,8 +45,6 @@
 .row-action:hover:not(:disabled) { color: var(--accent); }
 .row-action.danger:hover:not(:disabled) { color: var(--red-ink); }
 .row-action:disabled { opacity: .35; cursor: not-allowed; }
-.team-empty { min-height: 130px; display: grid; place-items: center; align-content: center; gap: 8px; color: var(--muted); }
-.team-empty p { margin: 0; }
 .section-footnote { margin: 12px 20px 16px; color: var(--muted); font-size: 11px; }
 .job-role-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px 18px; }
 .job-role-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 11.5px; }
@@ -79,7 +71,13 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .settings-row.muted { color: var(--ink-2); }
 .settings-row.muted .settings-row-main small, .settings-row.muted .settings-row-status { color: var(--ink-2); }
 .settings-row-static, .settings-row-control { cursor: default; }
-.settings-row-status { flex: 0 0 auto; color: var(--muted); font-size: 10.5px; font-weight: 700; }
+.settings-row-status { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10.5px; font-weight: 700; }
+/* A row someone could use if they had the right permission reads
+   differently from one that simply isn't built yet -- the lock icon plus
+   an accent-leaning tone (instead of the plain muted grey every other
+   status uses) makes that distinction scannable without reading the text. */
+.settings-row-status.is-permission { color: var(--accent); }
+.settings-row-status.is-permission svg { flex-shrink: 0; }
 .settings-row-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .settings-row-main > span:last-child { display: grid; gap: 2px; }
 .settings-row strong { font-size: 12.5px; }
@@ -173,12 +171,30 @@ body.modal-open { overflow: hidden; }
 @media (max-width: 760px) {
   .page-heading.split, .section-heading.split { display: grid; }
   .primary-action, .secondary-action { width: 100%; }
-  .team-table { overflow-x: auto; }
-  .team-row { min-width: 770px; }
   .job-role-grid { gap: 6px; }
   .account-popover { position: fixed; left: 14px; right: 14px; bottom: 16px; }
   .modal-backdrop { padding: 0; align-items: end; }
   .modal-panel { width: 100%; max-height: 92vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+
+  /* Team on mobile is a stack of compact cards, not a horizontally
+     scrollable desktop table: the column header row (meaningless once
+     nothing lines up under it) is dropped, and each cell that isn't
+     self-explanatory on its own gets a small inline label via
+     data-label. */
+  .team-table { overflow-x: visible; }
+  .team-row-head { display: none; }
+  .team-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    row-gap: 6px;
+    min-width: 0;
+    padding: 14px 16px;
+  }
+  .team-person { grid-column: 1; grid-row: 1; }
+  .team-row-actions { grid-column: 2; grid-row: 1; align-self: start; }
+  .team-role-cell, .team-job-cell, .team-status-cell { grid-column: 1 / -1; font-size: 12px; }
+  .team-role-cell::before, .team-job-cell::before, .team-status-cell::before { content: attr(data-label) ':'; margin-right: 5px; color: var(--muted); font-weight: 700; }
 }
 
 .switch-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }

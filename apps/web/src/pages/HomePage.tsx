@@ -1,4 +1,5 @@
-import { ArrowRight, CalendarDays, Hotel, UtensilsCrossed, Wrench } from 'lucide-react'
+import { useMemo } from 'react'
+import { ArrowRight, CalendarDays, CarFront, CircleCheck, Hotel, UtensilsCrossed } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
@@ -8,8 +9,15 @@ const moduleCatalog = [
   { slug: 'guest_requests', title: 'Housekeeping', description: 'Richieste ospiti e operatività camere.', path: '/housekeeping', icon: Hotel },
   { slug: 'dining', title: 'Ristorazione', description: 'Ristoranti convenzionati e prenotazioni.', path: '/dining', icon: UtensilsCrossed },
   { slug: 'shifts', title: 'Turni', description: 'Pianificazione e copertura dei turni.', path: '/turni', icon: CalendarDays },
-  { slug: 'transfers', title: 'Transfer', description: 'Gestione transfer e spostamenti ospiti.', path: '/transfer', icon: Wrench },
+  { slug: 'transfers', title: 'Transfer', description: 'Gestione transfer e spostamenti ospiti.', path: '/transfer', icon: CarFront },
 ]
+
+// "Lunedì 22 settembre 2026" -- Intl gives it lowercase, capitalized to
+// match how a date reads as a heading rather than mid-sentence.
+function formatTodayItalian(date: Date): string {
+  const formatted = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
 
 export function HomePage() {
   const runtime = useModuleRuntime()
@@ -24,28 +32,47 @@ export function HomePage() {
     if (module.slug === 'dining') return diningAccess.status === 'compatible'
     return true
   })
+  const today = useMemo(() => formatTodayItalian(new Date()), [])
 
   return (
     <div className="page-stack">
-      <section className="page-heading">
-        <p className="eyebrow">{runtime.property?.name}</p>
-        <h1>Home</h1>
-        <p className="page-subtitle">Una vista rapida su ciò che richiede attenzione.</p>
+      <section className="page-heading split">
+        <div>
+          <p className="eyebrow">{runtime.property?.name}</p>
+          <h1>Home</h1>
+          <p className="page-subtitle">Accesso rapido ai moduli disponibili per questa struttura.</p>
+        </div>
+        <div className="home-today">
+          <p className="home-today-date">{today}</p>
+          <p className="home-today-greeting">Buon lavoro!</p>
+        </div>
       </section>
       <section className="module-grid">
+        {/* The whole card is the link (not just "Apri modulo"): a bigger,
+            more forgiving touch target on a hotel front desk, and one clear
+            affordance instead of a card that half-invites a click anywhere
+            but only reacts to one small line of text. */}
         {modules.map((module) => (
-          <article className="module-card" key={module.title}>
+          <Link className="module-card" to={module.path} key={module.title}>
+            <module.icon className="module-card-decor" aria-hidden="true" />
             <div className="module-card-top">
-              <div className="module-icon"><module.icon size={20} /></div>
+              <div className="module-icon"><module.icon size={22} /></div>
             </div>
-            <div><h2>{module.title}</h2><p>{module.description}</p></div>
-            <Link className="card-link" to={module.path}>Apri <ArrowRight size={16} /></Link>
-          </article>
+            <div className="module-card-body">
+              <h2>{module.title}</h2>
+              <p>{module.description}</p>
+            </div>
+            <div className="module-card-footer">
+              <span className="module-card-open">Apri modulo</span>
+              <span className="module-card-arrow" aria-hidden="true"><ArrowRight size={16} /></span>
+            </div>
+          </Link>
         ))}
       </section>
-      <section className="attention-card">
-        <div><p className="eyebrow">Attenzione</p><h2>Nessuna criticità urgente</h2><p>Qui compariranno avvisi e attività che richiedono attenzione.</p></div>
-      </section>
+      <p className="attention-note">
+        <span className="attention-note-icon" aria-hidden="true"><CircleCheck size={13} /></span>
+        Nessuna criticità urgente al momento.
+      </p>
     </div>
   )
 }

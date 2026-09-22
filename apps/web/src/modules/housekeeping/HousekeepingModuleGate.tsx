@@ -3,6 +3,7 @@ import { HousekeepingModule } from '@homisuite/housekeeping-module'
 import '@homisuite/housekeeping-module/style.css'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
+import { PageState } from '../../components/PageState'
 import { useHousekeepingAccess } from './useHousekeepingAccess'
 
 // Deep links (typed URL, refresh, or a saved bookmark) reach this gate
@@ -64,7 +65,8 @@ export function HousekeepingModuleGate() {
           setCanManage(manage)
           setCanManageQueue(reception)
         }
-      } catch {
+      } catch (cause) {
+        console.error('HousekeepingModuleGate: capability resolution failed', cause)
         if (!cancelled) {
           setCanManage(false)
           setCanManageQueue(false)
@@ -79,32 +81,35 @@ export function HousekeepingModuleGate() {
   }, [propertyId, runtime.profile?.id, hasPermission])
 
   if (access.status === 'loading' || canManage === null || canManageQueue === null) {
-    return <div className="runtime-state" role="status">Caricamento Housekeeping…</div>
+    return <PageState kind="loading" title="Caricamento Housekeeping…" />
   }
 
   if (access.status === 'not-entitled') {
-    return <div className="runtime-state">Housekeeping non è abilitato per questa struttura.</div>
+    return <PageState kind="unavailable" title="Housekeeping non è abilitato per questa struttura." />
   }
 
   if (access.status === 'no-mapping') {
-    return <div className="runtime-state">Housekeeping non è ancora collegato a questa struttura.</div>
+    return <PageState kind="unavailable" title="Housekeeping non è ancora collegato a questa struttura." />
   }
 
   if (access.status === 'no-profile') {
     return (
-      <div className="runtime-state">
-        Non hai un profilo operativo Housekeeping per questa struttura.
-        <small>Gli accessi operativi si gestiscono da Team.</small>
-      </div>
+      <PageState
+        kind="unavailable"
+        title="Non hai un profilo operativo Housekeeping per questa struttura."
+        description="Gli accessi operativi si gestiscono da Team."
+      />
     )
   }
 
   if (access.status === 'error') {
     return (
-      <div className="runtime-state" role="alert">
-        <strong>Impossibile caricare Housekeeping.</strong>
-        <small style={{ maxWidth: 720, textAlign: 'center', overflowWrap: 'anywhere' }}>{access.message || 'Errore sconosciuto'}</small>
-      </div>
+      <PageState
+        kind="error"
+        title="Impossibile caricare Housekeeping."
+        description="Riprova tra qualche istante. Se il problema continua, contatta l'assistenza."
+        action={{ label: 'Ricarica', onClick: () => window.location.reload() }}
+      />
     )
   }
 

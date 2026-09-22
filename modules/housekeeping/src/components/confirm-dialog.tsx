@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { getHkPortalTarget } from '@/lib/portal-target'
 
 export interface ConfirmOptions {
   title: string
@@ -19,6 +20,9 @@ interface PendingConfirm extends ConfirmOptions {
 export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<boolean>] {
   const { t } = useLocale()
   const [pending, setPending] = useState<PendingConfirm | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
 
   function confirm(options: ConfirmOptions) {
     return new Promise<boolean>((resolve) => {
@@ -31,11 +35,40 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
     setPending(null)
   }
 
+  // Same baseline as the Shell's own Modal: focus moves into the dialog on
+  // open and back to whatever triggered it on close, and Escape dismisses
+  // like the backdrop click already does. Two buttons don't need a full
+  // Tab-cycle trap the way a form-filled modal does.
+  useEffect(() => {
+    if (!pending) return
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    // Cancel gets initial focus, not Confirm: this dialog is most often
+    // guarding a destructive action, so an accidental Enter keypress must
+    // never land on it by default.
+    cancelButtonRef.current?.focus()
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        settle(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      previousFocus?.focus()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending])
+
   const dialog = pending && typeof document !== 'undefined'
     ? createPortal((
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 px-4" onClick={() => settle(false)}>
       <div
         className="w-full max-w-[340px] rounded-lg border border-line bg-surface p-7 text-center shadow-lg"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -57,10 +90,11 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
             </svg>
           )}
         </div>
-        <p className="font-head text-[0.9375rem] font-extrabold text-foreground">{pending.title}</p>
-        <p className="mt-2 text-xs leading-relaxed text-muted">{pending.description}</p>
+        <p id={titleId} className="font-head text-[0.9375rem] font-extrabold text-foreground">{pending.title}</p>
+        <p id={descriptionId} className="mt-2 text-xs leading-relaxed text-muted">{pending.description}</p>
         <div className="mt-5 flex gap-2">
           <button
+            ref={cancelButtonRef}
             type="button"
             onClick={() => settle(false)}
             className="h-8 flex-1 cursor-pointer rounded-sm border border-line-strong bg-surface px-3 text-xs font-bold text-foreground/70 hover:bg-surface-2"
@@ -80,7 +114,7 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
         </div>
       </div>
     </div>
-  ), document.body)
+  ), getHkPortalTarget())
     : null
 
   return [dialog, confirm]

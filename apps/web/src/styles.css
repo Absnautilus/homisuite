@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800;900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  --bg: #eaecf9;
+  --bg: #f1f0f8;
   --surface: #ffffff;
   --surface-2: #f4f5fc;
   --ink: #16182b;
@@ -117,6 +117,23 @@ a { color: inherit; text-decoration: none; }
 .runtime-state { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 24px; color: var(--muted); }
 .runtime-state button { padding: 9px 14px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); }
 
+/* Shared page-state pattern: loading / empty / error / unavailable, used in
+   place of ad-hoc ".runtime-state" text wherever a page or a section has
+   nothing else to show. Compact by design -- no illustrations, no huge
+   empty states. `.fullscreen` is only for pre-Shell states (no sidebar/nav
+   mounted yet, e.g. ShellLayout's own loading/error); everything rendered
+   inside an already-mounted Shell page uses the default, content-sized
+   variant instead of pinning to 100vh. */
+.page-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 200px; padding: 32px 24px; text-align: center; color: var(--muted); }
+.page-state.fullscreen { min-height: 100vh; }
+.page-state-icon { width: 40px; height: 40px; border-radius: var(--r-sm); display: grid; place-items: center; background: var(--surface-2); color: var(--muted); flex-shrink: 0; }
+.page-state.error .page-state-icon { background: var(--red-bg); color: var(--red-ink); }
+.page-state.loading .page-state-icon svg { animation: page-state-spin 900ms linear infinite; }
+.page-state-title { margin: 0; color: var(--ink); font-size: 0.95rem; font-weight: 750; }
+.page-state-description { margin: 0; max-width: 360px; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+.page-state-action { margin-top: 4px; }
+@keyframes page-state-spin { to { transform: rotate(360deg); } }
+
 /* buttons */
 .btn { display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: var(--r-sm); padding: 0 15px; min-height: 44px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; transition: filter var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease); }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
@@ -148,9 +165,12 @@ a { color: inherit; text-decoration: none; }
 .brand { display: flex; align-items: center; gap: 9px; font-family: var(--f-head); font-weight: 800; font-size: 14.5px; padding: 6px 8px 18px; }
 .brand .mark { width: 28px; height: 28px; border-radius: 8px; display: block; flex-shrink: 0; }
 
-.property-switcher-root { position: relative; margin-bottom: 18px; }
-.property-switcher { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 1px solid var(--navbar-border); border-radius: var(--r-sm); background: var(--navbar-surface-solid); color: var(--navbar-text); cursor: pointer; text-align: left; font: inherit; }
-.property-switcher:hover { background: var(--navbar-surface-solid-hover); }
+.property-switcher-root { position: relative; margin-bottom: 20px; }
+/* Quieter than a bordered button: the property is context for the whole
+   sidebar, not another action competing with the nav below it -- a hover
+   state is still there for discoverability, just not a permanent outline. */
+.property-switcher { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--r-sm); background: transparent; color: var(--navbar-text); cursor: pointer; text-align: left; font: inherit; }
+.property-switcher:hover { background: var(--navbar-surface-hover); }
 .property-switcher .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; flex-shrink: 0; color: #fff; }
 .property-switcher span { min-width: 0; display: grid; gap: 1px; flex: 1; }
 .property-switcher strong, .property-switcher small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
@@ -168,8 +188,12 @@ a { color: inherit; text-decoration: none; }
 .switch-panel-row .n { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .switch-panel-row .check { color: var(--accent); flex-shrink: 0; }
 
-.sidebar-nav { display: grid; gap: 1px; }
-.nav-section-label { margin: 12px 10px 6px; color: var(--navbar-icon); font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.sidebar-nav { display: grid; gap: 2px; }
+.nav-section-label { margin: 16px 10px 7px; color: var(--navbar-icon); font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+/* A visible seam between "Moduli" and "Piattaforma" -- two different kinds
+   of destination (what the property does vs. how it's run), not just two
+   labels in the same list. */
+.nav-section-label.platform { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--navbar-border); }
 .nav-item { min-height: 40px; padding: 9px 10px; display: flex; align-items: center; gap: 10px; border-radius: var(--r-sm); color: var(--navbar-text-muted); font-size: 13px; font-weight: 600; position: relative; transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
 .nav-item svg { flex-shrink: 0; color: var(--navbar-icon); transition: color var(--motion-fast) var(--motion-ease); }
 .nav-item:not(.active):hover { background: var(--navbar-surface-hover); color: var(--navbar-text); }
@@ -181,30 +205,88 @@ a { color: inherit; text-decoration: none; }
 .page-content { max-width: 1180px; margin: 0 auto; padding: 32px 32px 72px; }
 .mobile-header, .mobile-nav, .drawer-scrim { display: none; }
 .mobile-back { display: flex; align-items: center; gap: 8px; color: inherit; font-weight: 700; font-size: 0.95rem; }
-.page-stack { display: grid; gap: 24px; }
+/* Page scaffolding shared by every Shell page (Home, Moduli, Team,
+   Impostazioni, i moduli embedded...) -- the one grammar every page should
+   build on instead of re-declaring its own eyebrow/heading/spacing.
+   `.split` puts the heading on the left and a primary action on the right,
+   stacking on narrow screens instead of squeezing both onto one line. */
+.page-stack { display: grid; gap: 22px; }
 .page-stack > * { min-width: 0; }
 .page-heading { display: grid; gap: 6px; }
-.eyebrow { margin: 0; color: var(--accent); font-size: 0.75rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+.page-heading.split, .section-heading.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.eyebrow { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 h1, h2, p { margin-top: 0; }
-h1 { margin-bottom: 2px; font-size: clamp(1.7rem, 3vw, 2.4rem); letter-spacing: -0.03em; }
-.page-subtitle { margin-bottom: 0; color: var(--muted); font-size: 1rem; }
+h1 { margin-bottom: 2px; font-size: clamp(1.8rem, 3vw, 2.35rem); letter-spacing: -0.04em; }
+.page-subtitle, .page-heading p { margin-bottom: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+.section-heading { padding: 18px 20px 14px; }
+.section-heading h2 { font-size: 1rem; }
+.section-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12.5px; }
 
 /* home — module summary cards */
-.module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 16px; }
-.module-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 12px; transition: box-shadow 400ms var(--motion-ease); }
-.module-card:hover { box-shadow: var(--shadow-md); }
+.module-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.module-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: 0 1px 2px rgba(22, 24, 43, 0.04);
+  padding: 26px 28px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: box-shadow var(--motion-panel) var(--motion-ease), transform var(--motion-panel) var(--motion-ease), border-color var(--motion-panel) var(--motion-ease);
+}
+.module-card:hover, .module-card:focus-visible { border-color: var(--line-strong); box-shadow: 0 10px 26px -14px rgba(22, 24, 43, 0.22); }
+/* Cards are real links (whole surface clickable) -- lift slightly on
+   hover/focus so the affordance reads as "clickable card", not just
+   "container with a link inside it somewhere". Kept to 1-2px: this is a
+   hospitality back-office tool, not a marketing page. */
+a.module-card:hover, a.module-card:focus-visible { transform: translateY(-2px); }
+a.module-card:focus-visible { box-shadow: 0 10px 26px -14px rgba(22, 24, 43, 0.22), var(--focus-ring); }
+/* The module's own icon again, large and barely-there, bleeding past the
+   card edge -- purely decorative texture, never a second meaning to read,
+   so it sits behind the real content and stays out of its way. */
+.module-card-decor { position: absolute; z-index: 0; right: -22px; bottom: -24px; width: 132px; height: 132px; color: var(--accent); opacity: 0.055; pointer-events: none; }
+.module-card-top, .module-card-body, .module-card-footer { position: relative; z-index: 1; }
 .module-card-top { display: flex; align-items: center; gap: 11px; }
 .status-pill { margin-left: auto; border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); background: var(--surface); font-size: 11px; font-weight: 750; line-height: 1; }
 .status-pill-ok { border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); color: var(--accent); background: var(--accent-soft); }
-.module-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
-.module-card h2 { margin-bottom: 4px; font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; }
-.module-card p { margin-bottom: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; flex: 1; }
-.card-link { width: fit-content; display: inline-flex; align-items: center; gap: 7px; color: var(--accent); font-size: 0.88rem; font-weight: 750; }
-.attention-card, .empty-state { border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); }
-.attention-card { min-height: 90px; padding: 20px 22px; display: flex; align-items: center; border-radius: var(--r-lg); }
+.module-icon { width: 48px; height: 48px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+.module-card-body { flex: 1; }
+.module-card h2 { margin-bottom: 5px; font-size: 18px; font-weight: 800; letter-spacing: -0.015em; }
+.module-card p { margin-bottom: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.module-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.module-card-open { color: var(--accent); font-size: 0.88rem; font-weight: 750; }
+.module-card-arrow { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; transition: transform var(--motion-fast) var(--motion-ease); }
+a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card-arrow { transform: translateX(2px); }
+/* Module lifecycle (Disponibile/Beta/Deprecato) is a different concept from
+   the entitlement .status-pill above (Attivo/Non attivo) -- a plain small
+   label, not another pill, so the two are never mistaken for each other. */
+.module-lifecycle { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.module-lifecycle.is-beta { color: var(--amber-ink); }
+.module-lifecycle.is-deprecated { color: var(--red-ink); }
+.attention-card { border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); min-height: 90px; padding: 20px 22px; display: flex; align-items: center; border-radius: var(--r-lg); }
 .attention-card h2 { margin-bottom: 5px; font-size: 15px; }
 .attention-card p { margin-bottom: 0; color: var(--muted); line-height: 1.5; font-size: 13px; }
-.empty-state { min-height: 260px; display: grid; place-items: center; border-radius: var(--r-lg); color: var(--muted); }
+/* Deliberately quieter than .attention-card/.module-card: this is
+   informational filler ("nothing needs attention"), not a peer of the
+   module grid above it, so it must not compete with it for the eye --
+   no border box, no shadow, just a muted inline note. */
+.attention-note { display: flex; align-items: center; gap: 10px; padding: 4px 2px; color: var(--muted); font-size: 12.5px; }
+.attention-note-icon { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: var(--green-bg); color: var(--green-ink); flex-shrink: 0; }
+
+/* Home header's right-aligned "today" block, paired with .page-heading.split
+   (already used by Team/Settings for a heading + primary action) -- hidden
+   below the breakpoint where a hotel's real property name can start
+   crowding it against "Home" itself, per the request: elegant or absent,
+   never a squeezed second line. */
+.home-today { text-align: right; white-space: nowrap; }
+.home-today-date { margin: 0; color: var(--ink-2); font-size: 0.85rem; font-weight: 600; }
+.home-today-greeting { margin: 2px 0 0; color: var(--muted); font-size: 0.8rem; }
+@media (max-width: 760px) {
+  .home-today { display: none; }
+}
 
 /* mobile — sidebar becomes topbar + global drawer */
 @media (max-width: 920px) {
@@ -218,7 +300,9 @@ h1 { margin-bottom: 2px; font-size: clamp(1.7rem, 3vw, 2.4rem); letter-spacing: 
   .mobile-header small { color: var(--navbar-icon); }
   .mobile-header button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--navbar-surface); color: var(--navbar-text); }
   .page-content { padding: 24px 16px 92px; }
-  .module-grid { grid-template-columns: 1fr; }
+  .module-grid { grid-template-columns: 1fr; gap: 14px; }
+  .module-card { padding: 20px 20px 18px; }
+  .module-card-decor { width: 92px; height: 92px; opacity: 0.045; }
   .mobile-nav { position: fixed; z-index: 30; inset: auto 0 0 0; min-height: 64px; padding: 8px 8px max(8px, env(safe-area-inset-bottom)); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface); border-top: 1px solid var(--line); }
   .mobile-nav-item { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--muted); font-size: 0.67rem; font-weight: 650; }
   .mobile-nav-item.active { color: var(--accent); }

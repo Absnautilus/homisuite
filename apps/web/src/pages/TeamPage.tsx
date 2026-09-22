@@ -3,6 +3,7 @@ import type { CoreRole, JobTitle, TeamMember } from '@homisuite/core-sdk'
 import { Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Modal } from '../components/Modal'
+import { PageState } from '../components/PageState'
 import { PasswordField } from '../components/PasswordField'
 import { useConfirm } from '../components/ConfirmDialog'
 import { Select } from '../components/Select'
@@ -144,12 +145,12 @@ export function TeamPage() {
     return (
       <div className="team-row" role="row" key={member.membership.id}>
         <span className="team-person" role="cell"><span className="mini-avatar">{initials(member.profile.fullName)}</span><strong>{member.profile.fullName}</strong></span>
-        <span role="cell">
+        <span role="cell" className="team-role-cell" data-label="Accesso">
           {roleLabel(member.role.slug, member.role.displayName)}
           {member.membership.username ? <><br /><small className="muted">{member.membership.username}</small></> : null}
         </span>
-        <span role="cell" className={member.jobTitle ? '' : 'muted'}>{member.jobTitle?.name ?? 'Da assegnare'}</span>
-        <span role="cell" className="team-status-cell">
+        <span role="cell" className={member.jobTitle ? 'team-job-cell' : 'team-job-cell muted'} data-label="Mansione">{member.jobTitle?.name ?? 'Da assegnare'}</span>
+        <span role="cell" className="team-status-cell" data-label="Stato">
           <Switch
             checked={member.membership.status === 'active'}
             onChange={() => onToggleAccess(member)}
@@ -161,9 +162,13 @@ export function TeamPage() {
         <span role="cell" className="team-row-actions">
           {team.canManage ? (
             <>
-              <button className="row-action" type="button" onClick={() => setEditing(member)} aria-label={`Modifica ${member.profile.fullName}`}><Pencil size={15} /></button>
+              <button className="row-action" type="button" onClick={() => setEditing(member)} aria-label={`Modifica ${member.profile.fullName}`} title="Modifica">
+                <Pencil size={15} />
+              </button>
               {member.membership.username ? (
-                <button className="row-action" type="button" onClick={() => setResettingPassword(member)} aria-label={`Reimposta pin di ${member.profile.fullName}`}><KeyRound size={15} /></button>
+                <button className="row-action" type="button" onClick={() => setResettingPassword(member)} aria-label={`Reimposta pin di ${member.profile.fullName}`} title="Reimposta pin">
+                  <KeyRound size={15} />
+                </button>
               ) : <span className="row-action-slot" aria-hidden="true" />}
               {housekeepingEntitled && !orgWide ? (
                 <button
@@ -182,7 +187,7 @@ export function TeamPage() {
                 onClick={() => onRemoveMember(member)}
                 disabled={isSelf || orgWide || removingId === member.membership.id}
                 aria-label={`Rimuovi ${member.profile.fullName}`}
-                title={isSelf ? 'Non puoi rimuovere te stesso' : orgWide ? 'Gli accessi organizzazione si gestiscono a livello di organizzazione' : undefined}
+                title={isSelf ? 'Non puoi rimuovere te stesso' : orgWide ? 'Gli accessi organizzazione si gestiscono a livello di organizzazione' : 'Rimuovi'}
               >
                 <Trash2 size={15} />
               </button>
@@ -230,7 +235,7 @@ export function TeamPage() {
             </div>
           ))}
         </div>
-        {!loading && team.members.length === 0 ? <div className="team-empty"><Users size={22} /><p>Nessuna persona collegata a questa struttura.</p></div> : null}
+        {!loading && team.members.length === 0 ? <PageState kind="empty" icon={Users} title="Nessuna persona collegata a questa struttura." /> : null}
       </section>
 
       <section className="shell-card">
