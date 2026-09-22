@@ -129,7 +129,7 @@ export function RequestRow({
     canReorder && mode === 'active' && (request.status === 'requested' || request.status === 'in_progress') && Boolean(onDragPointerDown)
 
   return (
-    <Card className={request.urgent ? 'border-bad-ink/50 ring-1 ring-bad-ink/15' : undefined}>
+    <Card>
       {confirmDialog}
       <CardBody>
         <div className="flex items-start justify-between gap-3">
