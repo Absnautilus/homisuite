@@ -51,9 +51,9 @@ begin
     (
       old.status = 'requested'
       and new.status = 'in_progress'
-      and old.accepted_by is null
-      and new.accepted_by is not null
-      and new.accepted_at is not null
+      and (old.accepted_by is null or old.accepted_by is not distinct from new.accepted_by)
+      and (new.accepted_by is not null or old.accepted_by is null)
+      and (new.accepted_at is not null or old.accepted_at is not distinct from new.accepted_at)
       and old.completed_at is not distinct from new.completed_at
       and old.returned_at is not distinct from new.returned_at
     )
