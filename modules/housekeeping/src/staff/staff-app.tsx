@@ -129,7 +129,8 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const manageAllowed = embedded && capabilities ? capabilities.manage : legacyAdminLike
   const staysAllowed = embedded && capabilities ? capabilities.staysView : legacyStaysAllowed
 
-  const queueManageAllowed = embedded && capabilities ? capabilities.queueManage : profile.department === 'reception'\n  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} />} />
+  const queueManageAllowed = embedded && capabilities ? capabilities.queueManage : profile.department === 'reception'
+  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} />} />
   const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} />} /> : null
   const adminRoute = manageAllowed ? (
     <Route
@@ -169,7 +170,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
           profile={profile}
           embedded={embedded}
           basePath={embedded ? basePath : '/staff'}
-          capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed } : undefined}
+          capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed, queueManage: queueManageAllowed } : undefined}
         />
         {embedded ? (
           <div className="pt-4">{routeContent}</div>
