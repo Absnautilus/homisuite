@@ -27,6 +27,8 @@ export function HousekeepingModuleGate() {
   // bridging anyone in, is what actually gates "Gestione" to admin/manager.
   useEffect(() => {
     if (!propertyId || !runtime.profile?.id) return
+    const resolvedPropertyId = propertyId
+    const resolvedProfileId = runtime.profile.id
     let cancelled = false
 
     async function resolveCapabilities() {
@@ -36,8 +38,8 @@ export function HousekeepingModuleGate() {
           supabase
             .from('property_staff_details')
             .select('housekeeping_department, job_title_id')
-            .eq('property_id', propertyId)
-            .eq('profile_id', runtime.profile!.id)
+            .eq('property_id', resolvedPropertyId)
+            .eq('profile_id', resolvedProfileId)
             .maybeSingle(),
         ])
 
