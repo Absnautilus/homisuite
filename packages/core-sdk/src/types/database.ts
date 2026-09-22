@@ -387,6 +387,7 @@ export interface Database {
           property_id: string
           name: string
           active: boolean
+          sees_full_queue: boolean
           created_by: string | null
           created_at: string
           updated_at: string
@@ -396,6 +397,7 @@ export interface Database {
           property_id: string
           name: string
           active?: boolean
+          sees_full_queue?: boolean
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -403,6 +405,7 @@ export interface Database {
         Update: {
           name?: string
           active?: boolean
+          sees_full_queue?: boolean
         }
         Relationships: []
       }

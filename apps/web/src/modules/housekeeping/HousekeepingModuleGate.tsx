@@ -15,6 +15,7 @@ export function HousekeepingModuleGate() {
   const access = useHousekeepingAccess()
   const propertyId = runtime.property?.id ?? null
   const [canManage, setCanManage] = useState<boolean | null>(null)
+  const [canManageQueue, setCanManageQueue] = useState<boolean | null>(null)
 
   // Housekeeping's own staff_profiles.role is no longer meaningful for
   // authorization (every Team member bridged in via grant-housekeeping-access
@@ -25,21 +26,59 @@ export function HousekeepingModuleGate() {
   // here, the same one grant-housekeeping-access itself checks before
   // bridging anyone in, is what actually gates "Gestione" to admin/manager.
   useEffect(() => {
-    if (!propertyId) return
+    if (!propertyId || !runtime.profile?.id) return
+    const resolvedPropertyId = propertyId
+    const resolvedProfileId = runtime.profile.id
     let cancelled = false
-    void hasPermission('core.staff.manage')
-      .then((value) => {
-        if (!cancelled) setCanManage(value)
-      })
-      .catch(() => {
-        if (!cancelled) setCanManage(false)
-      })
+
+    async function resolveCapabilities() {
+      try {
+        const [manage, detailResult] = await Promise.all([
+          hasPermission('core.staff.manage'),
+          supabase
+            .from('property_staff_details')
+            .select('housekeeping_department, job_title_id')
+            .eq('property_id', resolvedPropertyId)
+            .eq('profile_id', resolvedProfileId)
+            .maybeSingle(),
+        ])
+
+        let reception = detailResult.data?.housekeeping_department === 'reception'
+        const jobTitleId = detailResult.data?.job_title_id
+        if (!reception && jobTitleId) {
+          const { data: jobTitle } = await supabase
+            .from('property_job_titles')
+            .select('name, sees_full_queue')
+            .eq('id', jobTitleId)
+            .maybeSingle()
+          // sees_full_queue is the mansione-level flag Turni's own model uses
+          // for "this job title sees everything regardless of routing" (see
+          // 20260917120000_request_categories_job_titles) -- checking it
+          // here, not just a literal name match on "reception", is what
+          // actually recognizes a property's own differently-named front
+          // desk mansione (e.g. "Front Desk", "Receptionist") as operational.
+          reception = jobTitle?.sees_full_queue === true || jobTitle?.name.trim().toLocaleLowerCase('it') === 'reception'
+        }
+
+        if (!cancelled) {
+          setCanManage(manage)
+          setCanManageQueue(reception)
+        }
+      } catch {
+        if (!cancelled) {
+          setCanManage(false)
+          setCanManageQueue(false)
+        }
+      }
+    }
+
+    void resolveCapabilities()
     return () => {
       cancelled = true
     }
-  }, [propertyId, hasPermission])
+  }, [propertyId, runtime.profile?.id, hasPermission])
 
-  if (access.status === 'loading' || canManage === null) {
+  if (access.status === 'loading' || canManage === null || canManageQueue === null) {
     return <div className="runtime-state" role="status">Caricamento Housekeeping…</div>
   }
 
@@ -75,7 +114,7 @@ export function HousekeepingModuleGate() {
       supabase={supabase}
       hotelId={access.hotelId}
       basePath="/housekeeping"
-      capabilities={{ manage: canManage, staysView: true }}
+      capabilities={{ manage: canManage, staysView: canManage || canManageQueue, queueManage: canManageQueue }}
       platformStaffManagement={{
         href: '/team',
         label: 'Apri Team',

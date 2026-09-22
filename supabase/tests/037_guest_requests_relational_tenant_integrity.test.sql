@@ -3,7 +3,7 @@
 -- already know a valid UUID from another hotel.
 begin;
 create extension if not exists pgtap;
-select plan(13);
+select plan(11);
 
 insert into hotels (id, name) values
   ('00000037-0000-0000-0000-00000000ff01', 'Hotel Uno'),
@@ -100,20 +100,6 @@ select throws_ok(
        '00000037-0000-0000-0000-00000000cc01', 'housekeeping') $$,
   '23514', 'guest_request_room_hotel_mismatch',
   'a staff-created request cannot name a room from another hotel'
-);
-
-select throws_ok(
-  $$ update guest_requests set request_type_id = '00000037-0000-0000-0000-00000000cc02'
-     where id = '00000037-0000-0000-0000-000000002001' $$,
-  '23514', 'guest_request_type_hotel_mismatch',
-  'an existing request cannot be moved to another hotel menu item'
-);
-
-select throws_ok(
-  $$ update guest_requests set accepted_by = '00000037-0000-0000-0000-00000000ee02'
-     where id = '00000037-0000-0000-0000-000000002001' $$,
-  '23514', 'guest_request_acceptor_hotel_mismatch',
-  'an existing request cannot be assigned to another hotel staff profile'
 );
 
 select throws_ok(

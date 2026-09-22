@@ -44,19 +44,37 @@ select ok(
 -- network mock.
 insert into hotels (id, name, timezone, active) values
   ('00000062-0000-0000-0000-00000000ff01', 'Hotel Sessantadue', 'Europe/Rome', true);
+select backfill_legacy_property_mapping();
+select backfill_guest_requests_entitlement();
 insert into request_categories (id, hotel_id, name) values
   ('00000062-0000-0000-0000-000000000c01', '00000062-0000-0000-0000-00000000ff01', 'Pulizie');
 insert into request_types (id, category_id, name) values
   ('00000062-0000-0000-0000-0000000fee01', '00000062-0000-0000-0000-000000000c01', 'Asciugamani');
 insert into rooms (id, hotel_id, room_number) values
   ('00000062-0000-0000-0000-0000000fa001', '00000062-0000-0000-0000-00000000ff01', '101');
+insert into auth.users (id) values ('00000062-0000-0000-0000-000000000a01');
+insert into profiles (id, full_name) values ('00000062-0000-0000-0000-000000000a01', 'Reception Webhook');
+insert into staff_profiles (id, hotel_id, auth_user_id, name, role, department, active, login_username) values
+  ('00000062-0000-0000-0000-000000000101', '00000062-0000-0000-0000-00000000ff01',
+   '00000062-0000-0000-0000-000000000a01', 'Reception Webhook', 'operatore', 'reception', true, 'test062.reception');
+insert into memberships (profile_id, property_id, role_id, status)
+select '00000062-0000-0000-0000-000000000a01', m.platform_property_id, r.id, 'active'
+from legacy_property_mapping m, roles r
+where m.legacy_hotel_id = '00000062-0000-0000-0000-00000000ff01' and r.slug = 'receptionist';
+insert into property_staff_details (property_id, profile_id, housekeeping_department)
+select m.platform_property_id, '00000062-0000-0000-0000-000000000a01', 'reception'::department
+from legacy_property_mapping m where m.legacy_hotel_id = '00000062-0000-0000-0000-00000000ff01';
+
 insert into guest_requests (id, hotel_id, room_number, request_type_id, status) values
   ('00000062-0000-0000-0000-00000000ba01', '00000062-0000-0000-0000-00000000ff01', '101', '00000062-0000-0000-0000-0000000fee01', 'requested');
 
+set local role authenticated;
+set local request.jwt.claim.sub = '00000062-0000-0000-0000-000000000a01';
 select lives_ok(
   $$ update guest_requests set priority = priority + 1, urgent = true where id = '00000062-0000-0000-0000-00000000ba01' $$,
-  'changing priority and flagging urgent on the same row does not error (both triggers fire)'
+  'Reception can change priority and flag urgent on the same row (both triggers fire)'
 );
+reset role;
 
 select * from finish();
 rollback;

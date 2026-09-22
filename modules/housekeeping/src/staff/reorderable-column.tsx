@@ -32,6 +32,7 @@ export function ReorderableColumn({
   staffId,
   canReorder,
   canFlagUrgent,
+  canManageRequest,
   jobTitles,
   onReordered,
 }: {
@@ -40,6 +41,7 @@ export function ReorderableColumn({
   staffId: string
   canReorder: boolean
   canFlagUrgent: boolean
+  canManageRequest: boolean
   jobTitles: QueueJobTitle[]
   onReordered: () => Promise<void>
 }) {
@@ -202,6 +204,7 @@ export function ReorderableColumn({
               mode="active"
               canReorder={canReorder}
               canFlagUrgent={canFlagUrgent}
+              canManageRequest={canManageRequest}
               jobTitles={jobTitles}
               onMoveUp={i > 0 ? () => moveAdjacent(order, i, -1, onReordered) : undefined}
               onMoveDown={i < order.length - 1 ? () => moveAdjacent(order, i, 1, onReordered) : undefined}

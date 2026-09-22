@@ -194,6 +194,8 @@ h1 { margin-bottom: 2px; font-size: clamp(1.7rem, 3vw, 2.4rem); letter-spacing: 
 .module-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 12px; transition: box-shadow 400ms var(--motion-ease); }
 .module-card:hover { box-shadow: var(--shadow-md); }
 .module-card-top { display: flex; align-items: center; gap: 11px; }
+.status-pill { margin-left: auto; border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); background: var(--surface); font-size: 11px; font-weight: 750; line-height: 1; }
+.status-pill-ok { border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); color: var(--accent); background: var(--accent-soft); }
 .module-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
 .module-card h2 { margin-bottom: 4px; font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; }
 .module-card p { margin-bottom: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; flex: 1; }

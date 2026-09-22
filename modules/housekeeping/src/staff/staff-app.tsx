@@ -28,6 +28,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<StaffProfile | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+  const canRejectFromLink = embedded && capabilities ? capabilities.queueManage : profile?.department === 'reception'
 
   useEffect(() => {
     let cancelled = false
@@ -92,13 +93,13 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
 
   useEffect(() => {
     const rejectId = searchParams.get('reject')
-    if (!rejectId || !profile) return
+    if (!rejectId || !profile || !canRejectFromLink) return
     cancelRequest(rejectId).finally(() => {
       const next = new URLSearchParams(searchParams)
       next.delete('reject')
       setSearchParams(next, { replace: true })
     })
-  }, [searchParams, profile, setSearchParams])
+  }, [searchParams, profile, setSearchParams, canRejectFromLink])
 
   if (loading) {
     return (
@@ -129,7 +130,8 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const manageAllowed = embedded && capabilities ? capabilities.manage : legacyAdminLike
   const staysAllowed = embedded && capabilities ? capabilities.staysView : legacyStaysAllowed
 
-  const queueRoute = <Route index element={<RequestQueue profile={profile} />} />
+  const queueManageAllowed = embedded && capabilities ? capabilities.queueManage : profile.department === 'reception'
+  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} />} />
   const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} />} /> : null
   const adminRoute = manageAllowed ? (
     <Route
@@ -155,7 +157,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     </Routes>
   ) : (
     <Routes>
-      <Route path="/" element={<RequestQueue profile={profile} />} />
+      <Route path="/" element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} />} />
       {staysAllowed && <Route path="/soggiorni" element={<StaysPage hotelId={profile.hotel_id} />} />}
       {manageAllowed && <Route path="/admin/*" element={<AdminHome profile={profile} basePath="/admin" />} />}
       <Route path="*" element={<div className="rounded-lg border border-line bg-surface p-10 text-center text-sm text-muted">{t('staff.routeUnavailable')}</div>} />
@@ -169,7 +171,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
           profile={profile}
           embedded={embedded}
           basePath={embedded ? basePath : '/staff'}
-          capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed } : undefined}
+          capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed, queueManage: queueManageAllowed } : undefined}
         />
         {embedded ? (
           <div className="pt-4">{routeContent}</div>

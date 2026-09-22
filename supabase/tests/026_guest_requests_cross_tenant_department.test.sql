@@ -6,8 +6,7 @@
 -- original number/role in the suite (guest_requests visibility isolation)
 -- but its assertions now cover the new mechanism: own mansione visible, a
 -- different mansione not, a sees_full_queue mansione sees everything,
--- admin/master bypass entirely (positive check, not just absence of
--- denial), a category with no mansione linked is invisible to everyone but
+-- Core admin rank does not bypass operational routing, a category with no mansione linked is invisible to everyone but
 -- admin/master/sees_full_queue, and a staff member with no job title at
 -- all fails closed.
 begin;
@@ -172,13 +171,13 @@ select is(
 );
 reset role;
 
--- ### admin bypasses entirely -- positive check ###
+-- ### Core admin rank does not bypass operational routing ###
 set local role authenticated;
 set local request.jwt.claim.sub = '00000026-0000-0000-0000-000000000a04';
 select is(
   (select count(*)::int from guest_requests),
-  3,
-  'property_admin (bypasses the mansione filter) sees all three requests too'
+  0,
+  'property_admin without an operational mansione does not bypass the queue filter'
 );
 reset role;
 

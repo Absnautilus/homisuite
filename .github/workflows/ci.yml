@@ -126,6 +126,13 @@ jobs:
         run: npm ci
       - name: Build Housekeeping module for the web dev server
         run: npm run build --workspace=@homisuite/housekeeping-module
+      # apps/web also resolves @homisuite/shifts-module (ShiftPlannerPreviewPage)
+      # against its own dist/ -- same reason as the Housekeeping build above.
+      # Vite's dependency pre-bundling scan reaches this import even though the
+      # route is lazy-loaded, so the dev server used by the E2E step below
+      # fails to start at all without it, not just when /turni is visited.
+      - name: Build Turni module for the web dev server
+        run: npm run build --workspace=@homisuite/shifts-module
       - name: Read local Supabase credentials
         shell: bash
         run: |

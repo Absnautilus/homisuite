@@ -16,7 +16,7 @@ type Tab = 'active' | 'done'
 
 const DONE_PAGE_SIZE = 15
 
-export function RequestQueue({ profile }: { profile: StaffProfile }) {
+export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfile; canManageQueue: boolean }) {
   const { t } = useLocale()
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -27,7 +27,12 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
   const { push, pushCard } = useToast()
   const knownIds = useRef<Set<string> | null>(null)
 
-  const managesFrontDesk = profile.role === 'admin' || profile.role === 'master' || (profile.role === 'operatore' && profile.department === 'reception')
+  // Operational queue controls belong to Reception. In embedded Core mode
+  // bridged profiles deliberately carry a compatibility role of `admin`, so
+  // role is not an authorization signal here; department is. Porters and
+  // other operational units can work requests assigned to them, but cannot
+  // reprioritize, flag urgent, reassign, edit, cancel or reopen requests.
+  const managesFrontDesk = canManageQueue
   const canReorder = managesFrontDesk
 
   const reload = useCallback(async () => {
@@ -52,7 +57,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
           pushCard({
             title,
             onAccept: () => void claimRequest(request.id, profile.id),
-            onReject: () => void cancelRequest(request.id),
+            ...(managesFrontDesk ? { onReject: () => void cancelRequest(request.id) } : {}),
           })
           playAlertSound()
         }
@@ -61,7 +66,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
       setLoadError(getErrorMessage(err))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pushCard, profile.id, profile.hotel_id])
+  }, [pushCard, profile.id, profile.hotel_id, managesFrontDesk])
 
   useEffect(() => {
     reload()
@@ -103,9 +108,11 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
         </div>
       </div>
 
-      <div>
-        <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
-      </div>
+      {managesFrontDesk && (
+        <div>
+          <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
+        </div>
+      )}
 
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
         <div className="flex justify-end border-b border-line bg-surface px-4 py-3">
@@ -151,6 +158,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
                   staffId={profile.id}
                   canReorder={canReorder}
                   canFlagUrgent={managesFrontDesk}
+                  canManageRequest={managesFrontDesk}
                   jobTitles={jobTitles}
                   onReordered={reload}
                 />
@@ -172,6 +180,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
                   staffId={profile.id}
                   canReorder={canReorder}
                   canFlagUrgent={managesFrontDesk}
+                  canManageRequest={managesFrontDesk}
                   jobTitles={jobTitles}
                   onReordered={reload}
                 />
@@ -184,7 +193,7 @@ export function RequestQueue({ profile }: { profile: StaffProfile }) {
       ) : (
         <div className="space-y-3">
           {donePageItems.map((request) => (
-            <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="done" jobTitles={jobTitles} />
+            <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="done" canManageRequest={managesFrontDesk} jobTitles={jobTitles} />
           ))}
           {doneTotalPages > 1 && (
             <div className="flex items-center justify-center gap-3 pt-2">

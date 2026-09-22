@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ShellLayout } from '../components/ShellLayout'
 import { HomePage } from '../pages/HomePage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
+import { ModulesPage } from '../pages/ModulesPage'
 import { TeamPage } from '../pages/TeamPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
@@ -27,7 +28,7 @@ export function App() {
         <Route path="dining" element={<DiningModuleGate />} />
         <Route path="turni" element={<Suspense fallback={<main className="runtime-state">Caricamento Turni…</main>}><ShiftPlannerPreviewPage /></Suspense>} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
-        <Route path="modules" element={<PlaceholderPage title="Moduli" />} />
+        <Route path="modules" element={<ModulesPage />} />
         <Route path="team" element={<TeamPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
