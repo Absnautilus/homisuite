@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../core/client'
+import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { useDiningAccess } from './useDiningAccess'
 import { DiningPage } from './DiningPage'
 
@@ -7,29 +7,34 @@ import { DiningPage } from './DiningPage'
 // explains itself, since a deep link can reach this gate directly even
 // when the nav entry that normally leads here is hidden.
 export function DiningModuleGate() {
+  const runtime = useModuleRuntime()
   const access = useDiningAccess()
+  const propertyId = runtime.property?.id ?? null
   const [canManage, setCanManage] = useState<boolean | null>(null)
 
-  // current_staff_role() is the same function RLS itself evaluates, so
-  // "can this person manage the directory" always matches what the server
-  // will actually allow -- no separate, potentially-stale notion of role
-  // to keep in sync (see HousekeepingModuleGate's own comment on exactly
-  // this trap with staff_profiles.role).
+  // dining.manage is the same Core permission dining_categories_admin_write,
+  // restaurants_admin_write and restaurant_hours_admin_write now evaluate
+  // (see 20260922080500_dining_core_capability.sql), so "can this person
+  // manage the directory" always matches what the server will actually
+  // allow -- no separate, potentially-stale notion of role to keep in sync.
+  // has_permission() already covers the old admin/master split on its own:
+  // it matches a property-scoped membership (old "admin") or an org-wide
+  // one (old "master") against the same permission grant.
   useEffect(() => {
-    if (access.status !== 'compatible') return
+    if (access.status !== 'compatible' || !propertyId) return
     let cancelled = false
-    void (async () => {
-      try {
-        const { data, error } = await (supabase.rpc('current_staff_role' as never) as unknown as Promise<{ data: string | null; error: Error | null }>)
-        if (!cancelled) setCanManage(!error && (data === 'admin' || data === 'master'))
-      } catch {
+    void runtime
+      .hasPermission('dining.manage')
+      .then((allowed) => {
+        if (!cancelled) setCanManage(allowed)
+      })
+      .catch(() => {
         if (!cancelled) setCanManage(false)
-      }
-    })()
+      })
     return () => {
       cancelled = true
     }
-  }, [access])
+  }, [access, propertyId, runtime])
 
   if (access.status === 'loading' || (access.status === 'compatible' && canManage === null)) {
     return <div className="runtime-state" role="status">Caricamento Ristorazione…</div>
