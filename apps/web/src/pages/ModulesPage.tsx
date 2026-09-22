@@ -47,13 +47,14 @@ export function ModulesPage() {
 
   useEffect(() => {
     if (!propertyId) return
+    const resolvedPropertyId = propertyId
     let cancelled = false
 
     async function load() {
       setState('loading')
       const [modulesResult, entitlementsResult] = await Promise.all([
         supabase.from('modules').select('id, slug, display_name, status').order('display_name'),
-        supabase.from('property_modules').select('module_id, enabled').eq('property_id', propertyId),
+        supabase.from('property_modules').select('module_id, enabled').eq('property_id', resolvedPropertyId),
       ])
 
       if (cancelled) return
