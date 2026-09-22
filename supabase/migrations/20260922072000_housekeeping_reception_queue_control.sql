@@ -18,10 +18,14 @@ create or replace function current_staff_can_manage_housekeeping_queue()
 returns boolean
 language sql security definer stable set search_path = public as $$
   select coalesce((
-    select psd.housekeeping_department = 'reception'::department
+    select
+      case
+        when psd.profile_id is not null then psd.housekeeping_department = 'reception'::department
+        else sp.role in ('admin', 'master')
+      end
     from staff_profiles sp
     join legacy_property_mapping m on m.legacy_hotel_id = sp.hotel_id
-    join property_staff_details psd
+    left join property_staff_details psd
       on psd.property_id = m.platform_property_id
      and psd.profile_id = sp.auth_user_id
     where sp.auth_user_id = auth.uid()
