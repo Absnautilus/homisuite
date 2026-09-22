@@ -10,6 +10,8 @@ export interface HousekeepingCapabilities {
   staysView: boolean
   /** Access to Housekeeping management/configuration screens. */
   manage: boolean
+  /** Reception-level control of queue routing, priority and urgency. */
+  queueManage: boolean
 }
 
 export interface PlatformStaffManagementLink {
