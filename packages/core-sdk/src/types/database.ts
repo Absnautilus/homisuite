@@ -555,6 +555,10 @@ export interface Database {
         Args: { p_membership_id: string }
         Returns: boolean
       }
+      claim_device_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string }
+        Returns: undefined
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

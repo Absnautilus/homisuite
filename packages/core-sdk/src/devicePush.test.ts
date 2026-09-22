@@ -18,15 +18,23 @@ describe('saveDevicePushSubscription', () => {
     ).rejects.toThrow('not_authenticated')
   })
 
-  it('upserts the subscription for the signed-in user', async () => {
+  it('claims the subscription for the signed-in user via the RPC', async () => {
+    let calledWith: unknown
     const client = {
       auth: { getUser: async () => mockAuthenticatedUser('user-1') },
-      from: () => mockQueryBuilder({ data: null, error: null }),
+      rpc: async (name: string, args: unknown) => {
+        calledWith = { name, args }
+        return { data: null, error: null }
+      },
     } as unknown as SupabaseClient<Database>
 
     await expect(
       saveDevicePushSubscription(client, { endpoint: 'https://push.example/ep', p256dh: 'p', auth: 'a' }),
     ).resolves.toBeUndefined()
+    expect(calledWith).toEqual({
+      name: 'claim_device_push_subscription',
+      args: { p_endpoint: 'https://push.example/ep', p_p256dh: 'p', p_auth: 'a' },
+    })
   })
 })
 
