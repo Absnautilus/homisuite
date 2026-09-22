@@ -1,11 +1,11 @@
 -- Housekeeping queue control is a Reception capability, not a consequence of
 -- the legacy staff_profiles.role. Bridged Core members intentionally carry
--- role='admin' for compatibility, so using that role made porters look like
--- front-desk staff and exposed priority/urgency controls to them.
+-- role='admin' for compatibility, so that legacy role must never authorize
+-- front-desk actions.
 begin;
 
--- Existing Reception job-title members should have the same compatibility
--- sentinel already used by Team > Moduli for full-queue Reception access.
+-- Existing Reception job-title members inherit the compatibility sentinel
+-- already used by Team > Moduli for Reception/full-queue access.
 update property_staff_details psd
 set housekeeping_department = 'reception'::department
 from property_job_titles jt
@@ -33,19 +33,62 @@ $$;
 revoke all on function current_staff_can_manage_housekeeping_queue() from public;
 grant execute on function current_staff_can_manage_housekeeping_queue() to authenticated;
 
+-- Non-Reception staff may perform the operational lifecycle only:
+-- claim a requested job, complete an in-progress job and mark a delivered
+-- trackable item returned. Routing, editing, cancellation/reopen,
+-- priority/urgency and assignment remain Reception-only.
 create or replace function guard_housekeeping_queue_control()
 returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  v_operational_transition boolean;
 begin
-  if auth.role() = 'authenticated'
-     and (
-       old.priority is distinct from new.priority
-       or old.urgent is distinct from new.urgent
-     )
-     and not current_staff_can_manage_housekeeping_queue()
+  if auth.role() <> 'authenticated' or current_staff_can_manage_housekeeping_queue() then
+    return new;
+  end if;
+
+  v_operational_transition :=
+    (
+      old.status = 'requested'
+      and new.status = 'in_progress'
+      and old.accepted_by is null
+      and new.accepted_by is not null
+      and new.accepted_at is not null
+      and old.completed_at is not distinct from new.completed_at
+      and old.returned_at is not distinct from new.returned_at
+    )
+    or (
+      old.status = 'in_progress'
+      and new.status = 'completed'
+      and old.accepted_by is not distinct from new.accepted_by
+      and old.accepted_at is not distinct from new.accepted_at
+      and new.completed_at is not null
+      and old.returned_at is not distinct from new.returned_at
+    )
+    or (
+      old.status = 'completed'
+      and new.status = 'completed'
+      and old.returned_at is null
+      and new.returned_at is not null
+      and old.accepted_by is not distinct from new.accepted_by
+      and old.accepted_at is not distinct from new.accepted_at
+      and old.completed_at is not distinct from new.completed_at
+    );
+
+  if old.priority is distinct from new.priority
+     or old.urgent is distinct from new.urgent
+     or old.assigned_job_title_ids is distinct from new.assigned_job_title_ids
+     or old.assigned_department is distinct from new.assigned_department
+     or old.room_number is distinct from new.room_number
+     or old.quantity is distinct from new.quantity
+     or old.note is distinct from new.note
+     or old.request_type_id is distinct from new.request_type_id
+     or old.archived_at is distinct from new.archived_at
+     or not v_operational_transition
   then
     raise exception 'reception queue control required' using errcode = '42501';
   end if;
+
   return new;
 end;
 $$;
@@ -56,5 +99,13 @@ drop trigger if exists guest_requests_guard_queue_control on guest_requests;
 create trigger guest_requests_guard_queue_control
   before update on guest_requests
   for each row execute function guard_housekeeping_queue_control();
+
+-- Deleting a request is never an operational action.
+drop policy if exists guest_requests_delete_hotel on guest_requests;
+create policy guest_requests_delete_hotel on guest_requests for delete to authenticated
+  using (
+    hotel_id = current_staff_hotel()
+    and current_staff_can_manage_housekeeping_queue()
+  );
 
 commit;
