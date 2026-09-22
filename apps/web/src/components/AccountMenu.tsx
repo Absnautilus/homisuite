@@ -51,9 +51,14 @@ export function AccountMenu({ name }: { name: string }) {
             <span><Languages size={16} /> Lingua</span>
             <LanguageToggle />
           </div>
-          <button className="account-menu-row danger" type="button" onClick={() => void supabase.auth.signOut()}><LogOut size={16} /><span>Esci</span></button>
         </div>
       )}
+      {/* Always visible, not tucked inside the popover above: signing out is
+          common enough on a shared front-desk device to deserve its own
+          permanent affordance, not a click to reveal it first. */}
+      <button className="account-logout" type="button" onClick={() => void supabase.auth.signOut()}>
+        <LogOut size={16} /><span>Esci</span>
+      </button>
     </div>
   )
 }

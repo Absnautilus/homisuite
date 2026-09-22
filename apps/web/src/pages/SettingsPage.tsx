@@ -9,6 +9,7 @@ import { PasswordField } from '../components/PasswordField'
 import { Select } from '../components/Select'
 import { core, supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
+import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
 
 export function SettingsPage() {
@@ -200,10 +201,7 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, runtime.property?.timezone])
 
-  const logoUpdatedAt = typeof runtime.property?.settings.logoUpdatedAt === 'string' ? runtime.property.settings.logoUpdatedAt : null
-  const logoUrl = runtime.property && logoUpdatedAt
-    ? `${supabase.storage.from(LOGO_BUCKET).getPublicUrl(`${runtime.property.id}/logo.png`).data.publicUrl}?v=${encodeURIComponent(logoUpdatedAt)}`
-    : null
+  const logoUrl = getPropertyLogoUrl(supabase, runtime.property)
 
   async function onLogoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
