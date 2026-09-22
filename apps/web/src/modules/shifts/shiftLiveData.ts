@@ -64,7 +64,8 @@ export async function loadLiveShiftData(
 
   if (!units?.length) return { property: { id: propertyId, name: propertyName, units: [] }, month }
 
-  const unitIds = units.map((unit: Row) => unit.id)
+  const unitRows = units as Row[]
+  const unitIds = unitRows.map((unit) => String(unit.id))
   const [
     codesResult,
     membersResult,
@@ -88,7 +89,7 @@ export async function loadLiveShiftData(
 
   const assignmentDates = Array.from({ length: Math.round((nextMonth.getTime() - new Date(`${monthStart}T00:00:00Z`).getTime()) / 86400000) }, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`)
 
-  const projectedUnits: ShiftPlanningUnit[] = (units as Row[]).map((unit) => {
+  const projectedUnits: ShiftPlanningUnit[] = unitRows.map((unit) => {
     const unitMembers = members.filter((member) => member.planning_unit_id === unit.id)
     const activeRule = ruleSets.find((rule) => rule.id === unit.current_rule_set_id)
     const rules = activeRule?.rules ?? {}
@@ -102,17 +103,17 @@ export async function loadLiveShiftData(
     }
 
     return {
-      id: unit.id,
-      name: unit.name,
+      id: String(unit.id),
+      name: typeof unit.name === 'string' ? unit.name : 'Unità',
       jobTitles: [],
       excludedJobTitles: [],
-      ruleSetName: activeRule?.preset_key ?? unit.name,
-      ruleSetVersion: activeRule?.version ?? 1,
+      ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
+      ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,
       codes: codes.filter((code) => code.planning_unit_id === unit.id).map((code) => ({
-        code: code.code,
-        label: code.label,
-        time: timeLabel(code.starts_at, code.ends_at),
-        color: code.color,
+        code: String(code.code),
+        label: typeof code.label === 'string' ? code.label : String(code.code),
+        time: timeLabel(typeof code.starts_at === 'string' ? code.starts_at : null, typeof code.ends_at === 'string' ? code.ends_at : null),
+        color: typeof code.color === 'string' ? code.color : '#9AA0A6',
       })),
       people: unitMembers.filter((member) => member.shift_staff_profiles?.active !== false).map((member) => {
         const staff = related(member.shift_staff_profiles)
@@ -122,11 +123,11 @@ export async function loadLiveShiftData(
         const title = typeof jobTitle?.name === 'string' ? jobTitle.name : undefined
         const name = typeof profile?.display_name === 'string' ? profile.display_name : 'Dipendente'
         return {
-          id: member.staff_profile_id,
+          id: String(member.staff_profile_id),
           name,
           initials: initials(name),
           jobTitle: title ?? '—',
-          assignmentProfile: assignmentProfile(member.assignment_profile_key ?? staff?.shift_type ?? 'day'),
+          assignmentProfile: assignmentProfile(typeof member.assignment_profile_key === 'string' ? member.assignment_profile_key : (typeof staff?.shift_type === 'string' ? staff.shift_type : 'day')),
           includedBy: member.inclusion_source === 'explicit_include' ? 'manual' : 'job-title',
           restMode: staff?.rest_mode === 'fixed' ? 'fixed' : 'rotating',
           restDays: staff?.rest_mode === 'fixed' ? restDays(Array.isArray(staff.fixed_rest_days) ? staff.fixed_rest_days.filter((day): day is number => typeof day === 'number') : []) : undefined,
