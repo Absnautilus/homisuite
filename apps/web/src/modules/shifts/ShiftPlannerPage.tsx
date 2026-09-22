@@ -61,13 +61,16 @@ export function ShiftPlannerPage() {
   if (state.status === 'empty') return <PageState kind="empty" title="Turni non è ancora configurato." description="Crea almeno un’unità di pianificazione per iniziare." />
   if (state.status === 'error') return <PageState kind="error" title="Impossibile caricare Turni." description="Riprova tra qualche istante." action={{ label: 'Ricarica', onClick: () => window.location.reload() }} />
 
+  if (state.status !== 'ready') return null
+
+  const readyState = state
   const profileId = runtime.profile?.id
-  return <ShiftPlannerModule initialPropertyId={state.property.id} previewProperties={[state.property]} capabilities={state.capabilities} onSaveAssignments={async (changes) => {
+  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} onSaveAssignments={async (changes) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const byUnit = new Map<string, typeof changes>()
     for (const change of changes) byUnit.set(change.planningUnitId, [...(byUnit.get(change.planningUnitId) ?? []), change])
     for (const [unitId, unitChanges] of byUnit) {
-      const unit = state.property.units.find((candidate) => candidate.id === unitId)
+      const unit = readyState.property.units.find((candidate) => candidate.id === unitId)
       if (!unit) throw new Error('Unknown planning unit')
       await saveShiftAssignments(supabase, propertyId, profileId, unit, unitChanges)
     }
