@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
+import { Bell, Building2, ChevronRight, Globe2, Lock, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
 import { Modal } from '../components/Modal'
@@ -45,7 +45,7 @@ export function SettingsPage() {
       <section className="settings-section">
         <div className="settings-section-title"><Building2 size={18} /><div><h2>Struttura</h2><p>Configurazione condivisa di {propertyName}.</p></div></div>
         <div className="settings-list shell-card">
-          <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={canManageProperty ? () => setPropertyOpen(true) : undefined} status={canManageProperty ? undefined : 'Permesso richiesto'} />
+          <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={canManageProperty ? () => setPropertyOpen(true) : undefined} status={canManageProperty ? undefined : 'Permesso richiesto'} permissionRequired={!canManageProperty} />
           <SettingRow title="Preferenze operative" detail="Fuso orario, formati e impostazioni comuni" status="Non ancora disponibile" muted />
           {canManageProperty && <GuestLinkRow />}
         </div>
@@ -107,15 +107,27 @@ type SettingRowProps = {
   icon?: ReactNode
   muted?: boolean
   status?: string
+  // Distinguishes "you could do this if you had the permission" from a
+  // plain "not available yet" -- same static row, but a lock icon and an
+  // accent tone instead of the flat muted status text, so the reason is
+  // scannable without reading it.
+  permissionRequired?: boolean
   to?: string
   onClick?: () => void
 }
 
-function SettingRow({ title, detail, icon, muted = false, status, to, onClick }: SettingRowProps) {
+function SettingRow({ title, detail, icon, muted = false, status, permissionRequired = false, to, onClick }: SettingRowProps) {
   const content = (
     <>
       <span className="settings-row-main">{icon ? <span className="settings-row-icon">{icon}</span> : null}<span><strong>{title}</strong><small>{detail}</small></span></span>
-      {to || onClick ? <ChevronRight size={17} /> : <span className="settings-row-status">{status}</span>}
+      {to || onClick ? (
+        <ChevronRight size={17} />
+      ) : (
+        <span className={`settings-row-status${permissionRequired ? ' is-permission' : ''}`}>
+          {permissionRequired ? <Lock size={12} aria-hidden="true" /> : null}
+          {status}
+        </span>
+      )}
     </>
   )
 

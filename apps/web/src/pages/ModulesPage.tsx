@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Hotel, UtensilsCrossed, Wrench, type LucideIcon } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CalendarDays, CarFront, Hotel, Puzzle, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
+import { PageState } from '../components/PageState'
 
 type ModuleRow = {
   id: string
@@ -34,7 +35,7 @@ const catalog: Record<string, { title: string; description: string; icon: Lucide
   transfers: {
     title: 'Transfer',
     description: 'Organizzazione e tracciamento dei transfer e degli spostamenti degli ospiti.',
-    icon: Wrench,
+    icon: CarFront,
   },
 }
 
@@ -45,34 +46,33 @@ export function ModulesPage() {
   const [propertyModules, setPropertyModules] = useState<PropertyModuleRow[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
-  useEffect(() => {
-    if (!propertyId) return
-    const resolvedPropertyId = propertyId
-    let cancelled = false
+  const load = useCallback(async (propertyIdToLoad: string, isCancelled: () => boolean) => {
+    setState('loading')
+    const [modulesResult, entitlementsResult] = await Promise.all([
+      supabase.from('modules').select('id, slug, display_name, status').order('display_name'),
+      supabase.from('property_modules').select('module_id, enabled').eq('property_id', propertyIdToLoad),
+    ])
 
-    async function load() {
-      setState('loading')
-      const [modulesResult, entitlementsResult] = await Promise.all([
-        supabase.from('modules').select('id, slug, display_name, status').order('display_name'),
-        supabase.from('property_modules').select('module_id, enabled').eq('property_id', resolvedPropertyId),
-      ])
-
-      if (cancelled) return
-      if (modulesResult.error || entitlementsResult.error) {
-        setState('error')
-        return
-      }
-
-      setRegistered((modulesResult.data ?? []) as ModuleRow[])
-      setPropertyModules((entitlementsResult.data ?? []) as PropertyModuleRow[])
-      setState('ready')
+    if (isCancelled()) return
+    if (modulesResult.error || entitlementsResult.error) {
+      console.error('ModulesPage', modulesResult.error ?? entitlementsResult.error)
+      setState('error')
+      return
     }
 
-    void load()
+    setRegistered((modulesResult.data ?? []) as ModuleRow[])
+    setPropertyModules((entitlementsResult.data ?? []) as PropertyModuleRow[])
+    setState('ready')
+  }, [])
+
+  useEffect(() => {
+    if (!propertyId) return
+    let cancelled = false
+    void load(propertyId, () => cancelled)
     return () => {
       cancelled = true
     }
-  }, [propertyId])
+  }, [propertyId, load])
 
   const enabledById = useMemo(
     () => new Map(propertyModules.map((item) => [item.module_id, item.enabled])),
@@ -87,8 +87,15 @@ export function ModulesPage() {
         <p className="page-subtitle">I moduli disponibili in Homisuite e quelli attivi per questa struttura.</p>
       </section>
 
-      {state === 'loading' && <section className="empty-state"><span>Caricamento moduli…</span></section>}
-      {state === 'error' && <section className="empty-state"><span>Impossibile caricare i moduli.</span></section>}
+      {state === 'loading' && <PageState kind="loading" title="Caricamento moduli…" />}
+      {state === 'error' && (
+        <PageState
+          kind="error"
+          title="Impossibile caricare i moduli."
+          description="Riprova tra qualche istante. Se il problema continua, contatta l'assistenza."
+          action={{ label: 'Riprova', onClick: () => { if (propertyId) void load(propertyId, () => false) } }}
+        />
+      )}
 
       {state === 'ready' && (
         <section className="module-grid">
@@ -96,9 +103,16 @@ export function ModulesPage() {
             const meta = catalog[module.slug] ?? {
               title: module.display_name,
               description: 'Modulo Homisuite.',
-              icon: Wrench,
+              icon: Puzzle,
             }
+            // Entitlement (this property's own property_modules row) and
+            // lifecycle (the module's own rollout stage) are two different
+            // questions -- a Beta module can be fully Attivo here, and an
+            // Attivo module can still be Deprecato platform-wide. Kept as
+            // two visually distinct labels so neither reads as the other.
             const enabled = enabledById.get(module.id) === true
+            const lifecycleLabel = module.status === 'beta' ? 'Beta' : module.status === 'deprecated' ? 'Deprecato' : 'Disponibile'
+            const lifecycleClass = module.status === 'beta' ? 'module-lifecycle is-beta' : module.status === 'deprecated' ? 'module-lifecycle is-deprecated' : 'module-lifecycle'
             const Icon = meta.icon
 
             return (
@@ -113,7 +127,7 @@ export function ModulesPage() {
                   <h2>{meta.title}</h2>
                   <p>{meta.description}</p>
                 </div>
-                <p className="eyebrow">{module.status === 'beta' ? 'Beta' : module.status === 'deprecated' ? 'Deprecato' : 'Disponibile'}</p>
+                <p className={lifecycleClass}>{lifecycleLabel}</p>
               </article>
             )
           })}

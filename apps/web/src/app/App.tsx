@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ShellLayout } from '../components/ShellLayout'
+import { PageState } from '../components/PageState'
 import { HomePage } from '../pages/HomePage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { ModulesPage } from '../pages/ModulesPage'
@@ -26,7 +27,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="housekeeping/*" element={<HousekeepingModuleGate />} />
         <Route path="dining" element={<DiningModuleGate />} />
-        <Route path="turni" element={<Suspense fallback={<main className="runtime-state">Caricamento Turni…</main>}><ShiftPlannerPreviewPage /></Suspense>} />
+        <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPreviewPage /></Suspense>} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
         <Route path="modules" element={<ModulesPage />} />
         <Route path="team" element={<TeamPage />} />
