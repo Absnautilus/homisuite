@@ -28,6 +28,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<StaffProfile | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+  const canRejectFromLink = embedded && capabilities ? capabilities.queueManage : profile?.department === 'reception'
 
   useEffect(() => {
     let cancelled = false
@@ -92,13 +93,13 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
 
   useEffect(() => {
     const rejectId = searchParams.get('reject')
-    if (!rejectId || !profile || !queueManageAllowed) return
+    if (!rejectId || !profile || !canRejectFromLink) return
     cancelRequest(rejectId).finally(() => {
       const next = new URLSearchParams(searchParams)
       next.delete('reject')
       setSearchParams(next, { replace: true })
     })
-  }, [searchParams, profile, setSearchParams, queueManageAllowed])
+  }, [searchParams, profile, setSearchParams, canRejectFromLink])
 
   if (loading) {
     return (
