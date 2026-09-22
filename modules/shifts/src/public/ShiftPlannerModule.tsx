@@ -5,7 +5,8 @@ import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel
 import { ScheduleGrid } from './ScheduleGrid'
 
 export interface ShiftPlannerCapabilities { view: boolean; manage: boolean; manageRequests: boolean }
-export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[] }
+export interface ShiftAssignmentEdit { planningUnitId: string; staffProfileId: string; shiftDate: string; code: string }
+export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void> }
 type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'preferences' | 'swaps' | 'absences' | 'preassignments'
 type CalendarView = 'month' | 'week'
 
@@ -17,7 +18,7 @@ const TABS: Array<{ id: ModuleTab; label: string; managerOnly?: boolean }> = [
   { id: 'absences', label: 'Ferie / Permessi' }, { id: 'preassignments', label: 'Pre-assegnazioni' },
 ]
 
-export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties }: ShiftPlannerModuleProps) {
+export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments }: ShiftPlannerModuleProps) {
   const initialProperty = previewProperties.find((property) => property.id === initialPropertyId) ?? previewProperties[0]
   const [propertyId, setPropertyId] = useState(initialProperty?.id ?? '')
   const [unitId, setUnitId] = useState(initialProperty?.units[0]?.id ?? '')
@@ -25,12 +26,16 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const [periodOffset, setPeriodOffset] = useState(0)
   const [readOnlyDemo, setReadOnlyDemo] = useState(false)
+  const [draftProperties, setDraftProperties] = useState(previewProperties)
+  const [pendingChanges, setPendingChanges] = useState<ShiftAssignmentEdit[]>([])
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [tabDirection, setTabDirection] = useState<1 | -1>(1)
   const [tabTransitionActive, setTabTransitionActive] = useState(false)
   const navButtonRefs = useRef<Partial<Record<ModuleTab, HTMLButtonElement>>>({})
   const navContainerRef = useRef<HTMLDivElement>(null)
   const [navHighlight, setNavHighlight] = useState({ left: 0, width: 0, ready: false })
-  const property = useMemo(() => previewProperties.find((candidate) => candidate.id === propertyId) ?? previewProperties[0], [previewProperties, propertyId])
+  useEffect(() => { setDraftProperties(previewProperties); setPendingChanges([]); setSaveState('idle') }, [previewProperties])
+  const property = useMemo(() => draftProperties.find((candidate) => candidate.id === propertyId) ?? draftProperties[0], [draftProperties, propertyId])
   const unit = property?.units.find((candidate) => candidate.id === unitId) ?? property?.units[0]
   const readOnly = readOnlyDemo || !capabilities.manage
   const visibleTabs = TABS.filter((item) => !item.managerOnly || !readOnly)
@@ -57,7 +62,27 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     return () => { cancelAnimationFrame(firstFrame); cancelAnimationFrame(secondFrame) }
   }, [tabTransitionActive, tab])
 
-  function changeProperty(nextPropertyId: string) { const next = previewProperties.find((candidate) => candidate.id === nextPropertyId); setPropertyId(nextPropertyId); setUnitId(next?.units[0]?.id ?? ''); setTab('calendar') }
+  function changeProperty(nextPropertyId: string) { const next = draftProperties.find((candidate) => candidate.id === nextPropertyId); setPropertyId(nextPropertyId); setUnitId(next?.units[0]?.id ?? ''); setTab('calendar') }
+  function editAssignment(staffProfileId: string, date: string, code: string) {
+    if (!unit || readOnly || preview) return
+    const dateIndex = unit.assignmentDates?.indexOf(date) ?? -1
+    if (dateIndex < 0) return
+    setDraftProperties((current) => current.map((candidate) => candidate.id !== property?.id ? candidate : ({
+      ...candidate,
+      units: candidate.units.map((candidateUnit) => candidateUnit.id !== unit.id ? candidateUnit : ({
+        ...candidateUnit,
+        assignments: { ...candidateUnit.assignments, [staffProfileId]: candidateUnit.assignments[staffProfileId].map((value, index) => index === dateIndex ? code : value) },
+      })),
+    })))
+    setPendingChanges((current) => [...current.filter((item) => !(item.planningUnitId === unit.id && item.staffProfileId === staffProfileId && item.shiftDate === date)), { planningUnitId: unit.id, staffProfileId, shiftDate: date, code }])
+    setSaveState('idle')
+  }
+  async function saveAssignments() {
+    if (!onSaveAssignments || pendingChanges.length === 0) return
+    setSaveState('saving')
+    try { await onSaveAssignments(pendingChanges); setPendingChanges([]); setSaveState('saved') }
+    catch { setSaveState('error') }
+  }
   function togglePreviewRole() { setReadOnlyDemo((current) => { const next = !current; if (next && (tab === 'employees' || tab === 'rules')) setTab('calendar'); return next }) }
   function changeTab(nextTab: ModuleTab) {
     if (nextTab === tab) return
@@ -80,7 +105,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     </div></header>
     <nav className="shift-main-tabs" aria-label="Sezioni Turni"><div ref={navContainerRef} className="shift-main-tabs-scroll" role="tablist"><i className="shift-tab-highlight" aria-hidden="true" style={{ left: navHighlight.left, width: navHighlight.width, opacity: navHighlight.ready ? 1 : 0 }} /><div className="shift-main-tab-buttons">{visibleTabs.map((item) => <button ref={(element) => { if (element) navButtonRefs.current[item.id] = element }} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? 'is-active' : undefined} onClick={() => changeTab(item.id)} key={item.id}>{item.label}</button>)}</div></div></nav>
     <div className={`shift-tab-scene${tabTransitionActive ? ' is-entering' : ''}`} style={sceneStyle}>
-      {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className="shift-status-chip is-draft">Bozza</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview}>Assegna automaticamente</button><button type="button" disabled={preview}>Imposta riposi</button><button type="button" disabled={preview}>Rendi definitivo</button><button className="is-primary" type="button" disabled={preview}>Salva turni</button></> : null}</div></div><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><i style={{ background: code.color }} /><strong>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section></> : null}
+      {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className="shift-status-chip is-draft">Bozza</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview}>Assegna automaticamente</button><button type="button" disabled={preview}>Imposta riposi</button><button type="button" disabled={preview}>Rendi definitivo</button><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></> : null}</div></div><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} />{saveState === 'error' ? <div className="shift-empty" role="alert">Impossibile salvare le modifiche. Riprova.</div> : null}{saveState === 'saved' ? <div className="shift-empty" role="status">Turni salvati.</div> : null}<section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} editable={!readOnly && !preview} onAssignmentChange={editAssignment} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><i style={{ background: code.color }} /><strong>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section></> : null}
       {tab === 'employees' ? <EmployeesPanel property={property} /> : null}
       {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} /></> : null}
       {tab === 'mine' ? <MyShiftsPanel unit={unit} /> : null}{tab === 'preferences' ? <PersonalPanel /> : null}
