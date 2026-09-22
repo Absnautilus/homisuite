@@ -106,7 +106,7 @@ export function HousekeepingModuleGate() {
       supabase={supabase}
       hotelId={access.hotelId}
       basePath="/housekeeping"
-      capabilities={{ manage: canManage, staysView: true, queueManage: canManageQueue }}
+      capabilities={{ manage: canManage, staysView: canManageQueue, queueManage: canManageQueue }}
       platformStaffManagement={{
         href: '/team',
         label: 'Apri Team',
