@@ -54,9 +54,9 @@ insert into rooms (id, hotel_id, room_number) values
   ('00000062-0000-0000-0000-0000000fa001', '00000062-0000-0000-0000-00000000ff01', '101');
 insert into auth.users (id) values ('00000062-0000-0000-0000-000000000a01');
 insert into profiles (id, full_name) values ('00000062-0000-0000-0000-000000000a01', 'Reception Webhook');
-insert into staff_profiles (id, hotel_id, auth_user_id, name, role, department, active) values
+insert into staff_profiles (id, hotel_id, auth_user_id, name, role, department, active, login_username) values
   ('00000062-0000-0000-0000-000000000101', '00000062-0000-0000-0000-00000000ff01',
-   '00000062-0000-0000-0000-000000000a01', 'Reception Webhook', 'operatore', 'reception', true);
+   '00000062-0000-0000-0000-000000000a01', 'Reception Webhook', 'operatore', 'reception', true, 'test062.reception');
 insert into memberships (profile_id, property_id, role_id, status)
 select '00000062-0000-0000-0000-000000000a01', m.platform_property_id, r.id, 'active'
 from legacy_property_mapping m, roles r
