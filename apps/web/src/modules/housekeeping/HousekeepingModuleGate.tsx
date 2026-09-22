@@ -48,10 +48,16 @@ export function HousekeepingModuleGate() {
         if (!reception && jobTitleId) {
           const { data: jobTitle } = await supabase
             .from('property_job_titles')
-            .select('name')
+            .select('name, sees_full_queue')
             .eq('id', jobTitleId)
             .maybeSingle()
-          reception = jobTitle?.name.trim().toLocaleLowerCase('it') === 'reception'
+          // sees_full_queue is the mansione-level flag Turni's own model uses
+          // for "this job title sees everything regardless of routing" (see
+          // 20260917120000_request_categories_job_titles) -- checking it
+          // here, not just a literal name match on "reception", is what
+          // actually recognizes a property's own differently-named front
+          // desk mansione (e.g. "Front Desk", "Receptionist") as operational.
+          reception = jobTitle?.sees_full_queue === true || jobTitle?.name.trim().toLocaleLowerCase('it') === 'reception'
         }
 
         if (!cancelled) {
@@ -108,7 +114,7 @@ export function HousekeepingModuleGate() {
       supabase={supabase}
       hotelId={access.hotelId}
       basePath="/housekeeping"
-      capabilities={{ manage: canManage, staysView: canManageQueue, queueManage: canManageQueue }}
+      capabilities={{ manage: canManage, staysView: canManage || canManageQueue, queueManage: canManageQueue }}
       platformStaffManagement={{
         href: '/team',
         label: 'Apri Team',
