@@ -20,6 +20,7 @@ export function RequestRow({
   mode,
   canReorder = false,
   canFlagUrgent = false,
+  canManageRequest = false,
   jobTitles,
   onMoveUp,
   onMoveDown,
@@ -33,6 +34,7 @@ export function RequestRow({
   mode: 'active' | 'done'
   canReorder?: boolean
   canFlagUrgent?: boolean
+  canManageRequest?: boolean
   jobTitles: QueueJobTitle[]
   onMoveUp?: () => void
   onMoveDown?: () => void
@@ -190,7 +192,7 @@ export function RequestRow({
           )}
           {!editing && (
             <div className="flex shrink-0 items-center gap-1">
-              {request.created_by_staff && (
+              {canManageRequest && request.created_by_staff && (
                 <IconButton tone="neutral" icon={Pencil} label={t('staff.row.edit')} disabled={pending} onClick={startEdit} />
               )}
               {canFlagUrgent && mode === 'active' && (
@@ -274,7 +276,7 @@ export function RequestRow({
 
             {mode === 'active' && (
               <div className="flex flex-wrap items-center gap-2">
-                <Select
+                {canManageRequest && <Select
                   value={request.assigned_job_title_ids.length === 1 ? request.assigned_job_title_ids[0] : ''}
                   disabled={pending || jobTitles.length === 0}
                   onChange={(e) => run(() => reassignRequestToJobTitle(request.id, e.target.value))}
@@ -286,14 +288,15 @@ export function RequestRow({
                       {jobTitle.name}
                     </option>
                   ))}
-                </Select>
-                {/* Negatives (reject/cancel) on the left, positives (accept/complete) on the right. */}
-                {request.status === 'requested' ? (
+                </Select>}
+                {/* Destructive/routing controls are Reception-only. Operational
+                    staff can still claim and complete work assigned to them. */}
+                {canManageRequest && (request.status === 'requested' ? (
                   <IconButton tone="hintCaution" icon={X} label={t('staff.row.reject')} disabled={pending} onClick={onCancel} />
                 ) : (
                   <IconButton tone="danger" icon={X} label={t('staff.row.cancel')} disabled={pending} onClick={onCancel} />
-                )}
-                {request.status === 'in_progress' && (
+                ))}
+                {canManageRequest && request.status === 'in_progress' && (
                   <IconButton tone="neutral" icon={ArrowLeft} label={t('staff.row.revert')} disabled={pending} onClick={() => run(() => revertRequest(request.id, 'in_progress'))} />
                 )}
                 {request.status === 'requested' && (
@@ -310,14 +313,14 @@ export function RequestRow({
                 {trackable && request.status === 'completed' && !request.returned_at && (
                   <IconButton tone="ok" icon={PackageCheck} label={t('staff.row.markReturned')} disabled={pending} onClick={() => run(() => markItemReturned(request.id))} />
                 )}
-                <IconButton
+                {canManageRequest && <IconButton
                   tone="neutral"
                   icon={ArrowLeft}
                   label={t('staff.row.revert')}
                   disabled={pending}
                   onClick={() => run(() => revertRequest(request.id, request.status === 'completed' ? 'completed' : 'cancelled'))}
-                />
-                <IconButton tone="danger" icon={Trash2} label={t('staff.row.delete')} disabled={pending} onClick={onDelete} />
+                />}
+                {canManageRequest && <IconButton tone="danger" icon={Trash2} label={t('staff.row.delete')} disabled={pending} onClick={onDelete} />}
               </div>
             )}
           </div>
