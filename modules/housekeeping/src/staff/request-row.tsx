@@ -4,7 +4,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Select, Input, Textarea } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
+import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, Clock, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
@@ -173,21 +173,32 @@ export function RequestRow({
               </div>
             </div>
           ) : (
-            <div className="min-w-0">
-              <p className="font-semibold text-foreground">
-                {t('staff.newRequest.room')} {request.room_number} <span className="font-normal text-muted">·</span>{' '}
-                <AutoText text={typeName} translations={typeNameI18n} />
-                {request.quantity ? ` × ${request.quantity}` : ''}
-              </p>
-              <p className="mt-0.5 text-sm text-muted">
-                {formatTime(request.created_at)}
-                {categoryName && (
-                  <>
-                    {' · '}
-                    <AutoText text={categoryName} translations={categoryNameI18n} />
-                  </>
-                )}
-              </p>
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="flex shrink-0 flex-col items-center rounded-lg bg-surface-2 px-3 py-1.5 text-center">
+                <span className="text-[0.625rem] font-bold uppercase tracking-wide text-muted">{t('staff.newRequest.room')}</span>
+                <span className="text-2xl leading-none font-extrabold text-foreground">{request.room_number}</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-lg leading-tight font-bold text-foreground">
+                    <AutoText text={typeName} translations={typeNameI18n} />
+                  </p>
+                  {request.quantity ? (
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent">
+                      × {request.quantity}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-0.5 text-sm text-muted">
+                  {formatTime(request.created_at)}
+                  {categoryName && (
+                    <>
+                      {' · '}
+                      <AutoText text={categoryName} translations={categoryNameI18n} />
+                    </>
+                  )}
+                </p>
+              </div>
             </div>
           )}
           {!editing && (
@@ -265,7 +276,8 @@ export function RequestRow({
 
         {!editing && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-muted" />
               <p className="text-xs text-muted">{elapsedLabel}</p>
               {mode === 'done' && trackable && request.status === 'completed' && (
                 <Badge className={request.returned_at ? 'bg-ok-bg text-ok-ink' : 'bg-wait-bg text-wait-ink'}>
@@ -300,10 +312,10 @@ export function RequestRow({
                   <IconButton tone="neutral" icon={ArrowLeft} label={t('staff.row.revert')} disabled={pending} onClick={() => run(() => revertRequest(request.id, 'in_progress'))} />
                 )}
                 {request.status === 'requested' && (
-                  <IconButton tone="hintPositive" filled icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(() => claimRequest(request.id, staffId))} />
+                  <IconButton tone="hintPositive" filled shape="circle" size="lg" icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(() => claimRequest(request.id, staffId))} />
                 )}
                 {request.status === 'in_progress' && (
-                  <IconButton tone="ok" filled icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => completeRequest(request.id))} />
+                  <IconButton tone="ok" filled shape="circle" size="lg" icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => completeRequest(request.id))} />
                 )}
               </div>
             )}
