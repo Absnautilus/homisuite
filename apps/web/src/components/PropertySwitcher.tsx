@@ -8,11 +8,16 @@ export interface SwitchableProperty {
 
 export function PropertySwitcher({
   current,
+  logoUrl,
   properties,
   staffLabel,
   onSelect,
 }: {
   current: SwitchableProperty | null
+  // The property's own uploaded logo (Impostazioni > Struttura), when it has
+  // one -- shown instead of the initials monogram, never alongside a
+  // placeholder look when a real mark already exists.
+  logoUrl?: string | null
   properties: SwitchableProperty[]
   staffLabel: string
   onSelect: (propertyId: string) => void
@@ -48,7 +53,7 @@ export function PropertySwitcher({
         aria-expanded={canSwitch ? open : undefined}
         onClick={() => canSwitch && setOpen((o) => !o)}
       >
-        <span className="mk">{initials}</span>
+        {logoUrl ? <img className="mk mk-logo" src={logoUrl} alt="" /> : <span className="mk">{initials}</span>}
         <span>
           <strong>{current?.name ?? '—'}</strong>
           <small>{staffLabel}</small>

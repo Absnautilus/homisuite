@@ -43,7 +43,9 @@ test('organization admin logs in, switches property, and logs out', async ({ pag
   await expect(page.locator('.page-heading .eyebrow')).toHaveText('Property A2')
 
   await page.getByRole('button', { name: 'Menu account di E2E Org Admin' }).click()
-  await page.getByRole('menu').getByRole('button', { name: 'Esci' }).click()
+  // "Esci" now sits outside the popover as a persistent, always-visible
+  // control (see AccountMenu.tsx), not inside the role="menu" popover.
+  await page.getByRole('button', { name: 'Esci' }).click()
   await expect(page.getByRole('heading', { name: 'Bentornato' })).toBeVisible()
 
   expect(consoleErrors).toEqual([])

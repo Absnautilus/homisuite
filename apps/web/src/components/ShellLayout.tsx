@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Menu, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { shellNavigation } from '../app/navigation'
+import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
+import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
 import { useDiningAccess } from '../modules/dining/useDiningAccess'
 import { LoginScreen } from './LoginScreen'
@@ -110,6 +112,7 @@ export function ShellLayout() {
   const propertySwitcher = (
     <PropertySwitcher
       current={runtime.property ? { id: runtime.property.id, name: runtime.property.name } : null}
+      logoUrl={getPropertyLogoUrl(supabase, runtime.property)}
       properties={runtime.properties.map((property) => ({ id: property.id, name: property.name }))}
       staffLabel={displayName}
       onSelect={(propertyId) => runtime.selectProperty(propertyId)}
