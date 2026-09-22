@@ -1,7 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '@homisuite/shifts-module'
 
-type Row = Record<string, any>
+type Row = Record<string, unknown>
+
+type RelatedRow = Record<string, unknown>
+function related(value: unknown): RelatedRow | undefined {
+  if (Array.isArray(value)) return value[0] as RelatedRow | undefined
+  return value && typeof value === 'object' ? value as RelatedRow : undefined
+}
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
@@ -109,11 +115,12 @@ export async function loadLiveShiftData(
         color: code.color,
       })),
       people: unitMembers.filter((member) => member.shift_staff_profiles?.active !== false).map((member) => {
-        const staff = member.shift_staff_profiles
-        const profile = staff?.profiles
-        const detail = staff?.property_staff_details
-        const title = Array.isArray(detail) ? detail[0]?.property_job_titles?.name : detail?.property_job_titles?.name
-        const name = profile?.display_name ?? 'Dipendente'
+        const staff = related(member.shift_staff_profiles)
+        const profile = related(staff?.profiles)
+        const detail = related(staff?.property_staff_details)
+        const jobTitle = related(detail?.property_job_titles)
+        const title = typeof jobTitle?.name === 'string' ? jobTitle.name : undefined
+        const name = typeof profile?.display_name === 'string' ? profile.display_name : 'Dipendente'
         return {
           id: member.staff_profile_id,
           name,
@@ -122,7 +129,7 @@ export async function loadLiveShiftData(
           assignmentProfile: assignmentProfile(member.assignment_profile_key ?? staff?.shift_type ?? 'day'),
           includedBy: member.inclusion_source === 'explicit_include' ? 'manual' : 'job-title',
           restMode: staff?.rest_mode === 'fixed' ? 'fixed' : 'rotating',
-          restDays: staff?.rest_mode === 'fixed' ? restDays(staff.fixed_rest_days ?? []) : undefined,
+          restDays: staff?.rest_mode === 'fixed' ? restDays(Array.isArray(staff.fixed_rest_days) ? staff.fixed_rest_days.filter((day): day is number => typeof day === 'number') : []) : undefined,
         }
       }),
       assignments,
