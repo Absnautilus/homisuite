@@ -92,14 +92,19 @@ export async function loadLiveShiftData(
   const projectedUnits: ShiftPlanningUnit[] = unitRows.map((unit) => {
     const unitMembers = members.filter((member) => member.planning_unit_id === unit.id)
     const activeRule = ruleSets.find((rule) => rule.id === unit.current_rule_set_id)
-    const rules = activeRule?.rules ?? {}
+    const rules = related(activeRule?.rules) ?? {}
     const assignments: Record<string, string[]> = {}
     const lockedAssignments: Record<string, string[]> = {}
 
     for (const member of unitMembers) {
       const memberShifts = shifts.filter((shift) => shift.planning_unit_id === unit.id && shift.staff_profile_id === member.staff_profile_id)
-      assignments[member.staff_profile_id] = assignmentDates.map((date) => memberShifts.find((shift) => shift.shift_date === date)?.shift_codes?.code ?? '')
-      lockedAssignments[member.staff_profile_id] = memberShifts.filter((shift) => shift.locked).map((shift) => shift.shift_date)
+      const staffProfileId = String(member.staff_profile_id)
+      assignments[staffProfileId] = assignmentDates.map((date) => {
+        const shift = memberShifts.find((candidate) => candidate.shift_date === date)
+        const shiftCode = related(shift?.shift_codes)
+        return typeof shiftCode?.code === 'string' ? shiftCode.code : ''
+      })
+      lockedAssignments[staffProfileId] = memberShifts.filter((shift) => shift.locked === true).map((shift) => String(shift.shift_date))
     }
 
     return {
@@ -115,7 +120,7 @@ export async function loadLiveShiftData(
         time: timeLabel(typeof code.starts_at === 'string' ? code.starts_at : null, typeof code.ends_at === 'string' ? code.ends_at : null),
         color: typeof code.color === 'string' ? code.color : '#9AA0A6',
       })),
-      people: unitMembers.filter((member) => member.shift_staff_profiles?.active !== false).map((member) => {
+      people: unitMembers.filter((member) => related(member.shift_staff_profiles)?.active !== false).map((member) => {
         const staff = related(member.shift_staff_profiles)
         const profile = related(staff?.profiles)
         const detail = related(staff?.property_staff_details)
