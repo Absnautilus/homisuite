@@ -1,6 +1,7 @@
 import { Children, isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
+import { getHkPortalTarget } from '@/lib/portal-target'
 
 const controlClass = 'w-full min-h-11 rounded-sm border-[1.5px] border-line-strong bg-surface px-3 text-sm text-foreground outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-3 focus:ring-accent-soft disabled:bg-surface-2 disabled:opacity-45'
 
@@ -169,7 +170,7 @@ export function Select({ children, value, onChange, disabled, required, classNam
             </li>
           ))}
         </ul>,
-        document.body,
+        getHkPortalTarget(),
       )}
     </div>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { getHkPortalTarget } from '@/lib/portal-target'
 
 export interface ConfirmOptions {
   title: string
@@ -113,7 +114,7 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
         </div>
       </div>
     </div>
-  ), document.body)
+  ), getHkPortalTarget())
     : null
 
   return [dialog, confirm]

@@ -173,18 +173,30 @@ export function RequestRow({
               </div>
             </div>
           ) : (
+            // Done/cancelled rows are a review list, not a queue to act on
+            // at a glance -- once archived, the same bold camera/title
+            // treatment active rows need is just noise, so this header
+            // quiets down instead of matching the active card's prominence.
             <div className="flex min-w-0 flex-1 items-start gap-3">
-              <div className="flex shrink-0 flex-col items-center rounded-lg bg-surface-2 px-3 py-1.5 text-center">
+              <div className={`flex shrink-0 flex-col items-center rounded-lg px-3 py-1.5 text-center ${mode === 'done' ? '' : 'bg-surface-2'}`}>
                 <span className="text-[0.625rem] font-bold uppercase tracking-wide text-muted">{t('staff.newRequest.room')}</span>
-                <span className="text-2xl leading-none font-extrabold text-foreground">{request.room_number}</span>
+                <span className={mode === 'done' ? 'text-base leading-none font-bold text-muted' : 'text-2xl leading-none font-extrabold text-foreground'}>
+                  {request.room_number}
+                </span>
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-lg leading-tight font-bold text-foreground">
+                  <p className={mode === 'done' ? 'text-sm leading-tight font-semibold text-muted' : 'text-lg leading-tight font-bold text-foreground'}>
                     <AutoText text={typeName} translations={typeNameI18n} />
                   </p>
                   {request.quantity ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent">
+                    <span
+                      className={
+                        mode === 'done'
+                          ? 'inline-flex shrink-0 items-center rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted'
+                          : 'inline-flex shrink-0 items-center rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent'
+                      }
+                    >
                       × {request.quantity}
                     </span>
                   ) : null}
@@ -210,7 +222,7 @@ export function RequestRow({
                 <IconButton
                   tone="danger"
                   icon={AlertTriangle}
-                  filled={request.urgent}
+                  active={request.urgent}
                   label={request.urgent ? t('staff.row.unmarkUrgent') : t('staff.row.markUrgent')}
                   disabled={pending}
                   onClick={() => run(() => setRequestUrgent(request.id, !request.urgent))}

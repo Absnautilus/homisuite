@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { FieldError, Input } from '@/components/ui/field'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
+import { getHkPortalTarget } from '@/lib/portal-target'
 
 const ALL_ICON_NAMES = Object.keys(dynamicIconImports).sort()
 const DEFAULT_ICON_NAMES = ['bed-double', 'shower-head', 'sparkles', 'wrench', 'briefcase', 'ellipsis']
@@ -290,6 +291,6 @@ export function IconPicker({
         <FieldError>{error ?? undefined}</FieldError>
       </div>
     </>,
-    document.body,
+    getHkPortalTarget(),
   )
 }
