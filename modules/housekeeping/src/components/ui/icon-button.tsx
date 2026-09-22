@@ -16,11 +16,18 @@ const toneHoverClass: Record<Tone, string> = {
   danger: 'hover:text-bad-ink',
 }
 
+const sizeClass = {
+  md: 'h-11 w-11',
+  lg: 'h-14 w-14',
+} as const
+
 export function IconButton({
   tone,
   label,
   icon: Icon,
   filled = false,
+  shape = 'square',
+  size = 'md',
   className,
   ...props
 }: {
@@ -33,19 +40,25 @@ export function IconButton({
   // action (e.g. claim/complete), not a blanket per-tone style: most
   // same-toned icon buttons (e.g. "segna reso") stay the quiet default.
   filled?: boolean
+  // 'circle' is reserved the same way 'filled' is -- the row's one primary
+  // CTA (claim/complete), never the quiet secondary icons next to it.
+  shape?: 'square' | 'circle'
+  size?: keyof typeof sizeClass
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>) {
   return (
     <button
       type="button"
       aria-label={label}
       className={cn(
-        'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+        'flex shrink-0 cursor-pointer items-center justify-center border-0 transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+        sizeClass[size],
+        shape === 'circle' ? 'rounded-full' : 'rounded-lg',
         filled ? 'bg-accent text-accent-ink hover:brightness-[1.06] active:brightness-[.92]' : cn('bg-transparent text-muted', toneHoverClass[tone]),
         className,
       )}
       {...props}
     >
-      <Icon className="h-[15px] w-[15px]" />
+      <Icon className={size === 'lg' ? 'h-[18px] w-[18px]' : 'h-[15px] w-[15px]'} />
     </button>
   )
 }
