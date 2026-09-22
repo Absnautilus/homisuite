@@ -47,11 +47,14 @@
 }
 
 /* Hotsflow design-standard-v2 tokens. They live on the module root rather
-   than :root so the embeddable bundle cannot mutate shell-owned variables. */
+   than :root so the embeddable bundle cannot mutate shell-owned variables.
+   --muted/--off-ink/--terracotta-ink are darkened slightly from their
+   original values, which fell short of WCAG AA (4.5:1) against the
+   surfaces they're actually used on. */
 .hk-root {
   --background: #eaecf9;
   --foreground: #16182b;
-  --muted: #767aa0;
+  --muted: #61658c;
   --line: #e3e5f3;
   --line-strong: #d3d6ec;
   --surface: #ffffff;
@@ -78,10 +81,10 @@
   --bad-ink: #b23a3a;
   --bad-line: #f3b9b9;
   --off-bg: #edeef6;
-  --off-ink: #6b6f8a;
+  --off-ink: #60647c;
   --off-line: #d8dae9;
   --terracotta-bg: #fbe6d8;
-  --terracotta-ink: #b25a2e;
+  --terracotta-ink: #974c27;
   --terracotta-line: #efc3a4;
 
   color: var(--foreground);

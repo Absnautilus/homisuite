@@ -134,7 +134,11 @@ function ModeButton({ active, onClick, children }: { active: boolean; onClick: (
       onClick={onClick}
       className={cn(
         'flex-1 cursor-pointer rounded-full px-3 py-1.5 text-[0.71875rem] font-bold transition-colors',
-        active ? 'bg-accent text-accent-ink' : 'text-muted hover:text-foreground',
+        // Same "selected segment" treatment as the other two/three-way
+        // switches in the app (PMS mode, queue tabs) -- a solid accent fill
+        // is reserved for the one primary action on a screen, not for
+        // showing which segment of a toggle is picked.
+        active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
       )}
     >
       {children}

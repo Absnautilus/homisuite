@@ -16,8 +16,15 @@ export function LanguageToggle({ dark = false, align = 'center' }: { dark?: bool
     function onClickOutside(e: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [open])
 
   return (
@@ -40,7 +47,7 @@ export function LanguageToggle({ dark = false, align = 'center' }: { dark?: bool
           className={dropdownTransitionClassName(
             state,
             cn(
-              'absolute z-10 mt-2 flex w-56 flex-wrap gap-1.5 rounded-2xl border border-line bg-white p-2 shadow-lg',
+              'absolute z-10 mt-2 flex w-56 flex-wrap gap-1.5 rounded-2xl border border-line bg-surface p-2 shadow-lg',
               align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
             ),
           )}

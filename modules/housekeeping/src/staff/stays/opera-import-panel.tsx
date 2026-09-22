@@ -136,7 +136,7 @@ export function OperaImportPanel({ hotelId, rooms, onImported }: { hotelId: stri
 
           {drafts && drafts.length > 0 && (
             <div className="space-y-3">
-              <div className="overflow-x-auto rounded-lg border border-line bg-white">
+              <div className="overflow-x-auto rounded-lg border border-line bg-surface">
                 <table className="w-full min-w-max text-sm">
                   <thead className="bg-surface-2 text-left text-xs uppercase text-muted">
                     <tr>

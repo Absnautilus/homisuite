@@ -105,6 +105,7 @@ function PmsIntegrationForm({ hotelId }: { hotelId?: string }) {
       setOhipGatewayUrl(data.ohip_gateway_url ?? '')
       setLoadError(null)
     } catch (err) {
+      console.error(err)
       setLoadError(getErrorMessage(err))
       setStatus((current) => current ?? FALLBACK_STATUS)
     }
@@ -164,7 +165,7 @@ function PmsIntegrationForm({ hotelId }: { hotelId?: string }) {
   return (
     <div className="space-y-4">
       {loadError && (
-        <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.pms.loadError', { error: loadError })}</div>
+        <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.pms.loadError')}</div>
       )}
       <Card>
       <CardHeader>
@@ -292,7 +293,7 @@ function ModeButton({ active, onClick, children }: { active: boolean; onClick: (
       onClick={onClick}
       className={cn(
         'cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors',
-        active ? 'bg-white text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+        active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
       )}
     >
       {children}

@@ -34,7 +34,10 @@ export function ArchivePage({ hotelId }: { hotelId: string }) {
         setItems(items)
         setTotal(total)
       })
-      .catch((err) => setError(getErrorMessage(err)))
+      .catch((err) => {
+        console.error(err)
+        setError(getErrorMessage(err))
+      })
   }, [page, hotelId])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -48,7 +51,7 @@ export function ArchivePage({ hotelId }: { hotelId: string }) {
 
       {error ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">
-          {t('staff.archive.loadError', { error })}
+          {t('staff.archive.loadError')}
         </div>
       ) : items === null ? (
         <p className="text-sm text-muted">{t('staff.archive.loading')}</p>

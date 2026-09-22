@@ -16,8 +16,15 @@ export function NotificationSettingsToggle({ dark = false, align = 'center' }: {
     function onClickOutside(e: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [open])
 
   function onVolumeChange(next: number) {
@@ -49,7 +56,7 @@ export function NotificationSettingsToggle({ dark = false, align = 'center' }: {
           className={dropdownTransitionClassName(
             state,
             cn(
-              'absolute z-10 mt-2 w-56 rounded-2xl border border-line bg-white p-3 text-foreground shadow-lg',
+              'absolute z-10 mt-2 w-56 rounded-2xl border border-line bg-surface p-3 text-foreground shadow-lg',
               align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
             ),
           )}

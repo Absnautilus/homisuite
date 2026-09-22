@@ -94,7 +94,7 @@ export function OperatorsPage({
 
       {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-line bg-white">
+      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
         <table aria-label={t('staff.operators.title')} className="w-full min-w-max text-sm">
           <thead className="bg-surface-2 text-left text-xs uppercase text-muted">
             <tr>
