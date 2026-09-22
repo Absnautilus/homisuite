@@ -3,7 +3,7 @@
 -- staff_profiles.role/department, and only one INSERT webhook may remain.
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(11);
 
 insert into hotels (id, name, timezone, active) values
   ('00000063-0000-0000-0000-00000000ff01', 'Hotel Sessantatre', 'Europe/Rome', true);
@@ -16,7 +16,8 @@ insert into auth.users (id) values
   ('00000063-0000-0000-0000-000000000a03'),
   ('00000063-0000-0000-0000-000000000a04'),
   ('00000063-0000-0000-0000-000000000a05'),
-  ('00000063-0000-0000-0000-000000000a06');
+  ('00000063-0000-0000-0000-000000000a06'),
+  ('00000063-0000-0000-0000-000000000a07');
 
 insert into profiles (id, full_name) values
   ('00000063-0000-0000-0000-000000000a01', 'Matched Mansione'),
@@ -24,7 +25,8 @@ insert into profiles (id, full_name) values
   ('00000063-0000-0000-0000-000000000a03', 'Full Queue Mansione'),
   ('00000063-0000-0000-0000-000000000a04', 'Property Admin'),
   ('00000063-0000-0000-0000-000000000a05', 'Per Member Override'),
-  ('00000063-0000-0000-0000-000000000a06', 'Off Duty');
+  ('00000063-0000-0000-0000-000000000a06', 'Off Duty'),
+  ('00000063-0000-0000-0000-000000000a07', 'Property Admin With Override');
 
 insert into memberships (profile_id, property_id, role_id, status)
 select p.profile_id, m.platform_property_id, r.id, 'active'
@@ -35,7 +37,8 @@ from (
     ('00000063-0000-0000-0000-000000000a03'::uuid, 'receptionist'),
     ('00000063-0000-0000-0000-000000000a04'::uuid, 'property_admin'),
     ('00000063-0000-0000-0000-000000000a05'::uuid, 'receptionist'),
-    ('00000063-0000-0000-0000-000000000a06'::uuid, 'receptionist')
+    ('00000063-0000-0000-0000-000000000a06'::uuid, 'receptionist'),
+    ('00000063-0000-0000-0000-000000000a07'::uuid, 'property_admin')
 ) as p(profile_id, role_slug)
 join legacy_property_mapping m on m.legacy_hotel_id = '00000063-0000-0000-0000-00000000ff01'
 join roles r on r.slug = p.role_slug;
@@ -59,7 +62,8 @@ insert into staff_profiles (id, hotel_id, auth_user_id, name, role, department, 
   ('00000063-0000-0000-0000-000000000103', '00000063-0000-0000-0000-00000000ff01', '00000063-0000-0000-0000-000000000a03', 'Full Queue Mansione', 'admin', null, true, true),
   ('00000063-0000-0000-0000-000000000104', '00000063-0000-0000-0000-00000000ff01', '00000063-0000-0000-0000-000000000a04', 'Property Admin', 'admin', null, true, true),
   ('00000063-0000-0000-0000-000000000105', '00000063-0000-0000-0000-00000000ff01', '00000063-0000-0000-0000-000000000a05', 'Per Member Override', 'admin', null, true, true),
-  ('00000063-0000-0000-0000-000000000106', '00000063-0000-0000-0000-00000000ff01', '00000063-0000-0000-0000-000000000a06', 'Off Duty', 'admin', null, true, false);
+  ('00000063-0000-0000-0000-000000000106', '00000063-0000-0000-0000-00000000ff01', '00000063-0000-0000-0000-000000000a06', 'Off Duty', 'admin', null, true, false),
+  ('00000063-0000-0000-0000-000000000107', '00000063-0000-0000-0000-00000000ff01', '00000063-0000-0000-0000-000000000a07', 'Property Admin With Override', 'admin', null, true, true);
 
 insert into property_staff_details (property_id, profile_id, job_title_id, housekeeping_department)
 select m.platform_property_id, v.profile_id, v.job_title_id, v.housekeeping_department::department
@@ -70,7 +74,8 @@ from (
     ('00000063-0000-0000-0000-000000000a03'::uuid, '00000063-0000-0000-0000-00000000aa03'::uuid, null::text),
     ('00000063-0000-0000-0000-000000000a04'::uuid, null::uuid, null::text),
     ('00000063-0000-0000-0000-000000000a05'::uuid, '00000063-0000-0000-0000-00000000aa02'::uuid, 'reception'),
-    ('00000063-0000-0000-0000-000000000a06'::uuid, '00000063-0000-0000-0000-00000000aa01'::uuid, null::text)
+    ('00000063-0000-0000-0000-000000000a06'::uuid, '00000063-0000-0000-0000-00000000aa01'::uuid, null::text),
+    ('00000063-0000-0000-0000-000000000a07'::uuid, null::uuid, 'reception')
 ) as v(profile_id, job_title_id, housekeeping_department)
 join legacy_property_mapping m on m.legacy_hotel_id = '00000063-0000-0000-0000-00000000ff01';
 
@@ -107,15 +112,31 @@ select ok(
   'a sees_full_queue mansione receives the push'
 );
 
+-- 20260922080000_housekeeping_push_recipients_visibility_realignment:
+-- Core admin rank alone is no longer an operational-visibility signal (see
+-- guest_requests_select_hotel's own model, which dropped the same bypass).
+-- A property_admin with no reception override, no sees_full_queue mansione,
+-- and no assigned-mansione match must not receive the push.
 select ok(
-  '00000063-0000-0000-0000-000000000a04'::uuid in (
+  '00000063-0000-0000-0000-000000000a04'::uuid not in (
     select profile_id from housekeeping_push_recipient_profiles(
       '00000063-0000-0000-0000-00000000ff01',
       array['00000063-0000-0000-0000-00000000aa01'::uuid],
       null
     )
   ),
-  'a Core property_admin receives the push while on duty'
+  'a Core property_admin without operational Reception/full-queue visibility does not receive the push'
+);
+
+select ok(
+  '00000063-0000-0000-0000-000000000a07'::uuid in (
+    select profile_id from housekeeping_push_recipient_profiles(
+      '00000063-0000-0000-0000-00000000ff01',
+      array['00000063-0000-0000-0000-00000000aa01'::uuid],
+      null
+    )
+  ),
+  'a Core property_admin who also holds the per-member reception override still receives the push, via that override -- not via admin rank'
 );
 
 select ok(
