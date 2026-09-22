@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react'
 export interface ToastCard {
   title: string
   onAccept: () => void
-  onReject: () => void
+  onReject?: () => void
 }
 
 export interface Toast {
