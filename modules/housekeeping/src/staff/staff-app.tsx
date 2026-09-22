@@ -92,13 +92,13 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
 
   useEffect(() => {
     const rejectId = searchParams.get('reject')
-    if (!rejectId || !profile) return
+    if (!rejectId || !profile || !queueManageAllowed) return
     cancelRequest(rejectId).finally(() => {
       const next = new URLSearchParams(searchParams)
       next.delete('reject')
       setSearchParams(next, { replace: true })
     })
-  }, [searchParams, profile, setSearchParams])
+  }, [searchParams, profile, setSearchParams, queueManageAllowed])
 
   if (loading) {
     return (
