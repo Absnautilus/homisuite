@@ -1,6 +1,6 @@
-.sidebar-account { margin-top: auto; padding-top: 16px; }
+.sidebar-account { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--navbar-border); }
 .account-menu { position: relative; }
-.account-trigger { width: 100%; display: flex; align-items: center; gap: 9px; border: 1px solid var(--navbar-border); background: var(--navbar-surface); color: var(--navbar-text); border-radius: var(--r-sm); padding: 8px 9px; cursor: pointer; }
+.account-trigger { width: 100%; display: flex; align-items: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navbar-text); border-radius: var(--r-sm); padding: 8px 9px; cursor: pointer; }
 .account-trigger:hover { background: var(--navbar-surface-hover); }
 .account-avatar { width: 26px; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; flex: 0 0 auto; }
 .account-avatar.large { width: 34px; height: 34px; font-size: 11px; }
