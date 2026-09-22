@@ -13,15 +13,17 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
           <div key={toast.id} role="status" className="rounded-xl border border-line bg-surface p-3 text-sm text-foreground shadow-md">
             <p className="pr-1 font-semibold text-foreground">{toast.card.title}</p>
             <div className="mt-2 flex justify-end gap-2">
-              <IconButton
-                tone="hintCaution"
-                icon={X}
-                label={t('staff.row.reject')}
-                onClick={() => {
-                  toast.card?.onReject()
-                  onDismiss(toast.id)
-                }}
-              />
+              {toast.card.onReject && (
+                <IconButton
+                  tone="hintCaution"
+                  icon={X}
+                  label={t('staff.row.reject')}
+                  onClick={() => {
+                    toast.card?.onReject?.()
+                    onDismiss(toast.id)
+                  }}
+                />
+              )}
               <IconButton
                 tone="hintPositive"
                 icon={Check}
