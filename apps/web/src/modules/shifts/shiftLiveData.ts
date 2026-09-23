@@ -69,23 +69,26 @@ export async function loadLiveShiftData(
   const [
     codesResult,
     membersResult,
+    staffDetailsResult,
     rulesResult,
     shiftsResult,
     monthStatesResult,
   ] = await Promise.all([
     supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
-    supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,shift_staff_profiles!inner(id,profile_id,shift_type,rest_mode,fixed_rest_days,active,profiles!inner(id,display_name),property_staff_details!inner(job_title_id,property_job_titles(name)))').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
+    supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,shift_staff_profiles!inner(id,profile_id,shift_type,rest_mode,fixed_rest_days,active,profiles!inner(id,display_name))').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
+    supabase.from('property_staff_details').select('profile_id,job_title_id,property_job_titles(name)').eq('property_id', propertyId),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
     supabase.from('shift_month_states').select('planning_unit_id,status').eq('property_id', propertyId).eq('month', monthStart),
   ])
 
-  for (const result of [codesResult, membersResult, rulesResult, shiftsResult, monthStatesResult]) {
+  for (const result of [codesResult, membersResult, staffDetailsResult, rulesResult, shiftsResult, monthStatesResult]) {
     if (result.error) throw result.error
   }
 
   const codes = (codesResult.data ?? []) as Row[]
   const members = (membersResult.data ?? []) as Row[]
+  const staffDetails = (staffDetailsResult.data ?? []) as Row[]
   const ruleSets = (rulesResult.data ?? []) as Row[]
   const shifts = (shiftsResult.data ?? []) as Row[]
   const monthStates = (monthStatesResult.data ?? []) as Row[]
@@ -126,7 +129,7 @@ export async function loadLiveShiftData(
       people: unitMembers.filter((member) => related(member.shift_staff_profiles)?.active !== false).map((member) => {
         const staff = related(member.shift_staff_profiles)
         const profile = related(staff?.profiles)
-        const detail = related(staff?.property_staff_details)
+        const detail = staffDetails.find((candidate) => candidate.profile_id === staff?.profile_id)
         const jobTitle = related(detail?.property_job_titles)
         const title = typeof jobTitle?.name === 'string' ? jobTitle.name : undefined
         const name = typeof profile?.display_name === 'string' ? profile.display_name : 'Dipendente'
