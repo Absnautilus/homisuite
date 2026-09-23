@@ -3,7 +3,10 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
 import { getHkPortalTarget } from '@/lib/portal-target'
 
-const controlClass = 'w-full min-h-11 rounded-sm border-[1.5px] border-line-strong bg-surface px-3 text-sm text-foreground outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-3 focus:ring-accent-soft disabled:bg-surface-2 disabled:opacity-45'
+// text-base (16px), not text-sm -- iOS Safari (including installed
+// home-screen PWAs, where there's no pinch gesture to zoom back out
+// afterward) force-zooms the page on focus for any text input under 16px.
+const controlClass = 'w-full min-h-11 rounded-sm border-[1.5px] border-line-strong bg-surface px-3 text-base text-foreground outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-3 focus:ring-accent-soft disabled:bg-surface-2 disabled:opacity-45'
 
 export function Label({ children, htmlFor, required }: { children: ReactNode; htmlFor?: string; required?: boolean }) {
   return <label htmlFor={htmlFor} className="mb-1.5 block text-[0.65625rem] font-bold uppercase tracking-[.05em] text-muted">{children}{required && <span className="text-bad-ink"> *</span>}</label>

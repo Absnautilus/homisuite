@@ -182,7 +182,7 @@ export function DateTimePicker({
               }}
               inputMode="numeric"
               aria-label={t('datePicker.hour')}
-              className="w-11 rounded-sm border-[1.5px] border-line-strong bg-surface py-1.5 text-center font-mono text-sm text-foreground"
+              className="w-11 rounded-sm border-[1.5px] border-line-strong bg-surface py-1.5 text-center font-mono text-base text-foreground"
             />
             <span className="font-bold text-muted">:</span>
             <input
@@ -193,7 +193,7 @@ export function DateTimePicker({
               }}
               inputMode="numeric"
               aria-label={t('datePicker.minute')}
-              className="w-11 rounded-sm border-[1.5px] border-line-strong bg-surface py-1.5 text-center font-mono text-sm text-foreground"
+              className="w-11 rounded-sm border-[1.5px] border-line-strong bg-surface py-1.5 text-center font-mono text-base text-foreground"
             />
           </div>
         </div>

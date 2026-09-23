@@ -152,7 +152,11 @@ a { color: inherit; text-decoration: none; }
 .login-copy > p:last-child { margin: 8px 0 0; color: var(--muted); line-height: 1.5; font-size: 13px; }
 .login-form { display: grid; gap: 15px; }
 .login-form label { display: grid; gap: 6px; color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-.login-form input { width: 100%; height: 42px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); outline: none; background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 400; text-transform: none; letter-spacing: normal; transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
+/* font-size stays at 16px, not the app's usual 14-14.5px body copy -- iOS
+   Safari (including installed home-screen PWAs, where there's no pinch
+   gesture to zoom back out afterward) force-zooms the page on focus for any
+   text input under 16px. */
+.login-form input { width: 100%; height: 42px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); outline: none; background: var(--surface); color: var(--ink); font-size: 16px; font-weight: 400; text-transform: none; letter-spacing: normal; transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
 .login-form input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
 .login-error { margin: -2px 0 0; color: var(--red-ink); font-size: 0.82rem; line-height: 1.4; }
 .login-submit { height: 42px; margin-top: 4px; border: 0; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 750; cursor: pointer; }
