@@ -33,6 +33,10 @@ export interface ShiftPlanningUnit {
   codes: ShiftCode[]
   people: ShiftPerson[]
   assignments: Record<string, string[]>
+  assignmentDates?: string[]
+  lockedAssignments?: Record<string, string[]>
+  month?: string
+  monthStatus?: 'draft' | 'final'
   rules: ShiftRuleSummary
 }
 
