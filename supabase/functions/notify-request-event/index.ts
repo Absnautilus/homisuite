@@ -42,6 +42,7 @@ Deno.serve(async (request: Request) => {
     if (!eventType || !requestId || !hotelId || !roomNumber) return json({ error: 'invalid_payload' }, 400)
 
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+    const currentVapidFingerprint = await vapidFingerprint(vapidPublicKey)
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 
     const { data: recipients, error: recipientError } = await admin.rpc('housekeeping_push_recipient_profiles', {
@@ -59,7 +60,7 @@ Deno.serve(async (request: Request) => {
 
     const { data: subscriptions, error: subscriptionsError } = await admin
       .from('device_push_subscriptions')
-      .select('endpoint, p256dh, auth')
+      .select('endpoint, p256dh, auth, vapid_key_fingerprint')
       .in('profile_id', profileIds)
     if (subscriptionsError) {
       console.error('notify-request-event: subscription lookup failed', subscriptionsError)
@@ -90,7 +91,10 @@ Deno.serve(async (request: Request) => {
           sent++
         } catch (error) {
           const statusCode = (error as { statusCode?: number }).statusCode
-          if (statusCode === 404 || statusCode === 410) {
+          const body = (error as { body?: string }).body ?? ''
+          const isVapidMismatch = statusCode === 403 && body.includes('VAPID credentials')
+          const storedFingerprint = subscription.vapid_key_fingerprint as string | null
+          if (statusCode === 404 || statusCode === 410 || (isVapidMismatch && storedFingerprint !== currentVapidFingerprint)) {
             await admin.from('device_push_subscriptions').delete().eq('endpoint', subscription.endpoint as string)
           } else {
             console.error('notify-request-event: push failed', statusCode, error)
@@ -121,4 +125,9 @@ function json(body: unknown, status: number): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+async function vapidFingerprint(publicKey: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(publicKey.trim()))
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
