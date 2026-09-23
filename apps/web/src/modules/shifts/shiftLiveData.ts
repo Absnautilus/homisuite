@@ -85,6 +85,8 @@ export async function loadLiveShiftData(
   }
 
   const codes = (codesResult.data ?? []) as Row[]
+  const codeOrder = ['A1','A2','CE','C1','C2','N','D1','D2','F1','F2','R','F','P','P8','P7','P6','P5','P4','P3','P2','P1','R8','R7','R6','R5','R4','R3','R2','R1','RS','RR','AS','M','FG','CON','PL']
+  const codeRank = new Map(codeOrder.map((code, index) => [code, index]))
   const members = (membersResult.data ?? []) as Row[]
   const ruleSets = (rulesResult.data ?? []) as Row[]
   const shifts = (shiftsResult.data ?? []) as Row[]
@@ -136,7 +138,7 @@ export async function loadLiveShiftData(
       excludedJobTitles: [],
       ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
       ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,
-      codes: codes.filter((code) => code.planning_unit_id === unit.id).map((code) => ({
+      codes: codes.filter((code) => code.planning_unit_id === unit.id).sort((a, b) => (codeRank.get(String(a.code)) ?? 999) - (codeRank.get(String(b.code)) ?? 999)).map((code) => ({
         code: String(code.code),
         label: typeof code.label === 'string' ? code.label : String(code.code),
         time: timeLabel(typeof code.starts_at === 'string' ? code.starts_at : null, typeof code.ends_at === 'string' ? code.ends_at : null),
