@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ArrowRightLeft, CalendarCheck, ChevronLeft, ChevronRight, Download, GripVertical, Palmtree, SlidersHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
 import { ShiftSelect } from './ShiftSelect'
@@ -91,23 +91,93 @@ export function RulesPanel({ unit }: { unit: ShiftPlanningUnit }) {
   )
 }
 
-const SAMPLE_REQUESTS = {
-  swaps: [{ title: 'Ana Beatrice ↔ Hamza', detail: '22 ottobre · A1 scambiato con C2', status: 'Da approvare' }],
-  absences: [{ title: 'Ferie · Giulia', detail: '26–28 ottobre · 3 giorni', status: 'Approvata' }, { title: 'Permesso · Luca', detail: '21 ottobre · 4 ore', status: 'Da approvare' }],
-  preassignments: [{ title: 'Farouk · N', detail: '24 ottobre · turno bloccato', status: 'Attiva' }],
+export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit }) {
+  const [date, setDate] = useState('2026-09-01')
+  const [absenceType, setAbsenceType] = useState('Ferie')
+  const [affectedShift, setAffectedShift] = useState('Giornata intera')
+  const [preCode, setPreCode] = useState('')
+  const people = unit.people
+
+  if (kind === 'swaps') return <section className="shift-original-panel">
+    <h2>Richiedi cambio turno</h2>
+    <p>Scegli un giorno e vedi subito il tuo turno e quello di ogni collega quel giorno, per proporre uno scambio in base al turno che ti serve. Resta soggetto a conferma del collega e, a mese Definitivo, dell'admin.</p>
+    <div className="shift-form-label">Giorno</div>
+    <p className="shift-form-help">Scegli la data: sotto vedi subito il tuo turno e quello di ogni collega quel giorno, per scegliere in base al turno che ti serve.</p>
+    <div className="shift-swap-date-row"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /><span>Non hai ancora un turno assegnato in questa data<br /><small>Il giorno prima: —</small></span></div>
+    <div className="shift-form-label shift-section-label">Con chi vuoi scambiare</div>
+    <div className="shift-swap-list">{people.map((person) => <button type="button" className="shift-swap-person" key={person.id}>
+      <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>ieri: —</span><span>nessun turno</span><span>✓ 0 · × 0</span>
+    </button>)}</div>
+    <button className="shift-original-primary" type="button" disabled>Invia richiesta</button>
+    <div className="shift-inline-warning">Non è possibile scambiare un turno che non esiste ancora. Il tuo giorno non ha ancora un turno assegnato: serve prima una pre-assegnazione.</div>
+    <h3 className="shift-original-subtitle">Richieste</h3>
+    <p className="shift-empty-copy">Nessuna richiesta.</p>
+  </section>
+
+  if (kind === 'absences') return <section className="shift-original-panel">
+    <h2>Ferie e permessi</h2>
+    <p>Richiedi ferie o un permesso su un giorno specifico, anche di un mese diverso da quello visualizzato nel calendario. Resta soggetto a conferma dell'admin (Direttore o FOM).</p>
+    <div className="shift-inline-form shift-absence-form">
+      <label><span>Giorno</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+      <label><span>Tipo</span><select value={absenceType} onChange={(event) => setAbsenceType(event.target.value)}><option>Ferie</option><option>Permesso</option><option>R.O.L.</option><option>Malattia</option></select></label>
+      <label><span>Turno interessato</span><select value={affectedShift} onChange={(event) => setAffectedShift(event.target.value)}><option>Giornata intera</option>{unit.codes.map((code) => <option key={code.code}>{code.code} · {code.label}</option>)}</select></label>
+    </div>
+    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" /></label><button className="shift-original-primary" type="button">Invia richiesta</button></div>
+    <p className="shift-form-help">Se il permesso copre solo una parte del turno, indica ore e orario a quale turno si riferisce; altrimenti lascia “Giornata intera”.</p>
+    <h3 className="shift-original-subtitle">Le mie richieste</h3>
+    <p className="shift-empty-copy">Nessuna richiesta.</p>
+    <h3 className="shift-original-subtitle">Ferie e permessi rimanenti — 2026</h3>
+    <p className="shift-form-help">Calcolati sulle ferie già impostate a calendario in tutto l'anno e sui permessi con richiesta approvata.</p>
+    <div className="shift-balance-table"><div className="is-head"><span>Dipendente</span><span>Ferie usate</span><span>Ferie residue</span><span>Permessi usati (h)</span><span>Permessi residui (h)</span></div>{people.slice(0,1).map((person) => <div key={person.id}><span><i className="shift-avatar">{person.initials}</i>{person.name}</span><span>—</span><span>—</span><span>—</span><span>—</span></div>)}</div>
+  </section>
+
+  return <section className="shift-original-panel">
+    <h2>Pre-assegnazione turni</h2>
+    <p>Proponi di esserti assegnato un turno specifico (o un giorno libero) in un giorno specifico, anche di un mese diverso da quello visualizzato nel calendario. Resta soggetto a conferma dell'admin (Direttore o FOM); una volta accettata, il turno viene bloccato automaticamente.</p>
+    <div className="shift-inline-form shift-preassignment-form">
+      <label><span>Giorno</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+      <label><span>Turno</span><select value={preCode} onChange={(event) => setPreCode(event.target.value)}><option value="">Seleziona...</option>{unit.codes.map((code) => <option value={code.code} key={code.code}>{code.code} · {code.label}</option>)}</select></label>
+      <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" /></label>
+      <button className="shift-original-primary" type="button" disabled={!preCode}>Invia richiesta</button>
+    </div>
+    <p className="shift-form-help">Puoi scegliere solo tra i turni ammessi per il tuo ruolo. La richiesta resta in sospeso finché l'admin non la conferma; una volta accettata, il turno si blocca automaticamente.</p>
+    <h3 className="shift-original-subtitle">Le mie richieste</h3>
+    <p className="shift-empty-copy">Nessuna richiesta.</p>
+  </section>
 }
 
-export function RequestsPanel({ kind }: { kind: keyof typeof SAMPLE_REQUESTS }) {
-  const meta = kind === 'swaps'
-    ? { title: 'Cambi turno', subtitle: 'Richieste di scambio tra colleghi.', icon: ArrowRightLeft }
-    : kind === 'absences'
-      ? { title: 'Ferie / Permessi', subtitle: 'Richieste e saldo personale.', icon: Palmtree }
-      : { title: 'Pre-assegnazioni', subtitle: 'Turni e riposi da proteggere prima della generazione.', icon: CalendarCheck }
-  return <section className="shift-panel"><div className="shift-panel-title"><div><h2>{meta.title}</h2><p>{meta.subtitle}</p></div><meta.icon size={20} /></div><div className="shift-request-list">{SAMPLE_REQUESTS[kind].map((item) => <article key={item.title}><span><strong>{item.title}</strong><small>{item.detail}</small></span><span className="shift-status-chip">{item.status}</span></article>)}</div></section>
-}
-
-export function PersonalPanel() {
-  return <section className="shift-panel"><div className="shift-panel-title"><div><h2>Le mie preferenze</h2><p>Preferenze usate dall’assegnazione automatica quando i vincoli lo consentono.</p></div><SlidersHorizontal size={20} /></div><div className="shift-personal-preview"><article><strong>Preferenza fascia</strong><span>Mattina · priorità alta</span></article><article><strong>Giorno preferito</strong><span>Domenica</span></article></div></section>
+export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
+  const preferredCodes = unit.codes.filter((code) => code.time && code.code !== 'N').slice(0, 5)
+  const [order, setOrder] = useState(() => preferredCodes.map((code) => code.code))
+  const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+  function move(code: string, direction: -1 | 1) {
+    setOrder((current) => {
+      const index = current.indexOf(code)
+      const target = index + direction
+      if (index < 0 || target < 0 || target >= current.length) return current
+      const next = [...current]
+      const sourceValue = next[index]
+      const targetValue = next[target]
+      if (sourceValue === undefined || targetValue === undefined) return current
+      next[index] = targetValue
+      next[target] = sourceValue
+      return next
+    })
+  }
+  const codeMap = new Map(unit.codes.map((code) => [code.code, code]))
+  return <section className="shift-original-panel shift-preferences">
+    <h2>Le mie preferenze</h2>
+    <p>Indica le tue preferenze: verranno tenute in considerazione dall'assegnazione automatica, bilanciandole con quelle degli altri colleghi. Ricordati di salvare per renderle effettive.</p>
+    <div className="shift-form-label shift-section-label">Ordine di preferenza turni (generale)</div>
+    <p className="shift-form-help">Metti in cima il turno che preferisci di più. Usa le frecce per riordinare. Vale come base, a meno che tu non imposti una preferenza più specifica per un giorno della settimana qui sotto.</p>
+    <div className="shift-preference-order">{order.map((code, index) => {
+      const def = codeMap.get(code)
+      return <div key={code}><span>{index + 1}</span><strong style={{ background: def?.color, color: def?.textColor ?? '#fff' }}>{code}</strong><b>{def?.label}</b><button type="button" onClick={() => move(code, -1)} disabled={index === 0}>↑</button><button type="button" onClick={() => move(code, 1)} disabled={index === order.length - 1}>↓</button></div>
+    })}</div>
+    <div className="shift-form-label shift-section-label">Preferenze per giorno della settimana</div>
+    <p className="shift-form-help">Es. “il lunedì preferisco C2, poi C1”. Seleziona uno o più turni per ciascun giorno, poi ordina la priorità con le frecce. Se imposti una preferenza qui, ha la precedenza su quella generale per quel giorno.</p>
+    <div className="shift-weekday-preferences">{days.map((day) => <div key={day}><strong>{day}</strong><span>{order.map((code) => <button type="button" key={code}>{code}</button>)}</span></div>)}</div>
+  </section>
 }
 
 const MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
