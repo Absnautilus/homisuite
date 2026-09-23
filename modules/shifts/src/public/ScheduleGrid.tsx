@@ -1,6 +1,7 @@
 import { LockKeyhole } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import type { ShiftPlanningUnit } from '../preview/fixtures'
+import { ShiftSelect } from './ShiftSelect'
 
 interface ScheduleGridProps {
   unit: ShiftPlanningUnit
@@ -36,9 +37,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange 
             const definition = codeMap.get(code)
             const locked = unit.lockedAssignments?.[person.id]?.includes(date) ?? false
             return <td key={`${person.id}-${date}`}>
-              {editable && !locked ? <select className={`shift-cell shift-cell-select${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}`} value={code} onChange={(event) => onAssignmentChange?.(person.id, date, event.target.value)} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
-                <option value=""></option>{unit.codes.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.label}</option>)}
-              </select> : <div className="shift-cell" aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
+              {editable && !locked ? <div className="shift-cell-editor"><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
                 <strong>{code}</strong>{definition?.time ? <small>{definition.time}</small> : null}{locked ? <LockKeyhole size={10} aria-label="Bloccato" /> : null}
               </div>}
             </td>
