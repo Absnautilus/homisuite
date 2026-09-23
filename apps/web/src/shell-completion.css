@@ -122,7 +122,12 @@ body.modal-open { overflow: hidden; }
 .module-access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
 .form-field { display: grid; gap: 6px; }
 .form-field > span { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-.form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; }
+/* font-size overridden back up to 16px after `font: inherit` -- iOS Safari
+   (including installed home-screen PWAs) force-zooms the page on focus for
+   any editable text input under 16px, with no pinch gesture available to
+   zoom back out in standalone mode. Readonly fields don't open the on-screen
+   keyboard, so they don't trigger it and keep their own smaller size below. */
+.form-field input, .form-field select, .form-field textarea { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
 .form-field input[readonly], .form-field select:disabled { background: var(--surface-2); color: var(--muted); }
 .form-field input[readonly] { font-family: var(--mono); font-size: 12.5px; }
 .form-field textarea { padding: 9px 11px; resize: vertical; }
@@ -173,7 +178,9 @@ body.modal-open { overflow: hidden; }
 .login-help-panel > button:disabled { opacity: 0.6; cursor: wait; }
 .login-help-back { color: var(--muted) !important; font-weight: 400 !important; }
 .login-help-panel label { display: grid; gap: 4px; width: 100%; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; text-align: left; }
-.login-help-panel label input { width: 100%; height: 38px; padding: 0 10px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; }
+/* 16px, not 13px -- same iOS force-zoom-on-focus reasoning as .login-form
+   input above. */
+.login-help-panel label input { width: 100%; height: 38px; padding: 0 10px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font-size: 16px; font-weight: 400; text-transform: none; letter-spacing: normal; }
 .login-help-panel label input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); outline: none; }
 .drawer-account { margin-top: auto; padding-top: 16px; }
 
