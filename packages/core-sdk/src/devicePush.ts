@@ -40,12 +40,16 @@ export async function deleteDevicePushSubscription(client: SupabaseClient<Databa
   if (error) throw error
 }
 
-export async function isDevicePushSubscribed(client: SupabaseClient<Database>, endpoint: string): Promise<boolean> {
+export async function getDevicePushSubscription(client: SupabaseClient<Database>, endpoint: string): Promise<{ id: string; vapidKeyFingerprint: string | null } | null> {
   const { data, error } = await client
     .from('device_push_subscriptions')
-    .select('id')
+    .select('id,vapid_key_fingerprint')
     .eq('endpoint', endpoint)
     .maybeSingle()
   if (error) throw error
-  return data !== null
+  return data ? { id: data.id, vapidKeyFingerprint: data.vapid_key_fingerprint } : null
+}
+
+export async function isDevicePushSubscribed(client: SupabaseClient<Database>, endpoint: string): Promise<boolean> {
+  return (await getDevicePushSubscription(client, endpoint)) !== null
 }
