@@ -100,7 +100,7 @@ export async function loadLiveShiftData(
   const staffProfiles = (staffProfilesData ?? []) as Row[]
   const profileIds = [...new Set(staffProfiles.map((staff) => String(staff.profile_id)))]
   const [profilesResult, staffDetailsResult] = await Promise.all([
-    supabase.from('profiles').select('id,display_name').in('id', profileIds),
+    supabase.from('profiles').select('id,full_name').in('id', profileIds),
     supabase.from('property_staff_details').select('profile_id,job_title_id,property_job_titles(name)').eq('property_id', propertyId).in('profile_id', profileIds),
   ])
   if (profilesResult.error) throw profilesResult.error
@@ -151,7 +151,7 @@ export async function loadLiveShiftData(
         const detail = staffDetails.find((candidate) => candidate.profile_id === staff?.profile_id)
         const jobTitle = related(detail?.property_job_titles)
         const title = typeof jobTitle?.name === 'string' ? jobTitle.name : undefined
-        const name = typeof profile?.display_name === 'string' ? profile.display_name : 'Dipendente'
+        const name = typeof profile?.full_name === 'string' ? profile.full_name : 'Dipendente'
         return {
           id: String(member.staff_profile_id),
           name,
