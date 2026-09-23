@@ -71,7 +71,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
       ...candidate,
       units: candidate.units.map((candidateUnit) => candidateUnit.id !== unit.id ? candidateUnit : ({
         ...candidateUnit,
-        assignments: { ...candidateUnit.assignments, [staffProfileId]: candidateUnit.assignments[staffProfileId].map((value, index) => index === dateIndex ? code : value) },
+        assignments: { ...candidateUnit.assignments, [staffProfileId]: (candidateUnit.assignments[staffProfileId] ?? []).map((value, index) => index === dateIndex ? code : value) },
       })),
     })))
     setPendingChanges((current) => [...current.filter((item) => !(item.planningUnitId === unit.id && item.staffProfileId === staffProfileId && item.shiftDate === date)), { planningUnitId: unit.id, staffProfileId, shiftDate: date, code }])
