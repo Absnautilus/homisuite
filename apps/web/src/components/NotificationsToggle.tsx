@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Switch } from './Switch'
 import { core } from '../core/client'
-import { DEVICE_PUSH_SUPPORTED, getExistingPushSubscription, subscribeDevicePush, toSubscriptionKeys } from '../core/devicePush'
+import { DEVICE_PUSH_SUPPORTED, getCurrentVapidFingerprint, getExistingPushSubscription, subscribeDevicePush, toSubscriptionKeys } from '../core/devicePush'
+import { setLocalPushPreference } from '../core/pushLifecycle'
 
 const BLOCKED_MESSAGE = 'Notifiche bloccate dal browser per questo sito. Sbloccale dalle impostazioni del sito (icona del lucchetto nella barra degli indirizzi) per attivarle.'
 
@@ -38,16 +39,17 @@ export function NotificationsToggle() {
   }, [])
 
   async function turnOff() {
-    // Only the device_push_subscriptions row is removed -- the browser
-    // subscription itself is left alone. It may be shared with
-    // Housekeeping's own on-duty push flow, which never tears it down
-    // either (see modules/housekeeping/src/lib/push.ts); unsubscribing at
-    // the browser level here would silently break that unrelated feature.
+    // Disable delivery for this Homisuite device without destroying the
+    // browser-level subscription. Keeping the browser subscription lets a
+    // future explicit re-enable repair/claim it without another permission
+    // prompt; the local preference prevents session auto-repair from
+    // silently turning notifications back on.
     const previous = subscribed
     setSubscribed(false)
     try {
       const subscription = await getExistingPushSubscription()
       if (subscription) await core.deleteDevicePushSubscription(subscription.endpoint)
+      setLocalPushPreference(false)
     } catch {
       setSubscribed(previous)
       setError('Non è stato possibile disattivare le notifiche.')
@@ -58,7 +60,9 @@ export function NotificationsToggle() {
     setError(null)
     try {
       const subscription = await subscribeDevicePush()
-      await core.saveDevicePushSubscription(toSubscriptionKeys(subscription))
+      const fingerprint = await getCurrentVapidFingerprint()
+      await core.saveDevicePushSubscription(toSubscriptionKeys(subscription, fingerprint))
+      setLocalPushPreference(true)
       setSubscribed(true)
     } catch (cause) {
       setSubscribed(false)
