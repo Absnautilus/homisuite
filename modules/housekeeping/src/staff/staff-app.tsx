@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { cancelRequest, claimRequest, fetchMyProfile } from '@/lib/staff-api'
+import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
 import { unlockAudio } from '@/lib/beep'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
 import type { HousekeepingCapabilities, PlatformHotelSettings, PlatformStaffManagementLink } from '@/public/HousekeepingModule'
 import { ToastProvider } from '@/components/toast-context'
-import { StaffLogin } from '@/staff/staff-login'
 import { DashboardHeader } from '@/staff/dashboard-header'
 import { RequestQueue } from '@/staff/request-queue'
 import { AdminHome } from '@/staff/admin/admin-home'
@@ -28,7 +27,6 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<StaffProfile | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
-  const canRejectFromLink = embedded && capabilities ? capabilities.queueManage : profile?.department === 'reception'
 
   useEffect(() => {
     let cancelled = false
@@ -91,15 +89,6 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     })
   }, [searchParams, profile, setSearchParams])
 
-  useEffect(() => {
-    const rejectId = searchParams.get('reject')
-    if (!rejectId || !profile || !canRejectFromLink) return
-    cancelRequest(rejectId).finally(() => {
-      const next = new URLSearchParams(searchParams)
-      next.delete('reject')
-      setSearchParams(next, { replace: true })
-    })
-  }, [searchParams, profile, setSearchParams, canRejectFromLink])
 
   if (loading) {
     return (
@@ -113,7 +102,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     if (embedded) {
       return <div className="rounded-lg border border-line bg-surface p-10 text-center text-sm text-muted">{t('staff.routeUnavailable')}</div>
     }
-    return <StaffLogin />
+    return <div className="flex min-h-[16rem] items-center justify-center bg-surface-2 px-4 text-center text-sm text-muted">Accedi da Homisuite per usare Housekeeping.</div>
   }
   if (!profile.active) {
     return <div className="flex min-h-[16rem] items-center justify-center bg-surface-2 px-4 text-center text-sm text-muted">{t('staff.accountDisabled')}</div>
