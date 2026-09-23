@@ -1,54 +1,61 @@
-// Web Push service worker: shows the notification and handles the
-// "Accetta richiesta" / "Rifiuta richiesta" actions, or a tap on the
-// notification body, by opening (or focusing) the Housekeeping module with
-// ?claim=<id> or ?reject=<id>, which staff-app.tsx reads to auto-claim or
-// auto-reject the request. /housekeeping, not /staff -- the embedded module
-// mounts at that path in this shell (HousekeepingModuleGate's basePath),
-// unlike the original standalone Housekeeping app's own /staff route.
-//
-// data.data.type distinguishes what triggered the push (added for
-// notify-request-event: 'priority_changed' / 'urgent_flagged', alongside
-// notify-new-request's own pings) -- defaults to 'new_request' when absent
-// so every payload sent before this type existed keeps behaving exactly as
-// before. Only a brand-new, unclaimed request makes sense to accept/reject
-// straight from the notification; the other event types are informational
-// and just open the queue on tap.
 self.addEventListener('push', (event) => {
   let data = { title: 'Homisuite', body: 'Nuova richiesta', data: {} }
   try {
     if (event.data) data = { ...data, ...event.data.json() }
   } catch {
-    // ignore malformed payloads, fall back to the defaults above
+    // Ignore malformed payloads and fall back to defaults.
   }
 
   const isNewRequest = (data.data?.type ?? 'new_request') === 'new_request'
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const visibleWindows = windows.filter((client) => client.visibilityState === 'visible')
+
+    // When Homisuite is already visible, use the in-app toast instead of
+    // showing a second OS notification for the same event.
+    if (visibleWindows.length > 0) {
+      for (const client of visibleWindows) {
+        client.postMessage({
+          type: 'homisuite-push',
+          notification: {
+            title: data.title,
+            body: data.body,
+            data: data.data,
+            actions: isNewRequest ? ['ignore', 'accept'] : [],
+          },
+        })
+      }
+      return
+    }
+
+    await self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/icon-192.png',
       badge: '/favicon-48x48.png',
       data: data.data,
+      tag: data.data?.requestId ? `guest-request-${data.data.requestId}` : undefined,
       actions: isNewRequest
         ? [
-            { action: 'accept', title: 'Accetta richiesta' },
-            { action: 'reject', title: 'Rifiuta richiesta' },
+            { action: 'ignore', title: 'Ignora' },
+            { action: 'accept', title: 'Accetta' },
           ]
         : [],
-      requireInteraction: isNewRequest,
-    }),
-  )
+      requireInteraction: false,
+    })
+  })())
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+
+  if (event.action === 'ignore') return
+
   const requestId = event.notification.data?.requestId
   const url =
-    event.action === 'reject' && requestId
-      ? `/housekeeping?reject=${requestId}`
-      : event.action === 'accept' && requestId
-        ? `/housekeeping?claim=${requestId}`
-        : (event.notification.data?.url ?? '/housekeeping')
+    event.action === 'accept' && requestId
+      ? `/housekeeping?claim=${requestId}`
+      : (event.notification.data?.url ?? '/housekeeping')
 
   event.waitUntil(
     (async () => {
