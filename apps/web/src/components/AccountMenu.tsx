@@ -4,6 +4,7 @@ import { ChevronDown, Languages, LogOut, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../core/client'
 import { LanguageToggle } from './LanguageToggle'
+import { releaseCurrentPushSubscription } from '../core/pushLifecycle'
 
 export function AccountMenu({ name }: { name: string }) {
   const [open, setOpen] = useState(false)
@@ -56,7 +57,7 @@ export function AccountMenu({ name }: { name: string }) {
       {/* Always visible, not tucked inside the popover above: signing out is
           common enough on a shared front-desk device to deserve its own
           permanent affordance, not a click to reveal it first. */}
-      <button className="account-logout" type="button" onClick={() => void supabase.auth.signOut()}>
+      <button className="account-logout" type="button" onClick={() => void (async () => { await releaseCurrentPushSubscription(); await supabase.auth.signOut() })()}>
         <LogOut size={16} /><span>Esci</span>
       </button>
     </div>
