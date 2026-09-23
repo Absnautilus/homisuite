@@ -156,7 +156,11 @@ export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
       const target = index + direction
       if (index < 0 || target < 0 || target >= current.length) return current
       const next = [...current]
-      ;[next[index], next[target]] = [next[target], next[index]]
+      const sourceValue = next[index]
+      const targetValue = next[target]
+      if (sourceValue === undefined || targetValue === undefined) return current
+      next[index] = targetValue
+      next[target] = sourceValue
       return next
     })
   }
