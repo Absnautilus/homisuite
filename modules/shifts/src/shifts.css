@@ -417,7 +417,7 @@
   background: #f3eff8;
   box-shadow: inset 0 0 0 1px #d7c2e7;
 }
-.shift-cell-select:not([value=""]) {
+.shift-cell-select.has-value {
   background: var(--shift-color);
   border-radius: 4px;
   color: var(--shift-text);
