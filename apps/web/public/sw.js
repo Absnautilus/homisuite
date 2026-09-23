@@ -23,6 +23,7 @@ self.addEventListener('push', (event) => {
   const isNewRequest = (data.data?.type ?? 'new_request') === 'new_request'
   const requestId = data.data?.requestId
   const tag = requestId ? `housekeeping-request-${requestId}` : undefined
+  const actionableNewRequest = isNewRequest && Boolean(requestId)
 
   event.waitUntil(
     (async () => {
@@ -32,7 +33,7 @@ self.addEventListener('push', (event) => {
         badge: '/favicon-48x48.png',
         data: data.data,
         tag,
-        actions: isNewRequest
+        actions: actionableNewRequest
           ? [
               { action: 'ignore', title: 'Ignora' },
               { action: 'accept', title: 'Accetta' },
@@ -41,16 +42,11 @@ self.addEventListener('push', (event) => {
         requireInteraction: false,
       })
 
-      if (!isNewRequest) return
+      if (!actionableNewRequest || !tag) return
 
       await new Promise((resolve) => setTimeout(resolve, NEW_REQUEST_AUTO_CLOSE_MS))
-      const notifications = tag
-        ? await self.registration.getNotifications({ tag })
-        : await self.registration.getNotifications()
-
-      for (const notification of notifications) {
-        if (!tag || notification.tag === tag) notification.close()
-      }
+      const notifications = await self.registration.getNotifications({ tag })
+      for (const notification of notifications) notification.close()
     })(),
   )
 })
