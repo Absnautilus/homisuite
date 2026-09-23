@@ -143,9 +143,11 @@ export async function savePushSubscription(sub: { endpoint: string; p256dh: stri
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('not_authenticated')
-  const { error } = await supabase
-    .from('device_push_subscriptions')
-    .upsert({ profile_id: user.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, { onConflict: 'endpoint' })
+  const { error } = await supabase.rpc('claim_device_push_subscription', {
+    p_endpoint: sub.endpoint,
+    p_p256dh: sub.p256dh,
+    p_auth: sub.auth,
+  })
   if (error) throw error
 }
 

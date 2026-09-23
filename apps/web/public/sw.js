@@ -1,54 +1,66 @@
-// Web Push service worker: shows the notification and handles the
-// "Accetta richiesta" / "Rifiuta richiesta" actions, or a tap on the
-// notification body, by opening (or focusing) the Housekeeping module with
-// ?claim=<id> or ?reject=<id>, which staff-app.tsx reads to auto-claim or
-// auto-reject the request. /housekeeping, not /staff -- the embedded module
-// mounts at that path in this shell (HousekeepingModuleGate's basePath),
-// unlike the original standalone Housekeeping app's own /staff route.
+// Web Push service worker: shows Homisuite notifications and handles the
+// "Ignora" / "Accetta" actions for brand-new requests.
 //
-// data.data.type distinguishes what triggered the push (added for
-// notify-request-event: 'priority_changed' / 'urgent_flagged', alongside
-// notify-new-request's own pings) -- defaults to 'new_request' when absent
-// so every payload sent before this type existed keeps behaving exactly as
-// before. Only a brand-new, unclaimed request makes sense to accept/reject
-// straight from the notification; the other event types are informational
-// and just open the queue on tap.
+// Visual layout is controlled by the browser/OS; we can reliably control
+// title, body, icon, badge and action labels. New-request notifications are
+// intentionally non-persistent and are closed after roughly three seconds
+// on platforms that keep the service worker alive for the push event.
+//
+// All navigation stays inside Homisuite. Accepting opens the embedded
+// Housekeeping module with ?claim=<id>; ignoring only closes the native
+// notification and never changes the request status.
+
+const NEW_REQUEST_AUTO_CLOSE_MS = 3_000
+
 self.addEventListener('push', (event) => {
   let data = { title: 'Homisuite', body: 'Nuova richiesta', data: {} }
   try {
     if (event.data) data = { ...data, ...event.data.json() }
   } catch {
-    // ignore malformed payloads, fall back to the defaults above
+    // Ignore malformed payloads and use the defaults above.
   }
 
   const isNewRequest = (data.data?.type ?? 'new_request') === 'new_request'
+  const requestId = data.data?.requestId
+  const tag = requestId ? `housekeeping-request-${requestId}` : undefined
+  const actionableNewRequest = isNewRequest && Boolean(requestId)
 
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon-192.png',
-      badge: '/favicon-48x48.png',
-      data: data.data,
-      actions: isNewRequest
-        ? [
-            { action: 'accept', title: 'Accetta richiesta' },
-            { action: 'reject', title: 'Rifiuta richiesta' },
-          ]
-        : [],
-      requireInteraction: isNewRequest,
-    }),
+    (async () => {
+      await self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: '/icon-192.png',
+        badge: '/favicon-48x48.png',
+        data: data.data,
+        tag,
+        actions: actionableNewRequest
+          ? [
+              { action: 'ignore', title: 'Ignora' },
+              { action: 'accept', title: 'Accetta' },
+            ]
+          : [],
+        requireInteraction: false,
+      })
+
+      if (!actionableNewRequest || !tag) return
+
+      await new Promise((resolve) => setTimeout(resolve, NEW_REQUEST_AUTO_CLOSE_MS))
+      const notifications = await self.registration.getNotifications({ tag })
+      for (const notification of notifications) notification.close()
+    })(),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+
+  if (event.action === 'ignore') return
+
   const requestId = event.notification.data?.requestId
   const url =
-    event.action === 'reject' && requestId
-      ? `/housekeeping?reject=${requestId}`
-      : event.action === 'accept' && requestId
-        ? `/housekeeping?claim=${requestId}`
-        : (event.notification.data?.url ?? '/housekeeping')
+    event.action === 'accept' && requestId
+      ? `/housekeeping?claim=${requestId}`
+      : (event.notification.data?.url ?? '/housekeeping')
 
   event.waitUntil(
     (async () => {
