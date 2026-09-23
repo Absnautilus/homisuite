@@ -35,6 +35,8 @@ export interface ShiftPlanningUnit {
   assignments: Record<string, string[]>
   assignmentDates?: string[]
   lockedAssignments?: Record<string, string[]>
+  month?: string
+  monthStatus?: 'draft' | 'final'
   rules: ShiftRuleSummary
 }
 
