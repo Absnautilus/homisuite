@@ -405,25 +405,6 @@
   padding: 0;
 }
 .shift-cell strong { font-size: 9px; }
-.shift-cell small { display: none; }
-.shift-cell-select {
-  appearance: none;
-  color: transparent;
-  cursor: pointer;
-  outline: 0;
-}
-.shift-cell-select:hover,
-.shift-cell-select:focus {
-  background: #f3eff8;
-  box-shadow: inset 0 0 0 1px #d7c2e7;
-}
-.shift-cell-select.has-value {
-  background: var(--shift-color);
-  border-radius: 4px;
-  color: var(--shift-text);
-  margin: 5px 2px;
-  min-height: 28px;
-}
 .shift-legend {
   gap: 8px 15px;
   padding: 15px 1px 0;
@@ -663,7 +644,6 @@
 }
 
 @media (max-width: 760px) {
-  .shift-calendar-actions { display: none; }
   .shift-grid:has(th:nth-child(n+15)) { min-width: 970px; }
   .shift-inline-form,
   .shift-note-submit {

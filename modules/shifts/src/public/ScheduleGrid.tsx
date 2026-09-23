@@ -38,7 +38,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange 
             const locked = unit.lockedAssignments?.[person.id]?.includes(date) ?? false
             return <td key={`${person.id}-${date}`}>
               {editable && !locked ? <div className="shift-cell-editor"><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
-                <strong>{code}</strong>{definition?.time ? <small>{definition.time}</small> : null}{locked ? <LockKeyhole size={10} aria-label="Bloccato" /> : null}
+                <strong>{code}</strong>{locked ? <LockKeyhole size={10} aria-label="Bloccato" /> : null}
               </div>}
             </td>
           })}

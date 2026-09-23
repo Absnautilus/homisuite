@@ -21,13 +21,23 @@ export function ShiftDatePicker({ value, onChange, ariaLabel }: { value: string;
   const [open,setOpen]=useState(false)
   const [visible,setVisible]=useState(()=>new Date(selected.getFullYear(),selected.getMonth(),1))
   const rootRef=useRef<HTMLDivElement>(null)
+  const triggerRef=useRef<HTMLButtonElement>(null)
+  const dayRefs=useRef<Record<string,HTMLButtonElement|null>>({})
+
+  function dismiss(){ setOpen(false); requestAnimationFrame(()=>triggerRef.current?.focus()) }
 
   useEffect(()=>{
     if(!open)return
-    const close=(event:PointerEvent)=>{ if(!rootRef.current?.contains(event.target as Node)) setOpen(false) }
-    document.addEventListener('pointerdown',close)
-    return()=>document.removeEventListener('pointerdown',close)
-  },[open])
+    const closeOnOutside=(event:PointerEvent)=>{ if(!rootRef.current?.contains(event.target as Node)) setOpen(false) }
+    const closeOnEscape=(event:KeyboardEvent)=>{ if(event.key==='Escape'){ event.preventDefault(); dismiss() } }
+    document.addEventListener('pointerdown',closeOnOutside)
+    document.addEventListener('keydown',closeOnEscape)
+    ;(dayRefs.current[value] ?? dayRefs.current[toIso(new Date())])?.focus()
+    return()=>{
+      document.removeEventListener('pointerdown',closeOnOutside)
+      document.removeEventListener('keydown',closeOnEscape)
+    }
+  },[open,value])
 
   const cells=useMemo(()=>{
     const year=visible.getFullYear(), month=visible.getMonth()
@@ -42,10 +52,10 @@ export function ShiftDatePicker({ value, onChange, ariaLabel }: { value: string;
     })
   },[visible])
 
-  function choose(date:Date){ onChange(toIso(date)); setVisible(new Date(date.getFullYear(),date.getMonth(),1)); setOpen(false) }
+  function choose(date:Date){ onChange(toIso(date)); setVisible(new Date(date.getFullYear(),date.getMonth(),1)); setOpen(false); requestAnimationFrame(()=>triggerRef.current?.focus()) }
 
   return <div className={`shift-date-picker${open?' is-open':''}`} ref={rootRef}>
-    <button className="shift-date-trigger" type="button" aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open} onClick={()=>setOpen(v=>!v)}>
+    <button ref={triggerRef} className="shift-date-trigger" type="button" aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open} onClick={()=>setOpen(v=>!v)}>
       <span>{formatDisplay(value)}</span><CalendarDays size={15} aria-hidden="true" />
     </button>
     {open ? <div className="shift-date-popover" role="dialog" aria-label={ariaLabel}>
@@ -55,9 +65,9 @@ export function ShiftDatePicker({ value, onChange, ariaLabel }: { value: string;
       </div>
       <div className="shift-date-grid">{WEEKDAYS.map(day=><b key={day}>{day}</b>)}{cells.map(({date,outside})=>{
         const iso=toIso(date), active=iso===value, today=iso===toIso(new Date())
-        return <button key={iso} type="button" className={`${outside?' is-outside':''}${active?' is-selected':''}${today?' is-today':''}`} onClick={()=>choose(date)}>{date.getDate()}</button>
+        return <button key={iso} ref={(element)=>{ dayRefs.current[iso]=element }} type="button" className={`${outside?' is-outside':''}${active?' is-selected':''}${today?' is-today':''}`} onClick={()=>choose(date)}>{date.getDate()}</button>
       })}</div>
-      <div className="shift-date-footer"><button type="button" onClick={()=>setOpen(false)}>Cancella</button><button type="button" onClick={()=>choose(new Date())}>Oggi</button></div>
+      <div className="shift-date-footer"><button type="button" onClick={dismiss}>Cancella</button><button type="button" onClick={()=>choose(new Date())}>Oggi</button></div>
     </div> : null}
   </div>
 }

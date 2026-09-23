@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
+import { getShiftPortalTarget } from './portal-target'
 
 export interface ShiftSelectOption { value: string; label: string; shortLabel?: string; color?: string; textColor?: string }
 
@@ -70,7 +71,7 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
   return <div className={`shift-custom-select${open ? ' is-open' : ''}${compact ? ' is-compact' : ''}`}>
     <button ref={triggerRef} className="shift-custom-select-trigger" type="button" disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => open ? setOpen(false) : showMenu()} onKeyDown={(event) => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); showMenu() }
-    }}><span className="shift-select-value">{compact && selected?.value ? <b className="shift-select-code" style={{ background: selected.color, color: selected.textColor ?? '#fff' }}>{selected.shortLabel ?? selected.value}</b> : <span>{selected?.label ?? '—'}</span>}</span><ChevronDown size={16} aria-hidden="true" /></button>
+    }}><span className="shift-select-value">{compact ? <b className="shift-select-code" style={{ background: selected?.color, color: selected?.color ? (selected.textColor ?? '#fff') : undefined }}>{selected?.value ? (selected.shortLabel ?? selected.value) : ''}</b> : <span>{selected?.label ?? '—'}</span>}</span><ChevronDown size={16} aria-hidden="true" /></button>
     {open ? createPortal(<div ref={menuRef} id={`${id}-menu`} className="shift-custom-select-menu" role="listbox" aria-label={ariaLabel} style={menuStyle}>
       {options.map((option, index) => <button ref={(element) => { optionRefs.current[index] = element }} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : undefined} key={option.value} onClick={() => choose(option.value)} onMouseEnter={() => setActiveIndex(index)} onKeyDown={(event) => {
         if (event.key === 'ArrowDown') { event.preventDefault(); focusOption(activeIndex + 1) }
@@ -79,6 +80,6 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
         if (event.key === 'End') { event.preventDefault(); focusOption(options.length - 1) }
         if (event.key === 'Escape' || event.key === 'Tab') { if (event.key === 'Escape') event.preventDefault(); setOpen(false); triggerRef.current?.focus() }
       }}><span className="shift-select-option-copy">{option.color ? <b className="shift-select-code" style={{ background: option.color, color: option.textColor ?? '#fff' }}>{option.shortLabel ?? option.value}</b> : null}<span>{option.label}</span></span>{option.value === value ? <Check size={16} aria-hidden="true" /> : null}</button>)}
-    </div>, document.body) : null}
+    </div>, getShiftPortalTarget()) : null}
   </div>
 }

@@ -254,7 +254,7 @@ export function MyShiftsPanel({ unit }: { unit: ShiftPlanningUnit }) {
           })}
         </div>
       </div>
-      <div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><i style={{ background: code.color }} /><strong>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div>
+      <div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><strong style={{ background: code.color, color: code.textColor ?? '#fff' }}>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div>
     </section>
   </div>
 }
