@@ -69,29 +69,45 @@ export async function loadLiveShiftData(
   const [
     codesResult,
     membersResult,
-    staffDetailsResult,
     rulesResult,
     shiftsResult,
     monthStatesResult,
   ] = await Promise.all([
     supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
-    supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,shift_staff_profiles!inner(id,profile_id,shift_type,rest_mode,fixed_rest_days,active,profiles!inner(id,display_name))').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
-    supabase.from('property_staff_details').select('profile_id,job_title_id,property_job_titles(name)').eq('property_id', propertyId),
+    supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
     supabase.from('shift_month_states').select('planning_unit_id,status').eq('property_id', propertyId).eq('month', monthStart),
   ])
 
-  for (const result of [codesResult, membersResult, staffDetailsResult, rulesResult, shiftsResult, monthStatesResult]) {
+  for (const result of [codesResult, membersResult, rulesResult, shiftsResult, monthStatesResult]) {
     if (result.error) throw result.error
   }
 
   const codes = (codesResult.data ?? []) as Row[]
   const members = (membersResult.data ?? []) as Row[]
-  const staffDetails = (staffDetailsResult.data ?? []) as Row[]
   const ruleSets = (rulesResult.data ?? []) as Row[]
   const shifts = (shiftsResult.data ?? []) as Row[]
   const monthStates = (monthStatesResult.data ?? []) as Row[]
+  const staffProfileIds = [...new Set(members.map((member) => String(member.staff_profile_id)))]
+  const { data: staffProfilesData, error: staffProfilesError } = await supabase
+    .from('shift_staff_profiles')
+    .select('id,profile_id,shift_type,rest_mode,fixed_rest_days,active')
+    .eq('property_id', propertyId)
+    .in('id', staffProfileIds)
+  if (staffProfilesError) throw staffProfilesError
+
+  const staffProfiles = (staffProfilesData ?? []) as Row[]
+  const profileIds = [...new Set(staffProfiles.map((staff) => String(staff.profile_id)))]
+  const [profilesResult, staffDetailsResult] = await Promise.all([
+    supabase.from('profiles').select('id,display_name').in('id', profileIds),
+    supabase.from('property_staff_details').select('profile_id,job_title_id,property_job_titles(name)').eq('property_id', propertyId).in('profile_id', profileIds),
+  ])
+  if (profilesResult.error) throw profilesResult.error
+  if (staffDetailsResult.error) throw staffDetailsResult.error
+
+  const profiles = (profilesResult.data ?? []) as Row[]
+  const staffDetails = (staffDetailsResult.data ?? []) as Row[]
 
   const assignmentDates = Array.from({ length: Math.round((nextMonth.getTime() - new Date(`${monthStart}T00:00:00Z`).getTime()) / 86400000) }, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`)
 
@@ -126,9 +142,12 @@ export async function loadLiveShiftData(
         time: timeLabel(typeof code.starts_at === 'string' ? code.starts_at : null, typeof code.ends_at === 'string' ? code.ends_at : null),
         color: typeof code.color === 'string' ? code.color : '#9AA0A6',
       })),
-      people: unitMembers.filter((member) => related(member.shift_staff_profiles)?.active !== false).map((member) => {
-        const staff = related(member.shift_staff_profiles)
-        const profile = related(staff?.profiles)
+      people: unitMembers.filter((member) => {
+        const staff = staffProfiles.find((candidate) => candidate.id === member.staff_profile_id)
+        return staff?.active !== false
+      }).map((member) => {
+        const staff = staffProfiles.find((candidate) => candidate.id === member.staff_profile_id)
+        const profile = profiles.find((candidate) => candidate.id === staff?.profile_id)
         const detail = staffDetails.find((candidate) => candidate.profile_id === staff?.profile_id)
         const jobTitle = related(detail?.property_job_titles)
         const title = typeof jobTitle?.name === 'string' ? jobTitle.name : undefined
