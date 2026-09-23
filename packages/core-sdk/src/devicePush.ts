@@ -5,6 +5,7 @@ export interface DevicePushSubscriptionKeys {
   endpoint: string
   p256dh: string
   auth: string
+  vapidKeyFingerprint: string | null
 }
 
 // Owned by `profiles`, not any module-specific table -- works for any
@@ -29,6 +30,7 @@ export async function saveDevicePushSubscription(
     p_endpoint: keys.endpoint,
     p_p256dh: keys.p256dh,
     p_auth: keys.auth,
+    p_vapid_key_fingerprint: keys.vapidKeyFingerprint,
   })
   if (error) throw error
 }
