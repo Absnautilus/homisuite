@@ -92,7 +92,7 @@ Deno.serve(async (request: Request) => {
     const payload = JSON.stringify({
       title,
       body: bodyLines.join('\n'),
-      data: { requestId, type: 'new_request', url: `/housekeeping?claim=${requestId}` },
+      data: { requestId, type: 'new_request', url: '/housekeeping' },
     })
 
     let sent = 0
