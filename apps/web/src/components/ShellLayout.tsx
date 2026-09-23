@@ -11,6 +11,7 @@ import { LoginScreen } from './LoginScreen'
 import { PageState } from './PageState'
 import { PropertySwitcher } from './PropertySwitcher'
 import { AccountMenu } from './AccountMenu'
+import { PushToast } from './PushToast'
 import { repairAndClaimCurrentPushSubscription } from '../core/pushLifecycle'
 
 const moduleSlugByPath: Record<string, string> = {
@@ -128,6 +129,7 @@ export function ShellLayout() {
 
   return (
     <div className="app-shell">
+      <PushToast />
       <aside className="sidebar">
         {brandMark}
         {propertySwitcher}
