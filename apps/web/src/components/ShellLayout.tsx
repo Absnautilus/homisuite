@@ -11,6 +11,8 @@ import { LoginScreen } from './LoginScreen'
 import { PageState } from './PageState'
 import { PropertySwitcher } from './PropertySwitcher'
 import { AccountMenu } from './AccountMenu'
+import { PushToast } from './PushToast'
+import { repairAndClaimCurrentPushSubscription } from '../core/pushLifecycle'
 
 const moduleSlugByPath: Record<string, string> = {
   '/housekeeping': 'guest_requests',
@@ -46,6 +48,12 @@ export function ShellLayout() {
   const home = shellNavigation.find((item) => item.path === '/')
   const platform = shellNavigation.filter((item) => item.kind === 'platform' && item.path !== '/')
   const activeModule = modules.find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+
+  useEffect(() => {
+    if (runtime.status === 'ready') {
+      void repairAndClaimCurrentPushSubscription().catch(() => undefined)
+    }
+  }, [runtime.status, runtime.profile?.id])
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -121,6 +129,7 @@ export function ShellLayout() {
 
   return (
     <div className="app-shell">
+      <PushToast />
       <aside className="sidebar">
         {brandMark}
         {propertySwitcher}
