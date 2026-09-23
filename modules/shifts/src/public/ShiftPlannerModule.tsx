@@ -41,8 +41,8 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const readOnly = readOnlyDemo || !capabilities.manage || monthFinal
   const visibleTabs = TABS.filter((item) => !item.managerOnly || !readOnly)
   const periodLabel = calendarView === 'month'
-    ? ['Agosto 2026', 'Settembre 2026', 'Ottobre 2026'][Math.max(0, Math.min(2, periodOffset + 1))]
-    : ['12–18 ottobre 2026', '19–25 ottobre 2026', '26 ottobre–1 novembre 2026'][Math.max(0, Math.min(2, periodOffset + 1))]
+    ? (['Agosto 2026', 'Settembre 2026', 'Ottobre 2026'][Math.max(0, Math.min(2, periodOffset + 1))] ?? 'Settembre 2026')
+    : (['12–18 ottobre 2026', '19–25 ottobre 2026', '26 ottobre–1 novembre 2026'][Math.max(0, Math.min(2, periodOffset + 1))] ?? '19–25 ottobre 2026')
 
   useEffect(() => {
     const button = navButtonRefs.current[tab]
