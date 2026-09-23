@@ -74,7 +74,7 @@ export async function loadLiveShiftData(
     monthStatesResult,
   ] = await Promise.all([
     supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
-    supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
+    supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,display_order').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
     supabase.from('shift_month_states').select('planning_unit_id,status').eq('property_id', propertyId).eq('month', monthStart),
@@ -85,6 +85,8 @@ export async function loadLiveShiftData(
   }
 
   const codes = (codesResult.data ?? []) as Row[]
+  const codeOrder = ['A1','A2','CE','C1','C2','N','D1','D2','F1','F2','R','F','P','P8','P7','P6','P5','P4','P3','P2','P1','R8','R7','R6','R5','R4','R3','R2','R1','RS','RR','AS','M','FG','CON','PL']
+  const codeRank = new Map(codeOrder.map((code, index) => [code, index]))
   const members = (membersResult.data ?? []) as Row[]
   const ruleSets = (rulesResult.data ?? []) as Row[]
   const shifts = (shiftsResult.data ?? []) as Row[]
@@ -112,7 +114,12 @@ export async function loadLiveShiftData(
   const assignmentDates = Array.from({ length: Math.round((nextMonth.getTime() - new Date(`${monthStart}T00:00:00Z`).getTime()) / 86400000) }, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`)
 
   const projectedUnits: ShiftPlanningUnit[] = unitRows.map((unit) => {
-    const unitMembers = members.filter((member) => member.planning_unit_id === unit.id)
+    const unitMembers = members.filter((member) => member.planning_unit_id === unit.id).sort((a, b) => {
+      const aOrder = typeof a.display_order === 'number' ? a.display_order : Number.MAX_SAFE_INTEGER
+      const bOrder = typeof b.display_order === 'number' ? b.display_order : Number.MAX_SAFE_INTEGER
+      if (aOrder !== bOrder) return aOrder - bOrder
+      return String(a.staff_profile_id).localeCompare(String(b.staff_profile_id))
+    })
     const activeRule = ruleSets.find((rule) => rule.id === unit.current_rule_set_id)
     const rules = related(activeRule?.rules) ?? {}
     const assignments: Record<string, string[]> = {}
@@ -136,7 +143,7 @@ export async function loadLiveShiftData(
       excludedJobTitles: [],
       ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
       ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,
-      codes: codes.filter((code) => code.planning_unit_id === unit.id).map((code) => ({
+      codes: codes.filter((code) => code.planning_unit_id === unit.id).sort((a, b) => (codeRank.get(String(a.code)) ?? 999) - (codeRank.get(String(b.code)) ?? 999)).map((code) => ({
         code: String(code.code),
         label: typeof code.label === 'string' ? code.label : String(code.code),
         time: timeLabel(typeof code.starts_at === 'string' ? code.starts_at : null, typeof code.ends_at === 'string' ? code.ends_at : null),
