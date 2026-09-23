@@ -23,10 +23,10 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange 
   return (
     <div className="shift-grid-scroll" tabIndex={0} aria-label={`Tabella turni ${unit.name}`}>
       <table className="shift-grid">
-        <thead><tr><th className="shift-person-column">Persona</th>{visibleDates.map((date) => {
+        <thead><tr><th className="shift-person-column">Dipendente</th>{visibleDates.map((date) => {
           const parsed = new Date(`${date}T00:00:00Z`)
           const weekend = [0, 6].includes(parsed.getUTCDay())
-          return <th className={weekend ? 'is-weekend' : undefined} key={date}><span>{WEEKDAY.format(parsed).replace('.', '')}</span><strong>{parsed.getUTCDate()}</strong></th>
+          return <th className={weekend ? 'is-weekend' : undefined} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>
         })}</tr></thead>
         <tbody>{unit.people.map((person) => <tr key={person.id}>
           <th scope="row" className="shift-person-column"><span className="shift-avatar" aria-hidden="true">{person.initials}</span><span className="shift-person-copy"><strong>{person.name}</strong><small>{person.assignmentProfile}</small></span></th>
@@ -37,9 +37,9 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange 
             const locked = unit.lockedAssignments?.[person.id]?.includes(date) ?? false
             return <td key={`${person.id}-${date}`}>
               {editable && !locked ? <select className="shift-cell shift-cell-select" aria-label={`${person.name}, ${date}`} value={code} onChange={(event) => onAssignmentChange?.(person.id, date, event.target.value)} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
-                <option value="">—</option>{unit.codes.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.label}</option>)}
+                <option value=""></option>{unit.codes.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.label}</option>)}
               </select> : <div className="shift-cell" aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
-                <strong>{code || '—'}</strong>{definition?.time ? <small>{definition.time}</small> : null}{locked ? <LockKeyhole size={10} aria-label="Bloccato" /> : null}
+                <strong>{code}</strong>{definition?.time ? <small>{definition.time}</small> : null}{locked ? <LockKeyhole size={10} aria-label="Bloccato" /> : null}
               </div>}
             </td>
           })}
