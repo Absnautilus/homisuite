@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
 import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, Membership, ModuleEntitlement, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
 import { getCurrentProfile, updateCurrentProfile } from './profile'
-import { deleteDevicePushSubscription, isDevicePushSubscribed, saveDevicePushSubscription, type DevicePushSubscriptionKeys } from './devicePush'
+import { deleteDevicePushSubscription, getDevicePushSubscription, isDevicePushSubscribed, saveDevicePushSubscription, type DevicePushSubscriptionKeys } from './devicePush'
 import { getAccessibleProperties, getMembership, updateProperty } from './memberships'
 import { hasPermission } from './permissions'
 import { getEnabledModules } from './modules'
@@ -40,6 +40,7 @@ export interface CoreClient {
   updateProperty: (propertyId: string, changes: { name: string; timezone: string; settings?: Record<string, unknown> }) => Promise<Property>
   saveDevicePushSubscription: (keys: DevicePushSubscriptionKeys) => Promise<void>
   deleteDevicePushSubscription: (endpoint: string) => Promise<void>
+  getDevicePushSubscription: (endpoint: string) => Promise<{ id: string; vapidKeyFingerprint: string | null } | null>
   isDevicePushSubscribed: (endpoint: string) => Promise<boolean>
 }
 
@@ -72,6 +73,7 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     updateProperty: (propertyId, changes) => updateProperty(raw, propertyId, changes),
     saveDevicePushSubscription: (keys) => saveDevicePushSubscription(raw, keys),
     deleteDevicePushSubscription: (endpoint) => deleteDevicePushSubscription(raw, endpoint),
+    getDevicePushSubscription: (endpoint) => getDevicePushSubscription(raw, endpoint),
     isDevicePushSubscribed: (endpoint) => isDevicePushSubscribed(raw, endpoint),
   }
 }
