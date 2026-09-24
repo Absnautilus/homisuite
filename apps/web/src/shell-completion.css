@@ -81,12 +81,6 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .settings-row.muted .settings-row-main small, .settings-row.muted .settings-row-status { color: var(--ink-2); }
 .settings-row-static, .settings-row-control { cursor: default; }
 .settings-row-status { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10.5px; font-weight: 700; }
-/* A row someone could use if they had the right permission reads
-   differently from one that simply isn't built yet -- the lock icon plus
-   an accent-leaning tone (instead of the plain muted grey every other
-   status uses) makes that distinction scannable without reading the text. */
-.settings-row-status.is-permission { color: var(--accent); }
-.settings-row-status.is-permission svg { flex-shrink: 0; }
 .settings-row-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .settings-row-main > span:last-child { display: grid; gap: 2px; }
 .settings-row strong { font-size: 12.5px; }
@@ -120,6 +114,8 @@ body.modal-open { overflow: hidden; }
 .btn-danger { color: var(--red-ink); background: var(--red-bg); border: 1px solid rgba(178,58,58,.16); }
 .modal-form { display: grid; gap: 15px; }
 .module-access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.module-access-subrow { padding-left: 16px; }
+@keyframes modal-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .form-field { display: grid; gap: 6px; }
 .form-field > span { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 /* font-size overridden back up to 16px after `font: inherit` -- iOS Safari
@@ -189,8 +185,18 @@ body.modal-open { overflow: hidden; }
   .primary-action, .secondary-action { width: 100%; }
   .job-role-grid { gap: 6px; }
   .account-popover { position: fixed; left: 14px; right: 14px; bottom: 16px; }
-  .modal-backdrop { padding: 0; align-items: end; }
-  .modal-panel { width: 100%; max-height: 92vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  /* A bottom sheet reads as a phone-native pattern, but it hides the page
+     underneath and covers the same width a drawer would anyway on a narrow
+     screen -- a panel sliding in from the right instead keeps a sliver of
+     context visible and matches the nav drawer's own edge. */
+  .modal-backdrop { padding: 0; place-items: stretch end; }
+  .modal-panel { width: min(88vw, 400px); max-width: 400px; height: 100%; max-height: 100%; border-radius: 0; animation: modal-drawer-in var(--motion-panel) var(--motion-ease); }
+  .modal-header, .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; }
+  /* Restore the full 44px touch target the general .modal-footer .btn rule
+     shrinks down to 32px for desktop's denser footer -- a mobile drawer has
+     the room, and Annulla/Salva are the two actions a thumb reaches for. */
+  .modal-footer .btn { min-height: 44px; padding: 0 16px; font-size: 13px; }
 
   /* Team on mobile is a stack of compact cards, not a horizontally
      scrollable desktop table: the column header row (meaningless once

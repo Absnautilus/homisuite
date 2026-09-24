@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { Bell, Building2, ChevronRight, Globe2, Lock, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
+import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
 import { Modal } from '../components/Modal'
@@ -23,8 +23,15 @@ export function SettingsPage() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
   const [canManageProperty, setCanManageProperty] = useState(false)
+  // core.staff.manage is the same admin-tier permission Housekeeping's own
+  // "Gestione" tab gates on (see HousekeepingModuleGate) -- a base employee
+  // (e.g. a receptionist-ranked Facchino) holds neither permission, so
+  // Struttura and Impostazioni moduli below have nothing they could do and
+  // are hidden entirely rather than shown full of locked/muted rows.
+  const [canManageStaff, setCanManageStaff] = useState(false)
 
   useEffect(() => { void hasPermission('core.property.manage').then(setCanManageProperty).catch(() => setCanManageProperty(false)) }, [hasPermission])
+  useEffect(() => { void hasPermission('core.staff.manage').then(setCanManageStaff).catch(() => setCanManageStaff(false)) }, [hasPermission])
 
   useEffect(() => {
     function syncLanguage(event: Event) {
@@ -43,14 +50,16 @@ export function SettingsPage() {
         <p>Preferenze della struttura, del tuo account e dei moduli.</p>
       </header>
 
-      <section className="settings-section">
-        <div className="settings-section-title"><Building2 size={18} /><div><h2>Struttura</h2><p>Configurazione condivisa di {propertyName}.</p></div></div>
-        <div className="settings-list shell-card">
-          <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={canManageProperty ? () => setPropertyOpen(true) : undefined} status={canManageProperty ? undefined : 'Permesso richiesto'} permissionRequired={!canManageProperty} />
-          <SettingRow title="Preferenze operative" detail="Fuso orario, formati e impostazioni comuni" status="Non ancora disponibile" muted />
-          {canManageProperty && <GuestLinkRow />}
-        </div>
-      </section>
+      {canManageProperty && (
+        <section className="settings-section">
+          <div className="settings-section-title"><Building2 size={18} /><div><h2>Struttura</h2><p>Configurazione condivisa di {propertyName}.</p></div></div>
+          <div className="settings-list shell-card">
+            <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={() => setPropertyOpen(true)} />
+            <SettingRow title="Preferenze operative" detail="Fuso orario, formati e impostazioni comuni" status="Non ancora disponibile" muted />
+            <GuestLinkRow />
+          </div>
+        </section>
+      )}
 
       <section className="settings-section" id="account">
         <div className="settings-section-title"><UserRound size={18} /><div><h2>Account</h2><p>Preferenze personali valide in tutta la suite.</p></div></div>
@@ -68,23 +77,25 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-section">
-        <div className="settings-section-title"><Puzzle size={18} /><div><h2>Impostazioni moduli</h2><p>Configurazioni specifiche, senza duplicare le preferenze globali.</p></div></div>
-        <div className="settings-list shell-card">
-          {housekeepingAccess.status === 'compatible' ? (
-            <SettingRow title="Housekeeping" detail="Categorie, richieste e configurazione operativa" to="/housekeeping/admin/menu" />
-          ) : (
-            <SettingRow
-              title="Housekeeping"
-              detail="Categorie, richieste e configurazione operativa"
-              status={housekeepingStatus(housekeepingAccess.status)}
-              muted
-            />
-          )}
-          <SettingRow title="Turni" detail="Disponibile dopo l'integrazione del modulo" status="Non ancora disponibile" muted />
-          <SettingRow title="Transfer" detail="Disponibile dopo l'integrazione del modulo" status="Non ancora disponibile" muted />
-        </div>
-      </section>
+      {canManageStaff && (
+        <section className="settings-section">
+          <div className="settings-section-title"><Puzzle size={18} /><div><h2>Impostazioni moduli</h2><p>Configurazioni specifiche, senza duplicare le preferenze globali.</p></div></div>
+          <div className="settings-list shell-card">
+            {housekeepingAccess.status === 'compatible' ? (
+              <SettingRow title="Housekeeping" detail="Categorie, richieste e configurazione operativa" to="/housekeeping/admin/menu" />
+            ) : (
+              <SettingRow
+                title="Housekeeping"
+                detail="Categorie, richieste e configurazione operativa"
+                status={housekeepingStatus(housekeepingAccess.status)}
+                muted
+              />
+            )}
+            <SettingRow title="Turni" detail="Disponibile dopo l'integrazione del modulo" status="Non ancora disponibile" muted />
+            <SettingRow title="Transfer" detail="Disponibile dopo l'integrazione del modulo" status="Non ancora disponibile" muted />
+          </div>
+        </section>
+      )}
 
       <PropertyModal open={propertyOpen} onClose={() => setPropertyOpen(false)} onSaved={async () => { setPropertyOpen(false); await runtime.refresh() }} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} onSaved={async () => { setProfileOpen(false); await runtime.refresh() }} />
@@ -108,24 +119,18 @@ type SettingRowProps = {
   icon?: ReactNode
   muted?: boolean
   status?: string
-  // Distinguishes "you could do this if you had the permission" from a
-  // plain "not available yet" -- same static row, but a lock icon and an
-  // accent tone instead of the flat muted status text, so the reason is
-  // scannable without reading it.
-  permissionRequired?: boolean
   to?: string
   onClick?: () => void
 }
 
-function SettingRow({ title, detail, icon, muted = false, status, permissionRequired = false, to, onClick }: SettingRowProps) {
+function SettingRow({ title, detail, icon, muted = false, status, to, onClick }: SettingRowProps) {
   const content = (
     <>
       <span className="settings-row-main">{icon ? <span className="settings-row-icon">{icon}</span> : null}<span><strong>{title}</strong><small>{detail}</small></span></span>
       {to || onClick ? (
         <ChevronRight size={17} />
       ) : (
-        <span className={`settings-row-status${permissionRequired ? ' is-permission' : ''}`}>
-          {permissionRequired ? <Lock size={12} aria-hidden="true" /> : null}
+        <span className="settings-row-status">
           {status}
         </span>
       )}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import type { CoreRole, JobTitle, TeamMember } from '@homisuite/core-sdk'
+import type { CoreRole, JobTitle, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
 import { Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Modal } from '../components/Modal'
@@ -38,7 +38,7 @@ export function TeamPage() {
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [modulesFor, setModulesFor] = useState<TeamMember | null>(null)
   const [confirmDialog, confirm] = useConfirm()
-  const housekeepingEntitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'guest_requests')
+  const anyModuleEntitled = runtime.entitlements.some((item) => item.enabled)
 
   // Optimistic, matching the Moduli popup (#41) and Housekeeping's own
   // toggles (#45): flip the row immediately instead of waiting for
@@ -170,7 +170,7 @@ export function TeamPage() {
                   <KeyRound size={15} />
                 </button>
               ) : <span className="row-action-slot" aria-hidden="true" />}
-              {housekeepingEntitled && !orgWide ? (
+              {anyModuleEntitled && !orgWide ? (
                 <button
                   className="row-action"
                   type="button"
@@ -256,7 +256,7 @@ export function TeamPage() {
       <EditMemberModal member={editing} roles={assignableRoles} jobTitles={team.jobTitles.filter((job) => job.active)} currentProfileId={runtime.profile?.id ?? ''} propertyId={property?.id ?? ''} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await loadTeam({ silent: true }) }} />
       <ResetPasswordModal member={resettingPassword} onClose={() => setResettingPassword(null)} />
       <JobModal job={jobEditor} propertyId={property?.id ?? ''} onClose={() => setJobEditor(null)} onSaved={async () => { setJobEditor(null); await loadTeam({ silent: true }) }} />
-      <ModulesModal member={modulesFor} propertyId={property?.id ?? ''} onClose={() => { setModulesFor(null); void loadTeam({ silent: true }) }} />
+      <ModulesModal member={modulesFor} propertyId={property?.id ?? ''} entitlements={runtime.entitlements} onClose={() => { setModulesFor(null); void loadTeam({ silent: true }) }} />
       {confirmDialog}
     </div>
   )
@@ -369,14 +369,22 @@ function ResetPasswordModal({ member, onClose }: { member: TeamMember | null; on
   </Modal>
 }
 
-// Housekeeping is the only module today wired through this per-member
-// compatibility grant (see grant-housekeeping-access's own header) --
-// other Core-native modules don't need this dance at all, since their
-// authorization already flows through memberships/roles/permissions
-// directly. This list is written as one row now, but the modal itself
-// (status fetched per module, toggle calls grant/revoke) is the shape a
-// second module would extend, not a Housekeeping-only special case.
-function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | null; propertyId: string; onClose: () => void }) {
+// Display order/labels for whatever the property has enabled -- same slugs
+// and Italian names as Home's own module tiles (HomePage.tsx). Housekeeping
+// is the only module wired through a per-member compatibility grant (see
+// grant-housekeeping-access's own header); every other module's access is
+// governed entirely by the member's role permissions, so it's listed here
+// as informational rather than another fake toggle.
+const MODULE_CATALOG: { slug: string; title: string }[] = [
+  { slug: 'guest_requests', title: 'Housekeeping' },
+  { slug: 'dining', title: 'Ristorazione' },
+  { slug: 'shifts', title: 'Turni' },
+  { slug: 'transfers', title: 'Transfer' },
+]
+
+function ModulesModal({ member, propertyId, entitlements, onClose }: { member: TeamMember | null; propertyId: string; entitlements: ModuleEntitlement[]; onClose: () => void }) {
+  const enabledModules = MODULE_CATALOG.filter((module) => entitlements.some((item) => item.enabled && item.slug === module.slug))
+  const housekeepingEnabled = enabledModules.some((module) => module.slug === 'guest_requests')
   const [status, setStatus] = useState<boolean | null>(null)
   const [viewAllRequests, setViewAllRequests] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -385,7 +393,7 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!member) {
+    if (!member || !housekeepingEnabled) {
       setStatus(null)
       setViewAllRequests(false)
       setError(null)
@@ -398,7 +406,7 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
       .then(setStatus)
       .catch((cause) => setError(readableError(cause)))
       .finally(() => setLoading(false))
-  }, [member])
+  }, [member, housekeepingEnabled])
 
   async function onToggle() {
     if (!member || status === null || saving) return
@@ -463,21 +471,31 @@ function ModulesModal({ member, propertyId, onClose }: { member: TeamMember | nu
   return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="button" onClick={onClose} disabled={saving || savingVisibility}>{saving || savingVisibility ? 'Salvataggio…' : 'Salva'}</button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
       <>
-        <div className="module-access-row">
-          <span>Housekeeping</span>
-          <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label="Accesso a Housekeeping" />
-        </div>
-        {status && (
-          <div className="module-access-row">
-            <span>Visualizza tutte le richieste</span>
-            <Switch
-              checked={viewAllRequests}
-              onChange={() => void onViewAllRequestsChange()}
-              disabled={savingVisibility}
-              aria-label="Visualizza tutte le richieste"
-            />
+        {enabledModules.map((module) => module.slug === 'guest_requests' ? (
+          <div key={module.slug}>
+            <div className="module-access-row">
+              <span>{module.title}</span>
+              <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label={`Accesso a ${module.title}`} />
+            </div>
+            {status && (
+              <div className="module-access-row module-access-subrow">
+                <span>Visualizza tutte le richieste</span>
+                <Switch
+                  checked={viewAllRequests}
+                  onChange={() => void onViewAllRequestsChange()}
+                  disabled={savingVisibility}
+                  aria-label="Visualizza tutte le richieste"
+                />
+              </div>
+            )}
           </div>
-        )}
+        ) : (
+          <div className="module-access-row" key={module.slug}>
+            <span>{module.title}</span>
+            <small className="muted">Gestito dal ruolo</small>
+          </div>
+        ))}
+        {enabledModules.length === 0 ? <p className="muted">Nessun modulo attivo per questa struttura.</p> : null}
       </>
     )}
     {error ? <p className="form-error" role="alert">{error}</p> : null}
