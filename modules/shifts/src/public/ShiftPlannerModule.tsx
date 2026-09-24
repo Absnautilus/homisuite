@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, ShieldCheck } from 'lucide-react'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
-import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel } from './PlannerPanels'
+import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel, type ShiftRuleSetSave } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
 
 export interface ShiftPlannerCapabilities { view: boolean; manage: boolean; manageRequests: boolean }
 export interface ShiftAssignmentEdit { planningUnitId: string; staffProfileId: string; shiftDate: string; code: string }
 export interface ShiftMemberReorder { planningUnitId: string; staffProfileIds: string[] }
-export interface ShiftCoverageRuleChange { planningUnitId: string; coverage: Array<{ code: string; quantity: number }> }
-export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveCoverageRules?: (change: ShiftCoverageRuleChange) => Promise<void> }
+export type { ShiftRuleSetSave }
+export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void> }
 type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'preferences' | 'swaps' | 'absences' | 'preassignments'
 type CalendarView = 'month' | 'week'
 
@@ -20,7 +20,7 @@ const TABS: Array<{ id: ModuleTab; label: string; managerOnly?: boolean }> = [
   { id: 'absences', label: 'Ferie / Permessi' }, { id: 'preassignments', label: 'Pre-assegnazioni' },
 ]
 
-export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveCoverageRules }: ShiftPlannerModuleProps) {
+export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveRules }: ShiftPlannerModuleProps) {
   const initialProperty = previewProperties.find((property) => property.id === initialPropertyId) ?? previewProperties[0]
   const [propertyId, setPropertyId] = useState(initialProperty?.id ?? '')
   const [unitId, setUnitId] = useState(initialProperty?.units[0]?.id ?? '')
@@ -86,15 +86,15 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     try { await onSaveAssignments(pendingChanges); setPendingChanges([]); setSaveState('saved') }
     catch { setSaveState('error') }
   }
-  async function saveCoverageRules(change: ShiftCoverageRuleChange) {
-    if (!onSaveCoverageRules || !property) return
-    await onSaveCoverageRules(change)
+  async function saveRules(change: ShiftRuleSetSave) {
+    if (!onSaveRules || !property) return
+    await onSaveRules(change)
     const coverageStrings = change.coverage.map(({ code, quantity }) => `${quantity} × ${code}`)
     setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
       ...candidate,
       units: candidate.units.map((candidateUnit) => candidateUnit.id !== change.planningUnitId ? candidateUnit : ({
         ...candidateUnit,
-        rules: { ...candidateUnit.rules, coverage: coverageStrings },
+        rules: { coverage: coverageStrings, hard: change.hard, soft: change.soft },
         ruleSetVersion: candidateUnit.ruleSetVersion + 1,
       })),
     })))
@@ -123,7 +123,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     <div className={`shift-tab-scene${tabTransitionActive ? ' is-entering' : ''}`} style={sceneStyle}>
       {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className={`shift-status-chip ${monthFinal ? 'is-final' : 'is-draft'}`}>{monthFinal ? 'Definitivo' : 'Bozza'}</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview}>Assegna automaticamente</button><button type="button" disabled={preview}>Imposta riposi</button><button type="button" disabled={preview}>Rendi definitivo</button><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></> : null}</div></div><p className="shift-calendar-help">Lo stato Bozza/Definitivo riguarda solo {periodLabel.toLowerCase()}: ogni mese ha il proprio stato indipendente. “Assegna automaticamente” genera i turni solo per il mese visualizzato; gli altri mesi non vengono toccati. I turni bloccati restano fissi, mentre gli altri possono essere ricalcolati. Salva turni quando vuoi rendere permanenti le modifiche.</p><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} />{saveState === 'error' ? <div className="shift-empty" role="alert">Impossibile salvare le modifiche. Riprova.</div> : null}{saveState === 'saved' ? <div className="shift-empty" role="status">Turni salvati.</div> : null}<section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} editable={!readOnly && !preview && !monthFinal} onAssignmentChange={editAssignment} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><strong style={{ background: code.color, color: code.textColor ?? '#fff' }}>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section></> : null}
       {tab === 'employees' ? <EmployeesPanel property={property} onReorderMembers={onReorderMembers} /> : null}
-      {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} onSaveCoverageRules={onSaveCoverageRules ? saveCoverageRules : undefined} /></> : null}
+      {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} onSaveRules={onSaveRules ? saveRules : undefined} /></> : null}
       {tab === 'mine' ? <MyShiftsPanel unit={unit} /> : null}{tab === 'preferences' ? <PersonalPanel unit={unit} /> : null}
       {tab === 'swaps' ? <RequestsPanel kind="swaps" unit={unit} /> : null}{tab === 'absences' ? <RequestsPanel kind="absences" unit={unit} /> : null}{tab === 'preassignments' ? <RequestsPanel kind="preassignments" unit={unit} /> : null}
     </div>

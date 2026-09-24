@@ -7,7 +7,7 @@ import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { loadLiveShiftData } from './shiftLiveData'
 import { saveShiftAssignments } from './saveShiftAssignments'
 import { saveMemberOrder } from './saveMemberOrder'
-import { saveCoverageRules } from './saveCoverageRules'
+import { saveRuleSet } from './saveRuleSet'
 
 type State =
   | { status: 'loading' }
@@ -79,10 +79,10 @@ export function ShiftPlannerPage() {
   }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
-  }} onSaveCoverageRules={async ({ planningUnitId, coverage }) => {
+  }} onSaveRules={async ({ planningUnitId, coverage, hard, soft }) => {
     if (!propertyId) throw new Error('Missing active property')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
-    await saveCoverageRules(supabase, propertyId, unit, coverage)
+    await saveRuleSet(supabase, propertyId, unit, { coverage, hard, soft })
   }} />
 }

@@ -2,8 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
+import { DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
 import { ShiftSelect } from './ShiftSelect'
 import { ShiftDatePicker } from './ShiftDatePicker'
+
+export interface ShiftRuleSetSave {
+  planningUnitId: string
+  coverage: Array<{ code: string; quantity: number }>
+  hard: string[]
+  soft: string[]
+}
 
 type PersonDraft = {
   unitId: string
@@ -109,29 +117,30 @@ function parseCoverage(coverage: string[]): Record<string, number> {
   }))
 }
 
-export function RulesPanel({ unit, onSaveCoverageRules }: {
+export function RulesPanel({ unit, onSaveRules }: {
   unit: ShiftPlanningUnit
-  onSaveCoverageRules?: (change: { planningUnitId: string; coverage: Array<{ code: string; quantity: number }> }) => Promise<void>
+  onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>
 }) {
-  const [enabledRules, setEnabledRules] = useState(() => new Set(unit.rules.hard))
-  function toggle(rule: string) {
-    setEnabledRules((current) => {
-      const next = new Set(current)
-      if (next.has(rule)) next.delete(rule); else next.add(rule)
-      return next
-    })
-  }
   const codeMap = useMemo(() => new Map(unit.codes.map((code) => [code.code, code])), [unit.codes])
   const [coverageDraft, setCoverageDraft] = useState<Record<string, number>>(() => parseCoverage(unit.rules.coverage))
-  useEffect(() => { setCoverageDraft(parseCoverage(unit.rules.coverage)) }, [unit.id, unit.rules.coverage])
+  const [hardEnabled, setHardEnabled] = useState<Record<string, boolean>>(() => initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard))
+  const [softOrder, setSoftOrder] = useState<string[]>(() => initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft))
+  const [softEnabled, setSoftEnabled] = useState<Record<string, boolean>>(() => initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft))
+  useEffect(() => {
+    setCoverageDraft(parseCoverage(unit.rules.coverage))
+    setHardEnabled(initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard))
+    setSoftOrder(initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft))
+    setSoftEnabled(initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft))
+  }, [unit.id, unit.rules.coverage, unit.rules.hard, unit.rules.soft])
   const [newCode, setNewCode] = useState('')
   const [newQuantity, setNewQuantity] = useState(1)
-  const [coverageSaveState, setCoverageSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const availableCodes = unit.codes.filter((code) => code.time && !COVERAGE_EXCLUDED_CODES.includes(code.code) && coverageDraft[code.code] === undefined)
+  const softByKey = useMemo(() => new Map(DEFAULT_SOFT_RULES.map((rule) => [rule.key, rule])), [])
 
   function updateQuantity(code: string, quantity: number) {
     setCoverageDraft((current) => ({ ...current, [code]: Math.max(0, Math.min(9, quantity)) }))
-    setCoverageSaveState('idle')
+    setSaveState('idle')
   }
   function removeRule(code: string) {
     setCoverageDraft((current) => {
@@ -139,23 +148,51 @@ export function RulesPanel({ unit, onSaveCoverageRules }: {
       delete next[code]
       return next
     })
-    setCoverageSaveState('idle')
+    setSaveState('idle')
   }
   function addRule() {
     if (!newCode || coverageDraft[newCode] !== undefined) return
     setCoverageDraft((current) => ({ ...current, [newCode]: Math.max(1, Math.min(9, newQuantity)) }))
     setNewCode('')
     setNewQuantity(1)
-    setCoverageSaveState('idle')
+    setSaveState('idle')
   }
-  async function saveCoverage() {
-    if (!onSaveCoverageRules) return
-    setCoverageSaveState('saving')
+  function toggleHard(key: string) {
+    setHardEnabled((current) => ({ ...current, [key]: !current[key] }))
+    setSaveState('idle')
+  }
+  function toggleSoft(key: string) {
+    setSoftEnabled((current) => ({ ...current, [key]: !current[key] }))
+    setSaveState('idle')
+  }
+  function moveSoft(key: string, direction: -1 | 1) {
+    setSoftOrder((current) => {
+      const index = current.indexOf(key)
+      const target = index + direction
+      if (index < 0 || target < 0 || target >= current.length) return current
+      const next = [...current]
+      const sourceValue = next[index]
+      const targetValue = next[target]
+      if (sourceValue === undefined || targetValue === undefined) return current
+      next[index] = targetValue
+      next[target] = sourceValue
+      return next
+    })
+    setSaveState('idle')
+  }
+  async function saveRules() {
+    if (!onSaveRules) return
+    setSaveState('saving')
     try {
-      await onSaveCoverageRules({ planningUnitId: unit.id, coverage: Object.entries(coverageDraft).map(([code, quantity]) => ({ code, quantity })) })
-      setCoverageSaveState('saved')
+      await onSaveRules({
+        planningUnitId: unit.id,
+        coverage: Object.entries(coverageDraft).map(([code, quantity]) => ({ code, quantity })),
+        hard: DEFAULT_HARD_RULES.filter((rule) => hardEnabled[rule.key]).map((rule) => rule.text),
+        soft: softOrder.filter((key) => softEnabled[key]).map((key) => softByKey.get(key)?.text).filter((text): text is string => text != null),
+      })
+      setSaveState('saved')
     } catch {
-      setCoverageSaveState('error')
+      setSaveState('error')
     }
   }
   return (
@@ -170,25 +207,37 @@ export function RulesPanel({ unit, onSaveCoverageRules }: {
             <span><button type="button" aria-label={`Diminuisci ${code}`} onClick={() => updateQuantity(code, quantity - 1)}>−</button><b>{quantity}</b><button type="button" aria-label={`Aumenta ${code}`} onClick={() => updateQuantity(code, quantity + 1)}>+</button></span>
           </article>
         })}</div>
-        {onSaveCoverageRules ? <div className="shift-coverage-add">
+        {onSaveRules ? <div className="shift-coverage-add">
           <label>Aggiungi regola<ShiftSelect ariaLabel="Turno da aggiungere alla copertura" value={newCode} onChange={setNewCode} options={[{ value: '', label: 'Seleziona turno...' }, ...availableCodes.map((code) => ({ value: code.code, label: `${code.code} — ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
           <label>Quantità<input type="number" min={1} max={9} value={newQuantity} onChange={(event) => setNewQuantity(Number(event.target.value))} /></label>
           <button type="button" disabled={!newCode} onClick={addRule}>Aggiungi</button>
         </div> : null}
-        {onSaveCoverageRules ? <div className="shift-coverage-save">
-          <button type="button" className="shift-original-primary" disabled={coverageSaveState === 'saving'} onClick={() => void saveCoverage()}>{coverageSaveState === 'saving' ? 'Salvataggio…' : 'Salva regole'}</button>
-          {coverageSaveState === 'saved' ? <span role="status">Regole salvate.</span> : null}
-          {coverageSaveState === 'error' ? <span role="alert">Impossibile salvare. Riprova.</span> : null}
-        </div> : null}
       </section>
       <section className="shift-panel">
-        <div className="shift-panel-title"><div><h2>Regole assolute</h2><p>Vincoli rigidi configurati soltanto per l’unità {unit.name}.</p></div></div>
-        <div className="shift-rule-switches">{unit.rules.hard.map((rule) => <div key={rule}><span><strong>{rule.split(':')[0]}</strong>{rule.includes(':') ? `:${rule.split(':').slice(1).join(':')}` : ''}</span><button type="button" role="switch" aria-checked={enabledRules.has(rule)} className={enabledRules.has(rule) ? 'is-on' : ''} onClick={() => toggle(rule)}><i /></button></div>)}</div>
+        <div className="shift-panel-title"><div><h2>Regole assolute</h2><p>Vincoli rigidi e indipendenti tra loro, configurati soltanto per l’unità {unit.name}.</p></div></div>
+        <div className="shift-rule-switches">{DEFAULT_HARD_RULES.map((rule) => <div key={rule.key}><span><strong>{rule.text.split(':')[0]}</strong>{`:${rule.text.split(':').slice(1).join(':')}`}</span><button type="button" role="switch" aria-checked={hardEnabled[rule.key] ?? true} className={hardEnabled[rule.key] ? 'is-on' : ''} disabled={!onSaveRules} onClick={() => toggleHard(rule.key)}><i /></button></div>)}</div>
       </section>
       <section className="shift-panel">
-        <div className="shift-panel-title"><div><h2>Regole di preferenza</h2><p>Applicate in ordine, dopo i vincoli assoluti.</p></div></div>
-        <ol className="shift-priority-list">{unit.rules.soft.map((rule, index) => <li key={rule}><span>{index + 1}</span>{rule}</li>)}</ol>
+        <div className="shift-panel-title"><div><h2>Regole di preferenza</h2><p>Criteri usati in ordine per scegliere tra più candidati validi, dopo i vincoli assoluti.</p></div></div>
+        <ol className="shift-priority-list">{softOrder.map((key, index) => {
+          const rule = softByKey.get(key)
+          if (!rule) return null
+          return <li key={key}>
+            <span>{index + 1}</span>
+            <b>{rule.text}</b>
+            {onSaveRules ? <span className="shift-priority-controls">
+              <button type="button" aria-label={`Sposta su ${rule.text.split(':')[0]}`} onClick={() => moveSoft(key, -1)} disabled={index === 0}>↑</button>
+              <button type="button" aria-label={`Sposta giù ${rule.text.split(':')[0]}`} onClick={() => moveSoft(key, 1)} disabled={index === softOrder.length - 1}>↓</button>
+              <button type="button" role="switch" aria-checked={softEnabled[key] ?? true} className={softEnabled[key] ? 'is-on' : ''} onClick={() => toggleSoft(key)}><i /></button>
+            </span> : null}
+          </li>
+        })}</ol>
       </section>
+      {onSaveRules ? <div className="shift-coverage-save">
+        <button type="button" className="shift-original-primary" disabled={saveState === 'saving'} onClick={() => void saveRules()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva regole'}</button>
+        {saveState === 'saved' ? <span role="status">Regole salvate.</span> : null}
+        {saveState === 'error' ? <span role="alert">Impossibile salvare. Riprova.</span> : null}
+      </div> : null}
     </div>
   )
 }
