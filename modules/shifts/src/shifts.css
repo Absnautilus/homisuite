@@ -187,10 +187,21 @@
 .shift-rules-layout { display: grid; gap: 16px; }
 .shift-rules-layout .shift-panel:first-child { border-radius: 0 0 18px 18px; border-top: 0; }
 .shift-coverage-editor { display: flex; flex-wrap: wrap; gap: 12px; }
-.shift-coverage-editor article { align-items: center; background: #eff0fb; border-radius: 14px; display: grid; gap: 10px; justify-items: center; min-width: 118px; padding: 14px; }
+.shift-coverage-editor article { align-items: center; background: #eff0fb; border-radius: 14px; display: grid; gap: 10px; justify-items: center; min-width: 118px; padding: 14px; position: relative; }
 .shift-coverage-editor article > strong { background: var(--shift-accent); border-radius: 6px; color: white; font-size: 11px; padding: 4px 7px; }
 .shift-coverage-editor article span { align-items: center; display: flex; gap: 13px; }
 .shift-coverage-editor button { background: transparent; border: 0; cursor: pointer; font-size: 18px; height: 28px; width: 28px; }
+.shift-coverage-remove { color: var(--shift-muted); font-size: 12px !important; height: 20px !important; position: absolute; right: 4px; top: 4px; width: 20px !important; }
+.shift-coverage-remove:hover { color: var(--shift-accent); }
+.shift-coverage-add { align-items: flex-end; border-top: 1px solid var(--shift-line); display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; padding-top: 16px; }
+.shift-coverage-add label { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
+.shift-coverage-add .shift-custom-select { min-width: 200px; }
+.shift-coverage-add input { border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 36px; padding: 0 10px; width: 70px; }
+.shift-coverage-add > button { background: var(--shift-soft); border: 0; border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-weight: 700; height: 36px; padding: 0 14px; }
+.shift-coverage-add > button:disabled { cursor: not-allowed; opacity: .5; }
+.shift-coverage-save { align-items: center; display: flex; gap: 10px; margin-top: 16px; }
+.shift-coverage-save [role="status"] { color: var(--shift-accent); font-size: 12px; font-weight: 700; }
+.shift-coverage-save [role="alert"] { color: #c0392b; font-size: 12px; font-weight: 700; }
 .shift-rule-switches > div { align-items: center; border-top: 1px solid var(--shift-line); display: flex; gap: 20px; justify-content: space-between; min-height: 58px; padding: 9px 0; }
 .shift-rule-switches > div:first-child { border-top: 0; }
 .shift-rule-switches > div > span { color: var(--shift-muted); font-size: 13px; }
