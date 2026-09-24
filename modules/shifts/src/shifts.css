@@ -165,11 +165,19 @@
 .shift-employees-table th, .shift-employees-table td { border-bottom: 1px solid var(--shift-line); padding: 8px 7px; text-align: left; }
 .shift-employees-table thead th { background: #f0f1fa; color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
 .shift-employees-table tbody th { align-items: center; display: flex; gap: 9px; min-width: 225px; }
-.shift-employees-table tbody th > span:last-child { display: grid; }
 .shift-employees-table tbody small { color: var(--shift-muted); font-weight: 500; }
 .shift-employees-table tbody tr[draggable="true"] { cursor: grab; }
 .shift-employees-table tbody tr.is-dragging { opacity: .4; }
 .shift-drag-handle { color: var(--shift-muted); flex: 0 0 auto; }
+.shift-person-toggle { align-items: center; background: transparent; border: 0; cursor: pointer; display: flex; gap: 9px; min-width: 0; padding: 0; text-align: left; }
+.shift-person-toggle > span:last-child { display: grid; min-width: 0; }
+.shift-person-toggle:hover .shift-avatar, .shift-person-toggle:focus-visible .shift-avatar { box-shadow: 0 0 0 2px var(--shift-accent-soft); }
+/* Column widths are shared across rows in an HTML table, so this only
+   narrows the Dipendente column once every row is name-collapsed. */
+.shift-employees-table.is-compact-names tbody th { min-width: 0; }
+@media (max-width: 760px) {
+  .shift-employees-table.is-compact-names { min-width: 860px; }
+}
 .shift-custom-select { min-width: 130px; position: relative; }
 .shift-custom-select-trigger { align-items: center; background: white; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; display: flex; gap: 10px; justify-content: space-between; min-height: 40px; padding: 0 10px 0 12px; text-align: left; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; width: 100%; }
 .shift-custom-select-trigger:hover { border-color: var(--shift-accent); }
@@ -282,13 +290,27 @@
   .shift-my-period { justify-content: space-between; }
   .shift-export-button { justify-self: stretch; justify-content: center; }
   .shift-main-tabs button { font-size: 12.5px; padding-inline: 14px; }
+
+  /* All 7 columns fit the viewport instead of forcing horizontal scroll on
+     a 780px-wide grid -- a phone-width calendar reads better as a compact
+     week strip than as a desktop table you drag sideways through. */
+  .shift-my-calendar-scroll { overflow-x: visible; padding: 0 12px; }
+  .shift-my-calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 0; gap: 3px; }
+  .shift-my-weekday { padding: 4px 1px; font-size: 9px; }
+  .shift-my-day { border-width: 2px; min-height: 52px; padding: 4px; }
+  .shift-my-day > span { font-size: 9px; }
+  .shift-my-day > strong { font-size: 9px; margin-top: 4px; padding: 3px 4px; }
+  .shift-my-day > strong small { display: none; }
 }
 
 @media (max-width: 420px) {
   .shift-preview-banner { align-items: start; font-size: 12px; }
   .shift-month-copy { font-size: 13px; justify-content: space-between; }
-  .shift-card-heading, .shift-panel { padding: 16px; }
+  .shift-card-heading, .shift-panel, .shift-original-panel { padding: 16px; }
   .shift-legend { padding-inline: 16px; }
+  .shift-my-calendar-scroll { padding: 0 8px; }
+  .shift-my-day { min-height: 44px; padding: 3px; }
+  .shift-my-day > strong { font-size: 8px; padding: 2px 3px; }
 }
 
 
@@ -335,8 +357,7 @@
   font-size: 11px;
 }
 .shift-schedule-card,
-.shift-panel,
-.shift-original-panel {
+.shift-panel {
   background: #fff;
   border: 0;
   border-radius: 0;
@@ -441,19 +462,29 @@
   text-align: center;
 }
 
+/* Unlike the flattened planner grid/panels above, these self-service forms
+   (swap/absence/pre-assignment requests, personal preferences) had no card
+   of their own -- just form controls floating on the bare page background.
+   Giving them the same bordered/shadowed treatment as the rest of the Shell
+   (see .shell-card in apps/web) is what actually reads as a designed
+   component instead of an unstyled form. */
 .shift-original-panel {
+  background: var(--shift-panel);
+  border: 1px solid var(--shift-line);
+  border-radius: 18px;
+  box-shadow: 0 12px 34px #2925460a;
   color: var(--shift-ink);
-  padding: 0 4px 20px;
+  padding: 22px 22px 24px;
 }
 .shift-original-panel h2 {
-  font-size: 16px;
-  margin: 0 0 5px;
+  font-size: 17px;
+  margin: 0 0 6px;
 }
 .shift-original-panel > p {
   color: var(--shift-muted);
-  font-size: 11px;
-  line-height: 1.3;
-  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0 0 18px;
 }
 .shift-form-label,
 .shift-original-subtitle {
@@ -472,23 +503,34 @@
 .shift-original-panel input,
 .shift-original-panel select {
   background: white;
-  border: 1px solid #cfd4eb;
+  border: 1px solid var(--shift-line-strong);
   border-radius: 10px;
-  color: #191b31;
-  min-height: 36px;
-  padding: 0 12px;
+  color: var(--shift-ink);
+  font-size: 12.5px;
+  min-height: 42px;
+  padding: 0 13px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.shift-original-panel input:focus-visible,
+.shift-original-panel select:focus-visible {
+  border-color: var(--shift-accent);
+  box-shadow: var(--shift-focus-ring);
+  outline: none;
 }
 .shift-original-primary {
-  background: #9b4ed0;
+  background: var(--shift-accent);
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   color: white;
-  font-size: 11px;
+  cursor: pointer;
+  font-size: 12px;
   font-weight: 700;
-  min-height: 34px;
-  padding: 0 16px;
+  min-height: 42px;
+  padding: 0 18px;
+  transition: filter 160ms ease;
 }
-.shift-original-primary:disabled { opacity: .5; }
+.shift-original-primary:hover:not(:disabled) { filter: brightness(1.06); }
+.shift-original-primary:disabled { cursor: not-allowed; opacity: .5; }
 .shift-swap-date-row {
   align-items: center;
   display: flex;
@@ -670,6 +712,7 @@
   .shift-note-submit {
     align-items: stretch;
     flex-direction: column;
+    gap: 16px;
   }
   .shift-inline-form input,
   .shift-inline-form select,

@@ -37,6 +37,12 @@ export function EmployeesPanel({ property, onReorderMembers }: {
   const orderedRoster = personOrder.map((id) => rosterById.get(id)).filter((entry): entry is NonNullable<typeof entry> => entry != null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [reorderError, setReorderError] = useState(false)
+  // Column widths are shared across every row in an HTML table, so
+  // collapsing one person's name alone can't reclaim any space -- clicking
+  // any name instead compacts the whole Dipendente column down to just
+  // avatars, which is what actually lets the other columns fit on mobile
+  // without endless horizontal scrolling.
+  const [namesCollapsed, setNamesCollapsed] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, PersonDraft>>(() => Object.fromEntries(
     roster.map(({ person, unitId }) => [person.id, {
       unitId,
@@ -81,7 +87,7 @@ export function EmployeesPanel({ property, onReorderMembers }: {
       </div>
       {reorderError ? <div className="shift-empty" role="alert">Impossibile salvare il nuovo ordine. Riprova.</div> : null}
       <div className="shift-table-scroll" tabIndex={0} aria-label="Configurazione dipendenti per Turni">
-        <table className="shift-employees-table">
+        <table className={`shift-employees-table${namesCollapsed ? ' is-compact-names' : ''}`}>
           <thead><tr><th>Dipendente</th><th>Unità</th><th>Tipo turno</th><th>Riposo</th><th>Giorni fissi</th><th>Origine</th></tr></thead>
           <tbody>{orderedRoster.map(({ person, unitId }) => {
             const draft = drafts[person.id] ?? { unitId, assignmentProfile: person.assignmentProfile, restMode: person.restMode, restDays: person.restDays ?? '' }
@@ -92,7 +98,13 @@ export function EmployeesPanel({ property, onReorderMembers }: {
                 onDragOver={(event) => { if (draggedId) event.preventDefault() }}
                 onDrop={(event) => { event.preventDefault(); if (draggedId) reorder(draggedId, person.id) }}
               >
-                <th scope="row"><GripVertical size={15} aria-hidden="true" className="shift-drag-handle" /><span className="shift-avatar">{person.initials}</span><span><strong>{person.name}</strong><small>{person.jobTitle}</small></span></th>
+                <th scope="row">
+                  <GripVertical size={15} aria-hidden="true" className="shift-drag-handle" />
+                  <button type="button" className="shift-person-toggle" onClick={() => setNamesCollapsed((current) => !current)} aria-label={namesCollapsed ? 'Mostra i nomi dei dipendenti' : undefined}>
+                    <span className="shift-avatar">{person.initials}</span>
+                    {!namesCollapsed ? <span><strong>{person.name}</strong><small>{person.jobTitle}</small></span> : null}
+                  </button>
+                </th>
                 <td><ShiftSelect ariaLabel={`Unità di ${person.name}`} value={draft.unitId} onChange={(unitId) => update(person.id, { unitId })} options={property.units.map((unit) => ({ value: unit.id, label: unit.name }))} /></td>
                 <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => update(person.id, { assignmentProfile })} options={['Diurno', 'Turnante', 'Notturno', 'Direttore', 'FOM'].map((label) => ({ value: label, label }))} /></td>
                 <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => update(person.id, { restMode: restMode as PersonDraft['restMode'] })} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
