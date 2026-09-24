@@ -100,7 +100,19 @@ export function EmployeesPanel({ property, onReorderMembers }: {
   )
 }
 
-export function RulesPanel({ unit }: { unit: ShiftPlanningUnit }) {
+const COVERAGE_EXCLUDED_CODES = ['D1', 'D2', 'F1', 'F2']
+
+function parseCoverage(coverage: string[]): Record<string, number> {
+  return Object.fromEntries(coverage.map((entry) => {
+    const [quantity, code] = entry.split(' × ')
+    return [code ?? entry, Number(quantity) || 0]
+  }))
+}
+
+export function RulesPanel({ unit, onSaveCoverageRules }: {
+  unit: ShiftPlanningUnit
+  onSaveCoverageRules?: (change: { planningUnitId: string; coverage: Array<{ code: string; quantity: number }> }) => Promise<void>
+}) {
   const [enabledRules, setEnabledRules] = useState(() => new Set(unit.rules.hard))
   function toggle(rule: string) {
     setEnabledRules((current) => {
@@ -109,11 +121,65 @@ export function RulesPanel({ unit }: { unit: ShiftPlanningUnit }) {
       return next
     })
   }
+  const codeMap = useMemo(() => new Map(unit.codes.map((code) => [code.code, code])), [unit.codes])
+  const [coverageDraft, setCoverageDraft] = useState<Record<string, number>>(() => parseCoverage(unit.rules.coverage))
+  useEffect(() => { setCoverageDraft(parseCoverage(unit.rules.coverage)) }, [unit.id, unit.rules.coverage])
+  const [newCode, setNewCode] = useState('')
+  const [newQuantity, setNewQuantity] = useState(1)
+  const [coverageSaveState, setCoverageSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const availableCodes = unit.codes.filter((code) => code.time && !COVERAGE_EXCLUDED_CODES.includes(code.code) && coverageDraft[code.code] === undefined)
+
+  function updateQuantity(code: string, quantity: number) {
+    setCoverageDraft((current) => ({ ...current, [code]: Math.max(0, Math.min(9, quantity)) }))
+    setCoverageSaveState('idle')
+  }
+  function removeRule(code: string) {
+    setCoverageDraft((current) => {
+      const next = { ...current }
+      delete next[code]
+      return next
+    })
+    setCoverageSaveState('idle')
+  }
+  function addRule() {
+    if (!newCode || coverageDraft[newCode] !== undefined) return
+    setCoverageDraft((current) => ({ ...current, [newCode]: Math.max(1, Math.min(9, newQuantity)) }))
+    setNewCode('')
+    setNewQuantity(1)
+    setCoverageSaveState('idle')
+  }
+  async function saveCoverage() {
+    if (!onSaveCoverageRules) return
+    setCoverageSaveState('saving')
+    try {
+      await onSaveCoverageRules({ planningUnitId: unit.id, coverage: Object.entries(coverageDraft).map(([code, quantity]) => ({ code, quantity })) })
+      setCoverageSaveState('saved')
+    } catch {
+      setCoverageSaveState('error')
+    }
+  }
   return (
     <div className="shift-rules-layout">
       <section className="shift-panel">
-        <div className="shift-panel-title"><div><h2>Regole di copertura giornaliera</h2><p>{unit.name} · {unit.ruleSetName}</p></div><span className="shift-status-chip">v{unit.ruleSetVersion}</span></div>
-        <div className="shift-coverage-editor">{unit.rules.coverage.map((coverage) => <article key={coverage}><strong>{coverage.split(' × ')[1]}</strong><span><button type="button" aria-label={`Diminuisci ${coverage}`}>−</button><b>{coverage.split(' × ')[0]}</b><button type="button" aria-label={`Aumenta ${coverage}`}>+</button></span></article>)}</div>
+        <div className="shift-panel-title"><div><h2>Regole di copertura giornaliera</h2><p>Numero di dipendenti richiesti per ciascun turno, ogni giorno · {unit.name} · {unit.ruleSetName}</p></div><span className="shift-status-chip">v{unit.ruleSetVersion}</span></div>
+        <div className="shift-coverage-editor">{Object.entries(coverageDraft).map(([code, quantity]) => {
+          const def = codeMap.get(code)
+          return <article key={code}>
+            <button type="button" className="shift-coverage-remove" aria-label={`Rimuovi regola ${code}`} onClick={() => removeRule(code)}>✕</button>
+            <strong style={{ background: def?.color, color: def?.textColor ?? '#fff' }}>{code}</strong>
+            <span><button type="button" aria-label={`Diminuisci ${code}`} onClick={() => updateQuantity(code, quantity - 1)}>−</button><b>{quantity}</b><button type="button" aria-label={`Aumenta ${code}`} onClick={() => updateQuantity(code, quantity + 1)}>+</button></span>
+          </article>
+        })}</div>
+        {onSaveCoverageRules ? <div className="shift-coverage-add">
+          <label>Aggiungi regola<ShiftSelect ariaLabel="Turno da aggiungere alla copertura" value={newCode} onChange={setNewCode} options={[{ value: '', label: 'Seleziona turno...' }, ...availableCodes.map((code) => ({ value: code.code, label: `${code.code} — ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
+          <label>Quantità<input type="number" min={1} max={9} value={newQuantity} onChange={(event) => setNewQuantity(Number(event.target.value))} /></label>
+          <button type="button" disabled={!newCode} onClick={addRule}>Aggiungi</button>
+        </div> : null}
+        {onSaveCoverageRules ? <div className="shift-coverage-save">
+          <button type="button" className="shift-original-primary" disabled={coverageSaveState === 'saving'} onClick={() => void saveCoverage()}>{coverageSaveState === 'saving' ? 'Salvataggio…' : 'Salva regole'}</button>
+          {coverageSaveState === 'saved' ? <span role="status">Regole salvate.</span> : null}
+          {coverageSaveState === 'error' ? <span role="alert">Impossibile salvare. Riprova.</span> : null}
+        </div> : null}
       </section>
       <section className="shift-panel">
         <div className="shift-panel-title"><div><h2>Regole assolute</h2><p>Vincoli rigidi configurati soltanto per l’unità {unit.name}.</p></div></div>
