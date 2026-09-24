@@ -6,6 +6,7 @@ import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { loadLiveShiftData } from './shiftLiveData'
 import { saveShiftAssignments } from './saveShiftAssignments'
+import { saveMemberOrder } from './saveMemberOrder'
 
 type State =
   | { status: 'loading' }
@@ -74,5 +75,8 @@ export function ShiftPlannerPage() {
       if (!unit) throw new Error('Unknown planning unit')
       await saveShiftAssignments(supabase, propertyId, profileId, unit, unitChanges)
     }
+  }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
   }} />
 }

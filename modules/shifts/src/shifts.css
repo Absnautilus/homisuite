@@ -167,6 +167,9 @@
 .shift-employees-table tbody th { align-items: center; display: flex; gap: 9px; min-width: 225px; }
 .shift-employees-table tbody th > span:last-child { display: grid; }
 .shift-employees-table tbody small { color: var(--shift-muted); font-weight: 500; }
+.shift-employees-table tbody tr[draggable="true"] { cursor: grab; }
+.shift-employees-table tbody tr.is-dragging { opacity: .4; }
+.shift-drag-handle { color: var(--shift-muted); flex: 0 0 auto; }
 .shift-custom-select { min-width: 130px; position: relative; }
 .shift-custom-select-trigger { align-items: center; background: white; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; display: flex; gap: 10px; justify-content: space-between; min-height: 40px; padding: 0 10px 0 12px; text-align: left; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; width: 100%; }
 .shift-custom-select-trigger:hover { border-color: var(--shift-accent); }
