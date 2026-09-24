@@ -600,10 +600,12 @@
   border: 1px solid #d4d9e6;
   border-radius: 6px;
   color: #707795;
+  cursor: pointer;
   height: 24px;
   width: 24px;
 }
-.shift-preference-order button:disabled { opacity: .35; }
+.shift-preference-order button:hover:not(:disabled) { border-color: var(--shift-accent); color: var(--shift-accent); }
+.shift-preference-order button:disabled { cursor: not-allowed; opacity: .35; }
 .shift-weekday-preferences {
   display: grid;
   gap: 10px;
@@ -627,14 +629,17 @@
 }
 .shift-weekday-preferences button {
   background: white;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 7px;
   color: #8188a7;
+  cursor: pointer;
   font-size: 9px;
   font-weight: 700;
   min-height: 23px;
   min-width: 30px;
 }
+.shift-weekday-preferences button:hover { border-color: var(--shift-accent); }
+.shift-weekday-preferences button.is-selected { border-color: transparent; }
 
 @media (max-width: 760px) {
   .shift-grid:has(th:nth-child(n+15)) { min-width: 970px; }
