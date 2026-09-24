@@ -4,7 +4,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Select, Input, Textarea } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, Clock, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
+import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, ChevronDown, ChevronUp, Clock, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
@@ -238,7 +238,7 @@ export function RequestRow({
                       aria-label={t('staff.row.moveUp')}
                       className="flex h-6 w-9 cursor-pointer items-center justify-center leading-none text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      ▲
+                      <ChevronUp className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
@@ -247,7 +247,7 @@ export function RequestRow({
                       aria-label={t('staff.row.moveDown')}
                       className="flex h-6 w-9 cursor-pointer items-center justify-center leading-none text-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      ▼
+                      <ChevronDown className="h-4 w-4" />
                     </button>
                   </div>
                   <button
