@@ -208,7 +208,7 @@
 .shift-rule-switches > div strong { color: var(--shift-ink); }
 .shift-rule-switches button { background: #bbbcca; border: 0; border-radius: 999px; cursor: pointer; flex: 0 0 42px; height: 24px; padding: 3px; transition: background-color 180ms ease; }
 .shift-rule-switches button i { background: white; border-radius: 999px; display: block; height: 18px; transition: transform 180ms ease; width: 18px; }
-.shift-rule-switches button.is-on { background: #17182b; }
+.shift-rule-switches button.is-on { background: var(--shift-accent); }
 .shift-rule-switches button.is-on i { transform: translateX(18px); }
 .shift-rule-switches button:disabled { cursor: not-allowed; opacity: .5; }
 .shift-priority-list { list-style: none; margin: 0; padding: 0; }
@@ -221,7 +221,7 @@
 .shift-priority-controls button:disabled { cursor: not-allowed; opacity: .4; }
 .shift-priority-controls button[role="switch"] { background: #bbbcca; border-radius: 999px; height: 20px; padding: 2px; width: 34px; }
 .shift-priority-controls button[role="switch"] i { background: white; border-radius: 999px; display: block; height: 16px; transition: transform 180ms ease; width: 16px; }
-.shift-priority-controls button[role="switch"].is-on { background: #17182b; }
+.shift-priority-controls button[role="switch"].is-on { background: var(--shift-accent); }
 .shift-priority-controls button[role="switch"].is-on i { transform: translateX(14px); }
 .shift-request-list { border: 1px solid var(--shift-line); border-radius: 13px; overflow: hidden; }
 .shift-request-list article { align-items: center; display: flex; gap: 14px; justify-content: space-between; min-height: 62px; padding: 11px 14px; }
