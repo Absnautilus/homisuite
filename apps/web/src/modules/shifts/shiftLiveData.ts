@@ -75,7 +75,7 @@ export async function loadLiveShiftData(
   ] = await Promise.all([
     supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,display_order').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
-    supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
+    supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,engine_version,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
     supabase.from('shift_month_states').select('planning_unit_id,status').eq('property_id', propertyId).eq('month', monthStart),
   ])
@@ -143,6 +143,7 @@ export async function loadLiveShiftData(
       excludedJobTitles: [],
       ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
       ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,
+      ruleSetEngineVersion: typeof activeRule?.engine_version === 'string' ? activeRule.engine_version : 'v1',
       codes: codes.filter((code) => code.planning_unit_id === unit.id).sort((a, b) => (codeRank.get(String(a.code)) ?? 999) - (codeRank.get(String(b.code)) ?? 999)).map((code) => ({
         code: String(code.code),
         label: typeof code.label === 'string' ? code.label : String(code.code),

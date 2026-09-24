@@ -30,6 +30,7 @@ export interface ShiftPlanningUnit {
   excludedJobTitles: string[]
   ruleSetName: string
   ruleSetVersion: number
+  ruleSetEngineVersion?: string
   codes: ShiftCode[]
   people: ShiftPerson[]
   assignments: Record<string, string[]>

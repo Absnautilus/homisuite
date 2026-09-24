@@ -17,7 +17,9 @@ export async function saveCoverageRules(
     property_id: propertyId,
     planning_unit_id: unit.id,
     version: unit.ruleSetVersion + 1,
+    status: 'active',
     preset_key: unit.ruleSetName,
+    engine_version: unit.ruleSetEngineVersion ?? 'v1',
     rules: {
       coverage: coverage.map(({ code, quantity }) => `${quantity} × ${code}`),
       hard: unit.rules.hard,
