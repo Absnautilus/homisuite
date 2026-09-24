@@ -1,14 +1,9 @@
+import { subscriptionKeyMatches, urlBase64ToUint8Array } from './devicePushKeys'
+
 const VAPID_PUBLIC_KEY = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? null
 
 export const DEVICE_PUSH_SUPPORTED =
   typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && VAPID_PUBLIC_KEY !== null
-
-function urlBase64ToUint8Array(base64url: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64url.length % 4)) % 4)
-  const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = atob(base64)
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
-}
 
 export async function getExistingPushSubscription(): Promise<PushSubscription | null> {
   if (!DEVICE_PUSH_SUPPORTED) return null
@@ -20,9 +15,11 @@ export async function getExistingPushSubscription(): Promise<PushSubscription | 
 // Requests notification permission, registers the service worker (shared
 // with Housekeeping's own on-duty push flow -- one origin, one sw.js), and
 // subscribes to Web Push, reusing an existing subscription if one is
-// already active. Throws 'permission_denied' if the user declines the
-// browser prompt -- callers should surface that as an explanation, not a
-// generic error.
+// already active AND still bound to the current VAPID key -- otherwise it's
+// a leftover from before a key rotation that can never receive a push
+// again, so it's dropped and replaced. Throws 'permission_denied' if the
+// user declines the browser prompt -- callers should surface that as an
+// explanation, not a generic error.
 export async function subscribeDevicePush(): Promise<PushSubscription> {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('permission_denied')
@@ -30,12 +27,16 @@ export async function subscribeDevicePush(): Promise<PushSubscription> {
   const registration = await navigator.serviceWorker.register('/sw.js')
   await navigator.serviceWorker.ready
 
+  const currentKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY as string)
   const existing = await registration.pushManager.getSubscription()
-  if (existing) return existing
+  if (existing) {
+    if (subscriptionKeyMatches(existing.options.applicationServerKey, currentKey)) return existing
+    await existing.unsubscribe()
+  }
 
   return registration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY as string) as BufferSource,
+    applicationServerKey: currentKey as BufferSource,
   })
 }
 
