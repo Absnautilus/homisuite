@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
@@ -12,7 +12,10 @@ type PersonDraft = {
   restDays: string
 }
 
-export function EmployeesPanel({ property }: { property: ShiftPreviewProperty }) {
+export function EmployeesPanel({ property, onReorderMembers }: {
+  property: ShiftPreviewProperty
+  onReorderMembers?: (change: { planningUnitId: string; staffProfileIds: string[] }) => Promise<void>
+}) {
   const roster = useMemo(() => {
     const people = new Map<string, { person: ShiftPlanningUnit['people'][number]; unitId: string }>()
     for (const unit of property.units) {
@@ -20,6 +23,12 @@ export function EmployeesPanel({ property }: { property: ShiftPreviewProperty })
     }
     return [...people.values()]
   }, [property])
+  const rosterById = useMemo(() => new Map(roster.map((entry) => [entry.person.id, entry])), [roster])
+  const [personOrder, setPersonOrder] = useState(() => roster.map(({ person }) => person.id))
+  useEffect(() => { setPersonOrder(roster.map(({ person }) => person.id)) }, [roster])
+  const orderedRoster = personOrder.map((id) => rosterById.get(id)).filter((entry): entry is NonNullable<typeof entry> => entry != null)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [reorderError, setReorderError] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, PersonDraft>>(() => Object.fromEntries(
     roster.map(({ person, unitId }) => [person.id, {
       unitId,
@@ -36,20 +45,46 @@ export function EmployeesPanel({ property }: { property: ShiftPreviewProperty })
     })
   }
 
+  function reorder(sourceId: string, targetId: string) {
+    if (sourceId === targetId) return
+    const source = rosterById.get(sourceId)
+    const target = rosterById.get(targetId)
+    if (!source || !target || source.unitId !== target.unitId) return
+    const previousOrder = personOrder
+    const nextOrder = [...previousOrder]
+    const sourceIndex = nextOrder.indexOf(sourceId)
+    const targetIndex = nextOrder.indexOf(targetId)
+    nextOrder.splice(sourceIndex, 1)
+    nextOrder.splice(targetIndex, 0, sourceId)
+    setPersonOrder(nextOrder)
+    setReorderError(false)
+    const staffProfileIds = nextOrder.filter((id) => rosterById.get(id)?.unitId === source.unitId)
+    onReorderMembers?.({ planningUnitId: source.unitId, staffProfileIds }).catch(() => {
+      setPersonOrder(previousOrder)
+      setReorderError(true)
+    })
+  }
+
   return (
     <section className="shift-panel shift-employees-panel">
       <div className="shift-panel-title">
-        <div><h2>Dipendenti</h2><p>La lista arriva da Team. Qui assegni soltanto unità e parametri di pianificazione.</p></div>
+        <div><h2>Dipendenti</h2><p>La lista arriva da Team. Qui assegni soltanto unità e parametri di pianificazione. Trascina per riordinare all'interno della stessa unità.</p></div>
         <span className="shift-status-chip">{roster.length} persone</span>
       </div>
+      {reorderError ? <div className="shift-empty" role="alert">Impossibile salvare il nuovo ordine. Riprova.</div> : null}
       <div className="shift-table-scroll" tabIndex={0} aria-label="Configurazione dipendenti per Turni">
         <table className="shift-employees-table">
           <thead><tr><th>Dipendente</th><th>Unità</th><th>Tipo turno</th><th>Riposo</th><th>Giorni fissi</th><th>Origine</th></tr></thead>
-          <tbody>{roster.map(({ person, unitId }) => {
+          <tbody>{orderedRoster.map(({ person, unitId }) => {
             const draft = drafts[person.id] ?? { unitId, assignmentProfile: person.assignmentProfile, restMode: person.restMode, restDays: person.restDays ?? '' }
             return (
-              <tr key={person.id}>
-                <th scope="row"><GripVertical size={15} aria-hidden="true" /><span className="shift-avatar">{person.initials}</span><span><strong>{person.name}</strong><small>{person.jobTitle}</small></span></th>
+              <tr key={person.id} draggable={Boolean(onReorderMembers)} className={draggedId === person.id ? 'is-dragging' : undefined}
+                onDragStart={() => setDraggedId(person.id)}
+                onDragEnd={() => setDraggedId(null)}
+                onDragOver={(event) => { if (draggedId) event.preventDefault() }}
+                onDrop={(event) => { event.preventDefault(); if (draggedId) reorder(draggedId, person.id) }}
+              >
+                <th scope="row"><GripVertical size={15} aria-hidden="true" className="shift-drag-handle" /><span className="shift-avatar">{person.initials}</span><span><strong>{person.name}</strong><small>{person.jobTitle}</small></span></th>
                 <td><ShiftSelect ariaLabel={`Unità di ${person.name}`} value={draft.unitId} onChange={(unitId) => update(person.id, { unitId })} options={property.units.map((unit) => ({ value: unit.id, label: unit.name }))} /></td>
                 <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => update(person.id, { assignmentProfile })} options={['Diurno', 'Turnante', 'Notturno', 'Direttore', 'FOM'].map((label) => ({ value: label, label }))} /></td>
                 <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => update(person.id, { restMode: restMode as PersonDraft['restMode'] })} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
@@ -60,7 +95,7 @@ export function EmployeesPanel({ property }: { property: ShiftPreviewProperty })
           })}</tbody>
         </table>
       </div>
-      <p className="shift-panel-note">Queste modifiche restano locali nella preview. Creazione account, ruolo Homisuite e mansione lavorativa continuano a essere gestiti da Team.</p>
+      <p className="shift-panel-note">L'ordine si salva subito. Le altre modifiche restano locali nella preview: creazione account, ruolo Homisuite e mansione lavorativa continuano a essere gestiti da Team.</p>
     </section>
   )
 }
