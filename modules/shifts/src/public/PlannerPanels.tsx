@@ -150,7 +150,15 @@ export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'pr
 export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
   const preferredCodes = unit.codes.filter((code) => code.time && code.code !== 'N').slice(0, 5)
   const [order, setOrder] = useState(() => preferredCodes.map((code) => code.code))
+  const [dayPreferences, setDayPreferences] = useState<Record<string, string[]>>({})
   const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+  function toggleDayPreference(day: string, code: string) {
+    setDayPreferences((current) => {
+      const existing = current[day] ?? []
+      const next = existing.includes(code) ? existing.filter((item) => item !== code) : [...existing, code]
+      return { ...current, [day]: next }
+    })
+  }
   function move(code: string, direction: -1 | 1) {
     setOrder((current) => {
       const index = current.indexOf(code)
@@ -177,7 +185,11 @@ export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
     })}</div>
     <div className="shift-form-label shift-section-label">Preferenze per giorno della settimana</div>
     <p className="shift-form-help">Es. “il lunedì preferisco C2, poi C1”. Seleziona uno o più turni per ciascun giorno, poi ordina la priorità con le frecce. Se imposti una preferenza qui, ha la precedenza su quella generale per quel giorno.</p>
-    <div className="shift-weekday-preferences">{days.map((day) => <div key={day}><strong>{day}</strong><span>{order.map((code) => <button type="button" key={code}>{code}</button>)}</span></div>)}</div>
+    <div className="shift-weekday-preferences">{days.map((day) => <div key={day}><strong>{day}</strong><span>{order.map((code) => {
+      const def = codeMap.get(code)
+      const selected = (dayPreferences[day] ?? []).includes(code)
+      return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day, code)}>{code}</button>
+    })}</span></div>)}</div>
   </section>
 }
 
