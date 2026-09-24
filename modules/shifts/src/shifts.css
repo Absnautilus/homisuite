@@ -210,10 +210,19 @@
 .shift-rule-switches button i { background: white; border-radius: 999px; display: block; height: 18px; transition: transform 180ms ease; width: 18px; }
 .shift-rule-switches button.is-on { background: #17182b; }
 .shift-rule-switches button.is-on i { transform: translateX(18px); }
+.shift-rule-switches button:disabled { cursor: not-allowed; opacity: .5; }
 .shift-priority-list { list-style: none; margin: 0; padding: 0; }
-.shift-priority-list li { align-items: center; border-top: 1px solid var(--shift-line); color: var(--shift-muted); display: flex; gap: 12px; min-height: 48px; }
+.shift-priority-list li { align-items: center; border-top: 1px solid var(--shift-line); color: var(--shift-muted); display: flex; gap: 12px; min-height: 48px; padding: 6px 0; }
 .shift-priority-list li:first-child { border-top: 0; }
-.shift-priority-list li span { align-items: center; background: #f0e8f7; border-radius: 999px; color: #704192; display: inline-flex; flex: 0 0 27px; font-size: 11px; font-weight: 800; height: 27px; justify-content: center; }
+.shift-priority-list li > span:first-child { align-items: center; background: #f0e8f7; border-radius: 999px; color: #704192; display: inline-flex; flex: 0 0 27px; font-size: 11px; font-weight: 800; height: 27px; justify-content: center; }
+.shift-priority-list li b { color: var(--shift-ink); flex: 1; font-weight: 500; }
+.shift-priority-controls { align-items: center; display: flex; flex: 0 0 auto; gap: 6px; }
+.shift-priority-controls button { background: var(--shift-soft); border: 0; border-radius: 6px; color: var(--shift-ink); cursor: pointer; height: 24px; width: 24px; }
+.shift-priority-controls button:disabled { cursor: not-allowed; opacity: .4; }
+.shift-priority-controls button[role="switch"] { background: #bbbcca; border-radius: 999px; height: 20px; padding: 2px; width: 34px; }
+.shift-priority-controls button[role="switch"] i { background: white; border-radius: 999px; display: block; height: 16px; transition: transform 180ms ease; width: 16px; }
+.shift-priority-controls button[role="switch"].is-on { background: #17182b; }
+.shift-priority-controls button[role="switch"].is-on i { transform: translateX(14px); }
 .shift-request-list { border: 1px solid var(--shift-line); border-radius: 13px; overflow: hidden; }
 .shift-request-list article { align-items: center; display: flex; gap: 14px; justify-content: space-between; min-height: 62px; padding: 11px 14px; }
 .shift-request-list article + article { border-top: 1px solid var(--shift-line); }

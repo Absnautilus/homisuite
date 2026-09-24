@@ -2,26 +2,29 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ShiftPlanningUnit } from '@homisuite/shifts-module'
 
 /**
- * shift_rule_sets is immutable-by-convention and versioned: editing coverage
- * means inserting a new version with the updated coverage (keeping the unit's
- * existing hard/soft rules and preset_key) and pointing the planning unit's
- * current_rule_set_id at it, rather than updating the row in place.
+ * shift_rule_sets is immutable-by-convention and versioned: editing coverage,
+ * hard or soft rules means inserting a new version with the updated fields
+ * (keeping the unit's preset_key and engine_version) and pointing the
+ * planning unit's current_rule_set_id at it, rather than updating the row
+ * in place.
  */
-export async function saveCoverageRules(
+export async function saveRuleSet(
   supabase: SupabaseClient,
   propertyId: string,
   unit: ShiftPlanningUnit,
-  coverage: Array<{ code: string; quantity: number }>,
+  rules: { coverage: Array<{ code: string; quantity: number }>; hard: string[]; soft: string[] },
 ) {
   const { data, error } = await supabase.from('shift_rule_sets').insert({
     property_id: propertyId,
     planning_unit_id: unit.id,
     version: unit.ruleSetVersion + 1,
+    status: 'active',
     preset_key: unit.ruleSetName,
+    engine_version: unit.ruleSetEngineVersion ?? 'v1',
     rules: {
-      coverage: coverage.map(({ code, quantity }) => `${quantity} × ${code}`),
-      hard: unit.rules.hard,
-      soft: unit.rules.soft,
+      coverage: rules.coverage.map(({ code, quantity }) => `${quantity} × ${code}`),
+      hard: rules.hard,
+      soft: rules.soft,
     },
   }).select('id').single()
   if (error) throw error
