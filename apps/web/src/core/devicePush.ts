@@ -10,6 +10,27 @@ function urlBase64ToUint8Array(base64url: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
 }
 
+function subscriptionUsesCurrentVapidKey(subscription: PushSubscription): boolean {
+  const existingKey = subscription.options.applicationServerKey
+  if (!existingKey || !VAPID_PUBLIC_KEY) return false
+
+  const currentKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+  const existingBytes = new Uint8Array(existingKey)
+  if (existingBytes.length !== currentKey.length) return false
+  return existingBytes.every((byte, index) => byte === currentKey[index])
+}
+
+async function replaceStaleSubscription(
+  registration: ServiceWorkerRegistration,
+  subscription: PushSubscription,
+): Promise<PushSubscription> {
+  await subscription.unsubscribe()
+  return registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY as string) as BufferSource,
+  })
+}
+
 export async function getExistingPushSubscription(): Promise<PushSubscription | null> {
   if (!DEVICE_PUSH_SUPPORTED) return null
   const registration = await navigator.serviceWorker.getRegistration('/sw.js')
@@ -31,7 +52,10 @@ export async function subscribeDevicePush(): Promise<PushSubscription> {
   await navigator.serviceWorker.ready
 
   const existing = await registration.pushManager.getSubscription()
-  if (existing) return existing
+  if (existing) {
+    if (subscriptionUsesCurrentVapidKey(existing)) return existing
+    return replaceStaleSubscription(registration, existing)
+  }
 
   return registration.pushManager.subscribe({
     userVisibleOnly: true,
