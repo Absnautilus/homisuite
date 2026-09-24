@@ -11,11 +11,26 @@ function urlBase64ToUint8Array(base64url: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
 }
 
+function subscriptionUsesCurrentVapidKey(subscription: PushSubscription): boolean {
+  const existingKey = subscription.options.applicationServerKey
+  if (!existingKey || !VAPID_PUBLIC_KEY) return false
+
+  const currentKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+  const existingBytes = new Uint8Array(existingKey)
+  if (existingBytes.length !== currentKey.length) return false
+  return existingBytes.every((byte, index) => byte === currentKey[index])
+}
+
 async function ensurePushSubscription(): Promise<void> {
   const registration = await navigator.serviceWorker.register('/sw.js')
   await navigator.serviceWorker.ready
 
   let subscription = await registration.pushManager.getSubscription()
+  if (subscription && !subscriptionUsesCurrentVapidKey(subscription)) {
+    await subscription.unsubscribe()
+    subscription = null
+  }
+
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
