@@ -180,6 +180,7 @@ export async function loadLiveShiftData(
         coverage: Array.isArray(rules.coverage) ? rules.coverage.map(String) : [],
         hard: Array.isArray(rules.hard) ? rules.hard.map(String) : [],
         soft: Array.isArray(rules.soft) ? rules.soft.map(String) : [],
+        restRotationPairsPerCycle: typeof rules.restRotationPairsPerCycle === 'number' ? rules.restRotationPairsPerCycle : undefined,
       },
     }
   })
