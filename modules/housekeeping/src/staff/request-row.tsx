@@ -177,40 +177,35 @@ export function RequestRow({
             // at a glance -- once archived, the same bold camera/title
             // treatment active rows need is just noise, so this header
             // quiets down instead of matching the active card's prominence.
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <div className={`flex shrink-0 flex-col items-center rounded-lg px-3 py-1.5 text-center ${mode === 'done' ? '' : 'bg-surface-2'}`}>
-                <span className="text-[0.625rem] font-bold uppercase tracking-wide text-muted">{t('staff.newRequest.room')}</span>
-                <span className={mode === 'done' ? 'text-base leading-none font-bold text-muted' : 'text-2xl leading-none font-extrabold text-foreground'}>
+            //
+            // Room, item and quantity sit on one baseline-aligned line
+            // instead of a boxed room number next to a differently-shaped
+            // quantity pill -- the two competing shapes read as
+            // inconsistent; plain typographic weight/color keeps them
+            // reading as one linear group.
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className={mode === 'done' ? 'text-base leading-none font-extrabold text-muted' : 'text-2xl leading-none font-extrabold text-accent'}>
                   {request.room_number}
                 </span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className={mode === 'done' ? 'text-sm leading-tight font-semibold text-muted' : 'text-lg leading-tight font-bold text-foreground'}>
-                    <AutoText text={typeName} translations={typeNameI18n} />
-                  </p>
-                  {request.quantity ? (
-                    <span
-                      className={
-                        mode === 'done'
-                          ? 'inline-flex shrink-0 items-center rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted'
-                          : 'inline-flex shrink-0 items-center rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent'
-                      }
-                    >
-                      × {request.quantity}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-0.5 text-sm text-muted">
-                  {formatTime(request.created_at)}
-                  {categoryName && (
-                    <>
-                      {' · '}
-                      <AutoText text={categoryName} translations={categoryNameI18n} />
-                    </>
-                  )}
+                <p className={mode === 'done' ? 'text-sm leading-tight font-semibold text-muted' : 'text-lg leading-tight font-semibold text-foreground'}>
+                  <AutoText text={typeName} translations={typeNameI18n} />
                 </p>
+                {request.quantity ? (
+                  <span className={mode === 'done' ? 'shrink-0 text-xs font-bold text-muted' : 'shrink-0 text-sm font-bold text-muted'}>
+                    × {request.quantity}
+                  </span>
+                ) : null}
               </div>
+              <p className="mt-0.5 text-sm text-muted">
+                {formatTime(request.created_at)}
+                {categoryName && (
+                  <>
+                    {' · '}
+                    <AutoText text={categoryName} translations={categoryNameI18n} />
+                  </>
+                )}
+              </p>
             </div>
           )}
           {!editing && (
