@@ -3,6 +3,40 @@ export interface RuleDefinition {
   text: string
 }
 
+export interface RoleCodes {
+  base: string[]
+  extra: string[]
+}
+
+export const ASSIGNMENT_ROLES: Array<{ key: string; label: string }> = [
+  { key: 'day', label: 'Diurno' },
+  { key: 'night', label: 'Notturno' },
+  { key: 'rotating', label: 'Turnante' },
+  { key: 'director', label: 'Direttore' },
+  { key: 'fom', label: 'FOM' },
+]
+
+/**
+ * Starting point for a new unit's role -> code eligibility (which codes
+ * "Assegna automaticamente" may give to each role, as a primary pool and a
+ * reserve pool used only when the primary pool can't cover a slot) --
+ * matches the original Turni app's own hardcoded mapping for a hotel using
+ * its sigle, but every property can edit it from Regole turni since
+ * homisuite's shift codes are freely named per property.
+ */
+export const DEFAULT_ROLE_CODES: Record<string, RoleCodes> = {
+  day: { base: ['C1', 'C2', 'A1', 'A2'], extra: ['CE'] },
+  night: { base: ['N'], extra: [] },
+  rotating: { base: ['C1', 'C2', 'A1', 'A2', 'N'], extra: ['CE'] },
+  director: { base: ['D1', 'D2'], extra: [] },
+  fom: { base: ['F1', 'F2'], extra: ['A1', 'A2', 'C1', 'C2'] },
+}
+
+export function initRoleCodes(stored: Record<string, RoleCodes> | undefined): Record<string, RoleCodes> {
+  if (!stored || Object.keys(stored).length === 0) return DEFAULT_ROLE_CODES
+  return Object.fromEntries(ASSIGNMENT_ROLES.map(({ key }) => [key, stored[key] ?? DEFAULT_ROLE_CODES[key]!]))
+}
+
 /**
  * Baseline hard/soft scheduling rules ported verbatim from the original
  * Turni app (Absnautilus/plannerturni), used as the fallback when a

@@ -124,6 +124,9 @@
 .shift-assignment-profile { font-weight: 700; }
 .shift-source { font-size: 12px; }
 .shift-empty { background: white; border: 1px solid var(--shift-line); border-radius: 14px; padding: 28px; text-align: center; }
+.shift-assign-conflicts { text-align: left; }
+.shift-assign-conflicts ul { list-style: disc; margin: 8px 0 0; padding-left: 20px; }
+.shift-assign-conflicts li { margin-bottom: 4px; }
 
 .shift-header-actions { align-items: end; display: flex; gap: 10px; }
 .shift-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
@@ -191,6 +194,35 @@
 .shift-custom-select-menu button.is-selected { background: var(--shift-accent-soft); color: var(--shift-accent); font-weight: 750; }
 .shift-custom-select-menu button svg { color: var(--shift-accent); }
 .shift-employees-panel .shift-panel-note { margin-bottom: 0 !important; }
+
+.shift-codes-add { display: inline-flex; align-items: center; gap: 6px; }
+.shift-codes-table { border-collapse: collapse; min-width: 720px; width: 100%; }
+.shift-codes-table th, .shift-codes-table td { border-bottom: 1px solid var(--shift-line); padding: 9px 10px; text-align: left; }
+.shift-codes-table thead th { background: #f0f1fa; color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
+.shift-codes-table tbody tr.is-archived { color: var(--shift-muted); opacity: .65; }
+.shift-codes-actions { display: flex; gap: 4px; }
+.shift-code-action { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--shift-muted); cursor: pointer; display: inline-flex; height: 28px; justify-content: center; width: 28px; }
+.shift-code-action:hover { background: var(--shift-soft); color: var(--shift-accent); }
+.shift-code-action.is-danger:hover { background: #fdecea; color: #c0392b; }
+.shift-code-badge-preview { border-radius: 6px; display: inline-flex; font-size: 11px; font-weight: 800; height: 24px; align-items: center; justify-content: center; min-width: 36px; padding: 0 8px; }
+
+.shift-role-codes-table { border-collapse: collapse; min-width: 560px; width: 100%; }
+.shift-role-codes-table th, .shift-role-codes-table td { border-bottom: 1px solid var(--shift-line); padding: 9px 10px; text-align: left; }
+.shift-role-codes-table thead th { background: #f0f1fa; color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
+.shift-role-codes-table tbody th { white-space: nowrap; }
+.shift-role-codes-table input { border: 1px solid var(--shift-line); border-radius: 8px; padding: 6px 9px; width: 100%; }
+
+.shift-code-form { background: var(--shift-soft); border-radius: 14px; margin-top: 16px; padding: 16px; }
+.shift-code-form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.shift-code-form-grid label { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
+.shift-code-form-grid input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
+.shift-code-color-row { align-items: center; display: flex; gap: 10px; margin-top: 14px; }
+.shift-code-color-row span:first-child { color: var(--shift-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.shift-code-color-row input[type="color"] { border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 3px; width: 44px; }
+.shift-code-color-row input[type="text"] { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 0 10px; text-transform: uppercase; width: 96px; }
+.shift-code-form-error { color: #c0392b; font-size: 12px; margin: 10px 0 0; }
+.shift-code-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.shift-code-form-cancel { background: transparent; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 42px; padding: 0 16px; }
 
 .shift-rules-layout { display: grid; gap: 16px; }
 .shift-rules-layout .shift-panel:first-child { border-radius: 0 0 18px 18px; border-top: 0; }

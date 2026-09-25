@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ShiftPlanningUnit, ShiftPreviewProperty } from '@homisuite/shifts-module'
+import { contrastTextColor, type ShiftPlanningUnit, type ShiftPreviewProperty } from '@homisuite/shifts-module'
 
 type Row = Record<string, unknown>
 
@@ -73,7 +73,7 @@ export async function loadLiveShiftData(
     shiftsResult,
     monthStatesResult,
   ] = await Promise.all([
-    supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
+    supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color,active').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,display_order').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,engine_version,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
@@ -144,12 +144,23 @@ export async function loadLiveShiftData(
       ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
       ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,
       ruleSetEngineVersion: typeof activeRule?.engine_version === 'string' ? activeRule.engine_version : 'v1',
-      codes: codes.filter((code) => code.planning_unit_id === unit.id).sort((a, b) => (codeRank.get(String(a.code)) ?? 999) - (codeRank.get(String(b.code)) ?? 999)).map((code) => ({
-        code: String(code.code),
-        label: typeof code.label === 'string' ? code.label : String(code.code),
-        time: timeLabel(typeof code.starts_at === 'string' ? code.starts_at : null, typeof code.ends_at === 'string' ? code.ends_at : null),
-        color: typeof code.color === 'string' ? code.color : '#9AA0A6',
-      })),
+      codes: codes.filter((code) => code.planning_unit_id === unit.id).sort((a, b) => (codeRank.get(String(a.code)) ?? 999) - (codeRank.get(String(b.code)) ?? 999)).map((code) => {
+        const color = typeof code.color === 'string' ? code.color : '#9AA0A6'
+        const startsAt = typeof code.starts_at === 'string' ? code.starts_at : null
+        const endsAt = typeof code.ends_at === 'string' ? code.ends_at : null
+        return {
+          id: String(code.id),
+          code: String(code.code),
+          label: typeof code.label === 'string' ? code.label : String(code.code),
+          time: timeLabel(startsAt, endsAt),
+          startsAt,
+          endsAt,
+          kind: (typeof code.kind === 'string' ? code.kind : 'work') as 'work' | 'rest' | 'leave' | 'permission' | 'absence',
+          color,
+          textColor: contrastTextColor(color),
+          active: code.active !== false,
+        }
+      }),
       people: unitMembers.filter((member) => {
         const staff = staffProfiles.find((candidate) => candidate.id === member.staff_profile_id)
         return staff?.active !== false
@@ -181,6 +192,7 @@ export async function loadLiveShiftData(
         hard: Array.isArray(rules.hard) ? rules.hard.map(String) : [],
         soft: Array.isArray(rules.soft) ? rules.soft.map(String) : [],
         restRotationPairsPerCycle: typeof rules.restRotationPairsPerCycle === 'number' ? rules.restRotationPairsPerCycle : undefined,
+        roleCodes: rules.roleCodes && typeof rules.roleCodes === 'object' ? rules.roleCodes as Record<string, { base: string[]; extra: string[] }> : undefined,
       },
     }
   })

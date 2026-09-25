@@ -9,6 +9,9 @@ import { saveShiftAssignments } from './saveShiftAssignments'
 import { saveMemberOrder } from './saveMemberOrder'
 import { saveRuleSet } from './saveRuleSet'
 import { setUnitRestDays } from './saveRestDays'
+import { saveShiftCode, deleteOrArchiveShiftCode } from './saveShiftCode'
+import { setMonthStatus } from './saveMonthStatus'
+import { generateUnitAssignments } from './generateAssignments'
 
 type State =
   | { status: 'loading' }
@@ -80,15 +83,31 @@ export function ShiftPlannerPage() {
   }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
-  }} onSaveRules={async ({ planningUnitId, coverage, hard, soft, restRotationPairsPerCycle }) => {
+  }} onSaveRules={async ({ planningUnitId, coverage, hard, soft, restRotationPairsPerCycle, roleCodes }) => {
     if (!propertyId) throw new Error('Missing active property')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
-    await saveRuleSet(supabase, propertyId, unit, { coverage, hard, soft, restRotationPairsPerCycle })
+    await saveRuleSet(supabase, propertyId, unit, { coverage, hard, soft, restRotationPairsPerCycle, roleCodes })
   }} onSetRestDays={async (planningUnitId) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     return setUnitRestDays(supabase, propertyId, profileId, unit)
+  }} onSaveCode={async (input) => {
+    if (!propertyId) throw new Error('Missing active property')
+    return saveShiftCode(supabase, propertyId, input)
+  }} onDeleteCode={async (_planningUnitId, codeId) => {
+    if (!propertyId) throw new Error('Missing active property')
+    return deleteOrArchiveShiftCode(supabase, propertyId, codeId)
+  }} onSetMonthStatus={async (planningUnitId, status) => {
+    if (!propertyId || !profileId) throw new Error('Missing active property/profile')
+    const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
+    if (!unit) throw new Error('Unknown planning unit')
+    await setMonthStatus(supabase, propertyId, profileId, unit, status)
+  }} onGenerateAssignments={async (planningUnitId) => {
+    if (!propertyId || !profileId) throw new Error('Missing active property/profile')
+    const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
+    if (!unit) throw new Error('Unknown planning unit')
+    return generateUnitAssignments(supabase, propertyId, profileId, unit)
   }} />
 }
