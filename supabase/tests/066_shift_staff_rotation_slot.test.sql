@@ -24,6 +24,18 @@ insert into profiles (id, full_name) values
   ('00000066-0000-0000-0000-000000000042', 'Staff A2'),
   ('00000066-0000-0000-0000-000000000043', 'Staff B1');
 
+-- property_staff_details_validate_job_title requires a membership at the
+-- property (or its organization) before a staff-details row can reference
+-- the profile.
+insert into memberships (profile_id, property_id, organization_id, role_id, status)
+select fixture.profile_id, fixture.property_id, null::uuid, role.id, 'active'
+from (values
+  ('00000066-0000-0000-0000-000000000041'::uuid, '00000066-0000-0000-0000-000000000011'::uuid),
+  ('00000066-0000-0000-0000-000000000042'::uuid, '00000066-0000-0000-0000-000000000011'::uuid),
+  ('00000066-0000-0000-0000-000000000043'::uuid, '00000066-0000-0000-0000-000000000012'::uuid)
+) as fixture(profile_id, property_id)
+join roles role on role.slug = 'receptionist';
+
 insert into property_staff_details (property_id, profile_id) values
   ('00000066-0000-0000-0000-000000000011', '00000066-0000-0000-0000-000000000041'),
   ('00000066-0000-0000-0000-000000000011', '00000066-0000-0000-0000-000000000042'),
