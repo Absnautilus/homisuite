@@ -12,7 +12,7 @@ export async function saveRuleSet(
   supabase: SupabaseClient,
   propertyId: string,
   unit: ShiftPlanningUnit,
-  rules: { coverage: Array<{ code: string; quantity: number }>; hard: string[]; soft: string[] },
+  rules: { coverage: Array<{ code: string; quantity: number }>; hard: string[]; soft: string[]; restRotationPairsPerCycle: number },
 ) {
   const { data, error } = await supabase.from('shift_rule_sets').insert({
     property_id: propertyId,
@@ -25,6 +25,7 @@ export async function saveRuleSet(
       coverage: rules.coverage.map(({ code, quantity }) => `${quantity} × ${code}`),
       hard: rules.hard,
       soft: rules.soft,
+      restRotationPairsPerCycle: rules.restRotationPairsPerCycle,
     },
   }).select('id').single()
   if (error) throw error

@@ -8,6 +8,7 @@ import { loadLiveShiftData } from './shiftLiveData'
 import { saveShiftAssignments } from './saveShiftAssignments'
 import { saveMemberOrder } from './saveMemberOrder'
 import { saveRuleSet } from './saveRuleSet'
+import { setUnitRestDays } from './saveRestDays'
 
 type State =
   | { status: 'loading' }
@@ -79,10 +80,15 @@ export function ShiftPlannerPage() {
   }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
-  }} onSaveRules={async ({ planningUnitId, coverage, hard, soft }) => {
+  }} onSaveRules={async ({ planningUnitId, coverage, hard, soft, restRotationPairsPerCycle }) => {
     if (!propertyId) throw new Error('Missing active property')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
-    await saveRuleSet(supabase, propertyId, unit, { coverage, hard, soft })
+    await saveRuleSet(supabase, propertyId, unit, { coverage, hard, soft, restRotationPairsPerCycle })
+  }} onSetRestDays={async (planningUnitId) => {
+    if (!propertyId || !profileId) throw new Error('Missing active property/profile')
+    const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
+    if (!unit) throw new Error('Unknown planning unit')
+    return setUnitRestDays(supabase, propertyId, profileId, unit)
   }} />
 }

@@ -21,6 +21,7 @@ export interface ShiftRuleSummary {
   hard: string[]
   soft: string[]
   coverage: string[]
+  restRotationPairsPerCycle?: number
 }
 
 export interface ShiftPlanningUnit {

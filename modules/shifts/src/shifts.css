@@ -219,6 +219,8 @@
 .shift-rule-switches button.is-on { background: var(--shift-accent); }
 .shift-rule-switches button.is-on i { transform: translateX(18px); }
 .shift-rule-switches button:disabled { cursor: not-allowed; opacity: .5; }
+.shift-pairs-per-cycle-input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; flex: 0 0 auto; height: 36px; padding: 0 10px; text-align: center; width: 56px; }
+.shift-pairs-per-cycle-input:disabled { background: var(--shift-soft); color: var(--shift-muted); cursor: not-allowed; }
 .shift-priority-list { list-style: none; margin: 0; padding: 0; }
 .shift-priority-list li { align-items: center; border-top: 1px solid var(--shift-line); color: var(--shift-muted); display: flex; gap: 12px; min-height: 48px; padding: 6px 0; }
 .shift-priority-list li:first-child { border-top: 0; }

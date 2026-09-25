@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
-import { DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
+import { DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, initRestRotationPairsPerCycle, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
 import { ShiftSelect } from './ShiftSelect'
 import { ShiftDatePicker } from './ShiftDatePicker'
 
@@ -11,6 +11,7 @@ export interface ShiftRuleSetSave {
   coverage: Array<{ code: string; quantity: number }>
   hard: string[]
   soft: string[]
+  restRotationPairsPerCycle: number
 }
 
 type PersonDraft = {
@@ -138,12 +139,14 @@ export function RulesPanel({ unit, onSaveRules }: {
   const [hardEnabled, setHardEnabled] = useState<Record<string, boolean>>(() => initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard))
   const [softOrder, setSoftOrder] = useState<string[]>(() => initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft))
   const [softEnabled, setSoftEnabled] = useState<Record<string, boolean>>(() => initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft))
+  const [pairsPerCycle, setPairsPerCycle] = useState<number>(() => initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle))
   useEffect(() => {
     setCoverageDraft(parseCoverage(unit.rules.coverage))
     setHardEnabled(initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard))
     setSoftOrder(initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft))
     setSoftEnabled(initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft))
-  }, [unit.id, unit.rules.coverage, unit.rules.hard, unit.rules.soft])
+    setPairsPerCycle(initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle))
+  }, [unit.id, unit.rules.coverage, unit.rules.hard, unit.rules.soft, unit.rules.restRotationPairsPerCycle])
   const [newCode, setNewCode] = useState('')
   const [newQuantity, setNewQuantity] = useState(1)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -177,6 +180,10 @@ export function RulesPanel({ unit, onSaveRules }: {
     setSoftEnabled((current) => ({ ...current, [key]: !current[key] }))
     setSaveState('idle')
   }
+  function updatePairsPerCycle(value: number) {
+    setPairsPerCycle(Math.max(1, Math.min(9, Math.round(value) || 1)))
+    setSaveState('idle')
+  }
   function moveSoft(key: string, direction: -1 | 1) {
     setSoftOrder((current) => {
       const index = current.indexOf(key)
@@ -201,6 +208,7 @@ export function RulesPanel({ unit, onSaveRules }: {
         coverage: Object.entries(coverageDraft).map(([code, quantity]) => ({ code, quantity })),
         hard: DEFAULT_HARD_RULES.filter((rule) => hardEnabled[rule.key]).map((rule) => rule.text),
         soft: softOrder.filter((key) => softEnabled[key]).map((key) => softByKey.get(key)?.text).filter((text): text is string => text != null),
+        restRotationPairsPerCycle: pairsPerCycle,
       })
       setSaveState('saved')
     } catch {
@@ -227,7 +235,12 @@ export function RulesPanel({ unit, onSaveRules }: {
       </section>
       <section className="shift-panel">
         <div className="shift-panel-title"><div><h2>Regole assolute</h2><p>Vincoli rigidi e indipendenti tra loro, configurati soltanto per l’unità {unit.name}.</p></div></div>
-        <div className="shift-rule-switches">{DEFAULT_HARD_RULES.map((rule) => <div key={rule.key}><span><strong>{rule.text.split(':')[0]}</strong>{`:${rule.text.split(':').slice(1).join(':')}`}</span><button type="button" role="switch" aria-checked={hardEnabled[rule.key] ?? true} className={hardEnabled[rule.key] ? 'is-on' : ''} disabled={!onSaveRules} onClick={() => toggleHard(rule.key)}><i /></button></div>)}</div>
+        <div className="shift-rule-switches">{DEFAULT_HARD_RULES.map((rule) => <div key={rule.key}><span><strong>{rule.text.split(':')[0]}</strong>{`:${rule.text.split(':').slice(1).join(':')}`}</span><button type="button" role="switch" aria-checked={hardEnabled[rule.key] ?? true} className={hardEnabled[rule.key] ? 'is-on' : ''} disabled={!onSaveRules} onClick={() => toggleHard(rule.key)}><i /></button></div>)}
+          <div>
+            <span><strong>Rotazione riposi</strong>: dopo quante coppie di riposo consecutive il turno successivo diventa un giorno singolo e la rotazione slitta di un giorno.</span>
+            <input type="number" min={1} max={9} value={pairsPerCycle} disabled={!onSaveRules} onChange={(event) => updatePairsPerCycle(Number(event.target.value))} className="shift-pairs-per-cycle-input" aria-label="Coppie di riposo per ciclo" />
+          </div>
+        </div>
       </section>
       <section className="shift-panel">
         <div className="shift-panel-title"><div><h2>Regole di preferenza</h2><p>Criteri usati in ordine per scegliere tra più candidati validi, dopo i vincoli assoluti.</p></div></div>

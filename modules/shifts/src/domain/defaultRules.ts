@@ -40,3 +40,16 @@ export function initRuleOrder(catalog: RuleDefinition[], stored: string[]): stri
   const missing = catalog.map((rule) => rule.key).filter((key) => !ordered.includes(key))
   return [...ordered, ...missing]
 }
+
+/**
+ * Cycle length for the rest-day rotation (see domain/restRotation.ts): after
+ * this many consecutive rest pairs, the next turn is a single day and the
+ * weekday rotates back by one. Fixed at 3 in the original app; exposed here
+ * as a per-unit setting since nothing about the algorithm requires it to be
+ * a constant.
+ */
+export const DEFAULT_REST_ROTATION_PAIRS_PER_CYCLE = 3
+
+export function initRestRotationPairsPerCycle(stored: number | undefined): number {
+  return Number.isInteger(stored) && (stored as number) > 0 ? (stored as number) : DEFAULT_REST_ROTATION_PAIRS_PER_CYCLE
+}
