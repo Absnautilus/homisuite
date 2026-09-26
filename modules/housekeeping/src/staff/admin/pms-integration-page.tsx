@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@homisuite/ui'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Select } from '@/components/ui/field'
@@ -16,13 +15,11 @@ import {
   type PmsSyncResult,
 } from '@/lib/admin-api'
 import { useLocale } from '@/lib/i18n/locale-context'
-import { useHotelName } from '@/lib/hotel-branding-context'
 import { getErrorMessage } from '@/lib/errors'
 import type { StaffProfile } from '@/lib/staff-types'
 
 export function PmsIntegrationPage({ profile }: { profile: StaffProfile }) {
   const { t } = useLocale()
-  const hotelName = useHotelName()
   const isMaster = profile.role === 'master'
   const [hotels, setHotels] = useState<Hotel[]>([])
   const [hotelId, setHotelId] = useState('')
@@ -41,7 +38,7 @@ export function PmsIntegrationPage({ profile }: { profile: StaffProfile }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={hotelName} title={t('staff.pms.title')} description={t('staff.pms.subtitle')} />
+      <div className="admin-panel-title"><h2>{t('staff.pms.title')}</h2><p>{t('staff.pms.subtitle')}</p></div>
 
       {isMaster && (
         <FieldGroup className="max-w-xs">

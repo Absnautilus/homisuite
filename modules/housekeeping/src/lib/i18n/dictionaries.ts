@@ -144,7 +144,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Segna come urgente',
     'staff.row.unmarkUrgent': 'Rimuovi urgenza',
 
-    'staff.newRequest.toggle': '+ Nuova segnalazione',
+    'staff.newRequest.toggle': 'Nuova segnalazione',
     'staff.newRequest.title': 'Nuova segnalazione',
     'staff.newRequest.room': 'Camera',
     'staff.newRequest.category': 'Categoria',
@@ -160,6 +160,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Annulla',
     'staff.confirm.confirm': 'Conferma',
 
+    'staff.admin.subtitle': 'Configurazione operativa di Housekeeping: staff, camere, menu richieste e altro.',
     'staff.admin.tabStaff': 'Staff',
     'staff.admin.tabRooms': 'Camere',
     'staff.admin.tabMenu': 'Menu richieste',
@@ -543,7 +544,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Mark as urgent',
     'staff.row.unmarkUrgent': 'Remove urgent',
 
-    'staff.newRequest.toggle': '+ New request',
+    'staff.newRequest.toggle': 'New request',
     'staff.newRequest.title': 'New request',
     'staff.newRequest.room': 'Room',
     'staff.newRequest.category': 'Category',
@@ -559,6 +560,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Cancel',
     'staff.confirm.confirm': 'Confirm',
 
+    'staff.admin.subtitle': "Housekeeping's operational setup: staff, rooms, request menu and more.",
     'staff.admin.tabStaff': 'Staff',
     'staff.admin.tabRooms': 'Rooms',
     'staff.admin.tabMenu': 'Request menu',
@@ -942,7 +944,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Marquer comme urgent',
     'staff.row.unmarkUrgent': 'Retirer l\'urgence',
 
-    'staff.newRequest.toggle': '+ Nouveau signalement',
+    'staff.newRequest.toggle': 'Nouveau signalement',
     'staff.newRequest.title': 'Nouveau signalement',
     'staff.newRequest.room': 'Chambre',
     'staff.newRequest.category': 'Catégorie',
@@ -958,6 +960,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Annuler',
     'staff.confirm.confirm': 'Confirmer',
 
+    'staff.admin.subtitle': 'Configuration opérationnelle de Housekeeping : personnel, chambres, menu des demandes et plus.',
     'staff.admin.tabStaff': 'Personnel',
     'staff.admin.tabRooms': 'Chambres',
     'staff.admin.tabMenu': 'Menu des demandes',
@@ -1341,7 +1344,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Als dringend markieren',
     'staff.row.unmarkUrgent': 'Dringend entfernen',
 
-    'staff.newRequest.toggle': '+ Neue Meldung',
+    'staff.newRequest.toggle': 'Neue Meldung',
     'staff.newRequest.title': 'Neue Meldung',
     'staff.newRequest.room': 'Zimmer',
     'staff.newRequest.category': 'Kategorie',
@@ -1357,6 +1360,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Abbrechen',
     'staff.confirm.confirm': 'Bestätigen',
 
+    'staff.admin.subtitle': 'Betriebliche Einrichtung von Housekeeping: Personal, Zimmer, Anfragenmenü und mehr.',
     'staff.admin.tabStaff': 'Personal',
     'staff.admin.tabRooms': 'Zimmer',
     'staff.admin.tabMenu': 'Anfragenmenü',
@@ -1740,7 +1744,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Marcar como urgente',
     'staff.row.unmarkUrgent': 'Quitar urgente',
 
-    'staff.newRequest.toggle': '+ Nueva incidencia',
+    'staff.newRequest.toggle': 'Nueva incidencia',
     'staff.newRequest.title': 'Nueva incidencia',
     'staff.newRequest.room': 'Habitación',
     'staff.newRequest.category': 'Categoría',
@@ -1756,6 +1760,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Cancelar',
     'staff.confirm.confirm': 'Confirmar',
 
+    'staff.admin.subtitle': 'Configuración operativa de Housekeeping: personal, habitaciones, menú de solicitudes y más.',
     'staff.admin.tabStaff': 'Personal',
     'staff.admin.tabRooms': 'Habitaciones',
     'staff.admin.tabMenu': 'Menú de solicitudes',
@@ -2139,7 +2144,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Marcar como urgente',
     'staff.row.unmarkUrgent': 'Remover urgente',
 
-    'staff.newRequest.toggle': '+ Novo registo',
+    'staff.newRequest.toggle': 'Novo registo',
     'staff.newRequest.title': 'Novo registo',
     'staff.newRequest.room': 'Quarto',
     'staff.newRequest.category': 'Categoria',
@@ -2155,6 +2160,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Cancelar',
     'staff.confirm.confirm': 'Confirmar',
 
+    'staff.admin.subtitle': 'Configuração operacional do Housekeeping: equipa, quartos, menu de pedidos e mais.',
     'staff.admin.tabStaff': 'Equipa',
     'staff.admin.tabRooms': 'Quartos',
     'staff.admin.tabMenu': 'Menu de pedidos',
@@ -2538,7 +2544,7 @@ export const dictionaries = {
     'staff.row.markUrgent': '緊急としてマーク',
     'staff.row.unmarkUrgent': '緊急を解除',
 
-    'staff.newRequest.toggle': '+ 新しい報告',
+    'staff.newRequest.toggle': '新しい報告',
     'staff.newRequest.title': '新しい報告',
     'staff.newRequest.room': '部屋',
     'staff.newRequest.category': 'カテゴリー',
@@ -2554,6 +2560,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'キャンセル',
     'staff.confirm.confirm': '確認',
 
+    'staff.admin.subtitle': 'ハウスキーピングの運用設定:スタッフ、客室、リクエストメニューなど。',
     'staff.admin.tabStaff': 'スタッフ',
     'staff.admin.tabRooms': '部屋',
     'staff.admin.tabMenu': 'リクエストメニュー',
@@ -2937,7 +2944,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'জরুরি হিসেবে চিহ্নিত করুন',
     'staff.row.unmarkUrgent': 'জরুরি সরান',
 
-    'staff.newRequest.toggle': '+ নতুন রিপোর্ট',
+    'staff.newRequest.toggle': 'নতুন রিপোর্ট',
     'staff.newRequest.title': 'নতুন রিপোর্ট',
     'staff.newRequest.room': 'রুম',
     'staff.newRequest.category': 'বিভাগ',
@@ -2953,6 +2960,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'বাতিল করুন',
     'staff.confirm.confirm': 'নিশ্চিত করুন',
 
+    'staff.admin.subtitle': 'হাউসকিপিং-এর অপারেশনাল সেটআপ: স্টাফ, রুম, অনুরোধ মেনু এবং আরও অনেক কিছু।',
     'staff.admin.tabStaff': 'স্টাফ',
     'staff.admin.tabRooms': 'রুম',
     'staff.admin.tabMenu': 'অনুরোধ মেনু',
@@ -3336,7 +3344,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'अत्यावश्यक के रूप में चिह्नित करें',
     'staff.row.unmarkUrgent': 'अत्यावश्यक हटाएं',
 
-    'staff.newRequest.toggle': '+ नई रिपोर्ट',
+    'staff.newRequest.toggle': 'नई रिपोर्ट',
     'staff.newRequest.title': 'नई रिपोर्ट',
     'staff.newRequest.room': 'कमरा',
     'staff.newRequest.category': 'श्रेणी',
@@ -3352,6 +3360,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'रद्द करें',
     'staff.confirm.confirm': 'पुष्टि करें',
 
+    'staff.admin.subtitle': 'हाउसकीपिंग की परिचालन सेटअप: स्टाफ, कमरे, अनुरोध मेनू और अधिक।',
     'staff.admin.tabStaff': 'स्टाफ',
     'staff.admin.tabRooms': 'कमरे',
     'staff.admin.tabMenu': 'अनुरोध मेनू',
@@ -3735,7 +3744,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'وضع علامة عاجل',
     'staff.row.unmarkUrgent': 'إزالة العاجل',
 
-    'staff.newRequest.toggle': '+ بلاغ جديد',
+    'staff.newRequest.toggle': 'بلاغ جديد',
     'staff.newRequest.title': 'بلاغ جديد',
     'staff.newRequest.room': 'الغرفة',
     'staff.newRequest.category': 'الفئة',
@@ -3751,6 +3760,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'إلغاء',
     'staff.confirm.confirm': 'تأكيد',
 
+    'staff.admin.subtitle': 'الإعداد التشغيلي لـHousekeeping: الفريق، الغرف، قائمة الطلبات والمزيد.',
     'staff.admin.tabStaff': 'فريق العمل',
     'staff.admin.tabRooms': 'الغرف',
     'staff.admin.tabMenu': 'قائمة الطلبات',
@@ -4134,7 +4144,7 @@ export const dictionaries = {
     'staff.row.markUrgent': '标记为紧急',
     'staff.row.unmarkUrgent': '取消紧急标记',
 
-    'staff.newRequest.toggle': '+ 新报修',
+    'staff.newRequest.toggle': '新报修',
     'staff.newRequest.title': '新报修',
     'staff.newRequest.room': '房间',
     'staff.newRequest.category': '分类',
@@ -4150,6 +4160,7 @@ export const dictionaries = {
     'staff.confirm.cancel': '取消',
     'staff.confirm.confirm': '确认',
 
+    'staff.admin.subtitle': 'Housekeeping 的运营设置:员工、客房、请求菜单等。',
     'staff.admin.tabStaff': '员工',
     'staff.admin.tabRooms': '房间',
     'staff.admin.tabMenu': '请求菜单',
@@ -4533,7 +4544,7 @@ export const dictionaries = {
     'staff.row.markUrgent': 'Отметить как срочное',
     'staff.row.unmarkUrgent': 'Снять срочность',
 
-    'staff.newRequest.toggle': '+ Новое обращение',
+    'staff.newRequest.toggle': 'Новое обращение',
     'staff.newRequest.title': 'Новое обращение',
     'staff.newRequest.room': 'Комната',
     'staff.newRequest.category': 'Категория',
@@ -4549,6 +4560,7 @@ export const dictionaries = {
     'staff.confirm.cancel': 'Отменить',
     'staff.confirm.confirm': 'Подтвердить',
 
+    'staff.admin.subtitle': 'Операционные настройки Housekeeping: персонал, номера, меню запросов и многое другое.',
     'staff.admin.tabStaff': 'Персонал',
     'staff.admin.tabRooms': 'Комнаты',
     'staff.admin.tabMenu': 'Меню запросов',

@@ -71,14 +71,15 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
 
   if (!open) {
     return (
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        <Plus size={16} />
         {t('staff.newRequest.toggle')}
       </Button>
     )
   }
 
   return (
-    <Card className="mb-5">
+    <Card className="mb-5 w-full">
       <CardHeader>
         <h2 className="text-sm font-semibold text-foreground">{t('staff.newRequest.title')}</h2>
       </CardHeader>

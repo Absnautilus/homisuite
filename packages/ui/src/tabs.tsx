@@ -11,6 +11,14 @@ export interface TabsProps {
   value: string
   onValueChange: (value: string) => void
   className?: string
+  /**
+   * 'accent' (default) fills the active pill with the brand accent color --
+   * for a page's own primary section switcher (e.g. Turni's Operativo/
+   * Impostazioni). 'surface' fills it with the page background instead, a
+   * quieter look for a switcher that sits above/alongside other primary
+   * chrome (e.g. a module-wide nav bar).
+   */
+  variant?: 'accent' | 'surface'
   'aria-label'?: string
 }
 
@@ -18,7 +26,7 @@ export interface TabsProps {
 // from the real button, not a fixed width, so labels of any length work.
 // `ready` withholds the indicator until its first real measurement lands,
 // so it never flashes at the wrong position/width on mount.
-export function Tabs({ items, value, onValueChange, className, ...aria }: TabsProps) {
+export function Tabs({ items, value, onValueChange, className, variant = 'accent', ...aria }: TabsProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const buttonRefs = useRef(new Map<string, HTMLButtonElement>())
   const [rect, setRect] = useState<{ left: number; width: number } | null>(null)
@@ -39,7 +47,7 @@ export function Tabs({ items, value, onValueChange, className, ...aria }: TabsPr
   }, [])
 
   return (
-    <div ref={listRef} role="tablist" className={['ui-tabs', className].filter(Boolean).join(' ')} {...aria}>
+    <div ref={listRef} role="tablist" className={['ui-tabs', variant === 'surface' && 'ui-tabs--surface', className].filter(Boolean).join(' ')} {...aria}>
       <span
         aria-hidden="true"
         className="ui-tabs-indicator"

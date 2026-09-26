@@ -112,8 +112,27 @@
 }
 
 .hk-root .admin-tab.active {
-  background: var(--surface);
+  background: var(--accent);
+  color: var(--accent-ink, #fff);
+}
+
+/* Lighter sub-panel heading for AdminHome's 7 routed sub-pages, which now
+   sit under AdminHome's own PageHeader ("Gestione") instead of each
+   repeating a full page-level heading -- same grammar Turni uses for its
+   own nested panels (.shift-panel-title). */
+.hk-root .admin-panel-title {
+  margin: 0 0 18px;
+}
+.hk-root .admin-panel-title h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--foreground);
-  box-shadow: var(--shadow-sm);
+}
+.hk-root .admin-panel-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 

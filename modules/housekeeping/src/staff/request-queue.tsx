@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { PageHeader } from '@homisuite/ui'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PageHeader, Tabs } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
-import { cn } from '@/lib/cn'
 import { cancelRequest, claimRequest, fetchQueue, listQueueJobTitles, subscribeToQueue } from '@/lib/staff-api'
 import { useRequestAlerts } from '@/hooks/use-request-alerts'
 import { playAlertSound } from '@/lib/beep'
@@ -114,24 +113,24 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
       {embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
 
       {managesFrontDesk && (
-        <div>
+        <div className="flex justify-end">
           <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
         </div>
       )}
 
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
-        <div className="flex justify-end border-b border-line bg-surface px-4 py-3">
-          <div className="flex gap-1 rounded-md bg-surface-2 p-1 sm:w-fit">
-            <TabButton active={tab === 'new'} onClick={() => setTab('new')}>
-              {t('staff.queue.tabNew')} ({pending.length})
-            </TabButton>
-            <TabButton active={tab === 'inProgress'} onClick={() => setTab('inProgress')}>
-              {t('staff.queue.columnInProgress')} ({inProgress.length})
-            </TabButton>
-            <TabButton active={tab === 'done'} onClick={() => setTab('done')}>
-              {t('staff.queue.tabDone')}
-            </TabButton>
-          </div>
+        <div className="border-b border-line bg-surface px-4 py-3 sm:px-5">
+          <Tabs
+            items={[
+              { value: 'new', label: `${t('staff.queue.tabNew')} (${pending.length})` },
+              { value: 'inProgress', label: `${t('staff.queue.columnInProgress')} (${inProgress.length})` },
+              { value: 'done', label: t('staff.queue.tabDone') },
+            ]}
+            value={tab}
+            onValueChange={(value) => setTab(value as Tab)}
+            variant="surface"
+            aria-label={t('staff.queue.title')}
+          />
         </div>
         <div className="p-4 sm:p-5">
       {loadError ? (
@@ -213,20 +212,5 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
         </div>
       </section>
     </div>
-  )
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex-1 cursor-pointer whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
-        active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
-      )}
-    >
-      {children}
-    </button>
   )
 }
