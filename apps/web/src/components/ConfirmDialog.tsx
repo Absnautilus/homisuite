@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Modal } from './Modal'
+import { Modal } from '@homisuite/ui'
 
 export interface ConfirmOptions {
   title: string

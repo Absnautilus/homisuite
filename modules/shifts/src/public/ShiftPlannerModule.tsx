@@ -4,6 +4,7 @@ import { PageHeader, Tabs } from '@homisuite/ui'
 import type { ShiftCode } from '../preview/fixtures'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
 import type { AssignmentConflict } from '../domain/assignment'
+import { contrastTextColor } from '../domain/contrastColor'
 import { CodesPanel, type ShiftCodeSave } from './CodesPanel'
 import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel, type ShiftRuleSetSave } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
@@ -196,7 +197,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     if (!onSaveCode || !unit) return
     setRestCodeSetupState('saving')
     try {
-      await saveCode({ planningUnitId: unit.id, code: 'R', label: 'Riposo', kind: 'rest', startsAt: null, endsAt: null, color: '#5B7C99' })
+      await saveCode({ planningUnitId: unit.id, code: 'R', label: 'Riposo', kind: 'rest', startsAt: null, endsAt: null, color: '#5B7C99', textColor: contrastTextColor('#5B7C99') })
       setRestCodeSetupState('idle')
     } catch {
       setRestCodeSetupState('error')

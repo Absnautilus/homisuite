@@ -208,7 +208,9 @@
 .shift-role-codes-table tbody th { white-space: nowrap; }
 .shift-role-codes-table input { border: 1px solid var(--shift-line); border-radius: 8px; padding: 6px 9px; width: 100%; }
 
-.shift-code-form { background: var(--shift-soft); border-radius: 14px; margin-top: 16px; padding: 16px; }
+/* The card chrome (background/padding/margin) is the modal body's now --
+   this form only lays out its own fields. */
+.shift-code-form { display: grid; gap: 14px; }
 .shift-code-form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .shift-code-form-grid label { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
 .shift-code-form-grid input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
@@ -217,16 +219,19 @@
 .shift-code-color-row input[type="color"] { border: 1px solid var(--shift-line-strong); border-radius: 8px; flex-shrink: 0; height: 38px; padding: 3px; width: 44px; }
 .shift-code-color-row input[type="text"] { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 0 10px; text-transform: uppercase; min-width: 0; flex: 1 1 84px; }
 .shift-code-color-row .shift-code-badge-preview { flex-shrink: 0; }
-.shift-code-form-error { color: #c0392b; font-size: 12px; margin: 10px 0 0; }
-.shift-code-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.shift-code-textcolor-field { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
+.shift-code-textcolor-options { display: flex; gap: 8px; }
+.shift-code-textcolor-option { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; height: 40px; padding: 0 14px; text-transform: none; }
+.shift-code-textcolor-option.is-selected { background: var(--shift-accent); border-color: var(--shift-accent); color: white; }
+.shift-code-form-error { color: #c0392b; font-size: 12px; margin: 0; }
 .shift-code-form-cancel { background: transparent; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 42px; padding: 0 16px; }
 
 .shift-unit-name-field { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; max-width: 320px; text-transform: uppercase; }
 .shift-unit-name-field input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
-.shift-unit-job-titles { margin-top: 16px; }
 .shift-unit-job-titles-label { color: var(--shift-muted); display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
 .shift-unit-job-titles-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 .shift-unit-job-title-option { align-items: center; background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; display: flex; font-size: 13px; font-weight: 500; gap: 8px; min-width: 0; padding: 8px 10px; text-transform: none; }
+.shift-unit-job-title-option input[type="checkbox"] { accent-color: var(--shift-accent); height: 16px; width: 16px; }
 
 .shift-rules-layout { display: grid; gap: 16px; }
 .shift-rules-layout .shift-panel:first-child { border-radius: 0 0 18px 18px; border-top: 0; }

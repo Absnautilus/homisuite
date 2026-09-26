@@ -6,7 +6,7 @@ function timeLabel(start: string | null, end: string | null): string {
   return `${start.slice(0, 5)}–${end.slice(0, 5)}`
 }
 
-function toShiftCode(row: { id: string; code: string; label: string; kind: string; starts_at: string | null; ends_at: string | null; color: string; active: boolean }): ShiftCode {
+function toShiftCode(row: { id: string; code: string; label: string; kind: string; starts_at: string | null; ends_at: string | null; color: string; text_color: string | null; active: boolean }): ShiftCode {
   return {
     id: row.id,
     code: row.code,
@@ -16,7 +16,7 @@ function toShiftCode(row: { id: string; code: string; label: string; kind: strin
     endsAt: row.ends_at,
     kind: row.kind as ShiftCode['kind'],
     color: row.color,
-    textColor: contrastTextColor(row.color),
+    textColor: row.text_color ?? contrastTextColor(row.color),
     active: row.active,
   }
 }
@@ -30,11 +30,12 @@ export async function saveShiftCode(supabase: SupabaseClient, propertyId: string
     starts_at: input.startsAt,
     ends_at: input.endsAt,
     color: input.color,
+    text_color: input.textColor,
   }
   const query = input.id
     ? supabase.from('shift_codes').update(values).eq('property_id', propertyId).eq('id', input.id)
     : supabase.from('shift_codes').insert({ ...values, property_id: propertyId, planning_unit_id: input.planningUnitId })
-  const { data, error } = await query.select('id,code,label,kind,starts_at,ends_at,color,active').single()
+  const { data, error } = await query.select('id,code,label,kind,starts_at,ends_at,color,text_color,active').single()
   if (error) throw error
   return toShiftCode(data)
 }
