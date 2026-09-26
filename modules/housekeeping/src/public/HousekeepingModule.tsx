@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { LocaleProvider } from '@/lib/i18n/locale-context'
 import { UiScaleProvider } from '@/lib/ui-scale-context'
+import { HotelBrandingProvider } from '@/lib/hotel-branding-context'
 import { configureSupabaseClient } from '@/lib/supabase'
 import { StaffApp } from '@/staff/staff-app'
 import '../embedded.css'
@@ -33,6 +34,8 @@ export interface PlatformHotelSettings {
 export interface HousekeepingModuleProps {
   supabase: SupabaseClient
   hotelId: string
+  /** The property's display name, shown as every page's header eyebrow. */
+  hotelName: string
   basePath?: string
   /**
    * Core-owned authorization resolved by the Hotsflow shell.
@@ -63,6 +66,7 @@ export interface HousekeepingModuleProps {
 export function HousekeepingModule({
   supabase,
   hotelId,
+  hotelName,
   basePath = '/housekeeping',
   capabilities,
   platformStaffManagement,
@@ -76,14 +80,16 @@ export function HousekeepingModule({
     <div className="hk-root hk-root--embedded">
       <LocaleProvider>
         <UiScaleProvider>
-          <StaffApp
-            mode="embedded"
-            expectedHotelId={hotelId}
-            basePath={basePath}
-            capabilities={capabilities}
-            platformStaffManagement={platformStaffManagement}
-            hotelSettings={hotelSettings}
-          />
+          <HotelBrandingProvider hotelName={hotelName}>
+            <StaffApp
+              mode="embedded"
+              expectedHotelId={hotelId}
+              basePath={basePath}
+              capabilities={capabilities}
+              platformStaffManagement={platformStaffManagement}
+              hotelSettings={hotelSettings}
+            />
+          </HotelBrandingProvider>
         </UiScaleProvider>
       </LocaleProvider>
     </div>

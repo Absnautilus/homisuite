@@ -118,6 +118,7 @@ export function HousekeepingModuleGate() {
     <HousekeepingModule
       supabase={supabase}
       hotelId={access.hotelId}
+      hotelName={runtime.property?.name ?? 'Struttura'}
       basePath="/housekeeping"
       capabilities={{ manage: canManage, staysView: canManage || canManageQueue, queueManage: canManageQueue }}
       platformStaffManagement={{

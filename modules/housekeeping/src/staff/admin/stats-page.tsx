@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { Card, CardBody } from '@/components/ui/card'
 import { fetchCompletionStats, type StatsSummary } from '@/lib/admin-api'
 import { formatDuration } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import type { TranslationKey } from '@/lib/i18n/dictionaries'
 
 export function StatsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
+  const hotelName = useHotelName()
   const [stats, setStats] = useState<StatsSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,10 +25,7 @@ export function StatsPage({ hotelId }: { hotelId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{t('staff.stats.title')}</h1>
-        <p className="text-sm text-muted">{t('staff.stats.subtitle')}</p>
-      </div>
+      <PageHeader eyebrow={hotelName} title={t('staff.stats.title')} description={t('staff.stats.subtitle')} />
 
       {error ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.stats.loadError')}</div>
