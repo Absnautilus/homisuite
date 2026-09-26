@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { SlidePanel } from '@homisuite/ui'
+import { PageHeader, SlidePanel } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import { cn } from '@/lib/cn'
 import { RoomsPage } from '@/staff/admin/rooms-page'
 import { OperatorsPage } from '@/staff/admin/operators-page'
@@ -45,6 +46,7 @@ const moreLabels = {
 
 export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId, embeddedNav }: AdminHomeProps) {
   const { t, locale } = useLocale()
+  const hotelName = useHotelName()
   const location = useLocation()
   const operationalHotelId = hotelId ?? profile.hotel_id
   // One ordered, left-to-right list drives the nav (primary/secondary
@@ -97,6 +99,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
 
   return (
     <div className="min-w-0">
+      <PageHeader eyebrow={hotelName} title={t('staff.nav.admin')} description={t('staff.admin.subtitle')} />
       {embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
       <nav
         className="mb-5 flex w-fit max-w-full items-start gap-1 rounded-md bg-surface-2 p-1"

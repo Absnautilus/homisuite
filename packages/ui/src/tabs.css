@@ -43,6 +43,14 @@
   color: var(--accent-ink);
 }
 
+.ui-tabs--surface .ui-tabs-indicator {
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.ui-tabs--surface .ui-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ui-tabs-indicator,
   .ui-tab {

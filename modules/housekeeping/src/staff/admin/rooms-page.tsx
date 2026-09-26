@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@homisuite/ui'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
@@ -19,11 +18,9 @@ import { createRoom, deleteRoom, listRooms, setRoomActive, type Room } from '@/l
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
-import { useHotelName } from '@/lib/hotel-branding-context'
 
 export function RoomsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
-  const hotelName = useHotelName()
   const { push } = useToast()
   const [rooms, setRooms] = useState<Room[] | null>(null)
   const [hiddenRoomIds, setHiddenRoomIds] = useState<Set<string>>(new Set())
@@ -120,7 +117,7 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
   return (
     <div className="space-y-6">
       {confirmDialog}
-      <PageHeader eyebrow={hotelName} title={t('staff.rooms.title')} description={t('staff.rooms.subtitle')} />
+      <div className="admin-panel-title"><h2>{t('staff.rooms.title')}</h2><p>{t('staff.rooms.subtitle')}</p></div>
 
       <Card>
         <CardHeader>

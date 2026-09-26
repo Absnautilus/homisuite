@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@homisuite/ui'
 import { Badge } from '@/components/ui/badge'
 import { AutoText } from '@/components/auto-text'
 import { fetchItemAvailability, type ItemAvailability } from '@/lib/admin-api'
 import { getErrorMessage } from '@/lib/errors'
 import { useLocale } from '@/lib/i18n/locale-context'
-import { useHotelName } from '@/lib/hotel-branding-context'
 
 export function AvailabilityPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
-  const hotelName = useHotelName()
   const [items, setItems] = useState<ItemAvailability[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -24,7 +21,7 @@ export function AvailabilityPage({ hotelId }: { hotelId: string }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={hotelName} title={t('staff.availability.title')} description={t('staff.availability.subtitle')} />
+      <div className="admin-panel-title"><h2>{t('staff.availability.title')}</h2><p>{t('staff.availability.subtitle')}</p></div>
 
       {error ? (
         <div role="alert" className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.availability.loadError')}</div>

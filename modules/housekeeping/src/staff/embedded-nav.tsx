@@ -38,7 +38,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
 
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <Tabs items={items} value={active} onValueChange={(value) => navigate(value)} aria-label={t('staff.nav.requests')} />
+      <Tabs items={items} value={active} onValueChange={(value) => navigate(value)} variant="surface" aria-label={t('staff.nav.requests')} />
       <div className="flex items-center gap-1">
         <OnDutyToggle profile={profile} dark={false} />
         <NotificationSettingsToggle align="right" />

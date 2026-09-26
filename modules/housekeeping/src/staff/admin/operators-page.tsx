@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@homisuite/ui'
 import { Card, CardBody } from '@/components/ui/card'
 import { LinkButton } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +9,6 @@ import type { StaffRole } from '@/lib/types'
 import type { StaffProfile } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
-import { useHotelName } from '@/lib/hotel-branding-context'
 import type { PlatformStaffManagementLink } from '@/public/HousekeepingModule'
 
 const ROLE_KEY: Record<StaffRole, TranslationKey> = {
@@ -36,7 +34,6 @@ export function OperatorsPage({
   hotelId?: string
 }) {
   const { t } = useLocale()
-  const hotelName = useHotelName()
   const { push } = useToast()
   const isMaster = profile.role === 'master'
   const [staff, setStaff] = useState<OperatorSummary[] | null>(null)
@@ -76,7 +73,7 @@ export function OperatorsPage({
   return (
     <div className="space-y-6">
       {confirmDialog}
-      <PageHeader eyebrow={hotelName} title={t('staff.operators.title')} />
+      <div className="admin-panel-title"><h2>{t('staff.operators.title')}</h2></div>
 
       <Card>
         <CardBody>
