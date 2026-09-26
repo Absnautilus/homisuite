@@ -62,7 +62,16 @@ export async function loadLiveShiftData(
     .order('name')
   if (unitsError) throw unitsError
 
-  if (!units?.length) return { property: { id: propertyId, name: propertyName, units: [] }, month }
+  const { data: jobTitlesData, error: jobTitlesError } = await supabase
+    .from('property_job_titles')
+    .select('id,name')
+    .eq('property_id', propertyId)
+    .eq('active', true)
+    .order('name')
+  if (jobTitlesError) throw jobTitlesError
+  const jobTitleRoster = (jobTitlesData ?? []).map((row) => ({ id: String(row.id), name: String(row.name) }))
+
+  if (!units?.length) return { property: { id: propertyId, name: propertyName, units: [], jobTitleRoster }, month }
 
   const unitRows = units as Row[]
   const unitIds = unitRows.map((unit) => String(unit.id))
@@ -72,17 +81,20 @@ export async function loadLiveShiftData(
     rulesResult,
     shiftsResult,
     monthStatesResult,
+    unitJobTitlesResult,
   ] = await Promise.all([
     supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color,active').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,display_order').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,engine_version,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
     supabase.from('shift_month_states').select('planning_unit_id,status').eq('property_id', propertyId).eq('month', monthStart),
+    supabase.from('shift_unit_job_titles').select('planning_unit_id,job_title_id').eq('property_id', propertyId).in('planning_unit_id', unitIds),
   ])
 
-  for (const result of [codesResult, membersResult, rulesResult, shiftsResult, monthStatesResult]) {
+  for (const result of [codesResult, membersResult, rulesResult, shiftsResult, monthStatesResult, unitJobTitlesResult]) {
     if (result.error) throw result.error
   }
+  const unitJobTitles = (unitJobTitlesResult.data ?? []) as Row[]
 
   const codes = (codesResult.data ?? []) as Row[]
   const codeOrder = ['A1','A2','CE','C1','C2','N','D1','D2','F1','F2','R','F','P','P8','P7','P6','P5','P4','P3','P2','P1','R8','R7','R6','R5','R4','R3','R2','R1','RS','RR','AS','M','FG','CON','PL']
@@ -139,8 +151,8 @@ export async function loadLiveShiftData(
     return {
       id: String(unit.id),
       name: typeof unit.name === 'string' ? unit.name : 'Unità',
-      jobTitles: [],
-      excludedJobTitles: [],
+      status: 'active',
+      includedJobTitleIds: unitJobTitles.filter((row) => row.planning_unit_id === unit.id).map((row) => String(row.job_title_id)),
       ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
       ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,
       ruleSetEngineVersion: typeof activeRule?.engine_version === 'string' ? activeRule.engine_version : 'v1',
@@ -197,5 +209,5 @@ export async function loadLiveShiftData(
     }
   })
 
-  return { property: { id: propertyId, name: propertyName, units: projectedUnits }, month }
+  return { property: { id: propertyId, name: propertyName, units: projectedUnits, jobTitleRoster }, month }
 }

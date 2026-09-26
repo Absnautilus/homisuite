@@ -155,12 +155,14 @@ function CodeForm({ unit, initial, onSave, onClose }: {
             <label>Fine<input type="time" value={endsAt} required disabled={saving} onChange={(event) => setEndsAt(event.target.value)} /></label>
           </>
         ) : null}
-      </div>
-      <div className="shift-code-color-row">
-        <span>Colore badge</span>
-        <input type="color" value={swatch} disabled={saving} onChange={(event) => setColor(event.target.value)} aria-label="Colore badge" />
-        <input type="text" value={color} maxLength={7} spellCheck={false} disabled={saving} onChange={(event) => setColor(event.target.value)} />
-        <span className="shift-code-badge-preview" style={{ background: swatch, color: contrastTextColor(swatch) }}>{code.trim() || '—'}</span>
+        <label className="shift-code-color-field">
+          Colore badge
+          <span className="shift-code-color-row">
+            <input type="color" value={swatch} disabled={saving} onChange={(event) => setColor(event.target.value)} aria-label="Colore badge" />
+            <input type="text" value={color} maxLength={7} spellCheck={false} disabled={saving} onChange={(event) => setColor(event.target.value)} />
+            <span className="shift-code-badge-preview" style={{ background: swatch, color: contrastTextColor(swatch) }}>{code.trim() || '—'}</span>
+          </span>
+        </label>
       </div>
       {error ? <p role="alert" className="shift-code-form-error">{error}</p> : null}
       <div className="shift-code-form-actions">
