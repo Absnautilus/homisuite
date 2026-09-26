@@ -5,7 +5,7 @@ import { Check, ChevronDown } from 'lucide-react'
 // Fixed-position + portaled to <body>, computed from the trigger's own
 // viewport rect -- not just an absolutely-positioned child of .select-root.
 // A plain absolute panel gets clipped by any scrollable/overflow:hidden
-// ancestor (e.g. .modal-panel, which scrolls internally and is exactly
+// ancestor (e.g. .ui-modal-panel, which scrolls internally and is exactly
 // where this showed up: "Mansione" cut off mid-list inside the Team
 // modal). Flips above the trigger when there isn't enough room below.
 const PANEL_MAX_HEIGHT = 240
@@ -91,7 +91,7 @@ export function Select({
       if (triggerRef.current) setPanelPosition(computePanelPosition(triggerRef.current))
     }
     // capture: true also catches scroll on a nested scrollable ancestor
-    // (e.g. .modal-panel itself), not just the window.
+    // (e.g. .ui-modal-panel itself), not just the window.
     window.addEventListener('scroll', reposition, true)
     window.addEventListener('resize', reposition)
     return () => {

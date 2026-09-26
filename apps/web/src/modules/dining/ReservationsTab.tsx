@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Modal } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
-import { Modal } from '../../components/Modal'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { createReservation, listReservations, listRestaurants, updateReservation, type CreateReservationInput } from './api'

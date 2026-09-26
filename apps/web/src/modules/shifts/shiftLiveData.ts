@@ -83,7 +83,7 @@ export async function loadLiveShiftData(
     monthStatesResult,
     unitJobTitlesResult,
   ] = await Promise.all([
-    supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color,active').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
+    supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color,text_color,active').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,display_order').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,engine_version,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
     supabase.from('shifts').select('planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
@@ -169,7 +169,7 @@ export async function loadLiveShiftData(
           endsAt,
           kind: (typeof code.kind === 'string' ? code.kind : 'work') as 'work' | 'rest' | 'leave' | 'permission' | 'absence',
           color,
-          textColor: contrastTextColor(color),
+          textColor: typeof code.text_color === 'string' ? code.text_color : contrastTextColor(color),
           active: code.active !== false,
         }
       }),

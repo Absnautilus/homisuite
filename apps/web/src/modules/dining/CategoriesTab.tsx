@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Modal } from '@homisuite/ui'
 import { Pencil, Plus, UtensilsCrossed } from 'lucide-react'
-import { Modal } from '../../components/Modal'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
 import { createCategory, deleteCategory, listCategories, updateCategory } from './api'

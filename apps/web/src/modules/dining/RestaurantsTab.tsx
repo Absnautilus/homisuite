@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Modal } from '@homisuite/ui'
 import { Clock, Globe, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
-import { Modal } from '../../components/Modal'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { Modal } from './Modal'
+import { Modal } from '@homisuite/ui'
 
 type GuestQrModalProps = {
   open: boolean
