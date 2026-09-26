@@ -49,7 +49,7 @@ on:
           - include-all
         default: standard
       confirm_out_of_order_version:
-        description: "Only checked when migration_scope is include-all: type the exact out-of-order migration version(s) being applied (must be 20260915160000,20260915170000). Any value is accepted for mode=check or migration_scope=standard."
+        description: "Only checked when migration_scope is include-all: type the exact out-of-order migration version(s) being applied (must be 20260918160000). Any value is accepted for mode=check or migration_scope=standard."
         required: true
       confirm_project_ref:
         description: "Type the target Supabase project ref to confirm (must match the SUPABASE_PROJECT_REF repo variable exactly)"
@@ -70,11 +70,11 @@ jobs:
       - name: Verify out-of-order confirmation (include-all only)
         if: inputs.mode == 'apply' && inputs.migration_scope == 'include-all'
         run: |
-          if [ "${{ inputs.confirm_out_of_order_version }}" != "20260915160000,20260915170000" ]; then
-            echo "::error::confirm_out_of_order_version ('${{ inputs.confirm_out_of_order_version }}') must be exactly 20260915160000,20260915170000 to apply with migration_scope=include-all — refusing to proceed."
+          if [ "${{ inputs.confirm_out_of_order_version }}" != "20260918160000" ]; then
+            echo "::error::confirm_out_of_order_version ('${{ inputs.confirm_out_of_order_version }}') must be exactly 20260918160000 to apply with migration_scope=include-all — refusing to proceed."
             exit 1
           fi
-          echo "Out-of-order confirmation matched: 20260915160000,20260915170000"
+          echo "Out-of-order confirmation matched: 20260918160000"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
               echo "$local_val"
             fi
           done | sort)
-          expected=$(printf '%s\n' 20260921201522 | sort)
+          expected=$(printf '%s\n' 20260918160000 20260923212500 20260925090000 | sort)
           echo "Pending (local-only) migrations:"
           echo "$pending"
           if [ "$pending" != "$expected" ]; then
