@@ -1,26 +1,31 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, ShieldCheck } from 'lucide-react'
+import type { ShiftCode } from '../preview/fixtures'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
+import type { AssignmentConflict } from '../domain/assignment'
+import { CodesPanel, type ShiftCodeSave } from './CodesPanel'
 import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel, type ShiftRuleSetSave } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
 
 export interface ShiftPlannerCapabilities { view: boolean; manage: boolean; manageRequests: boolean }
 export interface ShiftAssignmentEdit { planningUnitId: string; staffProfileId: string; shiftDate: string; code: string }
 export interface ShiftMemberReorder { planningUnitId: string; staffProfileIds: string[] }
-export type { ShiftRuleSetSave }
-export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>> }
-type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'preferences' | 'swaps' | 'absences' | 'preassignments'
+export interface GenerateAssignmentsResult { assignments: Record<string, Record<string, string>>; conflicts: AssignmentConflict[] }
+export type { ShiftRuleSetSave, ShiftCodeSave, AssignmentConflict }
+export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult> }
+type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'codes' | 'preferences' | 'swaps' | 'absences' | 'preassignments'
 type CalendarView = 'month' | 'week'
 
 const DEFAULT_CAPABILITIES: ShiftPlannerCapabilities = { view: true, manage: true, manageRequests: true }
 const TABS: Array<{ id: ModuleTab; label: string; managerOnly?: boolean }> = [
   { id: 'calendar', label: 'Calendario' }, { id: 'mine', label: 'I miei turni' },
   { id: 'employees', label: 'Dipendenti', managerOnly: true }, { id: 'rules', label: 'Regole turni', managerOnly: true },
+  { id: 'codes', label: 'Codici turno', managerOnly: true },
   { id: 'preferences', label: 'Le mie preferenze' }, { id: 'swaps', label: 'Cambi turno' },
   { id: 'absences', label: 'Ferie / Permessi' }, { id: 'preassignments', label: 'Pre-assegnazioni' },
 ]
 
-export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveRules, onSetRestDays }: ShiftPlannerModuleProps) {
+export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveRules, onSetRestDays, onSaveCode, onDeleteCode, onSetMonthStatus, onGenerateAssignments }: ShiftPlannerModuleProps) {
   const initialProperty = previewProperties.find((property) => property.id === initialPropertyId) ?? previewProperties[0]
   const [propertyId, setPropertyId] = useState(initialProperty?.id ?? '')
   const [unitId, setUnitId] = useState(initialProperty?.units[0]?.id ?? '')
@@ -32,6 +37,10 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [pendingChanges, setPendingChanges] = useState<ShiftAssignmentEdit[]>([])
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [restDaysState, setRestDaysState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [restCodeSetupState, setRestCodeSetupState] = useState<'idle' | 'saving' | 'error'>('idle')
+  const [monthStatusState, setMonthStatusState] = useState<'idle' | 'saving' | 'error'>('idle')
+  const [assignState, setAssignState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [assignConflicts, setAssignConflicts] = useState<AssignmentConflict[]>([])
   const [tabDirection, setTabDirection] = useState<1 | -1>(1)
   const [tabTransitionActive, setTabTransitionActive] = useState(false)
   const navButtonRefs = useRef<Partial<Record<ModuleTab, HTMLButtonElement>>>({})
@@ -41,7 +50,8 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const property = useMemo(() => draftProperties.find((candidate) => candidate.id === propertyId) ?? draftProperties[0], [draftProperties, propertyId])
   const unit = property?.units.find((candidate) => candidate.id === unitId) ?? property?.units[0]
   const monthFinal = unit?.monthStatus === 'final'
-  const readOnly = readOnlyDemo || !capabilities.manage || monthFinal
+  const hasRestCode = unit?.codes.some((code) => code.code === 'R' && code.active !== false) ?? false
+  const readOnly = readOnlyDemo || !capabilities.manage
   const visibleTabs = TABS.filter((item) => !item.managerOnly || !readOnly)
   const periodLabel = calendarView === 'month'
     ? (['Agosto 2026', 'Settembre 2026', 'Ottobre 2026'][Math.max(0, Math.min(2, periodOffset + 1))] ?? 'Settembre 2026')
@@ -68,7 +78,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
 
   function changeProperty(nextPropertyId: string) { const next = draftProperties.find((candidate) => candidate.id === nextPropertyId); setPropertyId(nextPropertyId); setUnitId(next?.units[0]?.id ?? ''); setTab('calendar') }
   function editAssignment(staffProfileId: string, date: string, code: string) {
-    if (!unit || readOnly || preview) return
+    if (!unit || readOnly || preview || monthFinal) return
     const dateIndex = unit.assignmentDates?.indexOf(date) ?? -1
     if (dateIndex < 0) return
     setDraftProperties((current) => current.map((candidate) => candidate.id !== property?.id ? candidate : ({
@@ -95,7 +105,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
       ...candidate,
       units: candidate.units.map((candidateUnit) => candidateUnit.id !== change.planningUnitId ? candidateUnit : ({
         ...candidateUnit,
-        rules: { coverage: coverageStrings, hard: change.hard, soft: change.soft, restRotationPairsPerCycle: change.restRotationPairsPerCycle },
+        rules: { coverage: coverageStrings, hard: change.hard, soft: change.soft, restRotationPairsPerCycle: change.restRotationPairsPerCycle, roleCodes: change.roleCodes },
         ruleSetVersion: candidateUnit.ruleSetVersion + 1,
       })),
     })))
@@ -127,7 +137,87 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
       setRestDaysState('error')
     }
   }
-  function togglePreviewRole() { setReadOnlyDemo((current) => { const next = !current; if (next && (tab === 'employees' || tab === 'rules')) setTab('calendar'); return next }) }
+  async function generateAssignments() {
+    if (!onGenerateAssignments || !property || !unit) return
+    setAssignState('saving')
+    setAssignConflicts([])
+    try {
+      const result = await onGenerateAssignments(unit.id)
+      const dateIndexByDate = new Map((unit.assignmentDates ?? []).map((date, index) => [date, index]))
+      setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
+        ...candidate,
+        units: candidate.units.map((candidateUnit) => {
+          if (candidateUnit.id !== unit.id) return candidateUnit
+          const assignments = { ...candidateUnit.assignments }
+          for (const [profileId, byDate] of Object.entries(result.assignments)) {
+            const next = [...(assignments[profileId] ?? [])]
+            for (const [date, code] of Object.entries(byDate)) {
+              const index = dateIndexByDate.get(date)
+              if (index != null) next[index] = code
+            }
+            assignments[profileId] = next
+          }
+          return { ...candidateUnit, assignments }
+        }),
+      })))
+      setAssignConflicts(result.conflicts)
+      setAssignState('saved')
+    } catch {
+      setAssignState('error')
+    }
+  }
+  async function toggleMonthStatus() {
+    if (!onSetMonthStatus || !property || !unit) return
+    const nextStatus = monthFinal ? 'draft' : 'final'
+    setMonthStatusState('saving')
+    try {
+      await onSetMonthStatus(unit.id, nextStatus)
+      setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
+        ...candidate,
+        units: candidate.units.map((candidateUnit) => candidateUnit.id !== unit.id ? candidateUnit : ({ ...candidateUnit, monthStatus: nextStatus })),
+      })))
+      setMonthStatusState('idle')
+    } catch {
+      setMonthStatusState('error')
+    }
+  }
+  async function createDefaultRestCode() {
+    if (!onSaveCode || !unit) return
+    setRestCodeSetupState('saving')
+    try {
+      await saveCode({ planningUnitId: unit.id, code: 'R', label: 'Riposo', kind: 'rest', startsAt: null, endsAt: null, color: '#5B7C99' })
+      setRestCodeSetupState('idle')
+    } catch {
+      setRestCodeSetupState('error')
+    }
+  }
+  async function saveCode(input: ShiftCodeSave) {
+    if (!onSaveCode || !property) return
+    const saved = await onSaveCode(input)
+    setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
+      ...candidate,
+      units: candidate.units.map((candidateUnit) => {
+        if (candidateUnit.id !== input.planningUnitId) return candidateUnit
+        const exists = saved.id != null && candidateUnit.codes.some((existing) => existing.id === saved.id)
+        return { ...candidateUnit, codes: exists ? candidateUnit.codes.map((existing) => existing.id === saved.id ? saved : existing) : [...candidateUnit.codes, saved] }
+      }),
+    })))
+  }
+  // Only ever invoked via the onDeleteCode-gated wrapper passed to CodesPanel
+  // below, so onDeleteCode and property are guaranteed here even though
+  // their own types are optional.
+  async function deleteCode(planningUnitId: string, codeId: string): Promise<'deleted' | 'archived'> {
+    const outcome = await onDeleteCode!(planningUnitId, codeId)
+    setDraftProperties((current) => current.map((candidate) => candidate.id !== property!.id ? candidate : ({
+      ...candidate,
+      units: candidate.units.map((candidateUnit) => candidateUnit.id !== planningUnitId ? candidateUnit : ({
+        ...candidateUnit,
+        codes: outcome === 'deleted' ? candidateUnit.codes.filter((existing) => existing.id !== codeId) : candidateUnit.codes.map((existing) => existing.id === codeId ? { ...existing, active: false } : existing),
+      })),
+    })))
+    return outcome
+  }
+  function togglePreviewRole() { setReadOnlyDemo((current) => { const next = !current; if (next && (tab === 'employees' || tab === 'rules' || tab === 'codes')) setTab('calendar'); return next }) }
   function changeTab(nextTab: ModuleTab) {
     if (nextTab === tab) return
     const currentIndex = visibleTabs.findIndex((item) => item.id === tab)
@@ -149,9 +239,10 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     </div></header>
     <nav className="shift-main-tabs" aria-label="Sezioni Turni"><div ref={navContainerRef} className="shift-main-tabs-scroll" role="tablist"><i className="shift-tab-highlight" aria-hidden="true" style={{ left: navHighlight.left, width: navHighlight.width, opacity: navHighlight.ready ? 1 : 0 }} /><div className="shift-main-tab-buttons">{visibleTabs.map((item) => <button ref={(element) => { if (element) navButtonRefs.current[item.id] = element }} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? 'is-active' : undefined} onClick={() => changeTab(item.id)} key={item.id}>{item.label}</button>)}</div></div></nav>
     <div className={`shift-tab-scene${tabTransitionActive ? ' is-entering' : ''}`} style={sceneStyle}>
-      {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className={`shift-status-chip ${monthFinal ? 'is-final' : 'is-draft'}`}>{monthFinal ? 'Definitivo' : 'Bozza'}</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview}>Assegna automaticamente</button><button type="button" disabled={preview || !onSetRestDays || restDaysState === 'saving'} onClick={() => void setRestDays()}>{restDaysState === 'saving' ? 'Impostazione…' : 'Imposta riposi'}</button><button type="button" disabled={preview}>Rendi definitivo</button><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></> : null}</div></div><p className="shift-calendar-help">Lo stato Bozza/Definitivo riguarda solo {periodLabel.toLowerCase()}: ogni mese ha il proprio stato indipendente. “Assegna automaticamente” genera i turni solo per il mese visualizzato; gli altri mesi non vengono toccati. I turni bloccati restano fissi, mentre gli altri possono essere ricalcolati. Salva turni quando vuoi rendere permanenti le modifiche.</p><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} />{saveState === 'error' ? <div className="shift-empty" role="alert">Impossibile salvare le modifiche. Riprova.</div> : null}{saveState === 'saved' ? <div className="shift-empty" role="status">Turni salvati.</div> : null}{restDaysState === 'error' ? <div className="shift-empty" role="alert">Impossibile impostare i riposi. Riprova.</div> : null}{restDaysState === 'saved' ? <div className="shift-empty" role="status">Riposi impostati.</div> : null}<section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} editable={!readOnly && !preview && !monthFinal} onAssignmentChange={editAssignment} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><strong style={{ background: code.color, color: code.textColor ?? '#fff' }}>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section></> : null}
+      {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className={`shift-status-chip ${monthFinal ? 'is-final' : 'is-draft'}`}>{monthFinal ? 'Definitivo' : 'Bozza'}</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview || monthFinal || !onGenerateAssignments || assignState === 'saving'} onClick={() => void generateAssignments()}>{assignState === 'saving' ? 'Assegnazione…' : 'Assegna automaticamente'}</button>{hasRestCode ? <button type="button" disabled={preview || monthFinal || !onSetRestDays || restDaysState === 'saving'} onClick={() => void setRestDays()}>{restDaysState === 'saving' ? 'Impostazione…' : 'Imposta riposi'}</button> : <button type="button" disabled={preview || !onSaveCode || restCodeSetupState === 'saving'} onClick={() => void createDefaultRestCode()} title="Crea il codice turno &quot;R&quot; (Riposo), necessario per poter impostare i riposi">{restCodeSetupState === 'saving' ? 'Configurazione…' : 'Configura codice Riposo'}</button>}<button type="button" disabled={preview || !onSetMonthStatus || monthStatusState === 'saving'} onClick={() => void toggleMonthStatus()}>{monthStatusState === 'saving' ? 'Aggiornamento…' : (monthFinal ? 'Riporta a bozza' : 'Rendi definitivo')}</button><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></> : null}</div></div><p className="shift-calendar-help">Lo stato Bozza/Definitivo riguarda solo {periodLabel.toLowerCase()}: ogni mese ha il proprio stato indipendente. “Assegna automaticamente” genera i turni solo per il mese visualizzato; gli altri mesi non vengono toccati. I turni bloccati restano fissi, mentre gli altri possono essere ricalcolati. Salva turni quando vuoi rendere permanenti le modifiche.</p><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} />{saveState === 'error' ? <div className="shift-empty" role="alert">Impossibile salvare le modifiche. Riprova.</div> : null}{saveState === 'saved' ? <div className="shift-empty" role="status">Turni salvati.</div> : null}{restDaysState === 'error' ? <div className="shift-empty" role="alert">Impossibile impostare i riposi. Riprova.</div> : null}{restDaysState === 'saved' ? <div className="shift-empty" role="status">Riposi impostati.</div> : null}{restCodeSetupState === 'error' ? <div className="shift-empty" role="alert">Impossibile creare il codice Riposo. Riprova.</div> : null}{!hasRestCode && !readOnly && onSaveCode && restCodeSetupState !== 'error' ? <div className="shift-empty" role="status">Questa unità non ha ancora un codice "R" (Riposo): creane uno per poter usare "Imposta riposi".</div> : null}{monthStatusState === 'error' ? <div className="shift-empty" role="alert">Impossibile aggiornare lo stato del mese. Riprova.</div> : null}{assignState === 'error' ? <div className="shift-empty" role="alert">Impossibile generare l'assegnazione automatica. Riprova.</div> : null}{assignState === 'saved' && assignConflicts.length === 0 ? <div className="shift-empty" role="status">Turni assegnati automaticamente.</div> : null}{assignConflicts.length > 0 ? <div className="shift-empty shift-assign-conflicts" role="alert"><strong>{assignConflicts.length} {assignConflicts.length === 1 ? 'turno non coperto' : 'turni non coperti'}:</strong><ul>{assignConflicts.slice(0, 8).map((conflict, index) => <li key={index}>{conflict.message}</li>)}</ul>{assignConflicts.length > 8 ? <span>…e altri {assignConflicts.length - 8}.</span> : null}</div> : null}<section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} editable={!readOnly && !preview && !monthFinal} onAssignmentChange={editAssignment} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><strong style={{ background: code.color, color: code.textColor ?? '#fff' }}>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section></> : null}
       {tab === 'employees' ? <EmployeesPanel property={property} onReorderMembers={onReorderMembers} /> : null}
       {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} onSaveRules={onSaveRules ? saveRules : undefined} /></> : null}
+      {tab === 'codes' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><CodesPanel unit={unit} onSaveCode={onSaveCode ? saveCode : undefined} onDeleteCode={onDeleteCode ? (codeId) => deleteCode(unit.id, codeId) : undefined} /></> : null}
       {tab === 'mine' ? <MyShiftsPanel unit={unit} /> : null}{tab === 'preferences' ? <PersonalPanel unit={unit} /> : null}
       {tab === 'swaps' ? <RequestsPanel kind="swaps" unit={unit} /> : null}{tab === 'absences' ? <RequestsPanel kind="absences" unit={unit} /> : null}{tab === 'preassignments' ? <RequestsPanel kind="preassignments" unit={unit} /> : null}
     </div>

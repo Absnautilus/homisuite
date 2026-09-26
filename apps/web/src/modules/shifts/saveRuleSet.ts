@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ShiftPlanningUnit } from '@homisuite/shifts-module'
+import type { RoleCodes, ShiftPlanningUnit } from '@homisuite/shifts-module'
 
 /**
  * shift_rule_sets is immutable-by-convention and versioned: editing coverage,
@@ -12,7 +12,7 @@ export async function saveRuleSet(
   supabase: SupabaseClient,
   propertyId: string,
   unit: ShiftPlanningUnit,
-  rules: { coverage: Array<{ code: string; quantity: number }>; hard: string[]; soft: string[]; restRotationPairsPerCycle: number },
+  rules: { coverage: Array<{ code: string; quantity: number }>; hard: string[]; soft: string[]; restRotationPairsPerCycle: number; roleCodes: Record<string, RoleCodes> },
 ) {
   const { data, error } = await supabase.from('shift_rule_sets').insert({
     property_id: propertyId,
@@ -26,6 +26,7 @@ export async function saveRuleSet(
       hard: rules.hard,
       soft: rules.soft,
       restRotationPairsPerCycle: rules.restRotationPairsPerCycle,
+      roleCodes: rules.roleCodes,
     },
   }).select('id').single()
   if (error) throw error

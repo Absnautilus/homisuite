@@ -1,9 +1,14 @@
 export interface ShiftCode {
+  id?: string
   code: string
   label: string
   time: string
+  startsAt?: string | null
+  endsAt?: string | null
+  kind?: 'work' | 'rest' | 'leave' | 'permission' | 'absence'
   color: string
   textColor?: string
+  active?: boolean
 }
 
 export interface ShiftPerson {
@@ -22,6 +27,7 @@ export interface ShiftRuleSummary {
   soft: string[]
   coverage: string[]
   restRotationPairsPerCycle?: number
+  roleCodes?: Record<string, { base: string[]; extra: string[] }>
 }
 
 export interface ShiftPlanningUnit {
@@ -49,14 +55,14 @@ export interface ShiftPreviewProperty {
 }
 
 const receptionCodes: ShiftCode[] = [
-  { code: 'A1', label: 'Apertura 1', time: '07:00–15:00', color: '#3FA935' },
-  { code: 'A2', label: 'Apertura 2', time: '08:30–16:30', color: '#9C4FC7' },
-  { code: 'CE', label: 'Centrale', time: '09:30–17:30', color: '#E8541E' },
-  { code: 'C1', label: 'Chiusura 1', time: '14:00–22:00', color: '#F5A623', textColor: '#282014' },
-  { code: 'C2', label: 'Chiusura 2', time: '15:00–23:00', color: '#EAD23C', textColor: '#282014' },
-  { code: 'N', label: 'Notte', time: '23:00–07:00', color: '#E63946' },
-  { code: 'R', label: 'Riposo', time: '', color: '#9AA0A6' },
-  { code: 'F', label: 'Ferie', time: '', color: '#C9A227', textColor: '#282014' },
+  { id: 'code-a1', code: 'A1', label: 'Apertura 1', time: '07:00–15:00', startsAt: '07:00', endsAt: '15:00', kind: 'work', color: '#3FA935', active: true },
+  { id: 'code-a2', code: 'A2', label: 'Apertura 2', time: '08:30–16:30', startsAt: '08:30', endsAt: '16:30', kind: 'work', color: '#9C4FC7', active: true },
+  { id: 'code-ce', code: 'CE', label: 'Centrale', time: '09:30–17:30', startsAt: '09:30', endsAt: '17:30', kind: 'work', color: '#E8541E', active: true },
+  { id: 'code-c1', code: 'C1', label: 'Chiusura 1', time: '14:00–22:00', startsAt: '14:00', endsAt: '22:00', kind: 'work', color: '#F5A623', textColor: '#282014', active: true },
+  { id: 'code-c2', code: 'C2', label: 'Chiusura 2', time: '15:00–23:00', startsAt: '15:00', endsAt: '23:00', kind: 'work', color: '#EAD23C', textColor: '#282014', active: true },
+  { id: 'code-n', code: 'N', label: 'Notte', time: '23:00–07:00', startsAt: '23:00', endsAt: '07:00', kind: 'work', color: '#E63946', active: true },
+  { id: 'code-r', code: 'R', label: 'Riposo', time: '', kind: 'rest', color: '#9AA0A6', active: true },
+  { id: 'code-f', code: 'F', label: 'Ferie', time: '', kind: 'leave', color: '#C9A227', textColor: '#282014', active: true },
 ]
 
 export const shiftPreviewProperties: ShiftPreviewProperty[] = [

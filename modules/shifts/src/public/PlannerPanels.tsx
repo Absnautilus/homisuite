@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
-import { DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, initRestRotationPairsPerCycle, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
+import { ASSIGNMENT_ROLES, DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, type RoleCodes, initRestRotationPairsPerCycle, initRoleCodes, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
 import { ShiftSelect } from './ShiftSelect'
 import { ShiftDatePicker } from './ShiftDatePicker'
 
@@ -12,6 +12,7 @@ export interface ShiftRuleSetSave {
   hard: string[]
   soft: string[]
   restRotationPairsPerCycle: number
+  roleCodes: Record<string, RoleCodes>
 }
 
 type PersonDraft = {
@@ -140,13 +141,15 @@ export function RulesPanel({ unit, onSaveRules }: {
   const [softOrder, setSoftOrder] = useState<string[]>(() => initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft))
   const [softEnabled, setSoftEnabled] = useState<Record<string, boolean>>(() => initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft))
   const [pairsPerCycle, setPairsPerCycle] = useState<number>(() => initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle))
+  const [roleCodesDraft, setRoleCodesDraft] = useState<Record<string, RoleCodes>>(() => initRoleCodes(unit.rules.roleCodes))
   useEffect(() => {
     setCoverageDraft(parseCoverage(unit.rules.coverage))
     setHardEnabled(initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard))
     setSoftOrder(initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft))
     setSoftEnabled(initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft))
     setPairsPerCycle(initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle))
-  }, [unit.id, unit.rules.coverage, unit.rules.hard, unit.rules.soft, unit.rules.restRotationPairsPerCycle])
+    setRoleCodesDraft(initRoleCodes(unit.rules.roleCodes))
+  }, [unit.id, unit.rules.coverage, unit.rules.hard, unit.rules.soft, unit.rules.restRotationPairsPerCycle, unit.rules.roleCodes])
   const [newCode, setNewCode] = useState('')
   const [newQuantity, setNewQuantity] = useState(1)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -184,6 +187,11 @@ export function RulesPanel({ unit, onSaveRules }: {
     setPairsPerCycle(Math.max(1, Math.min(9, Math.round(value) || 1)))
     setSaveState('idle')
   }
+  function updateRoleCodes(role: string, field: 'base' | 'extra', text: string) {
+    const codes = text.split(',').map((entry) => entry.trim().toUpperCase()).filter(Boolean)
+    setRoleCodesDraft((current) => ({ ...current, [role]: { ...current[role], base: current[role]?.base ?? [], extra: current[role]?.extra ?? [], [field]: codes } }))
+    setSaveState('idle')
+  }
   function moveSoft(key: string, direction: -1 | 1) {
     setSoftOrder((current) => {
       const index = current.indexOf(key)
@@ -209,6 +217,7 @@ export function RulesPanel({ unit, onSaveRules }: {
         hard: DEFAULT_HARD_RULES.filter((rule) => hardEnabled[rule.key]).map((rule) => rule.text),
         soft: softOrder.filter((key) => softEnabled[key]).map((key) => softByKey.get(key)?.text).filter((text): text is string => text != null),
         restRotationPairsPerCycle: pairsPerCycle,
+        roleCodes: roleCodesDraft,
       })
       setSaveState('saved')
     } catch {
@@ -240,6 +249,22 @@ export function RulesPanel({ unit, onSaveRules }: {
             <span><strong>Rotazione riposi</strong>: dopo quante coppie di riposo consecutive il turno successivo diventa un giorno singolo e la rotazione slitta di un giorno.</span>
             <input type="number" min={1} max={9} value={pairsPerCycle} disabled={!onSaveRules} onChange={(event) => updatePairsPerCycle(Number(event.target.value))} className="shift-pairs-per-cycle-input" aria-label="Coppie di riposo per ciclo" />
           </div>
+        </div>
+      </section>
+      <section className="shift-panel">
+        <div className="shift-panel-title"><div><h2>Ruoli e codici</h2><p>Quali codici turno può coprire ciascun ruolo con "Assegna automaticamente": elenco separato da virgole. "Riserva" viene usato solo quando i codici base non bastano a coprire il fabbisogno.</p></div></div>
+        <div className="shift-table-scroll" tabIndex={0} aria-label="Ruoli e codici idonei">
+          <table className="shift-role-codes-table">
+            <thead><tr><th>Ruolo</th><th>Codici base</th><th>Codici di riserva</th></tr></thead>
+            <tbody>{ASSIGNMENT_ROLES.map(({ key, label }) => {
+              const entry = roleCodesDraft[key] ?? { base: [], extra: [] }
+              return <tr key={key}>
+                <th scope="row">{label}</th>
+                <td><input value={entry.base.join(', ')} disabled={!onSaveRules} onChange={(event) => updateRoleCodes(key, 'base', event.target.value)} placeholder="es. C1, C2, A1, A2" /></td>
+                <td><input value={entry.extra.join(', ')} disabled={!onSaveRules} onChange={(event) => updateRoleCodes(key, 'extra', event.target.value)} placeholder="es. CE" /></td>
+              </tr>
+            })}</tbody>
+          </table>
         </div>
       </section>
       <section className="shift-panel">

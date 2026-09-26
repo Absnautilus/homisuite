@@ -1,13 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { computeMonthRestDays, DEFAULT_HARD_RULES, initRestRotationPairsPerCycle, initRuleEnabled, nextFreeRotationSlot, type RestRotationProfile, type ShiftPlanningUnit } from '@homisuite/shifts-module'
-
-interface StaffProfileRow {
-  id: string
-  shift_type: string
-  rest_mode: string
-  fixed_rest_days: number[] | null
-  rotation_slot: number | null
-}
+import { computeMonthRestDays, DEFAULT_HARD_RULES, initRestRotationPairsPerCycle, initRuleEnabled, type RestRotationProfile, type ShiftPlanningUnit } from '@homisuite/shifts-module'
+import { ensureRotationSlots, type StaffProfileRow } from './ensureRotationSlots'
 
 /**
  * "Imposta riposi": assigns rest days ('R') for the visible month to every
@@ -32,34 +25,18 @@ export async function setUnitRestDays(
   const memberIds = unit.people.map((person) => person.id)
   if (memberIds.length === 0) return {}
 
-  const [{ data: unitStaff, error: unitStaffError }, { data: propertyRotating, error: propertyRotatingError }, { data: restCode, error: restCodeError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
+  const [{ data: unitStaff, error: unitStaffError }, { data: restCode, error: restCodeError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
     supabase.from('shift_staff_profiles').select('id,shift_type,rest_mode,fixed_rest_days,rotation_slot').eq('property_id', propertyId).in('id', memberIds),
-    supabase.from('shift_staff_profiles').select('id,rotation_slot').eq('property_id', propertyId).eq('rest_mode', 'rotating'),
     supabase.from('shift_codes').select('id').eq('property_id', propertyId).eq('planning_unit_id', unit.id).eq('code', 'R').maybeSingle(),
     supabase.from('shifts').select('staff_profile_id,shift_date').eq('property_id', propertyId).eq('planning_unit_id', unit.id).gte('shift_date', `${unit.month}-01`).lt('shift_date', nextMonthStart(year, month)),
   ])
   if (unitStaffError) throw unitStaffError
-  if (propertyRotatingError) throw propertyRotatingError
   if (restCodeError) throw restCodeError
   if (existingShiftsError) throw existingShiftsError
   if (!restCode) throw new Error("Codice turno 'R' (Riposo) non configurato per questa unità.")
 
   const unitStaffRows = (unitStaff ?? []) as StaffProfileRow[]
-
-  // Assign a rotation_slot to any rotating-rest member who doesn't have one
-  // yet -- the smallest integer not already used by another rotating
-  // profile at the PROPERTY (slots are unique property-wide, not per unit).
-  const usedSlots = new Set((propertyRotating ?? []).map((row) => row.rotation_slot).filter((slot): slot is number => slot != null))
-  const newSlotByProfileId = new Map<string, number>()
-  for (const staff of unitStaffRows) {
-    if (staff.rest_mode === 'fixed' || staff.rotation_slot != null) continue
-    const slot = nextFreeRotationSlot([...usedSlots].map((value) => ({ rotationSlot: value })))
-    usedSlots.add(slot)
-    newSlotByProfileId.set(staff.id, slot)
-  }
-  await Promise.all([...newSlotByProfileId.entries()].map(([id, rotationSlot]) =>
-    supabase.from('shift_staff_profiles').update({ rotation_slot: rotationSlot }).eq('id', id).then(({ error }) => { if (error) throw error }),
-  ))
+  const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unitStaffRows)
 
   const profiles: RestRotationProfile[] = unitStaffRows.map((staff) => ({
     id: staff.id,
