@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import type { CoreRole, JobTitle, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
-import { Tabs } from '@homisuite/ui'
+import { PageHeader, Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Modal } from '../components/Modal'
 import { PageState } from '../components/PageState'
@@ -200,10 +200,7 @@ export function TeamPage() {
 
   return (
     <div className="page-stack shell-page team-page">
-      <header className="page-heading split">
-        <div><p className="eyebrow">{propertyName}</p><h1>Team</h1><p>Persone, accessi Homisuite e mansioni operative della struttura.</p></div>
-        {team.canManage ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : null}
-      </header>
+      <PageHeader eyebrow={propertyName} title="Team" description="Persone, accessi Homisuite e mansioni operative della struttura." actions={team.canManage ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : undefined} />
 
       <section className="shell-card team-principle-card">
         <div className="icon-tile"><ShieldCheck size={20} /></div>

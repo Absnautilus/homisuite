@@ -73,6 +73,7 @@ export function DiningModuleGate() {
   return (
     <DiningPage
       hotelId={access.hotelId}
+      hotelName={runtime.property?.name ?? 'Struttura'}
       canManage={Boolean(canManage)}
       staffProfileId={access.staffProfileId}
     />

@@ -21,9 +21,10 @@
 .account-menu-row:hover { background: var(--surface-2); }
 .account-language-row { justify-content: space-between; }
 .account-language-row > span { display: flex; gap: 8px; align-items: center; }
-/* .page-stack / .page-heading / .eyebrow / .section-heading live in
-   styles.css now -- one canonical page-scaffolding definition for the
-   whole Shell instead of two near-identical copies. */
+/* .page-stack / .eyebrow / .section-heading live in styles.css now -- one
+   canonical page-scaffolding definition for the whole Shell instead of two
+   near-identical copies. The top-level page header itself is @homisuite/ui's
+   PageHeader. */
 .shell-page { max-width: 1040px; margin: 0 auto; }
 /* Same delicate depth as .module-card's resting state (Home/Moduli), minus
    the hover lift -- these are static content panels (Team/Settings/Dining
@@ -181,7 +182,7 @@ body.modal-open { overflow: hidden; }
 .drawer-account { margin-top: auto; padding-top: 16px; }
 
 @media (max-width: 760px) {
-  .page-heading.split, .section-heading.split { display: grid; }
+  .section-heading.split { display: grid; }
   .primary-action, .secondary-action { width: 100%; }
   .job-role-grid { gap: 6px; }
   .account-popover { position: fixed; left: 14px; right: 14px; bottom: 16px; }

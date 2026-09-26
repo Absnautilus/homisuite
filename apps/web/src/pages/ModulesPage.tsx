@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { CalendarDays, CarFront, Hotel, Puzzle, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
@@ -81,11 +82,7 @@ export function ModulesPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-heading">
-        <p className="eyebrow">{runtime.property?.name}</p>
-        <h1>Moduli</h1>
-        <p className="page-subtitle">I moduli disponibili in Homisuite e quelli attivi per questa struttura.</p>
-      </section>
+      <PageHeader eyebrow={runtime.property?.name} title="Moduli" description="I moduli disponibili in Homisuite e quelli attivi per questa struttura." />
 
       {state === 'loading' && <PageState kind="loading" title="Caricamento moduli…" />}
       {state === 'error' && (
