@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { StatusBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,12 +17,14 @@ import { fetchArchivedRequests } from '@/lib/staff-api'
 import { formatElapsed, formatTime } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import type { QueuedRequest } from '@/lib/staff-types'
 
 const PAGE_SIZE = 15
 
 export function ArchivePage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
+  const hotelName = useHotelName()
   const [page, setPage] = useState(0)
   const [items, setItems] = useState<QueuedRequest[] | null>(null)
   const [total, setTotal] = useState(0)
@@ -44,10 +47,7 @@ export function ArchivePage({ hotelId }: { hotelId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{t('staff.archive.title')}</h1>
-        <p className="text-sm text-muted">{t('staff.archive.subtitle')}</p>
-      </div>
+      <PageHeader eyebrow={hotelName} title={t('staff.archive.title')} description={t('staff.archive.subtitle')} />
 
       {error ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">

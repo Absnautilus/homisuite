@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
@@ -35,6 +36,7 @@ import { LOCALES } from '@/lib/i18n/locales'
 import { removeCategoryWithItems, removeMenuItem } from '@/lib/menu-removal'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import { cn } from '@/lib/cn'
 
 const TRANSLATABLE_LOCALES = LOCALES.filter((l) => l.code !== 'it')
@@ -42,6 +44,7 @@ const IT_LOCALE = LOCALES.find((l) => l.code === 'it')!
 
 export function ItemsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
+  const hotelName = useHotelName()
   const { push } = useToast()
   const [categories, setCategories] = useState<RequestCategoryAdmin[]>([])
   const [types, setTypes] = useState<RequestTypeAdmin[]>([])
@@ -164,10 +167,7 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
   return (
     <div className="space-y-6">
       {confirmDialog}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{t('staff.items.title')}</h1>
-        <p className="text-sm text-muted">{t('staff.items.subtitle')}</p>
-      </div>
+      <PageHeader eyebrow={hotelName} title={t('staff.items.title')} description={t('staff.items.subtitle')} />
       {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
       <NewCategoryForm jobTitles={jobTitles} onCreated={reload} />
       <div className="overflow-x-auto rounded-lg border border-line bg-surface">

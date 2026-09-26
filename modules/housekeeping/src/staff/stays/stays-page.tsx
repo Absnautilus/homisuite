@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { ChevronsRight, History, LogOut, Pencil, Power } from 'lucide-react'
 import type { PlatformHotelSettings } from '@/public/HousekeepingModule'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -15,6 +16,7 @@ import { formatElapsed, formatTime } from '@/lib/format'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import { tenantIntegrityErrorRef } from '@/lib/errors'
 
 function toLocalInputValue(iso: string): string {
@@ -36,6 +38,7 @@ function defaultDateTimeInput(daysFromNow: number, time: string): string {
 
 export function StaysPage({ hotelId, hotelSettings }: { hotelId: string; hotelSettings?: PlatformHotelSettings }) {
   const { t } = useLocale()
+  const hotelName = useHotelName()
   const [stays, setStays] = useState<Stay[] | null>(null)
   const [allRooms, setAllRooms] = useState<Room[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -54,10 +57,7 @@ export function StaysPage({ hotelId, hotelSettings }: { hotelId: string; hotelSe
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{t('staff.stays.title')}</h1>
-        <p className="text-sm text-muted">{t('staff.stays.subtitle')}</p>
-      </div>
+      <PageHeader eyebrow={hotelName} title={t('staff.stays.title')} description={t('staff.stays.subtitle')} />
 
       <NewStayForm hotelId={hotelId} rooms={rooms} hotelSettings={hotelSettings} onCreated={reload} />
       <OperaImportPanel hotelId={hotelId} rooms={rooms} onImported={reload} />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { cn } from '@/lib/cn'
@@ -9,6 +10,7 @@ import { RequestRow } from '@/staff/request-row'
 import { ReorderableColumn } from '@/staff/reorderable-column'
 import { NewRequestForm } from '@/staff/new-request-form'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import { getErrorMessage } from '@/lib/errors'
 import type { QueueJobTitle, QueuedRequest, StaffProfile } from '@/lib/staff-types'
 
@@ -18,6 +20,7 @@ const DONE_PAGE_SIZE = 15
 
 export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfile; canManageQueue: boolean }) {
   const { t } = useLocale()
+  const hotelName = useHotelName()
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('active')
@@ -102,12 +105,7 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="font-head text-2xl font-bold tracking-tight text-foreground">{t('staff.queue.title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('staff.queue.subtitle')}</p>
-        </div>
-      </div>
+      <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
 
       {managesFrontDesk && (
         <div>
