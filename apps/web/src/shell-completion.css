@@ -24,8 +24,9 @@
 /* .page-stack / .eyebrow / .section-heading live in styles.css now -- one
    canonical page-scaffolding definition for the whole Shell instead of two
    near-identical copies. The top-level page header itself is @homisuite/ui's
-   PageHeader. */
-.shell-page { max-width: 1040px; margin: 0 auto; }
+   PageHeader. Every page's width comes from .page-content alone (1180px,
+   centered) -- no page adds its own narrower cap, so headers line up at the
+   same edges when navigating between them. */
 /* Same delicate depth as .module-card's resting state (Home/Moduli), minus
    the hover lift -- these are static content panels (Team/Settings/Dining
    sections), not clickable tiles, but they should still read as part of

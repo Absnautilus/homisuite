@@ -23,7 +23,7 @@ export function DiningPage({ hotelId, hotelName, canManage, staffProfileId }: Di
   const [tab, setTab] = useState('prenotazioni')
 
   return (
-    <div className="page-stack shell-page dining-page">
+    <div className="page-stack dining-page">
       <PageHeader eyebrow={hotelName} title="Ristorazione" description="Elenco ristoranti convenzionati e dashboard prenotazioni." />
       <nav className="dining-tab-nav" aria-label="Sezioni Ristorazione">
         {TABS.map((item) => (
