@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useRef, useState, type Ref, type SVGProps } from 'react'
-import type { HousekeepingCapabilities } from '@/public/HousekeepingModule'
+import type { SVGProps } from 'react'
 import { LogoMark } from '@/components/logo'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
@@ -13,42 +12,24 @@ import type { StaffProfile } from '@/lib/staff-types'
 
 interface DashboardHeaderProps {
   profile: StaffProfile
-  embedded?: boolean
   basePath?: string
-  capabilities?: HousekeepingCapabilities
 }
 
-export function DashboardHeader({ profile, embedded = false, basePath = '/staff', capabilities }: DashboardHeaderProps) {
+// Standalone-only now: the embedded Shell integration gets its
+// Richieste/Soggiorni/Gestione switcher from EmbeddedNav instead, rendered
+// by each top-level page below its own PageHeader (see embedded-nav.tsx).
+export function DashboardHeader({ profile, basePath = '/staff' }: DashboardHeaderProps) {
   const { t } = useLocale()
   const location = useLocation()
   const roleLabel = profile.role === 'master' ? t('role.master') : profile.role === 'admin' ? t('role.admin') : profile.department ? t(`department.${profile.department}`) : t('role.operatore')
   const legacyAdminLike = profile.role === 'admin' || profile.role === 'master'
-  const staysAllowed = embedded && capabilities ? capabilities.staysView : legacyAdminLike || profile.department === 'reception'
-  const manageAllowed = embedded && capabilities ? capabilities.manage : legacyAdminLike
+  const staysAllowed = legacyAdminLike || profile.department === 'reception'
+  const manageAllowed = legacyAdminLike
   const initials = profile.name.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 
   const requestPath = basePath
   const staysPath = `${basePath}/soggiorni`
   const adminPath = `${basePath}/admin`
-
-  if (embedded) {
-    const tabs = [
-      { to: requestPath, label: t('staff.nav.requests'), active: location.pathname === requestPath || location.pathname === `${requestPath}/` },
-      ...(staysAllowed ? [{ to: staysPath, label: t('staff.nav.stays'), active: location.pathname.startsWith(staysPath) }] : []),
-      ...(manageAllowed ? [{ to: adminPath, label: t('staff.nav.admin'), active: location.pathname.startsWith(adminPath) }] : []),
-    ]
-    return (
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <AnimatedEmbeddedTabs tabs={tabs} label={t('staff.nav.requests')} />
-        <div className="flex items-center gap-1">
-          <OnDutyToggle profile={profile} dark={false} />
-          <NotificationSettingsToggle align="right" />
-          <TextSizeToggle align="right" />
-          <LanguageToggle align="right" />
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="bg-background px-3 pt-3 sm:px-6 sm:pt-4">
@@ -77,36 +58,6 @@ export function DashboardHeader({ profile, embedded = false, basePath = '/staff'
       </div>
     </div>
   )
-}
-
-function AnimatedEmbeddedTabs({ tabs, label }: { tabs: Array<{ to: string; label: string; active: boolean }>; label: string }) {
-  const navRef = useRef<HTMLElement>(null)
-  const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
-  const [highlight, setHighlight] = useState({ left: 0, width: 0, ready: false })
-  const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.active))
-
-  useEffect(() => {
-    function measure() {
-      const nav = navRef.current
-      const link = linkRefs.current[activeIndex]
-      if (!nav || !link) return
-      const navRect = nav.getBoundingClientRect()
-      const linkRect = link.getBoundingClientRect()
-      setHighlight({ left: linkRect.left - navRect.left, width: linkRect.width, ready: true })
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [activeIndex, tabs.length])
-
-  return <nav ref={navRef} className="hk-embedded-tabs" aria-label={label}>
-    <i className="hk-embedded-tab-highlight" aria-hidden="true" style={{ left: highlight.left, width: highlight.width, opacity: highlight.ready ? 1 : 0 }} />
-    {tabs.map((tab, index) => <TabLink ref={(element) => { linkRefs.current[index] = element }} key={tab.to} {...tab} />)}
-  </nav>
-}
-
-function TabLink({ to, label, active, ref }: { to: string; label: string; active: boolean; ref?: Ref<HTMLAnchorElement> }) {
-  return <Link ref={ref} to={to} className={cn('hk-embedded-tab', active && 'active')} aria-current={active ? 'page' : undefined}>{label}</Link>
 }
 
 function NavLink({ to, label, icon: Icon, active }: { to: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element; active: boolean }) {

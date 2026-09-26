@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { SlidePanel } from '@homisuite/ui'
+import { EmbeddedNav } from '@/staff/embedded-nav'
 import { cn } from '@/lib/cn'
 import { RoomsPage } from '@/staff/admin/rooms-page'
 import { OperatorsPage } from '@/staff/admin/operators-page'
@@ -24,6 +25,7 @@ interface AdminHomeProps {
   platformStaffManagement?: PlatformStaffManagementLink
   /** Embedded mode only: scopes the operators roster to this hotel. */
   hotelId?: string
+  embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
 }
 
 const moreLabels = {
@@ -41,7 +43,7 @@ const moreLabels = {
   ru: 'Ещё',
 } as const
 
-export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId }: AdminHomeProps) {
+export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId, embeddedNav }: AdminHomeProps) {
   const { t, locale } = useLocale()
   const location = useLocation()
   const operationalHotelId = hotelId ?? profile.hotel_id
@@ -95,6 +97,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
 
   return (
     <div className="min-w-0">
+      {embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
       <nav
         className="mb-5 flex w-fit max-w-full items-start gap-1 rounded-md bg-surface-2 p-1"
         aria-label={t('staff.nav.admin')}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PageHeader } from '@homisuite/ui'
 import { ChevronsRight, History, LogOut, Pencil, Power } from 'lucide-react'
 import type { PlatformHotelSettings } from '@/public/HousekeepingModule'
+import { EmbeddedNav } from '@/staff/embedded-nav'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { EmptyState, IconBedEmpty } from '@/components/empty-state'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
 import { tenantIntegrityErrorRef } from '@/lib/errors'
+import type { StaffProfile } from '@/lib/staff-types'
 
 function toLocalInputValue(iso: string): string {
   const d = new Date(iso)
@@ -36,7 +38,12 @@ function defaultDateTimeInput(daysFromNow: number, time: string): string {
   return toLocalInputValue(d.toISOString())
 }
 
-export function StaysPage({ hotelId, hotelSettings }: { hotelId: string; hotelSettings?: PlatformHotelSettings }) {
+export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
+  hotelId: string
+  hotelSettings?: PlatformHotelSettings
+  profile?: StaffProfile
+  embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
+}) {
   const { t } = useLocale()
   const hotelName = useHotelName()
   const [stays, setStays] = useState<Stay[] | null>(null)
@@ -58,6 +65,7 @@ export function StaysPage({ hotelId, hotelSettings }: { hotelId: string; hotelSe
   return (
     <div className="space-y-6">
       <PageHeader eyebrow={hotelName} title={t('staff.stays.title')} description={t('staff.stays.subtitle')} />
+      {profile && embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
 
       <NewStayForm hotelId={hotelId} rooms={rooms} hotelSettings={hotelSettings} onCreated={reload} />
       <OperaImportPanel hotelId={hotelId} rooms={rooms} onImported={reload} />

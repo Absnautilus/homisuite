@@ -120,8 +120,12 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const staysAllowed = embedded && capabilities ? capabilities.staysView : legacyStaysAllowed
 
   const queueManageAllowed = embedded && capabilities ? capabilities.queueManage : profile.department === 'reception'
-  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} />} />
-  const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} />} /> : null
+  // Only embedded routes get the module-wide Richieste/Soggiorni/Gestione
+  // switcher below their PageHeader -- standalone mode keeps its own
+  // DashboardHeader (a full top bar, logo included) unchanged.
+  const embeddedNav = embedded ? { basePath, staysAllowed, manageAllowed } : undefined
+  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} embeddedNav={embeddedNav} />} />
+  const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} />} /> : null
   const adminRoute = manageAllowed ? (
     <Route
       path="admin/*"
@@ -132,6 +136,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
           embedded
           platformStaffManagement={platformStaffManagement}
           hotelId={expectedHotelId}
+          embeddedNav={embeddedNav}
         />
       )}
     />
@@ -156,12 +161,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   return (
     <ToastProvider>
       <div className={embedded ? undefined : 'min-h-full bg-surface-2'}>
-        <DashboardHeader
-          profile={profile}
-          embedded={embedded}
-          basePath={embedded ? basePath : '/staff'}
-          capabilities={embedded ? { staysView: staysAllowed, manage: manageAllowed, queueManage: queueManageAllowed } : undefined}
-        />
+        {embedded ? null : <DashboardHeader profile={profile} basePath="/staff" />}
         {embedded ? (
           <div className="pt-4">{routeContent}</div>
         ) : (
