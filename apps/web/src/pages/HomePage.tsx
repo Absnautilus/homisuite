@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { ArrowRight, CalendarDays, CarFront, CircleCheck, Hotel, UtensilsCrossed } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
@@ -36,17 +37,17 @@ export function HomePage() {
 
   return (
     <div className="page-stack">
-      <section className="page-heading split">
-        <div>
-          <p className="eyebrow">{runtime.property?.name}</p>
-          <h1>Home</h1>
-          <p className="page-subtitle">Accesso rapido ai moduli disponibili per questa struttura.</p>
-        </div>
-        <div className="home-today">
-          <p className="home-today-date">{today}</p>
-          <p className="home-today-greeting">Buon lavoro!</p>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow={runtime.property?.name}
+        title="Home"
+        description="Accesso rapido ai moduli disponibili per questa struttura."
+        actions={
+          <div className="home-today">
+            <p className="home-today-date">{today}</p>
+            <p className="home-today-greeting">Buon lavoro!</p>
+          </div>
+        }
+      />
       <section className="module-grid">
         {/* The whole card is the link (not just "Apri modulo"): a bigger,
             more forgiving touch target on a hotel front desk, and one clear

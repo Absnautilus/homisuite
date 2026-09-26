@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { CategoriesTab } from './CategoriesTab'
 import { RestaurantsTab } from './RestaurantsTab'
 import { ReservationsTab } from './ReservationsTab'
@@ -6,6 +7,7 @@ import { ChangeLogTab } from './ChangeLogTab'
 
 interface DiningPageProps {
   hotelId: string
+  hotelName: string
   canManage: boolean
   staffProfileId: string | null
 }
@@ -17,15 +19,12 @@ const TABS = [
   { value: 'registro', label: 'Registro modifiche' },
 ]
 
-export function DiningPage({ hotelId, canManage, staffProfileId }: DiningPageProps) {
+export function DiningPage({ hotelId, hotelName, canManage, staffProfileId }: DiningPageProps) {
   const [tab, setTab] = useState('prenotazioni')
 
   return (
     <div className="page-stack shell-page dining-page">
-      <header className="page-heading">
-        <h1>Ristorazione</h1>
-        <p>Elenco ristoranti convenzionati e dashboard prenotazioni.</p>
-      </header>
+      <PageHeader eyebrow={hotelName} title="Ristorazione" description="Elenco ristoranti convenzionati e dashboard prenotazioni." />
       <nav className="dining-tab-nav" aria-label="Sezioni Ristorazione">
         {TABS.map((item) => (
           <button

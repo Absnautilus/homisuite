@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { PageHeader } from '@homisuite/ui'
 import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
@@ -44,11 +45,7 @@ export function SettingsPage() {
 
   return (
     <div className="page-stack shell-page settings-page">
-      <header className="page-heading">
-        <p className="eyebrow">Homisuite</p>
-        <h1>Impostazioni</h1>
-        <p>Preferenze della struttura, del tuo account e dei moduli.</p>
-      </header>
+      <PageHeader eyebrow="Homisuite" title="Impostazioni" description="Preferenze della struttura, del tuo account e dei moduli." />
 
       {canManageProperty && (
         <section className="settings-section">

@@ -36,11 +36,11 @@ test('organization admin logs in, switches property, and logs out', async ({ pag
   })
 
   await login(page, ORG_ADMIN_EMAIL)
-  await expect(page.locator('.page-heading .eyebrow')).toHaveText('Property A1')
+  await expect(page.locator('.ui-page-header-eyebrow')).toHaveText('Property A1')
 
   await page.getByRole('button', { name: /Property A1/ }).first().click()
   await page.getByRole('option', { name: /Property A2/ }).click()
-  await expect(page.locator('.page-heading .eyebrow')).toHaveText('Property A2')
+  await expect(page.locator('.ui-page-header-eyebrow')).toHaveText('Property A2')
 
   await page.getByRole('button', { name: 'Menu account di E2E Org Admin' }).click()
   // "Esci" now sits outside the popover as a persistent, always-visible

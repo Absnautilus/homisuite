@@ -213,18 +213,17 @@ a { color: inherit; text-decoration: none; }
 .mobile-header, .mobile-nav, .drawer-scrim { display: none; }
 .mobile-back { display: flex; align-items: center; gap: 8px; color: inherit; font-weight: 700; font-size: 0.95rem; }
 /* Page scaffolding shared by every Shell page (Home, Moduli, Team,
-   Impostazioni, i moduli embedded...) -- the one grammar every page should
-   build on instead of re-declaring its own eyebrow/heading/spacing.
+   Impostazioni, i moduli embedded...) -- the top-level header on every page
+   is @homisuite/ui's PageHeader; what's left here is spacing plus the
+   grammar sub-sections still build their own headings on.
    `.split` puts the heading on the left and a primary action on the right,
    stacking on narrow screens instead of squeezing both onto one line. */
 .page-stack { display: grid; gap: 22px; }
 .page-stack > * { min-width: 0; }
-.page-heading { display: grid; gap: 6px; }
-.page-heading.split, .section-heading.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.section-heading.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .eyebrow { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 2px; font-size: clamp(1.8rem, 3vw, 2.35rem); letter-spacing: -0.04em; }
-.page-subtitle, .page-heading p { margin-bottom: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
 .section-heading { padding: 18px 20px 14px; }
 .section-heading h2 { font-size: 1rem; }
 .section-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12.5px; }
