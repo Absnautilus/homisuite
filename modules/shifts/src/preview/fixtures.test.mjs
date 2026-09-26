@@ -30,9 +30,10 @@ test('every assignment references a code defined by its planning unit', () => {
 
 test('planning units select job titles without changing Core profiles', () => {
   for (const property of shiftPreviewProperties) {
+    const rosterIds = new Set((property.jobTitleRoster ?? []).map((jobTitle) => jobTitle.id))
     for (const unit of property.units) {
-      assert.ok(unit.jobTitles.length > 0)
-      assert.equal(new Set([...unit.jobTitles, ...unit.excludedJobTitles]).size, unit.jobTitles.length + unit.excludedJobTitles.length)
+      assert.ok(unit.includedJobTitleIds.length > 0)
+      for (const id of unit.includedJobTitleIds) assert.ok(rosterIds.has(id), `${unit.id} includes job title ${id} not in the property's roster`)
       assert.ok(unit.people.every((person) => person.jobTitle && person.assignmentProfile))
     }
   }

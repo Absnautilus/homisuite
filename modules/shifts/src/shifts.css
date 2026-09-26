@@ -33,10 +33,6 @@
   padding: 11px 14px;
 }
 
-.shift-header { align-items: end; display: flex; gap: 28px; justify-content: space-between; margin-bottom: 22px; }
-.shift-header h1 { font-size: clamp(30px, 4vw, 44px); letter-spacing: -.04em; line-height: 1; margin: 5px 0 10px; }
-.shift-header p { color: var(--shift-muted); margin: 0; }
-.shift-header .shift-eyebrow { color: var(--shift-accent); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .shift-property-field { min-width: 255px; }
 .shift-field { display: grid; gap: 7px; }
 .shift-field > span:first-child { color: var(--shift-muted); font-size: 12px; font-weight: 750; text-transform: uppercase; }
@@ -128,8 +124,8 @@
 .shift-assign-conflicts ul { list-style: disc; margin: 8px 0 0; padding-left: 20px; }
 .shift-assign-conflicts li { margin-bottom: 4px; }
 
-.shift-header-actions { align-items: end; display: flex; gap: 10px; }
-.shift-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
+.ui-page-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
+.shift-nav-groups { margin-bottom: 14px; }
 .shift-main-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; margin-bottom: 20px; overflow: hidden; padding: 5px; }
 .shift-main-tabs-scroll { overflow-x: auto; position: relative; scrollbar-width: none; }
 .shift-main-tabs-scroll::-webkit-scrollbar { display: none; }
@@ -216,13 +212,21 @@
 .shift-code-form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .shift-code-form-grid label { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
 .shift-code-form-grid input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
-.shift-code-color-row { align-items: center; display: flex; gap: 10px; margin-top: 14px; }
-.shift-code-color-row span:first-child { color: var(--shift-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
-.shift-code-color-row input[type="color"] { border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 3px; width: 44px; }
-.shift-code-color-row input[type="text"] { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 0 10px; text-transform: uppercase; width: 96px; }
+.shift-code-color-field { min-width: 0; }
+.shift-code-color-row { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
+.shift-code-color-row input[type="color"] { border: 1px solid var(--shift-line-strong); border-radius: 8px; flex-shrink: 0; height: 38px; padding: 3px; width: 44px; }
+.shift-code-color-row input[type="text"] { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 0 10px; text-transform: uppercase; min-width: 0; flex: 1 1 84px; }
+.shift-code-color-row .shift-code-badge-preview { flex-shrink: 0; }
 .shift-code-form-error { color: #c0392b; font-size: 12px; margin: 10px 0 0; }
 .shift-code-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .shift-code-form-cancel { background: transparent; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 42px; padding: 0 16px; }
+
+.shift-unit-name-field { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; max-width: 320px; text-transform: uppercase; }
+.shift-unit-name-field input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
+.shift-unit-job-titles { margin-top: 16px; }
+.shift-unit-job-titles-label { color: var(--shift-muted); display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
+.shift-unit-job-titles-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.shift-unit-job-title-option { align-items: center; background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; display: flex; font-size: 13px; font-weight: 500; gap: 8px; min-width: 0; padding: 8px 10px; text-transform: none; }
 
 .shift-rules-layout { display: grid; gap: 16px; }
 .shift-rules-layout .shift-panel:first-child { border-radius: 0 0 18px 18px; border-top: 0; }
@@ -298,8 +302,6 @@
 .shift-my-day > strong small { font-size: 9px; font-weight: 600; opacity: .9; }
 
 @media (max-width: 760px) {
-  .shift-header { align-items: stretch; flex-direction: column; gap: 16px; }
-  .shift-header-actions { align-items: stretch; flex-direction: column; }
   .shift-property-field { min-width: 0; }
   .shift-unit-bar { align-items: stretch; flex-direction: column; gap: 8px; }
   .shift-view-toggle { justify-content: center; width: 100%; }

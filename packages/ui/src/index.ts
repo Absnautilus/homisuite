@@ -6,3 +6,5 @@ export { useDropdownTransition, dropdownTransitionClassName } from './dropdown-t
 export type { DropdownTransitionState } from './dropdown-transition'
 export { SlidePanel } from './slide-panel'
 export type { SlidePanelProps } from './slide-panel'
+export { PageHeader } from './page-header'
+export type { PageHeaderProps } from './page-header'

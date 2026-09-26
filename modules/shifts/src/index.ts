@@ -1,9 +1,9 @@
 import './shifts.css'
 
 export { ShiftPlannerModule } from './public/ShiftPlannerModule'
-export type { ShiftPlannerModuleProps, ShiftPlannerCapabilities, ShiftAssignmentEdit, ShiftMemberReorder, ShiftRuleSetSave, ShiftCodeSave, GenerateAssignmentsResult } from './public/ShiftPlannerModule'
+export type { ShiftPlannerModuleProps, ShiftPlannerCapabilities, ShiftAssignmentEdit, ShiftMemberReorder, ShiftRuleSetSave, ShiftCodeSave, GenerateAssignmentsResult, UnitSave, UnitSaveResult } from './public/ShiftPlannerModule'
 export { shiftPreviewProperties } from './preview/fixtures'
-export type { ShiftPreviewProperty, ShiftPlanningUnit, ShiftCode } from './preview/fixtures'
+export type { ShiftPreviewProperty, ShiftPlanningUnit, ShiftCode, ShiftJobTitle } from './preview/fixtures'
 export { computeMonthRestDays, nextFreeRotationSlot } from './domain/restRotation'
 export type { RestRotationProfile } from './domain/restRotation'
 export { DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, DEFAULT_ROLE_CODES, ASSIGNMENT_ROLES, initRestRotationPairsPerCycle, initRuleEnabled, initRuleOrder, initRoleCodes } from './domain/defaultRules'

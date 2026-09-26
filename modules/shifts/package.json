@@ -21,6 +21,7 @@
     "preview": "vite --host 127.0.0.1"
   },
   "dependencies": {
+    "@homisuite/ui": "*",
     "lucide-react": "^0.468.0"
   },
   "peerDependencies": {

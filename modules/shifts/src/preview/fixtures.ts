@@ -30,11 +30,17 @@ export interface ShiftRuleSummary {
   roleCodes?: Record<string, { base: string[]; extra: string[] }>
 }
 
+export interface ShiftJobTitle {
+  id: string
+  name: string
+}
+
 export interface ShiftPlanningUnit {
   id: string
   name: string
-  jobTitles: string[]
-  excludedJobTitles: string[]
+  status?: 'active' | 'inactive'
+  /** Job titles (from the property's roster) whose staff are auto-included in this unit. */
+  includedJobTitleIds: string[]
   ruleSetName: string
   ruleSetVersion: number
   ruleSetEngineVersion?: string
@@ -52,6 +58,8 @@ export interface ShiftPreviewProperty {
   id: string
   name: string
   units: ShiftPlanningUnit[]
+  /** Full active job-title roster for the property, used by the Unità admin panel. */
+  jobTitleRoster?: ShiftJobTitle[]
 }
 
 const receptionCodes: ShiftCode[] = [
@@ -65,16 +73,26 @@ const receptionCodes: ShiftCode[] = [
   { id: 'code-f', code: 'F', label: 'Ferie', time: '', kind: 'leave', color: '#C9A227', textColor: '#282014', active: true },
 ]
 
+const palazzoVenezianoJobTitles: ShiftJobTitle[] = [
+  { id: 'jt-receptionist', name: 'Receptionist' },
+  { id: 'jt-fom', name: 'Front Office Manager' },
+  { id: 'jt-rooms-division-manager', name: 'Rooms Division Manager' },
+  { id: 'jt-facchino', name: 'Facchino' },
+  { id: 'jt-governante', name: 'Governante' },
+  { id: 'jt-cameriera-piani', name: 'Cameriere/a ai piani' },
+]
+
 export const shiftPreviewProperties: ShiftPreviewProperty[] = [
   {
     id: 'palazzo-veneziano',
     name: 'Palazzo Veneziano',
+    jobTitleRoster: palazzoVenezianoJobTitles,
     units: [
       {
         id: 'pv-reception',
         name: 'Reception',
-        jobTitles: ['Receptionist', 'Front Office Manager', 'Rooms Division Manager'],
-        excludedJobTitles: ['Facchino', 'Governante'],
+        status: 'active',
+        includedJobTitleIds: ['jt-receptionist', 'jt-fom', 'jt-rooms-division-manager'],
         ruleSetName: 'Palazzo Veneziano · Reception',
         ruleSetVersion: 1,
         codes: receptionCodes,
@@ -103,8 +121,8 @@ export const shiftPreviewProperties: ShiftPreviewProperty[] = [
       {
         id: 'pv-housekeeping',
         name: 'Housekeeping',
-        jobTitles: ['Cameriere/a ai piani', 'Governante'],
-        excludedJobTitles: ['Receptionist', 'Facchino'],
+        status: 'active',
+        includedJobTitleIds: ['jt-cameriera-piani', 'jt-governante'],
         ruleSetName: 'Palazzo Veneziano · Housekeeping',
         ruleSetVersion: 1,
         codes: [
@@ -137,12 +155,16 @@ export const shiftPreviewProperties: ShiftPreviewProperty[] = [
   {
     id: 'hotel-aurora',
     name: 'Hotel Aurora · esempio',
+    jobTitleRoster: [
+      { id: 'jt-aurora-receptionist', name: 'Receptionist' },
+      { id: 'jt-aurora-fom', name: 'Front Office Manager' },
+    ],
     units: [
       {
         id: 'aurora-front-office',
         name: 'Front Office',
-        jobTitles: ['Receptionist'],
-        excludedJobTitles: ['Front Office Manager'],
+        status: 'active',
+        includedJobTitleIds: ['jt-aurora-receptionist'],
         ruleSetName: 'Preset neutro · Front Office',
         ruleSetVersion: 1,
         codes: [
