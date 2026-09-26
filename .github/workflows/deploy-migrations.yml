@@ -89,25 +89,37 @@ jobs:
           SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
         run: supabase migration list --db-url "$SUPABASE_DB_URL" | tee migration_list_before.txt
 
-      - name: Inspect the two orphan migration history entries (read-only, diagnostic)
+      - name: Reconcile history for 2 already-applied Turni migrations under mismatched versions
+        # Confirmed byte-for-byte (name + statements) via a prior diagnostic run:
+        # remote history version 20260923145443 (name shifts_property_scoped_schema)
+        # is identical to local 20260918160000_shifts_property_scoped_schema.sql, and
+        # remote 20260923192606 (name shifts_member_display_order) is identical to
+        # local 20260923212500_shifts_member_display_order.sql -- same schema content,
+        # already live, just recorded under different version stamps (likely a prior
+        # deploy from outside this workflow, before these files got their current
+        # timestamps). `migration repair` only rewrites bookkeeping rows in
+        # supabase_migrations.schema_migrations -- it never executes migration SQL --
+        # so this cannot touch the actual schema, which is already correct either way.
+        if: inputs.mode == 'apply'
         env:
           SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
         run: |
-          which psql || sudo apt-get update -y && sudo apt-get install -y postgresql-client
-          psql "$SUPABASE_DB_URL" -c "select version, name, statements from supabase_migrations.schema_migrations where version in ('20260923145443','20260923192606') order by version;"
+          supabase migration repair --status applied 20260918160000 20260923212500 --db-url "$SUPABASE_DB_URL"
+          supabase migration repair --status reverted 20260923145443 20260923192606 --db-url "$SUPABASE_DB_URL"
+          supabase migration list --db-url "$SUPABASE_DB_URL" | tee migration_list_after_repair.txt
 
       - name: Verify pending migration set matches the approved migration exactly
         if: inputs.mode == 'apply'
         run: |
-          pending=$(grep '`' migration_list_before.txt | while IFS='|' read -r local_col remote_col _rest; do
+          pending=$(grep '`' migration_list_after_repair.txt | while IFS='|' read -r local_col remote_col _rest; do
             local_val=$(echo "$local_col" | tr -d '`' | xargs)
             remote_val=$(echo "$remote_col" | tr -d '`' | xargs)
             if [ -n "$local_val" ] && [ -z "$remote_val" ]; then
               echo "$local_val"
             fi
           done | sort)
-          expected=$(printf '%s\n' 20260918160000 20260923212500 20260925090000 | sort)
-          echo "Pending (local-only) migrations:"
+          expected=$(printf '%s\n' 20260925090000 | sort)
+          echo "Pending (local-only) migrations after repair:"
           echo "$pending"
           if [ "$pending" != "$expected" ]; then
             echo "::error::Pending migration set does not match exactly the approved set ($(echo "$expected" | tr '\n' ' ')) — refusing to apply anything."
@@ -115,23 +127,11 @@ jobs:
           fi
           echo "Pending set confirmed: exactly the approved set ($(echo "$expected" | tr '\n' ' '))."
 
-      - name: Preview include-all apply (dry run, no changes made)
-        if: inputs.mode == 'apply' && inputs.migration_scope == 'include-all'
-        env:
-          SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
-        run: supabase db push --db-url "$SUPABASE_DB_URL" --include-all --dry-run
-
       - name: Apply pending migrations (standard)
         if: inputs.mode == 'apply' && inputs.migration_scope == 'standard'
         env:
           SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
         run: supabase migration up --db-url "$SUPABASE_DB_URL"
-
-      - name: Apply pending migrations (include-all)
-        if: inputs.mode == 'apply' && inputs.migration_scope == 'include-all'
-        env:
-          SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
-        run: supabase migration up --db-url "$SUPABASE_DB_URL" --include-all
 
       - name: Migration status after apply
         if: inputs.mode == 'apply'
