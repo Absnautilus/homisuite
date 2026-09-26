@@ -89,6 +89,13 @@ jobs:
           SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
         run: supabase migration list --db-url "$SUPABASE_DB_URL" | tee migration_list_before.txt
 
+      - name: Inspect the two orphan migration history entries (read-only, diagnostic)
+        env:
+          SUPABASE_DB_URL: postgresql://${{ vars.SUPABASE_DB_USER }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ vars.SUPABASE_DB_HOST }}:5432/postgres
+        run: |
+          which psql || sudo apt-get update -y && sudo apt-get install -y postgresql-client
+          psql "$SUPABASE_DB_URL" -c "select version, name, statements from supabase_migrations.schema_migrations where version in ('20260923145443','20260923192606') order by version;"
+
       - name: Verify pending migration set matches the approved migration exactly
         if: inputs.mode == 'apply'
         run: |
