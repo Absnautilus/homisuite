@@ -44,7 +44,7 @@ export function SettingsPage() {
   }, [])
 
   return (
-    <div className="page-stack shell-page settings-page">
+    <div className="page-stack settings-page">
       <PageHeader eyebrow="Homisuite" title="Impostazioni" description="Preferenze della struttura, del tuo account e dei moduli." />
 
       {canManageProperty && (

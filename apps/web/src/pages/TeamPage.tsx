@@ -199,7 +199,7 @@ export function TeamPage() {
   }
 
   return (
-    <div className="page-stack shell-page team-page">
+    <div className="page-stack team-page">
       <PageHeader eyebrow={propertyName} title="Team" description="Persone, accessi Homisuite e mansioni operative della struttura." actions={team.canManage ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : undefined} />
 
       <section className="shell-card team-principle-card">
