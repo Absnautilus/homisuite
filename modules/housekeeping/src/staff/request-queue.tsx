@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PageHeader } from '@homisuite/ui'
+import { EmbeddedNav } from '@/staff/embedded-nav'
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { cn } from '@/lib/cn'
@@ -14,16 +15,20 @@ import { useHotelName } from '@/lib/hotel-branding-context'
 import { getErrorMessage } from '@/lib/errors'
 import type { QueueJobTitle, QueuedRequest, StaffProfile } from '@/lib/staff-types'
 
-type Tab = 'active' | 'done'
+type Tab = 'new' | 'inProgress' | 'done'
 
 const DONE_PAGE_SIZE = 15
 
-export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfile; canManageQueue: boolean }) {
+export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
+  profile: StaffProfile
+  canManageQueue: boolean
+  embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
+}) {
   const { t } = useLocale()
   const hotelName = useHotelName()
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('active')
+  const [tab, setTab] = useState<Tab>('new')
   const [donePage, setDonePage] = useState(0)
   const [jobTitles, setJobTitles] = useState<QueueJobTitle[]>([])
   const [now, setNow] = useState(() => new Date())
@@ -106,6 +111,7 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
   return (
     <div className="space-y-4">
       <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
+      {embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
 
       {managesFrontDesk && (
         <div>
@@ -116,8 +122,11 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
         <div className="flex justify-end border-b border-line bg-surface px-4 py-3">
           <div className="flex gap-1 rounded-md bg-surface-2 p-1 sm:w-fit">
-            <TabButton active={tab === 'active'} onClick={() => setTab('active')}>
-              {t('staff.queue.tabActive')} ({active.length})
+            <TabButton active={tab === 'new'} onClick={() => setTab('new')}>
+              {t('staff.queue.tabNew')} ({pending.length})
+            </TabButton>
+            <TabButton active={tab === 'inProgress'} onClick={() => setTab('inProgress')}>
+              {t('staff.queue.columnInProgress')} ({inProgress.length})
             </TabButton>
             <TabButton active={tab === 'done'} onClick={() => setTab('done')}>
               {t('staff.queue.tabDone')}
@@ -131,8 +140,8 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
         </div>
       ) : queue === null ? (
         <p className="text-sm text-muted">{t('staff.queue.loading')}</p>
-      ) : tab === 'active' ? (
-        active.length === 0 ? (
+      ) : tab === 'new' ? (
+        pending.length === 0 ? (
           <EmptyState
             icon={<IconInboxEmpty className="h-6 w-6" />}
             title={t('staff.queue.emptyActiveTitle')}
@@ -140,52 +149,36 @@ export function RequestQueue({ profile, canManageQueue }: { profile: StaffProfil
             className="rounded-none border-0 bg-transparent py-10 shadow-none"
           />
         ) : (
-          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
-            <section className="min-w-0">
-              <h2 className="mb-3 flex items-center gap-2 px-1 text-sm font-semibold text-wait-ink">
-                <span className="h-2 w-2 rounded-full bg-wait-ink" />
-                {t('staff.queue.columnNew')} ({pending.length})
-              </h2>
-              {pending.length === 0 ? (
-                <div className="rounded-lg border border-line bg-surface/70 px-4 py-6 text-sm text-muted">
-                  {t('staff.queue.emptyNewShort')}
-                </div>
-              ) : (
-                <ReorderableColumn
-                  items={pending}
-                  now={now}
-                  staffId={profile.id}
-                  canReorder={canReorder}
-                  canFlagUrgent={managesFrontDesk}
-                  canManageRequest={managesFrontDesk}
-                  jobTitles={jobTitles}
-                  onReordered={reload}
-                />
-              )}
-            </section>
-            <section className="min-w-0">
-              <h2 className="mb-3 flex items-center gap-2 px-1 text-sm font-semibold text-prog-ink">
-                <span className="h-2 w-2 rounded-full bg-prog-ink" />
-                {t('staff.queue.columnInProgress')} ({inProgress.length})
-              </h2>
-              {inProgress.length === 0 ? (
-                <div className="rounded-lg border border-line bg-surface/70 px-4 py-6 text-sm text-muted">
-                  {t('staff.queue.emptyInProgressShort')}
-                </div>
-              ) : (
-                <ReorderableColumn
-                  items={inProgress}
-                  now={now}
-                  staffId={profile.id}
-                  canReorder={canReorder}
-                  canFlagUrgent={managesFrontDesk}
-                  canManageRequest={managesFrontDesk}
-                  jobTitles={jobTitles}
-                  onReordered={reload}
-                />
-              )}
-            </section>
-          </div>
+          <ReorderableColumn
+            items={pending}
+            now={now}
+            staffId={profile.id}
+            canReorder={canReorder}
+            canFlagUrgent={managesFrontDesk}
+            canManageRequest={managesFrontDesk}
+            jobTitles={jobTitles}
+            onReordered={reload}
+          />
+        )
+      ) : tab === 'inProgress' ? (
+        inProgress.length === 0 ? (
+          <EmptyState
+            icon={<IconInboxEmpty className="h-6 w-6" />}
+            title={t('staff.queue.emptyInProgressTitle')}
+            description={t('staff.queue.emptyInProgressDesc')}
+            className="rounded-none border-0 bg-transparent py-10 shadow-none"
+          />
+        ) : (
+          <ReorderableColumn
+            items={inProgress}
+            now={now}
+            staffId={profile.id}
+            canReorder={canReorder}
+            canFlagUrgent={managesFrontDesk}
+            canManageRequest={managesFrontDesk}
+            jobTitles={jobTitles}
+            onReordered={reload}
+          />
         )
       ) : done.length === 0 ? (
         <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} className="rounded-none border-0 bg-transparent py-10 shadow-none" />
