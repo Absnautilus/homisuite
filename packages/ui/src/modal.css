@@ -33,11 +33,15 @@ body.ui-modal-open { overflow: hidden; }
 }
 
 .ui-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   padding: 20px;
+  background: var(--surface, #fff);
   border-bottom: 1px solid var(--line, #e3e5f3);
 }
 .ui-modal-header h2 { margin: 0; font-size: 1.05rem; color: var(--ink, #16182b); }
@@ -60,6 +64,8 @@ body.ui-modal-open { overflow: hidden; }
 .ui-modal-body { padding: 20px; }
 
 .ui-modal-footer {
+  position: sticky;
+  bottom: 0;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
