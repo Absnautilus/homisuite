@@ -129,11 +129,11 @@
 .shift-main-tabs-scroll { overflow-x: auto; position: relative; scrollbar-width: none; }
 .shift-main-tabs-scroll::-webkit-scrollbar { display: none; }
 .shift-main-tab-buttons { display: flex; gap: 3px; position: relative; z-index: 1; }
-.shift-tab-highlight { background: white; border-radius: 10px; bottom: 0; box-shadow: 0 4px 12px #29254614; pointer-events: none; position: absolute; top: 0; transition: left 320ms cubic-bezier(.22,1,.36,1), width 320ms cubic-bezier(.22,1,.36,1), opacity 160ms ease; z-index: 0; }
+.shift-tab-highlight { background: white; border-radius: 10px; bottom: 0; box-shadow: 0 4px 12px #29254614; pointer-events: none; position: absolute; top: 0; transition: left 200ms cubic-bezier(.22,1,.36,1), width 200ms cubic-bezier(.22,1,.36,1), opacity 160ms ease; z-index: 0; }
 .shift-main-tabs button { background: transparent; border: 0; border-radius: 10px; color: var(--shift-muted); cursor: pointer; flex: 1 0 auto; font-size: 13px; font-weight: 500; letter-spacing: .01em; min-height: 40px; padding: 0 18px; transition: background-color 180ms ease, color 280ms ease, transform 180ms ease; }
 .shift-main-tabs button:hover { color: var(--shift-ink); transform: translateY(-1px); }
 .shift-main-tabs button.is-active { color: var(--shift-ink); font-weight: 700; }
-.shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform 380ms cubic-bezier(.22,1,.36,1), opacity 300ms ease; }
+.shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform var(--motion-content, 150ms) cubic-bezier(.22,1,.36,1), opacity var(--motion-content, 150ms) ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
 @media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-tab-highlight, .shift-main-tabs button { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
 
