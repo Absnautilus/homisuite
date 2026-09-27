@@ -28,12 +28,15 @@ export function BreadcrumbHeader({ breadcrumb, switcher, actions, className }: B
     <header className={['ui-breadcrumb-header', className].filter(Boolean).join(' ')}>
       <div className="ui-breadcrumb-header-row">
         <nav className="ui-breadcrumb-header-trail" aria-label="Posizione">
-          {breadcrumb.map((part, index) => (
-            <span key={index}>
-              {index > 0 ? <span className="ui-breadcrumb-header-sep">/</span> : null}
-              {part}
-            </span>
-          ))}
+          {breadcrumb.map((part, index) => {
+            const isCurrent = index === breadcrumb.length - 1
+            return (
+              <span key={index}>
+                {index > 0 ? <span className="ui-breadcrumb-header-sep">/</span> : null}
+                {isCurrent ? <h1 className="ui-breadcrumb-header-current">{part}</h1> : part}
+              </span>
+            )
+          })}
         </nav>
         {actions ? <div className="ui-breadcrumb-header-actions">{actions}</div> : null}
       </div>

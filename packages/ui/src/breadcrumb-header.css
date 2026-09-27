@@ -27,6 +27,15 @@
   color: var(--accent, #9c4fc7);
 }
 
+/* The current segment is the page's real h1 (screen readers need a
+   heading landmark), styled to read as plain trail text like the rest. */
+.ui-breadcrumb-header-current {
+  display: inline;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
 .ui-breadcrumb-header-sep {
   margin-right: 4px;
   color: var(--accent, #9c4fc7);
