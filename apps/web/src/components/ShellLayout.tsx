@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Menu, X } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { shellNavigation } from '../app/navigation'
 import { supabase } from '../core/client'
@@ -132,12 +132,12 @@ export function ShellLayout() {
         {activeModule ? (
           <header className="mobile-header mobile-header-module">
             <Link to="/" aria-label="Torna alla Home" className="mobile-back"><ArrowLeft size={19} /><span>{activeModule.label}</span></Link>
-            <button type="button" aria-label="Apri menu" onClick={() => setDrawerOpen(true)}><Menu size={20} /></button>
+            <MenuToggle open={drawerOpen} onToggle={() => setDrawerOpen((open) => !open)} />
           </header>
         ) : (
           <header className="mobile-header">
             <div>{brandMark}<small>{runtime.property?.name}</small></div>
-            <button type="button" aria-label="Apri menu" onClick={() => setDrawerOpen(true)}><Menu size={20} /></button>
+            <MenuToggle open={drawerOpen} onToggle={() => setDrawerOpen((open) => !open)} />
           </header>
         )}
         <main className="page-content"><Outlet /></main>
@@ -167,5 +167,17 @@ export function ShellLayout() {
         </div>
       )}
     </div>
+  )
+}
+
+// The hamburger morphs into an X in place, instead of swapping icons, so the
+// same button reads as one continuous control for opening and closing.
+function MenuToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" aria-label={open ? 'Chiudi menu' : 'Apri menu'} className={`menu-toggle${open ? ' is-open' : ''}`} onClick={onToggle}>
+      <span className="menu-toggle-bar" />
+      <span className="menu-toggle-bar" />
+      <span className="menu-toggle-bar" />
+    </button>
   )
 }

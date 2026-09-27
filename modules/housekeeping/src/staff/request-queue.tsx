@@ -109,8 +109,11 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
 
   return (
     <div className="space-y-4">
-      <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
-      {embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
+      {embeddedNav ? (
+        <EmbeddedNav profile={profile} {...embeddedNav} />
+      ) : (
+        <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
+      )}
 
       {managesFrontDesk && (
         <div className="flex justify-end">

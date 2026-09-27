@@ -124,8 +124,7 @@
 .shift-assign-conflicts ul { list-style: disc; margin: 8px 0 0; padding-left: 20px; }
 .shift-assign-conflicts li { margin-bottom: 4px; }
 
-.ui-page-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
-.shift-nav-groups { margin-bottom: 14px; }
+.ui-breadcrumb-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
 .shift-main-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; margin-bottom: 20px; overflow: hidden; padding: 5px; }
 .shift-main-tabs-scroll { overflow-x: auto; position: relative; scrollbar-width: none; }
 .shift-main-tabs-scroll::-webkit-scrollbar { display: none; }
@@ -137,6 +136,17 @@
 .shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform 380ms cubic-bezier(.22,1,.36,1), opacity 300ms ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
 @media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-tab-highlight, .shift-main-tabs button { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
+
+/* Below the desktop width, the sliding-highlight track reads as one flat bar;
+   split it into separate pill chips instead, each carrying its own active
+   state, matching the mobile nav mockups. */
+@media (max-width: 640px) {
+  .shift-main-tabs { background: transparent; border: 0; padding: 0; }
+  .shift-main-tab-buttons { gap: 8px; }
+  .shift-tab-highlight { display: none; }
+  .shift-main-tabs button { flex: 0 0 auto; background: rgba(255, 255, 255, 0.5); }
+  .shift-main-tabs button.is-active { background: #ffffff; box-shadow: 0 4px 12px rgba(156, 79, 199, 0.18); color: var(--shift-accent); }
+}
 
 .shift-calendar-toolbar { align-items: center; background: white; border: 1px solid var(--shift-line); border-radius: 18px 18px 0 0; display: flex; gap: 16px; justify-content: space-between; padding: 16px 18px; }
 .shift-period-control, .shift-calendar-actions, .shift-view-segment { align-items: center; display: flex; gap: 8px; }
