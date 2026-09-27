@@ -146,6 +146,10 @@
   .shift-tab-highlight { display: none; }
   .shift-main-tabs button { flex: 0 0 auto; background: rgba(255, 255, 255, 0.5); }
   .shift-main-tabs button.is-active { background: #ffffff; box-shadow: 0 4px 12px rgba(156, 79, 199, 0.18); color: var(--shift-accent); }
+
+  /* This same primary action now lives in the fixed BottomActionBar instead,
+     always within thumb's reach while the schedule grid scrolls. */
+  .shift-calendar-actions > button.is-primary { display: none; }
 }
 
 .shift-calendar-toolbar { align-items: center; background: white; border: 1px solid var(--shift-line); border-radius: 18px 18px 0 0; display: flex; gap: 16px; justify-content: space-between; padding: 16px 18px; }
