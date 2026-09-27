@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useDropdownTransition } from '@homisuite/ui'
 import { shellNavigation } from '../app/navigation'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
@@ -29,6 +30,7 @@ export function ShellLayout() {
   const diningAccess = useDiningAccess()
   const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const { state: drawerState, mounted: drawerMounted } = useDropdownTransition(drawerOpen, 220)
   const drawerRef = useRef<HTMLDivElement>(null)
   const enabledSlugs = new Set(runtime.entitlements.filter((item) => item.enabled).map((item) => item.slug))
   // Housekeeping needs an extra check beyond "entitled": a property can be
@@ -153,9 +155,9 @@ export function ShellLayout() {
         </nav>
       )}
 
-      {drawerOpen && (
-        <div className="drawer-scrim" onClick={() => setDrawerOpen(false)}>
-          <div ref={drawerRef} className="drawer-panel" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Menu">
+      {drawerMounted && (
+        <div className={`drawer-scrim${drawerState === 'open' ? ' is-open' : ''}`} onClick={() => setDrawerOpen(false)}>
+          <div ref={drawerRef} className={`drawer-panel${drawerState === 'open' ? ' is-open' : ''}`} onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Menu">
             <div className="drawer-header">
               {brandMark}
               <button type="button" aria-label="Chiudi menu" onClick={() => setDrawerOpen(false)}><X size={20} /></button>
