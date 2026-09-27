@@ -47,6 +47,7 @@
   --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
   --motion-fast: 120ms;
   --motion-default: 165ms;
+  --motion-content: 150ms;
   --motion-panel: 220ms;
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --glass-bg: rgba(255, 255, 255, 0.55);
@@ -55,7 +56,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --motion-fast: 0ms; --motion-default: 0ms; --motion-panel: 0ms; }
+  :root { --motion-fast: 0ms; --motion-default: 0ms; --motion-content: 0ms; --motion-panel: 0ms; }
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
@@ -209,7 +210,8 @@ a { color: inherit; text-decoration: none; }
 .nav-item.active::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
 
 .shell-content { width: 100%; min-width: 0; padding-left: 236px; background: var(--bg); }
-.page-content { max-width: 1180px; margin: 0 auto; padding: 32px 32px 72px; }
+.page-content { max-width: 1180px; margin: 0 auto; padding: 32px 32px 72px; animation: page-content-fade-in var(--motion-content, 150ms) ease; }
+@keyframes page-content-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .mobile-header, .mobile-nav, .drawer-scrim { display: none; }
 .mobile-back { display: flex; align-items: center; gap: 8px; color: inherit; font-weight: 700; font-size: 0.95rem; }
 /* Page scaffolding shared by every Shell page (Home, Moduli, Team,
