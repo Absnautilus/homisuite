@@ -1,0 +1,77 @@
+.ui-breadcrumb-header {
+  border-radius: 14px;
+  background: var(--accent-soft, #f4e8fa);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ui-breadcrumb-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ui-breadcrumb-header-trail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent, #9c4fc7);
+}
+
+.ui-breadcrumb-header-sep {
+  margin-right: 4px;
+  color: var(--accent, #9c4fc7);
+  opacity: 0.45;
+}
+
+.ui-breadcrumb-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* The switcher sits on the banner's own tinted background, so its track needs
+   a bit more contrast than the plain page-background it normally sits on. */
+.ui-breadcrumb-header .ui-tabs {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .ui-breadcrumb-header {
+    padding: 10px 14px;
+    border-radius: 12px;
+  }
+
+  /* A frosted, floating pill reads better than a flat tinted track once the
+     banner itself is this narrow -- the same "glass" switcher agreed on for
+     the mobile mockups. */
+  .ui-breadcrumb-header .ui-tabs {
+    background: rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow:
+      0 4px 18px rgba(22, 24, 43, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .ui-breadcrumb-header .ui-tabs .ui-tabs-indicator {
+    background: linear-gradient(135deg, var(--accent-light, #c77dee), var(--accent, #9c4fc7));
+    box-shadow: 0 4px 12px rgba(156, 79, 199, 0.4);
+  }
+
+  .ui-breadcrumb-header .ui-tabs .ui-tab[aria-selected='true'] {
+    color: #ffffff;
+  }
+}

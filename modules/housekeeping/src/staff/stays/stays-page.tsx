@@ -64,8 +64,11 @@ export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={hotelName} title={t('staff.stays.title')} description={t('staff.stays.subtitle')} />
-      {profile && embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
+      {profile && embeddedNav ? (
+        <EmbeddedNav profile={profile} {...embeddedNav} />
+      ) : (
+        <PageHeader eyebrow={hotelName} title={t('staff.stays.title')} description={t('staff.stays.subtitle')} />
+      )}
 
       <NewStayForm hotelId={hotelId} rooms={rooms} hotelSettings={hotelSettings} onCreated={reload} />
       <OperaImportPanel hotelId={hotelId} rooms={rooms} onImported={reload} />

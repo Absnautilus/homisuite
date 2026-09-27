@@ -99,10 +99,13 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
 
   return (
     <div className="min-w-0">
-      <PageHeader eyebrow={hotelName} title={t('staff.nav.admin')} description={t('staff.admin.subtitle')} />
-      {embeddedNav ? <EmbeddedNav profile={profile} {...embeddedNav} /> : null}
+      {embeddedNav ? (
+        <EmbeddedNav profile={profile} {...embeddedNav} />
+      ) : (
+        <PageHeader eyebrow={hotelName} title={t('staff.nav.admin')} description={t('staff.admin.subtitle')} />
+      )}
       <nav
-        className="mb-5 flex w-fit max-w-full items-start gap-1 rounded-md bg-surface-2 p-1"
+        className="admin-nav mb-5 flex w-fit max-w-full items-start gap-1 rounded-md bg-surface-2 p-1"
         aria-label={t('staff.nav.admin')}
       >
         <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

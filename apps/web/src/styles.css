@@ -301,10 +301,15 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
   .login-brand { margin-bottom: 26px; }
   .sidebar { display: none; }
   .shell-content { padding-left: 0; }
-  .mobile-header { position: sticky; z-index: 20; top: 0; min-height: 58px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; background: var(--navbar-bg); color: var(--navbar-text); }
+  .mobile-header { position: sticky; z-index: 41; top: 0; min-height: 58px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; background: var(--navbar-bg); color: var(--navbar-text); }
   .mobile-header .brand { color: var(--navbar-text); }
   .mobile-header small { color: var(--navbar-icon); }
   .mobile-header button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--navbar-surface); color: var(--navbar-text); }
+  .menu-toggle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .menu-toggle-bar { width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform 260ms cubic-bezier(.4, 0, .2, 1), opacity 180ms ease; }
+  .menu-toggle.is-open .menu-toggle-bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .menu-toggle.is-open .menu-toggle-bar:nth-child(2) { opacity: 0; }
+  .menu-toggle.is-open .menu-toggle-bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
   .page-content { padding: 24px 16px 92px; }
   .module-grid { grid-template-columns: 1fr; gap: 14px; }
   .module-card { padding: 20px 20px 18px; }
@@ -313,7 +318,7 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
   .mobile-nav-item { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--muted); font-size: 0.67rem; font-weight: 650; }
   .mobile-nav-item.active { color: var(--accent); }
   .drawer-scrim { display: block; position: fixed; inset: 0; z-index: 40; background: rgba(16, 15, 30, 0.4); }
-  .drawer-panel { position: absolute; inset: 0 auto 0 0; width: min(84vw, 300px); height: 100%; padding: 16px 12px; background: var(--navbar-bg); color: var(--navbar-text); box-shadow: var(--shadow-lg); overflow-y: auto; display: flex; flex-direction: column; }
+  .drawer-panel { position: absolute; inset: 0 0 0 auto; width: min(84vw, 300px); height: 100%; padding: 16px 12px; background: var(--navbar-bg); color: var(--navbar-text); box-shadow: var(--shadow-lg); overflow-y: auto; display: flex; flex-direction: column; }
   .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 6px 8px 0; }
   .mobile-header .brand, .drawer-header .brand { padding: 0; }
   .drawer-header button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--navbar-surface); color: var(--navbar-text); }

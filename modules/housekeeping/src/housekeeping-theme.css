@@ -116,6 +116,24 @@
   color: var(--accent-ink, #fff);
 }
 
+/* Below the desktop width, split the shared track into separate pill chips
+   (white, own shadow when active) instead of one solid-purple bar -- the
+   same mobile "chip" language used for Turni's own secondary sections. */
+@media (max-width: 640px) {
+  .hk-root .admin-nav {
+    background: transparent;
+    padding: 0;
+  }
+  .hk-root .admin-tab {
+    border-radius: 999px;
+  }
+  .hk-root .admin-tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
 /* Lighter sub-panel heading for AdminHome's 7 routed sub-pages, which now
    sit under AdminHome's own PageHeader ("Gestione") instead of each
    repeating a full page-level heading -- same grammar Turni uses for its
