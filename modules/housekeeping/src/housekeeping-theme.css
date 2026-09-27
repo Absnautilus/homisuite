@@ -111,14 +111,19 @@
   color: var(--foreground);
 }
 
+/* A white pill lifted onto the tinted track, same "secondary tabs" grammar
+   as Turni's own sub-navigation (.shift-main-tabs .ui-tab[aria-selected]) --
+   not an accent-filled pill, which reads as a different, heavier control. */
 .hk-root .admin-tab.active {
-  background: var(--accent);
-  color: var(--accent-ink, #fff);
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Below the desktop width, split the shared track into separate pill chips
-   (white, own shadow when active) instead of one solid-purple bar -- the
-   same mobile "chip" language used for Turni's own secondary sections. */
+   instead of one flat bar -- the same mobile "chip" language used for
+   Turni's own secondary sections. */
 @media (max-width: 640px) {
   .hk-root .admin-nav {
     background: transparent;
@@ -126,11 +131,6 @@
   }
   .hk-root .admin-tab {
     border-radius: 999px;
-  }
-  .hk-root .admin-tab.active {
-    background: var(--surface);
-    color: var(--accent);
-    box-shadow: var(--shadow-sm);
   }
 }
 

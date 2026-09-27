@@ -41,6 +41,7 @@
 }
 .ui-tab[aria-selected='true'] {
   color: var(--accent-ink);
+  font-weight: 700;
 }
 
 .ui-tabs--surface .ui-tabs-indicator {

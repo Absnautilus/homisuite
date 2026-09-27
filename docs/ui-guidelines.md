@@ -76,6 +76,48 @@ component was introduced — a deliberate, requested exception to
 pattern now (rather than after a second tab UI is built ad hoc) was the
 point of the exercise.
 
+### `BreadcrumbHeader`
+
+The module page header: a breadcrumb trail (`breadcrumb: string[]`, last
+segment rendered as a real `<h1>`) plus an optional inline primary
+`switcher` (a `Tabs`, `variant="surface"`) and an optional `actions` slot,
+in one tinted banner. Below 640px the switcher gets an automatic frosted
+"glass" pill treatment (see `breadcrumb-header.css`).
+
+**The breadcrumb's last segment is always the module's own display name,
+never the currently active section.** `[hotelName, 'Turni']`,
+`[hotelName, t('department.housekeeping')]` — constant regardless of which
+tab is selected. The active section belongs in `switcher` (or in a
+secondary `Tabs` row below the header), not the breadcrumb — see "Module
+page header contract" below.
+
+### `BottomActionBar`
+
+A generic, opt-in, mobile-only (`display: none` above 640px) fixed bar
+pinned to the bottom of the screen, for a page's primary action to stay
+reachable while its content scrolls (e.g. Turni's "Salva turni"). No fixed
+content schema — each page fills it with whatever it needs, since this
+varies a lot by module and role.
+
+### `Modal`
+
+A centered dialog on desktop; below 760px it becomes a full-height edge
+drawer instead (`translateX` slide-in, not a scale morph — always
+contained within the viewport by construction). `title`/`description`/
+`footer`/`onClose`, plus an optional `originRef` pointing at the button
+that triggered it: above the mobile breakpoint the panel visually grows out
+of that button via the Web Animations API; the morph is skipped on mobile,
+where scaling a small trigger up to a 100%-tall drawer would look broken
+rather than smooth. Header and footer are `position: sticky` so the title
+and primary actions stay reachable regardless of how long the body is.
+
+### `Toast`
+
+A brief, self-dismissing confirmation (e.g. "Turni salvati.") reusing
+`useDropdownTransition`'s mount lifecycle — no provider, no queue. The
+consumer owns its own `open` boolean, typically flipped back via a
+`setTimeout` a few seconds after the action succeeds.
+
 ### `useDropdownTransition` / `dropdownTransitionClassName`
 
 Not a full dropdown/menu component — each app's popover (language picker,
@@ -91,6 +133,47 @@ Set `data-origin` on the popover element to `top-left` / `top-right` /
 `bottom-left` / `bottom-right` to match where it actually opens relative to
 its trigger (a menu opening upward needs a `bottom-*` origin, or the scale
 animation looks like it's growing from the wrong corner).
+
+## Module page header contract
+
+Every module (Turni, Housekeeping, Ristorazione, and whatever comes next)
+renders its top-level pages the same way — this is what "Variazione D"
+means in practice, and the rule new modules should follow from the start
+rather than reinvent:
+
+1. **One `BreadcrumbHeader` per page**, `breadcrumb={[propertyName,
+   ModuleDisplayName]}`. The second segment is a constant — the module's own
+   name — never the active section's label. (Housekeeping's embedded pages
+   used to put the active Richieste/Soggiorni/Gestione label there instead
+   of "Housekeeping"; that was a bug, not a variant.)
+2. **A module's top-level sections** (Operativo/Impostazioni,
+   Richieste/Soggiorni/Gestione) go in `BreadcrumbHeader`'s `switcher` prop.
+   This is a `Tabs`, so it always gets the shared sliding-pill look and the
+   automatic mobile "glass" treatment for free — no per-module CSS needed.
+3. **A second tier of navigation within a section** (Turni's
+   Calendario/Dipendenti/Unità/..., Housekeeping admin's
+   Staff/Camere/Menu richieste/...) is a `<Tabs variant="surface">` row
+   directly below the header. A module may layer its own sizing/spacing on
+   top via a combined selector (`.shift-main-tabs.ui-tabs`, matching the
+   `className` it passes to `Tabs`) but must not re-color or re-weight the
+   selected state — that comes from `.ui-tab[aria-selected='true']` in
+   `tabs.css` (currently: `--accent-ink`/`--ink` color, 700 weight), so
+   every module's "selected" reads the same without each one deciding it
+   separately. This is what drifted for Housekeeping's admin nav (an
+   accent-filled pill instead of the shared white-surface one) and is the
+   actual bug to watch for when a module's secondary nav can't literally be
+   a `<Tabs>` instance.
+4. **When the mechanism genuinely can't be `Tabs`** — real link-based
+   routing with browser history, an overflow menu for extra items (as
+   Housekeeping admin's "Altro" dropdown needs) — it still has to look like
+   tier 3 above: a white/surface pill on the active item, not an
+   accent-filled one. The component can differ; the rendered look at a given
+   tier can't.
+
+When building a new module, start from `BreadcrumbHeader` for its header and
+reach for `Tabs` for both its primary switcher and any secondary nav before
+writing bespoke tab markup — the visual identity comes from using the same
+two components, not from copying another module's CSS by hand.
 
 ## Adding a new shared component
 

@@ -37,11 +37,10 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
     : staysAllowed && location.pathname.startsWith(staysPath)
       ? staysPath
       : requestPath
-  const activeLabel = items.find((item) => item.value === active)?.label ?? items[0]!.label
 
   return (
     <BreadcrumbHeader
-      breadcrumb={[hotelName, activeLabel]}
+      breadcrumb={[hotelName, t('department.housekeeping')]}
       switcher={{ items, value: active, onValueChange: (value) => navigate(value), 'aria-label': t('staff.nav.requests') }}
       actions={
         <>
