@@ -212,15 +212,6 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .switch-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
 .switch-field > span { text-transform: none; font-weight: 600; font-size: 12.5px; color: var(--ink-2); letter-spacing: normal; }
 
-/* Same visual spec as Housekeeping's own admin-tab nav (housekeeping-theme.css)
-   for a consistent feel between the two modules -- a rounded pill container
-   holding flat, rectangular tabs where the active one lifts onto the page's
-   own surface color with a soft shadow, rather than a colored accent pill. */
-.dining-tab-nav { display: inline-flex; width: fit-content; max-width: 100%; gap: 4px; padding: 4px; border-radius: var(--r-md); background: var(--surface-2); overflow-x: auto; }
-.dining-tab { flex: 0 0 auto; min-height: 40px; padding: 7px 13px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background 165ms ease, color 120ms ease, box-shadow 165ms ease; }
-.dining-tab:hover { color: var(--ink); }
-.dining-tab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
-
 .dining-restaurant-list { display: grid; gap: 10px; padding: 0 20px 20px; }
 .dining-restaurant-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 16px; box-shadow: none; }
 .dining-restaurant-row > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; }

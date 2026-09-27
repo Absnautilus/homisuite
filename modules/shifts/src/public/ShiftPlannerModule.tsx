@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, ShieldCheck } from 'lucide-react'
-import { BottomActionBar, BreadcrumbHeader, Toast } from '@homisuite/ui'
+import { BottomActionBar, BreadcrumbHeader, Tabs, Toast } from '@homisuite/ui'
 import type { ShiftCode } from '../preview/fixtures'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
 import type { AssignmentConflict } from '../domain/assignment'
@@ -55,9 +55,6 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [assignConflicts, setAssignConflicts] = useState<AssignmentConflict[]>([])
   const [tabDirection, setTabDirection] = useState<1 | -1>(1)
   const [tabTransitionActive, setTabTransitionActive] = useState(false)
-  const navButtonRefs = useRef<Partial<Record<ModuleTab, HTMLButtonElement>>>({})
-  const navContainerRef = useRef<HTMLDivElement>(null)
-  const [navHighlight, setNavHighlight] = useState({ left: 0, width: 0, ready: false })
   useEffect(() => { setDraftProperties(previewProperties); setPendingChanges([]); setSaveState('idle') }, [previewProperties])
   const property = useMemo(() => draftProperties.find((candidate) => candidate.id === propertyId) ?? draftProperties[0], [draftProperties, propertyId])
   const unit = property?.units.find((candidate) => candidate.id === unitId) ?? property?.units[0]
@@ -68,18 +65,6 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const periodLabel = calendarView === 'month'
     ? (['Agosto 2026', 'Settembre 2026', 'Ottobre 2026'][Math.max(0, Math.min(2, periodOffset + 1))] ?? 'Settembre 2026')
     : (['12–18 ottobre 2026', '19–25 ottobre 2026', '26 ottobre–1 novembre 2026'][Math.max(0, Math.min(2, periodOffset + 1))] ?? '19–25 ottobre 2026')
-
-  useEffect(() => {
-    const button = navButtonRefs.current[tab]
-    const container = navContainerRef.current
-    if (!button || !container) return
-    const buttonRect = button.getBoundingClientRect()
-    const containerRect = container.getBoundingClientRect()
-    const left = buttonRect.left - containerRect.left + container.scrollLeft
-    setNavHighlight({ left, width: buttonRect.width, ready: true })
-    const target = Math.max(0, Math.min(container.scrollWidth - container.clientWidth, left - (container.clientWidth - buttonRect.width) / 2))
-    container.scrollTo({ left: target, behavior: 'smooth' })
-  }, [tab, readOnly, propertyId])
 
   useEffect(() => {
     if (!tabTransitionActive) return
@@ -304,7 +289,15 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
         <button className="shift-view-toggle" type="button" onClick={togglePreviewRole}>{readOnly ? <Eye size={15} /> : <ShieldCheck size={15} />}Vista {readOnly ? 'dipendente' : 'responsabile'}</button>
       </> : undefined}
     />
-    <nav className="shift-main-tabs" aria-label="Sezioni Turni"><div ref={navContainerRef} className="shift-main-tabs-scroll" role="tablist"><i className="shift-tab-highlight" aria-hidden="true" style={{ left: navHighlight.left, width: navHighlight.width, opacity: navHighlight.ready ? 1 : 0 }} /><div className="shift-main-tab-buttons">{visibleTabs.map((item) => <button ref={(element) => { if (element) navButtonRefs.current[item.id] = element }} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? 'is-active' : undefined} onClick={() => changeTab(item.id)} key={item.id}>{item.label}</button>)}</div></div></nav>
+    <Tabs
+      items={visibleTabs.map((item) => ({ value: item.id, label: item.label }))}
+      value={tab}
+      onValueChange={(value) => changeTab(value as ModuleTab)}
+      variant="surface"
+      scrollIntoView
+      className="shift-main-tabs"
+      aria-label="Sezioni Turni"
+    />
     <div className={`shift-tab-scene${tabTransitionActive ? ' is-entering' : ''}`} style={sceneStyle}>
       {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => setPeriodOffset((value) => Math.max(-1, value - 1))}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => setPeriodOffset((value) => Math.min(1, value + 1))}><ChevronRight size={17} /></button><span className={`shift-status-chip ${monthFinal ? 'is-final' : 'is-draft'}`}>{monthFinal ? 'Definitivo' : 'Bozza'}</span></div><div className="shift-calendar-actions"><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month'); setPeriodOffset(0) }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week'); setPeriodOffset(0) }}>Settimana</button></div>{!readOnly ? <><button type="button" disabled={preview || monthFinal || !onGenerateAssignments || assignState === 'saving'} onClick={() => void generateAssignments()}>{assignState === 'saving' ? 'Assegnazione…' : 'Assegna automaticamente'}</button>{hasRestCode ? <button type="button" disabled={preview || monthFinal || !onSetRestDays || restDaysState === 'saving'} onClick={() => void setRestDays()}>{restDaysState === 'saving' ? 'Impostazione…' : 'Imposta riposi'}</button> : <button type="button" disabled={preview || !onSaveCode || restCodeSetupState === 'saving'} onClick={() => void createDefaultRestCode()} title="Crea il codice turno &quot;R&quot; (Riposo), necessario per poter impostare i riposi">{restCodeSetupState === 'saving' ? 'Configurazione…' : 'Configura codice Riposo'}</button>}<button type="button" disabled={preview || !onSetMonthStatus || monthStatusState === 'saving'} onClick={() => void toggleMonthStatus()}>{monthStatusState === 'saving' ? 'Aggiornamento…' : (monthFinal ? 'Riporta a bozza' : 'Rendi definitivo')}</button><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></> : null}</div></div><p className="shift-calendar-help">Lo stato Bozza/Definitivo riguarda solo {periodLabel.toLowerCase()}: ogni mese ha il proprio stato indipendente. “Assegna automaticamente” genera i turni solo per il mese visualizzato; gli altri mesi non vengono toccati. I turni bloccati restano fissi, mentre gli altri possono essere ricalcolati. Salva turni quando vuoi rendere permanenti le modifiche.</p><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} />{saveState === 'error' ? <div className="shift-empty" role="alert">Impossibile salvare le modifiche. Riprova.</div> : null}{restDaysState === 'error' ? <div className="shift-empty" role="alert">Impossibile impostare i riposi. Riprova.</div> : null}{restCodeSetupState === 'error' ? <div className="shift-empty" role="alert">Impossibile creare il codice Riposo. Riprova.</div> : null}{!hasRestCode && !readOnly && onSaveCode && restCodeSetupState !== 'error' ? <div className="shift-empty" role="status">Questa unità non ha ancora un codice "R" (Riposo): creane uno per poter usare "Imposta riposi".</div> : null}{monthStatusState === 'error' ? <div className="shift-empty" role="alert">Impossibile aggiornare lo stato del mese. Riprova.</div> : null}{assignState === 'error' ? <div className="shift-empty" role="alert">Impossibile generare l'assegnazione automatica. Riprova.</div> : null}{assignConflicts.length > 0 ? <div className="shift-empty shift-assign-conflicts" role="alert"><strong>{assignConflicts.length} {assignConflicts.length === 1 ? 'turno non coperto' : 'turni non coperti'}:</strong><ul>{assignConflicts.slice(0, 8).map((conflict, index) => <li key={index}>{conflict.message}</li>)}</ul>{assignConflicts.length > 8 ? <span>…e altri {assignConflicts.length - 8}.</span> : null}</div> : null}<Toast open={saveState === 'saved'}>Turni salvati.</Toast><Toast open={restDaysState === 'saved'}>Riposi impostati.</Toast><Toast open={assignState === 'saved' && assignConflicts.length === 0}>Turni assegnati automaticamente.</Toast><section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} editable={!readOnly && !preview && !monthFinal} onAssignmentChange={editAssignment} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><strong style={{ background: code.color, color: code.textColor ?? '#fff' }}>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section>{!readOnly ? <BottomActionBar><strong>{periodLabel}</strong><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></BottomActionBar> : null}</> : null}
       {tab === 'employees' ? <EmployeesPanel property={property} onReorderMembers={onReorderMembers} /> : null}

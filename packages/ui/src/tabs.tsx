@@ -19,6 +19,14 @@ export interface TabsProps {
    * chrome (e.g. a module-wide nav bar).
    */
   variant?: 'accent' | 'surface'
+  /**
+   * When true, the active tab scrolls into view (centered) inside its
+   * nearest scrollable ancestor whenever it changes -- for a switcher whose
+   * own container can overflow (e.g. many section tabs on a narrow
+   * viewport). The consumer owns the scrollable ancestor (typically via its
+   * own `overflow-x: auto` on the element `className` targets).
+   */
+  scrollIntoView?: boolean
   'aria-label'?: string
 }
 
@@ -26,7 +34,7 @@ export interface TabsProps {
 // from the real button, not a fixed width, so labels of any length work.
 // `ready` withholds the indicator until its first real measurement lands,
 // so it never flashes at the wrong position/width on mount.
-export function Tabs({ items, value, onValueChange, className, variant = 'accent', ...aria }: TabsProps) {
+export function Tabs({ items, value, onValueChange, className, variant = 'accent', scrollIntoView = false, ...aria }: TabsProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const buttonRefs = useRef(new Map<string, HTMLButtonElement>())
   const [rect, setRect] = useState<{ left: number; width: number } | null>(null)
@@ -36,9 +44,10 @@ export function Tabs({ items, value, onValueChange, className, variant = 'accent
     const active = buttonRefs.current.get(value)
     if (!list || !active) return
     setRect({ left: active.offsetLeft, width: active.offsetWidth })
+    if (scrollIntoView) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }
 
-  useLayoutEffect(measure, [value, items])
+  useLayoutEffect(measure, [value, items, scrollIntoView])
 
   useEffect(() => {
     window.addEventListener('resize', measure)

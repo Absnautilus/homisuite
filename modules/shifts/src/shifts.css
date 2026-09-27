@@ -125,27 +125,27 @@
 .shift-assign-conflicts li { margin-bottom: 4px; }
 
 .ui-breadcrumb-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
-.shift-main-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; margin-bottom: 20px; overflow: hidden; padding: 5px; }
-.shift-main-tabs-scroll { overflow-x: auto; position: relative; scrollbar-width: none; }
-.shift-main-tabs-scroll::-webkit-scrollbar { display: none; }
-.shift-main-tab-buttons { display: flex; gap: 3px; position: relative; z-index: 1; }
-.shift-tab-highlight { background: white; border-radius: 10px; bottom: 0; box-shadow: 0 4px 12px #29254614; pointer-events: none; position: absolute; top: 0; transition: left 200ms cubic-bezier(.22,1,.36,1), width 200ms cubic-bezier(.22,1,.36,1), opacity 160ms ease; z-index: 0; }
-.shift-main-tabs button { background: transparent; border: 0; border-radius: 10px; color: var(--shift-muted); cursor: pointer; flex: 1 0 auto; font-size: 13px; font-weight: 500; letter-spacing: .01em; min-height: 40px; padding: 0 18px; transition: background-color 180ms ease, color 280ms ease, transform 180ms ease; }
-.shift-main-tabs button:hover { color: var(--shift-ink); transform: translateY(-1px); }
-.shift-main-tabs button.is-active { color: var(--shift-ink); font-weight: 700; }
+/* Turni's own sizing/track layered on the shared Tabs component (packages/ui)
+   instead of reimplementing the sliding-pill mechanism -- .shift-main-tabs is
+   the className passed to <Tabs>, so it lands on the same element as .ui-tabs. */
+.shift-main-tabs.ui-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; margin-bottom: 20px; padding: 5px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.shift-main-tabs.ui-tabs::-webkit-scrollbar { display: none; }
+.shift-main-tabs .ui-tabs-indicator { border-radius: 10px; box-shadow: 0 4px 12px #29254614; }
+.shift-main-tabs .ui-tab { border-radius: 10px; color: var(--shift-muted); flex: 1 0 auto; font-size: 13px; font-weight: 500; letter-spacing: .01em; min-height: 40px; padding: 0 18px; transition: color 280ms ease, transform 180ms ease; }
+.shift-main-tabs .ui-tab:hover { color: var(--shift-ink); transform: translateY(-1px); }
+.shift-main-tabs .ui-tab[aria-selected='true'] { color: var(--shift-ink); font-weight: 700; }
 .shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform var(--motion-content, 150ms) cubic-bezier(.22,1,.36,1), opacity var(--motion-content, 150ms) ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
-@media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-tab-highlight, .shift-main-tabs button { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-main-tabs .ui-tab { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
 
 /* Below the desktop width, the sliding-highlight track reads as one flat bar;
    split it into separate pill chips instead, each carrying its own active
    state, matching the mobile nav mockups. */
 @media (max-width: 640px) {
-  .shift-main-tabs { background: transparent; border: 0; padding: 0; }
-  .shift-main-tab-buttons { gap: 8px; }
-  .shift-tab-highlight { display: none; }
-  .shift-main-tabs button { flex: 0 0 auto; background: rgba(255, 255, 255, 0.5); }
-  .shift-main-tabs button.is-active { background: #ffffff; box-shadow: 0 4px 12px rgba(156, 79, 199, 0.18); color: var(--shift-accent); }
+  .shift-main-tabs.ui-tabs { background: transparent; border: 0; padding: 0; gap: 8px; }
+  .shift-main-tabs .ui-tabs-indicator { display: none; }
+  .shift-main-tabs .ui-tab { flex: 0 0 auto; background: rgba(255, 255, 255, 0.5); border-radius: 999px; }
+  .shift-main-tabs .ui-tab[aria-selected='true'] { background: #ffffff; box-shadow: 0 4px 12px rgba(156, 79, 199, 0.18); color: var(--shift-accent); }
 
   /* This same primary action now lives in the fixed BottomActionBar instead,
      always within thumb's reach while the schedule grid scrolls. */
