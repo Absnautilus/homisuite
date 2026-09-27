@@ -294,7 +294,7 @@ export function RequestRow({
             </div>
 
             {mode === 'active' && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 {canManageRequest && <Select
                   value={request.assigned_job_title_ids.length === 1 ? request.assigned_job_title_ids[0] : ''}
                   disabled={pending || jobTitles.length === 0}
@@ -328,7 +328,7 @@ export function RequestRow({
             )}
 
             {mode === 'done' && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 {trackable && request.status === 'completed' && !request.returned_at && (
                   <IconButton tone="ok" icon={PackageCheck} label={t('staff.row.markReturned')} disabled={pending} onClick={() => run(() => markItemReturned(request.id))} />
                 )}

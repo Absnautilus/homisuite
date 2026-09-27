@@ -42,7 +42,10 @@ export function OnDutyToggle({ profile, dark = true }: { profile: StaffProfile; 
         disabled={pending}
         title={onDuty ? t('staff.onDuty.onTitle') : t('staff.onDuty.offTitle')}
         className={cn(
-          'flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+          // A fixed 44px circle (matching the icon buttons beside it in the
+          // header actions row) until the on/off label has room to show at
+          // `sm:`, where it opens back into an auto-width pill.
+          'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:justify-start sm:px-3',
           dark
             ? onDuty
               ? 'bg-white text-accent'

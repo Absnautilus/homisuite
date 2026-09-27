@@ -37,13 +37,18 @@ export function Modal({ open, title, description, footer, onClose, dismissible =
   // The morph: grow the panel from the trigger's on-screen rect to its own
   // final rect via the Web Animations API, rather than a fixed fade/slide --
   // this is what makes the modal read as opening "from" the button someone
-  // clicked instead of appearing out of nowhere.
+  // clicked instead of appearing out of nowhere. Skipped below the mobile
+  // breakpoint, where the panel becomes a full-height edge drawer: scaling
+  // up from a small trigger to a 100%-tall panel reads as broken rather than
+  // a morph, so the CSS slide-in keyframe runs instead -- always contained
+  // within the viewport by construction.
   useLayoutEffect(() => {
     if (!open) return
     const panel = panelRef.current
     const origin = originRef?.current
     if (!panel || !origin) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (window.matchMedia('(max-width: 760px)').matches) return
     const from = origin.getBoundingClientRect()
     const to = panel.getBoundingClientRect()
     if (to.width === 0 || to.height === 0 || from.width === 0 || from.height === 0) return
