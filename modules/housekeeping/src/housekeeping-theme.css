@@ -91,59 +91,24 @@
   font-family: var(--font-sans);
 }
 
-.hk-root .admin-nav {
+.hk-root .admin-nav.ui-tabs {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  margin-bottom: 20px;
+  gap: 4px;
   padding: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
   border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   border-radius: 18px;
   background: color-mix(in srgb, var(--surface-2) 82%, transparent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 72%, transparent);
 }
-
-.hk-root .admin-tab {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  flex: 0 0 auto;
-  padding: 7px 13px;
-  border-radius: 14px;
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.35;
-  white-space: nowrap;
-  text-decoration: none;
-  transition: background 165ms cubic-bezier(.4,0,.2,1), color 120ms cubic-bezier(.4,0,.2,1), box-shadow 165ms cubic-bezier(.4,0,.2,1);
-}
-
-.hk-root .admin-tab:hover {
-  color: var(--foreground);
-}
-
-/* A white pill lifted onto the tinted track, same "secondary tabs" grammar
-   as Turni's own sub-navigation (.shift-main-tabs .ui-tab[aria-selected]) --
-   not an accent-filled pill, which reads as a different, heavier control. */
-.hk-root .admin-tab.active {
-  background: var(--surface);
-  color: var(--accent);
-  font-weight: 700;
-  box-shadow:
-    0 5px 16px color-mix(in srgb, var(--accent) 12%, transparent),
-    0 1px 2px color-mix(in srgb, var(--foreground) 8%, transparent);
-}
-
-/* Below the desktop width, split the shared track into separate pill chips
-   instead of one flat bar -- the same mobile "chip" language used for
-   Turni's own secondary sections. */
-@media (max-width: 640px) {
-  .hk-root .admin-nav {
-    width: 100%;
-    overflow: hidden;
-    border-radius: 18px;
-  }
-  .hk-root .admin-tab {
-    border-radius: 14px;
-  }
-}
+.hk-root .admin-nav.ui-tabs::-webkit-scrollbar { display: none; }
+.hk-root .admin-nav .ui-tab { flex: 0 0 auto; }
 
 /* Lighter sub-panel heading for AdminHome's 7 routed sub-pages, which now
    sit under AdminHome's own PageHeader ("Gestione") instead of each

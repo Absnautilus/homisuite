@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { PageHeader, SlidePanel } from '@homisuite/ui'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Archive, BedDouble, ChartNoAxesColumnIncreasing, ClipboardList, Plug, UsersRound } from 'lucide-react'
+import { PageHeader, SlidePanel, Tabs } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { useHotelName } from '@/lib/hotel-branding-context'
-import { cn } from '@/lib/cn'
 import { RoomsPage } from '@/staff/admin/rooms-page'
 import { OperatorsPage } from '@/staff/admin/operators-page'
 import { ItemsPage } from '@/staff/admin/items-page'
@@ -29,23 +28,9 @@ interface AdminHomeProps {
   embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
 }
 
-const moreLabels = {
-  it: 'Altro',
-  en: 'More',
-  fr: 'Autres',
-  de: 'Mehr',
-  es: 'Más',
-  pt: 'Mais',
-  ja: 'その他',
-  bn: 'আরও',
-  hi: 'और',
-  ar: 'المزيد',
-  zh: '更多',
-  ru: 'Ещё',
-} as const
-
 export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId, embeddedNav }: AdminHomeProps) {
-  const { t, locale } = useLocale()
+  const { t } = useLocale()
+  const navigate = useNavigate()
   const hotelName = useHotelName()
   const location = useLocation()
   const operationalHotelId = hotelId ?? profile.hotel_id
@@ -71,31 +56,10 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
     { to: `${basePath}/archivio`, label: t('staff.admin.tabArchive'), match: (p: string) => p.startsWith(`${basePath}/archivio`), element: <ArchivePage hotelId={operationalHotelId} /> },
     { to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> },
   ]
-  const primaryTabs = tabs.slice(0, 4)
-  const secondaryTabs = tabs.slice(4)
-  const secondaryActive = secondaryTabs.some((tab) => tab.match(location.pathname))
   const activeTab = tabs.find((tab) => tab.match(location.pathname))
-  const secondaryDetailsRef = useRef<HTMLDetailsElement>(null)
+  const tabIcons = [<UsersRound />, <BedDouble />, <ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
+  const navItems = tabs.map((tab, index) => ({ value: tab.to, label: tab.label, icon: tabIcons[index] }))
 
-  // <details> has no native outside-click-to-close behavior -- unlike the
-  // popovers elsewhere in this module (icon-picker.tsx, mansioni-picker.tsx),
-  // which all close on an outside click/Escape via this same pattern.
-  useEffect(() => {
-    function onPointerDown(event: MouseEvent) {
-      if (secondaryDetailsRef.current && !secondaryDetailsRef.current.contains(event.target as Node)) {
-        secondaryDetailsRef.current.removeAttribute('open')
-      }
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') secondaryDetailsRef.current?.removeAttribute('open')
-    }
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [])
 
   return (
     <div className="min-w-0">
@@ -104,65 +68,15 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
       ) : (
         <PageHeader eyebrow={hotelName} title={t('staff.nav.admin')} description={t('staff.admin.subtitle')} />
       )}
-      <nav
-        className="admin-nav mb-5 flex w-full max-w-full items-start gap-1"
+      <Tabs
+        items={navItems}
+        value={activeTab?.to ?? basePath}
+        onValueChange={(value) => navigate(value)}
+        variant="surface"
+        scrollIntoView
+        className="admin-nav"
         aria-label={t('staff.nav.admin')}
-      >
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {primaryTabs.map((tab) => {
-            const active = tab.match(location.pathname)
-            return (
-              <Link
-                key={tab.to}
-                to={tab.to}
-                aria-current={active ? 'page' : undefined}
-                className={cn('admin-tab', active && 'active')}
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <details ref={secondaryDetailsRef} className="group relative shrink-0">
-          <summary
-            className={cn(
-              'admin-tab flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden',
-              secondaryActive && 'active',
-            )}
-          >
-            {moreLabels[locale]}
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
-              aria-hidden="true"
-            >
-              <path d="m6 8 4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </summary>
-          <div className="absolute right-0 z-30 mt-2 min-w-52 rounded-md border border-line bg-surface p-1.5 shadow-lg">
-            {secondaryTabs.map((tab) => {
-              const active = tab.match(location.pathname)
-              return (
-                <Link
-                  key={tab.to}
-                  to={tab.to}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'block rounded-sm px-3 py-2 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-foreground',
-                    active && 'bg-accent-soft text-accent',
-                  )}
-                  onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                >
-                  {tab.label}
-                </Link>
-              )
-            })}
-          </div>
-        </details>
-      </nav>
+      />
       <SlidePanel activeKey={activeTab?.to ?? location.pathname} order={tabs.map((tab) => tab.to)}>
         {activeTab?.element ?? null}
       </SlidePanel>

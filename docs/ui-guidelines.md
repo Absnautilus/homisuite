@@ -149,8 +149,10 @@ module-navigation design:
 2. primary navigation with a leading icon for every item;
 3. optional secondary navigation directly below, also icon-labelled;
 4. one shared raised surface-pill active state and smooth sliding indicator;
-5. horizontal scrolling on narrow screens instead of compressing or hiding
-   labels.
+5. compact, left-aligned items — never equal-width columns stretched across the
+   module rail;
+6. horizontal scrolling on narrow screens instead of compressing, hiding
+   labels, or moving module destinations into an "Altro/More" overflow menu.
 
 New modules must start from `ModuleNav`. Existing modules should migrate to
 it rather than reproducing the look with local CSS. Module-specific CSS may
