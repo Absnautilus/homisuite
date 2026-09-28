@@ -4,7 +4,7 @@ import { getAlertVolume, playAlertSound, setAlertVolume, unlockAudio } from '@/l
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
 
-export function NotificationSettingsToggle({ dark = false, align = 'center' }: { dark?: boolean; align?: 'center' | 'right' } = {}) {
+export function NotificationSettingsToggle({ dark = false, align = 'center', unread = false }: { dark?: boolean; align?: 'center' | 'right'; unread?: boolean } = {}) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const { state, mounted } = useDropdownTransition(open)
@@ -48,6 +48,7 @@ export function NotificationSettingsToggle({ dark = false, align = 'center' }: {
           dark ? 'hover:bg-white/10' : 'border border-line shadow-sm hover:border-accent-soft-line',
         )}
       >
+        {unread ? <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-accent-soft bg-[#6d28f5]" aria-hidden="true" /> : null}
         {volume > 0 ? <IconBell className="h-4.5 w-4.5" /> : <IconBellMuted className="h-4.5 w-4.5" />}
       </button>
       {mounted && (
