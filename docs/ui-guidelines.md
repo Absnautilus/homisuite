@@ -154,7 +154,9 @@ module-navigation design:
 6. horizontal scrolling on narrow screens instead of compressing, hiding
    labels, or moving module destinations into an "Altro/More" overflow menu.
 
-The approved Housekeeping desktop/mobile reference is the visual specification: the primary module rail uses compact left-aligned icon + label pills; the secondary rail is text-only (badges/counts are allowed, icons are not); both use fully rounded tracks and a white active pill. Desktop keeps the property/module identity and duty state; mobile omits that identity/duty row because the Shell already provides context, leaving the bell, text-size and language actions. Do not stretch primary destinations to fill available width.\n\nNew modules must start from `ModuleNav`. Existing modules should migrate to
+The approved Housekeeping desktop/mobile reference is the visual specification: the primary module rail uses compact left-aligned icon + label pills; the secondary rail is text-only (badges/counts are allowed, icons are not); both use fully rounded tracks and a white active pill. Desktop keeps the property/module identity and duty state; mobile omits that identity/duty row because the Shell already provides context, leaving the bell, text-size and language actions. Do not stretch primary destinations to fill available width.\n\nAttention markers belong to the destination tab/pill that contains unseen work, never to the notification-settings bell. Secondary navigation remains text-only. On mobile, rails must retain trailing inset so the last pill never appears outside the rounded track. Internal module tab changes should preserve the mounted module shell and use a short content transition rather than presenting as a full page reload.
+
+New modules must start from `ModuleNav`. Existing modules should migrate to
 it rather than reproducing the look with local CSS. Module-specific CSS may
 control surrounding content, but must not redefine the navigation track,
 selected pill, icon geometry, typography, or mobile behavior.
