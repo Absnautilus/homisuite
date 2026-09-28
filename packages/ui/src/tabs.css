@@ -29,6 +29,10 @@
 .ui-tab {
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 40px;
   padding: 7px 18px;
   border: 0;
@@ -79,3 +83,18 @@
     padding-inline: 16px;
   }
 }
+
+.ui-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+.ui-tab-icon > svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.8;
+}
+.ui-tab-label { line-height: 1; }
