@@ -124,21 +124,12 @@
 .shift-assign-conflicts ul { list-style: disc; margin: 8px 0 0; padding-left: 20px; }
 .shift-assign-conflicts li { margin-bottom: 4px; }
 
-.ui-breadcrumb-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
-/* Turni layers only layout/overflow on the shared tier-2 Tabs grammar.
-   Track, active surface pill, typography and mobile treatment stay owned by
-   @homisuite/ui so every module navigation behaves the same way. */
-.shift-main-tabs.ui-tabs { display: flex; width: 100%; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
-.shift-main-tabs.ui-tabs::-webkit-scrollbar { display: none; }
-.shift-main-tabs .ui-tab { flex: 1 0 auto; letter-spacing: .01em; transition: color 200ms cubic-bezier(.22,1,.36,1); }
-.shift-main-tabs .ui-tab:hover { color: var(--shift-ink); }
+.ui-module-nav-actions .shift-view-toggle { margin: 0; min-height: 44px; }
 .shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform var(--motion-content, 150ms) cubic-bezier(.22,1,.36,1), opacity var(--motion-content, 150ms) ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
-@media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-main-tabs .ui-tab { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .shift-tab-scene { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
 
 @media (max-width: 640px) {
-  .shift-main-tabs .ui-tab { flex: 0 0 auto; }
-
   /* This same primary action now lives in the fixed BottomActionBar instead,
      always within thumb's reach while the schedule grid scrolls. */
   .shift-calendar-actions > button.is-primary { display: none; }
@@ -336,7 +327,6 @@
   .shift-my-calendar-header { align-items: stretch; grid-template-columns: 1fr; }
   .shift-my-period { justify-content: space-between; }
   .shift-export-button { justify-self: stretch; justify-content: center; }
-  .shift-main-tabs button { font-size: 12.5px; padding-inline: 14px; }
 
   /* All 7 columns fit the viewport instead of forcing horizontal scroll on
      a 780px-wide grid -- a phone-width calendar reads better as a compact
