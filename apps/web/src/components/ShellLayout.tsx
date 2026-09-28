@@ -142,7 +142,7 @@ export function ShellLayout() {
             <MenuToggle open={drawerOpen} onToggle={() => setDrawerOpen((open) => !open)} />
           </header>
         )}
-        <main className="page-content" key={location.pathname}><Outlet /></main>
+        <main className="page-content"><Outlet /></main>
       </div>
 
       {!activeModule && (
