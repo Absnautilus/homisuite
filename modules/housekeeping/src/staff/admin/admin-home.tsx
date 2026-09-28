@@ -3,7 +3,6 @@ import { Archive, BedDouble, ChartNoAxesColumnIncreasing, ClipboardList, Plug, U
 import { PageHeader, SlidePanel, Tabs } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { useHotelName } from '@/lib/hotel-branding-context'
-import { cn } from '@/lib/cn'
 import { RoomsPage } from '@/staff/admin/rooms-page'
 import { OperatorsPage } from '@/staff/admin/operators-page'
 import { ItemsPage } from '@/staff/admin/items-page'
