@@ -105,7 +105,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
         <PageHeader eyebrow={hotelName} title={t('staff.nav.admin')} description={t('staff.admin.subtitle')} />
       )}
       <nav
-        className="admin-nav mb-5 flex w-fit max-w-full items-start gap-1 rounded-md bg-surface-2 p-1"
+        className="admin-nav mb-5 flex w-full max-w-full items-start gap-1"
         aria-label={t('staff.nav.admin')}
       >
         <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
