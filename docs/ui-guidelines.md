@@ -134,65 +134,33 @@ Set `data-origin` on the popover element to `top-left` / `top-right` /
 its trigger (a menu opening upward needs a `bottom-*` origin, or the scale
 animation looks like it's growing from the wrong corner).
 
-## Module page header contract
+## Module navigation contract
 
-Every module (Turni, Housekeeping, Ristorazione, and whatever comes next)
-renders its top-level pages the same way. This contract applies **only to
-navigation inside a module**: the Homisuite Shell/sidebar/header keeps its
-own visual language and behavior and must not be restyled by module-nav
-work.
+`ModuleNav` is the single source of truth for navigation **inside Homisuite
+modules**. Previous per-module combinations of `BreadcrumbHeader`, `Tabs`,
+custom tab bars, or mobile-only navigation treatments are superseded by this
+component. The Shell is explicitly outside this contract and must keep its
+existing style and behavior.
 
-The canonical module navigation is a two-tier system: a soft tinted/glass
-module banner containing the breadcrumb and the first navigation rail, then
-— when the active section needs it — a second navigation rail directly
-below. Both use a recessed rounded track with a raised white/surface active
-pill, horizontal overflow on narrow screens, and the same shared Tabs
-motion. Do not replace this with accent-filled active tabs or bespoke
-mobile chips.
+The component owns the complete two-tier pattern shown in the approved
+module-navigation design:
 
-This is what "Variazione D" means in practice, and the rule new modules
-should follow from the start rather than reinvent:
+1. module identity (`property / module`) and optional right-side actions;
+2. primary navigation with a leading icon for every item;
+3. optional secondary navigation directly below, also icon-labelled;
+4. one shared raised surface-pill active state and smooth sliding indicator;
+5. horizontal scrolling on narrow screens instead of compressing or hiding
+   labels.
 
-1. **One `BreadcrumbHeader` per page**, `breadcrumb={[propertyName,
-   ModuleDisplayName]}`. The second segment is a constant — the module's own
-   name — never the active section's label. (Housekeeping's embedded pages
-   used to put the active Richieste/Soggiorni/Gestione label there instead
-   of "Housekeeping"; that was a bug, not a variant.) Because the
-   breadcrumb's `<h1>` is now always the module name, **each section's own
-   page needs its own heading** for its content (an `<h2>`, e.g. the
-   `.admin-panel-title` pattern already used across Housekeeping's admin
-   sub-pages) — don't rely on the breadcrumb to carry a section-specific
-   heading again, an e2e test (and a screen reader) will only find the
-   module name there.
-2. **A module's top-level sections** (Operativo/Impostazioni,
-   Richieste/Soggiorni/Gestione) go in `BreadcrumbHeader`'s `switcher` prop.
-   This is a `Tabs`, so it always gets the shared sliding-pill look and the
-   automatic mobile "glass" treatment for free — no per-module CSS needed.
-3. **A second tier of navigation within a section** (Turni's
-   Calendario/Dipendenti/Unità/..., Housekeeping admin's
-   Staff/Camere/Menu richieste/...) is a `<Tabs variant="surface">` row
-   directly below the header. It keeps the same rail/pill visual grammar as
-   tier 1, but remains a distinct row so hierarchy is always visible. A module may layer its own sizing/spacing on
-   top via a combined selector (`.shift-main-tabs.ui-tabs`, matching the
-   `className` it passes to `Tabs`) but must not re-color or re-weight the
-   selected state — that comes from `.ui-tab[aria-selected='true']` in
-   `tabs.css` (currently: `--accent-ink`/`--ink` color, 700 weight), so
-   every module's "selected" reads the same without each one deciding it
-   separately. This is what drifted for Housekeeping's admin nav (an
-   accent-filled pill instead of the shared white-surface one) and is the
-   actual bug to watch for when a module's secondary nav can't literally be
-   a `<Tabs>` instance.
-4. **When the mechanism genuinely can't be `Tabs`** — real link-based
-   routing with browser history, an overflow menu for extra items (as
-   Housekeeping admin's "Altro" dropdown needs) — it still has to look like
-   tier 3 above: a white/surface pill on the active item, not an
-   accent-filled one. The component can differ; the rendered look at a given
-   tier can't.
+New modules must start from `ModuleNav`. Existing modules should migrate to
+it rather than reproducing the look with local CSS. Module-specific CSS may
+control surrounding content, but must not redefine the navigation track,
+selected pill, icon geometry, typography, or mobile behavior.
 
-When building a new module, start from `BreadcrumbHeader` for its header and
-reach for `Tabs` for both its primary switcher and any secondary nav before
-writing bespoke tab markup — the visual identity comes from using the same
-two components, not from copying another module's CSS by hand.
+`Tabs` remains the low-level segmented-control primitive for controls that
+are not module navigation. `BreadcrumbHeader` remains available for legacy
+call sites while migration completes, but it is no longer the module-nav
+contract.
 
 ## Adding a new shared component
 
