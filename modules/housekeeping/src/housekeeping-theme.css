@@ -95,20 +95,45 @@
   display: flex;
   width: max-content;
   max-width: 100%;
-  margin-bottom: 20px;
+  margin: -4px 0 20px;
   gap: 4px;
-  padding: 5px;
+  padding: 6px;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 72%, transparent);
+  border: 1px solid rgba(255, 255, 255, .66);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 3%, var(--surface-2));
+  box-shadow: inset 0 1px 2px rgba(33, 27, 63, .03);
 }
 .hk-root .admin-nav.ui-tabs::-webkit-scrollbar { display: none; }
-.hk-root .admin-nav .ui-tab { flex: 0 0 auto; }
+.hk-root .admin-nav .ui-tabs-indicator { border-radius: 999px; }
+.hk-root .admin-nav .ui-tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.hk-root .admin-nav .ui-tab[aria-selected='true'] { font-weight: 700; }
+.hk-root .admin-nav .ui-tab-icon,
+.hk-root .admin-nav .ui-tab-icon > svg { width: 18px; height: 18px; }
+.hk-root .admin-nav .ui-tab-icon { flex-basis: 18px; }
+
+@media (max-width: 640px) {
+  .hk-root .admin-nav.ui-tabs {
+    width: 100%;
+    margin-top: -2px;
+    scroll-snap-type: x proximity;
+  }
+  .hk-root .admin-nav .ui-tab {
+    min-height: 42px;
+    padding-inline: 16px;
+    scroll-snap-align: start;
+  }
+}
 
 /* Lighter sub-panel heading for AdminHome's 7 routed sub-pages, which now
    sit under AdminHome's own PageHeader ("Gestione") instead of each
