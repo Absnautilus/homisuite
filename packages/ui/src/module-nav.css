@@ -6,8 +6,8 @@
 .ui-module-nav-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 18px 20px 16px;
+  gap: 10px;
+  padding: 14px 16px 14px;
   border: 1px solid rgba(255, 255, 255, .78);
   border-radius: 28px;
   background:
@@ -20,7 +20,7 @@
 
 .ui-module-nav-topline {
   display: flex;
-  min-height: 44px;
+  min-height: 34px;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -56,8 +56,8 @@
 .ui-module-nav-primary .ui-tab {
   flex: 0 0 auto;
   min-width: 0;
-  min-height: 48px;
-  padding: 0 22px;
+  min-height: 42px;
+  padding: 0 18px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 500;
@@ -65,17 +65,17 @@
 .ui-module-nav-primary .ui-tab[aria-selected='true'] { font-weight: 700; }
 .ui-module-nav-primary .ui-tab-icon,
 .ui-module-nav-primary .ui-tab-icon > svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
-.ui-module-nav-primary .ui-tab-icon { flex-basis: 22px; }
+.ui-module-nav-primary .ui-tab-icon { flex-basis: 18px; }
 .ui-module-nav-primary .ui-tab-icon > svg { stroke-width: 1.8; }
 
 .ui-module-nav-secondary.ui-tabs {
   display: flex;
   width: max-content;
   max-width: 100%;
-  margin-top: 12px;
+  margin-top: 8px;
   gap: 4px;
   padding: 6px;
   border-radius: 999px;
@@ -86,8 +86,8 @@
 .ui-module-nav-secondary .ui-tabs-indicator { border-radius: 999px; }
 .ui-module-nav-secondary .ui-tab {
   flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 18px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
@@ -97,11 +97,11 @@
 @media (max-width: 640px) {
   .ui-module-nav { margin-bottom: 18px; }
   .ui-module-nav-card {
-    padding: 12px;
-    border-radius: 26px;
-    gap: 12px;
+    padding: 10px;
+    border-radius: 24px;
+    gap: 8px;
   }
-  .ui-module-nav-topline { min-height: 48px; }
+  .ui-module-nav-topline { min-height: 38px; }
   .ui-module-nav-identity { display: none; }
   .ui-module-nav-actions { max-width: 100%; margin-left: auto; }
   .ui-module-nav-primary.ui-tabs,
@@ -123,11 +123,11 @@
     scroll-snap-stop: always;
   }
   .ui-module-nav-primary .ui-tab {
-    min-height: 46px;
-    padding-inline: 18px;
+    min-height: 40px;
+    padding-inline: 16px;
   }
-  .ui-module-nav-secondary.ui-tabs { margin-top: 10px; }
-  .ui-module-nav-secondary .ui-tab { min-height: 42px; padding-inline: 16px; }
+  .ui-module-nav-secondary.ui-tabs { margin-top: 8px; }
+  .ui-module-nav-secondary .ui-tab { min-height: 36px; padding-inline: 14px; }
 }
 
 .ui-module-nav-primary .ui-tab,
