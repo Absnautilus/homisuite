@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { BreadcrumbHeader } from '@homisuite/ui'
+import { ModuleNav } from '@homisuite/ui'
+import { BookOpenText, CalendarDays, ListTree, UtensilsCrossed } from 'lucide-react'
 import { CategoriesTab } from './CategoriesTab'
 import { RestaurantsTab } from './RestaurantsTab'
 import { ReservationsTab } from './ReservationsTab'
@@ -13,10 +14,10 @@ interface DiningPageProps {
 }
 
 const TABS = [
-  { value: 'prenotazioni', label: 'Prenotazioni' },
-  { value: 'ristoranti', label: 'Ristoranti' },
-  { value: 'categorie', label: 'Categorie' },
-  { value: 'registro', label: 'Registro modifiche' },
+  { value: 'prenotazioni', label: 'Prenotazioni', icon: <CalendarDays /> },
+  { value: 'ristoranti', label: 'Ristoranti', icon: <UtensilsCrossed /> },
+  { value: 'categorie', label: 'Categorie', icon: <ListTree /> },
+  { value: 'registro', label: 'Registro modifiche', icon: <BookOpenText /> },
 ]
 
 export function DiningPage({ hotelId, hotelName, canManage, staffProfileId }: DiningPageProps) {
@@ -24,9 +25,13 @@ export function DiningPage({ hotelId, hotelName, canManage, staffProfileId }: Di
 
   return (
     <div className="page-stack dining-page">
-      <BreadcrumbHeader
-        breadcrumb={[hotelName, 'Ristorazione']}
-        switcher={{ items: TABS, value: tab, onValueChange: setTab, 'aria-label': 'Sezioni Ristorazione' }}
+      <ModuleNav
+        propertyName={hotelName}
+        moduleName="Ristorazione"
+        items={TABS}
+        value={tab}
+        onValueChange={setTab}
+        ariaLabel="Sezioni Ristorazione"
       />
       {/* All four panels stay mounted, switching only which is visible --
           unmounting/remounting a tab (the previous behaviour) discarded
