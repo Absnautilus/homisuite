@@ -145,7 +145,13 @@ rather than reinvent:
    ModuleDisplayName]}`. The second segment is a constant — the module's own
    name — never the active section's label. (Housekeeping's embedded pages
    used to put the active Richieste/Soggiorni/Gestione label there instead
-   of "Housekeeping"; that was a bug, not a variant.)
+   of "Housekeeping"; that was a bug, not a variant.) Because the
+   breadcrumb's `<h1>` is now always the module name, **each section's own
+   page needs its own heading** for its content (an `<h2>`, e.g. the
+   `.admin-panel-title` pattern already used across Housekeeping's admin
+   sub-pages) — don't rely on the breadcrumb to carry a section-specific
+   heading again, an e2e test (and a screen reader) will only find the
+   module name there.
 2. **A module's top-level sections** (Operativo/Impostazioni,
    Richieste/Soggiorni/Gestione) go in `BreadcrumbHeader`'s `switcher` prop.
    This is a `Tabs`, so it always gets the shared sliding-pill look and the

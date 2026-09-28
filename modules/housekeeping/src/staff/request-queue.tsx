@@ -110,7 +110,10 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
   return (
     <div className="space-y-4">
       {embeddedNav ? (
-        <EmbeddedNav profile={profile} {...embeddedNav} />
+        <>
+          <EmbeddedNav profile={profile} {...embeddedNav} />
+          <div className="admin-panel-title"><h2>{t('staff.nav.requests')}</h2></div>
+        </>
       ) : (
         <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
       )}

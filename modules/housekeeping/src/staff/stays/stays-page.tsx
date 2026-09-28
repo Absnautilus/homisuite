@@ -65,7 +65,10 @@ export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
   return (
     <div className="space-y-6">
       {profile && embeddedNav ? (
-        <EmbeddedNav profile={profile} {...embeddedNav} />
+        <>
+          <EmbeddedNav profile={profile} {...embeddedNav} />
+          <div className="admin-panel-title"><h2>{t('staff.nav.stays')}</h2></div>
+        </>
       ) : (
         <PageHeader eyebrow={hotelName} title={t('staff.stays.title')} description={t('staff.stays.subtitle')} />
       )}
