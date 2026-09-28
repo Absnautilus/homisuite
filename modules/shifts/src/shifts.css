@@ -125,27 +125,19 @@
 .shift-assign-conflicts li { margin-bottom: 4px; }
 
 .ui-breadcrumb-header-actions .shift-view-toggle { margin: 0; min-height: 44px; }
-/* Turni's own sizing/track layered on the shared Tabs component (packages/ui)
-   instead of reimplementing the sliding-pill mechanism -- .shift-main-tabs is
-   the className passed to <Tabs>, so it lands on the same element as .ui-tabs. */
-.shift-main-tabs.ui-tabs { background: #f1f0f8; border: 1px solid var(--shift-line); border-radius: 14px; margin-bottom: 20px; padding: 5px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+/* Turni layers only layout/overflow on the shared tier-2 Tabs grammar.
+   Track, active surface pill, typography and mobile treatment stay owned by
+   @homisuite/ui so every module navigation behaves the same way. */
+.shift-main-tabs.ui-tabs { display: flex; width: 100%; margin-bottom: 20px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .shift-main-tabs.ui-tabs::-webkit-scrollbar { display: none; }
-.shift-main-tabs .ui-tabs-indicator { border-radius: 10px; box-shadow: 0 4px 12px #29254614; }
-.shift-main-tabs .ui-tab { border-radius: 10px; color: var(--shift-muted); flex: 1 0 auto; font-size: 13px; font-weight: 500; letter-spacing: .01em; min-height: 40px; padding: 0 18px; transition: color 280ms ease, transform 180ms ease; }
-.shift-main-tabs .ui-tab:hover { color: var(--shift-ink); transform: translateY(-1px); }
-.shift-main-tabs .ui-tab[aria-selected='true'] { color: var(--shift-ink); }
+.shift-main-tabs .ui-tab { flex: 1 0 auto; letter-spacing: .01em; transition: color 200ms cubic-bezier(.22,1,.36,1); }
+.shift-main-tabs .ui-tab:hover { color: var(--shift-ink); }
 .shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform var(--motion-content, 150ms) cubic-bezier(.22,1,.36,1), opacity var(--motion-content, 150ms) ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
 @media (prefers-reduced-motion: reduce) { .shift-tab-scene, .shift-main-tabs .ui-tab { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
 
-/* Below the desktop width, the sliding-highlight track reads as one flat bar;
-   split it into separate pill chips instead, each carrying its own active
-   state, matching the mobile nav mockups. */
 @media (max-width: 640px) {
-  .shift-main-tabs.ui-tabs { background: transparent; border: 0; padding: 0; gap: 8px; }
-  .shift-main-tabs .ui-tabs-indicator { display: none; }
-  .shift-main-tabs .ui-tab { flex: 0 0 auto; background: rgba(255, 255, 255, 0.5); border-radius: 999px; }
-  .shift-main-tabs .ui-tab[aria-selected='true'] { background: #ffffff; box-shadow: 0 4px 12px rgba(156, 79, 199, 0.18); color: var(--shift-accent); }
+  .shift-main-tabs .ui-tab { flex: 0 0 auto; }
 
   /* This same primary action now lives in the fixed BottomActionBar instead,
      always within thumb's reach while the schedule grid scrolls. */
