@@ -155,3 +155,15 @@
 
 .hk-module-duty-desktop { display: contents; }
 @media (max-width: 640px) { .hk-module-duty-desktop { display: none; } }
+
+.hk-route-scene {
+  animation: hk-route-enter 190ms cubic-bezier(.22,1,.36,1) both;
+  transform-origin: top center;
+}
+@keyframes hk-route-enter {
+  from { opacity: .72; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hk-route-scene { animation: none; }
+}
