@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { BreadcrumbHeader } from '@homisuite/ui'
+import { ModuleNav } from '@homisuite/ui'
+import { BedDouble, Inbox, Settings2 } from 'lucide-react'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
@@ -28,9 +29,9 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
   const adminPath = `${basePath}/admin`
 
   const items = [
-    { value: requestPath, label: t('staff.nav.requests') },
-    ...(staysAllowed ? [{ value: staysPath, label: t('staff.nav.stays') }] : []),
-    ...(manageAllowed ? [{ value: adminPath, label: t('staff.nav.admin') }] : []),
+    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox /> },
+    ...(staysAllowed ? [{ value: staysPath, label: t('staff.nav.stays'), icon: <BedDouble /> }] : []),
+    ...(manageAllowed ? [{ value: adminPath, label: t('staff.nav.admin'), icon: <Settings2 /> }] : []),
   ]
   const active = manageAllowed && location.pathname.startsWith(adminPath)
     ? adminPath
@@ -39,9 +40,13 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
       : requestPath
 
   return (
-    <BreadcrumbHeader
-      breadcrumb={[hotelName, t('department.housekeeping')]}
-      switcher={{ items, value: active, onValueChange: (value) => navigate(value), 'aria-label': t('staff.nav.requests') }}
+    <ModuleNav
+      propertyName={hotelName}
+      moduleName={t('department.housekeeping')}
+      items={items}
+      value={active}
+      onValueChange={(value) => navigate(value)}
+      ariaLabel={t('staff.nav.requests')}
       actions={
         <>
           <OnDutyToggle profile={profile} dark={false} />
