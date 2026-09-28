@@ -93,12 +93,6 @@
   font-weight: 500;
 }
 .ui-module-nav-secondary .ui-tab[aria-selected='true'] { font-weight: 700; }
-.ui-module-nav-secondary .ui-tab-icon,
-.ui-module-nav-secondary .ui-tab-icon > svg {
-  width: 18px;
-  height: 18px;
-}
-.ui-module-nav-secondary .ui-tab-icon { flex-basis: 18px; }
 
 @media (max-width: 640px) {
   .ui-module-nav { margin-bottom: 18px; }
@@ -144,4 +138,3 @@
   box-shadow: 0 7px 18px rgba(83, 55, 150, .12), 0 1px 3px rgba(29, 25, 57, .06);
 }
 .ui-module-nav-primary .ui-tab[aria-selected='true'] .ui-tab-icon { color: #6d28f5; }
-.ui-module-nav-secondary .ui-tab[aria-selected='true'] .ui-tab-icon { color: #6d28f5; }
