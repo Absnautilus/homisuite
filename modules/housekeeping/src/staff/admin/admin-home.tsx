@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { Archive, BedDouble, ChartNoAxesColumnIncreasing, ClipboardList, Plug, UsersRound } from 'lucide-react'
 import { PageHeader, SlidePanel, Tabs } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { useHotelName } from '@/lib/hotel-branding-context'
@@ -56,7 +57,8 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
     { to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> },
   ]
   const activeTab = tabs.find((tab) => tab.match(location.pathname))
-  const navItems = tabs.map((tab) => ({ value: tab.to, label: tab.label }))
+  const tabIcons = [<UsersRound />, <BedDouble />, <ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
+  const navItems = tabs.map((tab, index) => ({ value: tab.to, label: tab.label, icon: tabIcons[index] }))
 
 
   return (
