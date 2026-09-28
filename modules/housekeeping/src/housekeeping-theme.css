@@ -152,3 +152,6 @@
   font-size: 0.875rem;
 }
 
+
+.hk-module-duty-desktop { display: contents; }
+@media (max-width: 640px) { .hk-module-duty-desktop { display: none; } }
