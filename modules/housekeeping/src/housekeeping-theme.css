@@ -111,13 +111,17 @@
 .hk-root .admin-nav .ui-tabs-indicator { border-radius: 999px; }
 .hk-root .admin-nav .ui-tab {
   flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 18px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
 }
 .hk-root .admin-nav .ui-tab[aria-selected='true'] { font-weight: 700; }
+.hk-root .admin-nav .ui-tab-icon,
+.hk-root .admin-nav .ui-tab-icon > svg { width: 16px; height: 16px; }
+.hk-root .admin-nav .ui-tab-icon { flex-basis: 16px; }
+.hk-root .admin-nav .ui-tab[aria-selected='true'] .ui-tab-icon { color: #6d28f5; }
 
 @media (max-width: 640px) {
   .hk-root .admin-nav.ui-tabs {
@@ -126,8 +130,8 @@
     scroll-snap-type: x proximity;
   }
   .hk-root .admin-nav .ui-tab {
-    min-height: 42px;
-    padding-inline: 16px;
+    min-height: 36px;
+    padding-inline: 14px;
     scroll-snap-align: start;
   }
 }
