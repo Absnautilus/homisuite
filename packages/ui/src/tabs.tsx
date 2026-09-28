@@ -4,6 +4,8 @@ import './tabs.css'
 export interface TabItem {
   value: string
   label: ReactNode
+  /** Optional leading icon. Module navigation should use this consistently. */
+  icon?: ReactNode
 }
 
 export interface TabsProps {
@@ -76,7 +78,8 @@ export function Tabs({ items, value, onValueChange, className, variant = 'accent
           className="ui-tab"
           onClick={() => onValueChange(item.value)}
         >
-          {item.label}
+          {item.icon ? <span className="ui-tab-icon" aria-hidden="true">{item.icon}</span> : null}
+          <span className="ui-tab-label">{item.label}</span>
         </button>
       ))}
     </div>
