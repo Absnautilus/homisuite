@@ -137,9 +137,21 @@ animation looks like it's growing from the wrong corner).
 ## Module page header contract
 
 Every module (Turni, Housekeeping, Ristorazione, and whatever comes next)
-renders its top-level pages the same way — this is what "Variazione D"
-means in practice, and the rule new modules should follow from the start
-rather than reinvent:
+renders its top-level pages the same way. This contract applies **only to
+navigation inside a module**: the Homisuite Shell/sidebar/header keeps its
+own visual language and behavior and must not be restyled by module-nav
+work.
+
+The canonical module navigation is a two-tier system: a soft tinted/glass
+module banner containing the breadcrumb and the first navigation rail, then
+— when the active section needs it — a second navigation rail directly
+below. Both use a recessed rounded track with a raised white/surface active
+pill, horizontal overflow on narrow screens, and the same shared Tabs
+motion. Do not replace this with accent-filled active tabs or bespoke
+mobile chips.
+
+This is what "Variazione D" means in practice, and the rule new modules
+should follow from the start rather than reinvent:
 
 1. **One `BreadcrumbHeader` per page**, `breadcrumb={[propertyName,
    ModuleDisplayName]}`. The second segment is a constant — the module's own
@@ -159,7 +171,8 @@ rather than reinvent:
 3. **A second tier of navigation within a section** (Turni's
    Calendario/Dipendenti/Unità/..., Housekeeping admin's
    Staff/Camere/Menu richieste/...) is a `<Tabs variant="surface">` row
-   directly below the header. A module may layer its own sizing/spacing on
+   directly below the header. It keeps the same rail/pill visual grammar as
+   tier 1, but remains a distinct row so hierarchy is always visible. A module may layer its own sizing/spacing on
    top via a combined selector (`.shift-main-tabs.ui-tabs`, matching the
    `className` it passes to `Tabs`) but must not re-color or re-weight the
    selected state — that comes from `.ui-tab[aria-selected='true']` in
