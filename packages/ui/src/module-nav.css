@@ -111,7 +111,8 @@
     overflow-y: hidden;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
-    scroll-snap-type: x proximity;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 6px;
   }
   .ui-module-nav-primary.ui-tabs::-webkit-scrollbar,
   .ui-module-nav-secondary.ui-tabs::-webkit-scrollbar { display: none; }
@@ -119,6 +120,7 @@
   .ui-module-nav-secondary .ui-tab {
     flex: 0 0 auto;
     scroll-snap-align: start;
+    scroll-snap-stop: always;
   }
   .ui-module-nav-primary .ui-tab {
     min-height: 46px;
@@ -138,3 +140,14 @@
   box-shadow: 0 7px 18px rgba(83, 55, 150, .12), 0 1px 3px rgba(29, 25, 57, .06);
 }
 .ui-module-nav-primary .ui-tab[aria-selected='true'] .ui-tab-icon { color: #6d28f5; }
+
+@media (max-width: 640px) {
+  .ui-module-nav-primary.ui-tabs,
+  .ui-module-nav-secondary.ui-tabs {
+    padding-right: 18px;
+  }
+  .ui-module-nav-primary .ui-tab:last-of-type,
+  .ui-module-nav-secondary .ui-tab:last-of-type {
+    margin-right: 8px;
+  }
+}
