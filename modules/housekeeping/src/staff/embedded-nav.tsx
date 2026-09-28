@@ -49,8 +49,8 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
       ariaLabel={t('staff.nav.requests')}
       actions={
         <>
-          <OnDutyToggle profile={profile} dark={false} />
-          <NotificationSettingsToggle align="right" />
+          <span className="hk-module-duty-desktop"><OnDutyToggle profile={profile} dark={false} /></span>
+          <NotificationSettingsToggle align="right" unread />
           <TextSizeToggle align="right" />
           <LanguageToggle align="right" />
         </>

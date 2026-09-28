@@ -118,9 +118,6 @@
   font-weight: 500;
 }
 .hk-root .admin-nav .ui-tab[aria-selected='true'] { font-weight: 700; }
-.hk-root .admin-nav .ui-tab-icon,
-.hk-root .admin-nav .ui-tab-icon > svg { width: 18px; height: 18px; }
-.hk-root .admin-nav .ui-tab-icon { flex-basis: 18px; }
 
 @media (max-width: 640px) {
   .hk-root .admin-nav.ui-tabs {
@@ -155,3 +152,6 @@
   font-size: 0.875rem;
 }
 
+
+.hk-module-duty-desktop { display: contents; }
+@media (max-width: 640px) { .hk-module-duty-desktop { display: none; } }

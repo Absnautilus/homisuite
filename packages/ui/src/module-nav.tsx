@@ -25,7 +25,7 @@ export interface ModuleNavProps {
  * It deliberately does not own or style the Shell.
  *
  * Tier 1: module identity + icon-labelled primary navigation.
- * Tier 2: optional icon-labelled sub-navigation immediately below.
+ * Tier 2: optional text-only sub-navigation immediately below.
  */
 export function ModuleNav({ propertyName, moduleName, items, value, onValueChange, ariaLabel, actions, secondary, className }: ModuleNavProps) {
   return (
