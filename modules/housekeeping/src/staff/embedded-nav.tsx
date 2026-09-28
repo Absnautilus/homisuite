@@ -28,16 +28,17 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
   const staysPath = `${basePath}/soggiorni`
   const adminPath = `${basePath}/admin`
 
-  const items = [
-    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox /> },
-    ...(staysAllowed ? [{ value: staysPath, label: t('staff.nav.stays'), icon: <BedDouble /> }] : []),
-    ...(manageAllowed ? [{ value: adminPath, label: t('staff.nav.admin'), icon: <Settings2 /> }] : []),
-  ]
   const active = manageAllowed && location.pathname.startsWith(adminPath)
     ? adminPath
     : staysAllowed && location.pathname.startsWith(staysPath)
       ? staysPath
       : requestPath
+
+  const items = [
+    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox />, attention: active !== requestPath },
+    ...(staysAllowed ? [{ value: staysPath, label: t('staff.nav.stays'), icon: <BedDouble /> }] : []),
+    ...(manageAllowed ? [{ value: adminPath, label: t('staff.nav.admin'), icon: <Settings2 /> }] : []),
+  ]
 
   return (
     <ModuleNav
@@ -50,7 +51,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
       actions={
         <>
           <span className="hk-module-duty-desktop"><OnDutyToggle profile={profile} dark={false} /></span>
-          <NotificationSettingsToggle align="right" unread />
+          <NotificationSettingsToggle align="right" />
           <TextSizeToggle align="right" />
           <LanguageToggle align="right" />
         </>

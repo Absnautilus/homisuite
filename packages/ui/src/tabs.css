@@ -98,3 +98,15 @@
   stroke-width: 1.8;
 }
 .ui-tab-label { line-height: 1; }
+
+.ui-tab-attention {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #6d28f5;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 88%, transparent);
+  pointer-events: none;
+}

@@ -6,6 +6,8 @@ export interface TabItem {
   label: ReactNode
   /** Optional leading icon. Module navigation should use this consistently. */
   icon?: ReactNode
+  /** Optional attention marker for unseen/new content in this destination. */
+  attention?: boolean
 }
 
 export interface TabsProps {
@@ -80,6 +82,7 @@ export function Tabs({ items, value, onValueChange, className, variant = 'accent
         >
           {item.icon ? <span className="ui-tab-icon" aria-hidden="true">{item.icon}</span> : null}
           <span className="ui-tab-label">{item.label}</span>
+          {item.attention ? <span className="ui-tab-attention" aria-label="Nuovi elementi" /> : null}
         </button>
       ))}
     </div>
