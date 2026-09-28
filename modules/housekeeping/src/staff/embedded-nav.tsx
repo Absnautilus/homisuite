@@ -50,7 +50,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
       actions={
         <>
           <OnDutyToggle profile={profile} dark={false} />
-          <NotificationSettingsToggle align="right" />
+          <NotificationSettingsToggle align="right" unread />
           <TextSizeToggle align="right" />
           <LanguageToggle align="right" />
         </>
