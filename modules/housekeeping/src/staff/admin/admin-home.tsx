@@ -64,19 +64,31 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
   return (
     <div className="min-w-0">
       {embeddedNav ? (
-        <EmbeddedNav profile={profile} {...embeddedNav} />
+        <EmbeddedNav
+          profile={profile}
+          {...embeddedNav}
+          secondary={{
+            items: navItems,
+            value: activeTab?.to ?? basePath,
+            onValueChange: (value) => navigate(value),
+            ariaLabel: t('staff.nav.admin'),
+            scrollIntoView: true,
+          }}
+        />
       ) : (
         <PageHeader eyebrow={hotelName} title={t('staff.nav.admin')} description={t('staff.admin.subtitle')} />
       )}
-      <Tabs
-        items={navItems}
-        value={activeTab?.to ?? basePath}
-        onValueChange={(value) => navigate(value)}
-        variant="surface"
-        scrollIntoView
-        className="admin-nav"
-        aria-label={t('staff.nav.admin')}
-      />
+      {!embeddedNav ? (
+        <Tabs
+          items={navItems}
+          value={activeTab?.to ?? basePath}
+          onValueChange={(value) => navigate(value)}
+          variant="surface"
+          scrollIntoView
+          className="admin-nav"
+          aria-label={t('staff.nav.admin')}
+        />
+      ) : null}
       <SlidePanel activeKey={activeTab?.to ?? location.pathname} order={tabs.map((tab) => tab.to)}>
         {activeTab?.element ?? null}
       </SlidePanel>

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ModuleNav } from '@homisuite/ui'
+import { ModuleNav, type TabItem } from '@homisuite/ui'
 import { BedDouble, Inbox, Settings2 } from 'lucide-react'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
@@ -13,11 +13,18 @@ import type { StaffProfile } from '@/lib/staff-types'
 // (hotel / current section) plus the Richieste/Soggiorni/Gestione switcher,
 // in one banner -- replacing a separate PageHeader title per page, the same
 // "Variazione D" grammar Turni uses for its own Operativo/Impostazioni row.
-export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: {
+export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed, secondary }: {
   profile: StaffProfile
   basePath: string
   staysAllowed: boolean
   manageAllowed: boolean
+  secondary?: {
+    items: TabItem[]
+    value: string
+    onValueChange: (value: string) => void
+    ariaLabel: string
+    scrollIntoView?: boolean
+  }
 }) {
   const { t } = useLocale()
   const hotelName = useHotelName()
@@ -35,7 +42,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
       : requestPath
 
   const items = [
-    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox />, attention: active !== requestPath },
+    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox /> },
     ...(staysAllowed ? [{ value: staysPath, label: t('staff.nav.stays'), icon: <BedDouble /> }] : []),
     ...(manageAllowed ? [{ value: adminPath, label: t('staff.nav.admin'), icon: <Settings2 /> }] : []),
   ]
@@ -48,6 +55,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed }: 
       value={active}
       onValueChange={(value) => navigate(value)}
       ariaLabel={t('staff.nav.requests')}
+      secondary={secondary}
       actions={
         <>
           <span className="hk-module-duty-desktop"><OnDutyToggle profile={profile} dark={false} /></span>
