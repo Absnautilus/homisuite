@@ -25,7 +25,7 @@ export interface ModuleNavProps {
  * It deliberately does not own or style the Shell.
  *
  * Tier 1: module identity + icon-labelled primary navigation.
- * Tier 2: optional text-only sub-navigation immediately below.
+ * Tier 2: optional icon-labelled sub-navigation inside the same module surface.
  */
 export function ModuleNav({ propertyName, moduleName, items, value, onValueChange, ariaLabel, actions, secondary, className }: ModuleNavProps) {
   return (
@@ -40,18 +40,18 @@ export function ModuleNav({ propertyName, moduleName, items, value, onValueChang
           {actions ? <div className="ui-module-nav-actions">{actions}</div> : null}
         </div>
         <Tabs items={items} value={value} onValueChange={onValueChange} variant="surface" className="ui-module-nav-primary" aria-label={ariaLabel} />
-      </header>
-      {secondary ? (
-        <Tabs
+        {secondary ? (
+          <Tabs
           items={secondary.items}
           value={secondary.value}
           onValueChange={secondary.onValueChange}
           variant="surface"
           scrollIntoView={secondary.scrollIntoView}
           className="ui-module-nav-secondary"
-          aria-label={secondary.ariaLabel}
-        />
-      ) : null}
+            aria-label={secondary.ariaLabel}
+          />
+        ) : null}
+      </header>
     </div>
   )
 }
