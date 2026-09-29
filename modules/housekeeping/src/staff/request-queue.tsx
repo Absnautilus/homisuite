@@ -111,7 +111,20 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
     <div className="space-y-4">
       {embeddedNav ? (
         <>
-          <EmbeddedNav profile={profile} {...embeddedNav} />
+          <EmbeddedNav
+            profile={profile}
+            {...embeddedNav}
+            secondary={{
+              items: [
+                { value: 'new', label: t('staff.queue.tabNew'), attention: pending.length > 0 ? pending.length : false },
+                { value: 'inProgress', label: t('staff.queue.columnInProgress') },
+                { value: 'done', label: t('staff.queue.tabDone') },
+              ],
+              value: tab,
+              onValueChange: (value) => setTab(value as Tab),
+              ariaLabel: t('staff.queue.title'),
+            }}
+          />
           <div className="admin-panel-title"><h2>{t('staff.nav.requests')}</h2></div>
         </>
       ) : (
@@ -125,19 +138,21 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
       )}
 
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
-        <div className="border-b border-line bg-surface px-4 py-3 sm:px-5">
-          <Tabs
-            items={[
-              { value: 'new', label: `${t('staff.queue.tabNew')} (${pending.length})` },
-              { value: 'inProgress', label: `${t('staff.queue.columnInProgress')} (${inProgress.length})` },
-              { value: 'done', label: t('staff.queue.tabDone') },
-            ]}
-            value={tab}
-            onValueChange={(value) => setTab(value as Tab)}
-            variant="surface"
-            aria-label={t('staff.queue.title')}
-          />
-        </div>
+        {!embeddedNav ? (
+          <div className="border-b border-line bg-surface px-4 py-3 sm:px-5">
+            <Tabs
+              items={[
+                { value: 'new', label: `${t('staff.queue.tabNew')} (${pending.length})` },
+                { value: 'inProgress', label: `${t('staff.queue.columnInProgress')} (${inProgress.length})` },
+                { value: 'done', label: t('staff.queue.tabDone') },
+              ]}
+              value={tab}
+              onValueChange={(value) => setTab(value as Tab)}
+              variant="surface"
+              aria-label={t('staff.queue.title')}
+            />
+          </div>
+        ) : null}
         <div className="p-4 sm:p-5">
       {loadError ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">
