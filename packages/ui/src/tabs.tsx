@@ -83,7 +83,7 @@ export function Tabs({ items, value, onValueChange, className, variant = 'accent
           {item.icon ? <span className="ui-tab-icon" aria-hidden="true">{item.icon}</span> : null}
           <span className="ui-tab-label">{item.label}</span>
           {item.attention ? (
-            <span className="ui-tab-attention" aria-label={typeof item.attention === 'number' ? `${item.attention} nuovi elementi` : 'Nuovi elementi'}>
+            <span className={`ui-tab-attention ${typeof item.attention === 'number' ? 'ui-tab-attention--count' : 'ui-tab-attention--dot'}`} aria-label={typeof item.attention === 'number' ? `${item.attention} nuovi elementi` : 'Nuovi elementi'}>
               {typeof item.attention === 'number' ? item.attention : null}
             </span>
           ) : null}
