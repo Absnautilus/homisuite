@@ -101,10 +101,18 @@
 
 .ui-tab-attention {
   position: absolute;
-  top: 7px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
   border-radius: 999px;
   background: #6d28f5;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 88%, transparent);
