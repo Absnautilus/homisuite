@@ -133,11 +133,14 @@ a { color: inherit; text-decoration: none; }
 .page-state-description { margin: 0; max-width: 360px; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
 .page-state-action { margin-top: 4px; }
 
-/* A thin indeterminate bar instead of a spinning icon in a tile -- lighter,
-   and (fullscreen) sits at the very top edge like a page-load bar rather
-   than blocking the viewport with a centered icon. */
+/* Loading has two treatments. Fullscreen (before the Shell itself has
+   mounted, nothing to shape a skeleton around): a thin indeterminate bar at
+   the very top edge, like a page-load bar elsewhere on the web. Inline
+   (replacing an already-known page shape): a skeleton of that shape -- a
+   header banner plus a few content rows -- instead of a spinner. */
 .page-state.loading { gap: 14px; }
 .page-state.loading .page-state-title { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+
 .page-state-bar-track { position: relative; width: 220px; max-width: 60%; height: 3px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .page-state.fullscreen .page-state-bar-track { position: fixed; inset: 0 0 auto 0; width: 100%; max-width: none; height: 3px; border-radius: 0; background: transparent; z-index: 500; }
 .page-state-bar { position: absolute; inset: 0; width: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-light, #c77dee), var(--accent)); animation: page-state-indeterminate 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
@@ -145,6 +148,28 @@ a { color: inherit; text-decoration: none; }
   0% { translate: -110% 0; scale: 0.4 1; }
   55% { translate: 40% 0; scale: 0.7 1; }
   100% { translate: 110% 0; scale: 0.4 1; }
+}
+
+.page-state-skeleton { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+.pss-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 44px; border-radius: 12px; background: var(--accent-soft, #f4e8fa); padding: 0 14px; }
+.pss-chip, .pss-pill, .pss-row { position: relative; overflow: hidden; display: block; border-radius: 999px; }
+.pss-chip { width: 40%; height: 10px; background: rgba(255, 255, 255, 0.45); }
+.pss-pill { width: 64px; height: 22px; flex-shrink: 0; background: rgba(255, 255, 255, 0.45); }
+.pss-row { height: 13px; border-radius: 8px; background: var(--surface-2); }
+.pss-chip::after, .pss-pill::after, .pss-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.65) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: page-state-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes page-state-shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -50% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pss-chip::after, .pss-pill::after, .pss-row::after { animation: none; opacity: 0.5; }
 }
 @media (prefers-reduced-motion: reduce) {
   .page-state-bar { animation: none; translate: 0 0; scale: 1 1; opacity: 0.6; }
