@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
 import { unlockAudio } from '@/lib/beep'
@@ -27,7 +27,6 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<StaffProfile | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
-  const location = useLocation()
 
   useEffect(() => {
     let cancelled = false
@@ -164,7 +163,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
       <div className={embedded ? undefined : 'min-h-full bg-surface-2'}>
         {embedded ? null : <DashboardHeader profile={profile} basePath="/staff" />}
         {embedded ? (
-          <div className="pt-4 hk-route-scene" key={location.pathname}>{routeContent}</div>
+          <div className="pt-4">{routeContent}</div>
         ) : (
           <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">{routeContent}</main>
         )}
