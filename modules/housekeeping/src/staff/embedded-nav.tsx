@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ModuleNav, type TabItem } from '@homisuite/ui'
 import { BedDouble, Inbox, Settings2 } from 'lucide-react'
@@ -8,7 +7,6 @@ import { NotificationSettingsToggle } from '@/components/notification-settings-t
 import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
-import { fetchQueue, subscribeToQueue } from '@/lib/staff-api'
 import type { StaffProfile } from '@/lib/staff-types'
 
 // The module-wide header for every top-level embedded page: a breadcrumb
@@ -32,25 +30,6 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed, se
   const hotelName = useHotelName()
   const location = useLocation()
   const navigate = useNavigate()
-  const [pendingCount, setPendingCount] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    const refresh = async () => {
-      try {
-        const queue = await fetchQueue(profile.hotel_id)
-        if (!cancelled) setPendingCount(queue.filter((request) => request.status === 'requested').length)
-      } catch (error) {
-        console.error('Unable to refresh Housekeeping request badge', error)
-      }
-    }
-    void refresh()
-    const unsubscribe = subscribeToQueue(profile.hotel_id, () => void refresh())
-    return () => {
-      cancelled = true
-      unsubscribe()
-    }
-  }, [profile.hotel_id])
 
   const requestPath = basePath
   const staysPath = `${basePath}/soggiorni`
@@ -63,7 +42,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed, se
       : requestPath
 
   const items = [
-    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox />, attention: pendingCount > 0 ? pendingCount : false },
+    { value: requestPath, label: t('staff.nav.requests'), icon: <Inbox /> },
     ...(staysAllowed ? [{ value: staysPath, label: t('staff.nav.stays'), icon: <BedDouble /> }] : []),
     ...(manageAllowed ? [{ value: adminPath, label: t('staff.nav.admin'), icon: <Settings2 /> }] : []),
   ]
