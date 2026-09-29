@@ -34,14 +34,33 @@ export function PageState({
   icon?: LucideIcon
   variant?: 'inline' | 'fullscreen'
 }) {
-  // A thin indeterminate bar reads as lighter/faster than a spinning icon in
-  // a tile, and (in the fullscreen variant) sits at the very top edge the
-  // way a page-load bar does elsewhere on the web, instead of blocking the
-  // whole viewport with a centered icon.
   if (kind === 'loading') {
+    // Fullscreen renders before there is any page chrome to hint at (the
+    // Shell itself hasn't mounted yet), so a content-shaped skeleton would
+    // have nothing real to resemble -- it keeps the thin top-edge bar
+    // instead. Inline loading replaces an already-known page shape, so it
+    // gets a skeleton of that shape (a header banner + a few content rows)
+    // instead of a generic spinner, which reads as "this is what's coming"
+    // rather than just "something is happening".
+    if (variant === 'fullscreen') {
+      return (
+        <div className="page-state loading fullscreen" role="status">
+          <span className="page-state-bar-track" aria-hidden="true"><span className="page-state-bar" /></span>
+          <p className="page-state-title">{title}</p>
+        </div>
+      )
+    }
     return (
-      <div className={`page-state loading${variant === 'fullscreen' ? ' fullscreen' : ''}`} role="status">
-        <span className="page-state-bar-track" aria-hidden="true"><span className="page-state-bar" /></span>
+      <div className="page-state loading" role="status">
+        <div className="page-state-skeleton" aria-hidden="true">
+          <div className="pss-banner">
+            <span className="pss-chip" />
+            <span className="pss-pill" />
+          </div>
+          <span className="pss-row" style={{ width: '92%' }} />
+          <span className="pss-row" style={{ width: '78%' }} />
+          <span className="pss-row" style={{ width: '85%' }} />
+        </div>
         <p className="page-state-title">{title}</p>
       </div>
     )
