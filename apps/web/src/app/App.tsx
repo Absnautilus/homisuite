@@ -8,8 +8,16 @@ import { ModulesPage } from '../pages/ModulesPage'
 import { TeamPage } from '../pages/TeamPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
-import { HousekeepingModuleGate } from '../modules/housekeeping/HousekeepingModuleGate'
-import { DiningModuleGate } from '../modules/dining/DiningModuleGate'
+
+const HousekeepingModuleGate = lazy(async () => {
+  const module = await import('../modules/housekeeping/HousekeepingModuleGate')
+  return { default: module.HousekeepingModuleGate }
+})
+
+const DiningModuleGate = lazy(async () => {
+  const module = await import('../modules/dining/DiningModuleGate')
+  return { default: module.DiningModuleGate }
+})
 
 const ShiftPlannerPage = lazy(async () => {
   const module = await import('../modules/shifts/ShiftPlannerPage')
@@ -25,8 +33,8 @@ export function App() {
       <Route path="reimposta-password" element={<ResetPasswordPage />} />
       <Route element={<ShellLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="housekeeping/*" element={<HousekeepingModuleGate />} />
-        <Route path="dining" element={<DiningModuleGate />} />
+        <Route path="housekeeping/*" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
+        <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
         <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
         <Route path="modules" element={<ModulesPage />} />
