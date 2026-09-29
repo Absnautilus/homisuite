@@ -7,7 +7,7 @@ export interface TabItem {
   /** Optional leading icon. Module navigation should use this consistently. */
   icon?: ReactNode
   /** Optional attention marker for unseen/new content in this destination. */
-  attention?: boolean
+  attention?: boolean | number
 }
 
 export interface TabsProps {
@@ -82,7 +82,11 @@ export function Tabs({ items, value, onValueChange, className, variant = 'accent
         >
           {item.icon ? <span className="ui-tab-icon" aria-hidden="true">{item.icon}</span> : null}
           <span className="ui-tab-label">{item.label}</span>
-          {item.attention ? <span className="ui-tab-attention" aria-label="Nuovi elementi" /> : null}
+          {item.attention ? (
+            <span className="ui-tab-attention" aria-label={typeof item.attention === 'number' ? `${item.attention} nuovi elementi` : 'Nuovi elementi'}>
+              {typeof item.attention === 'number' ? item.attention : null}
+            </span>
+          ) : null}
         </button>
       ))}
     </div>
