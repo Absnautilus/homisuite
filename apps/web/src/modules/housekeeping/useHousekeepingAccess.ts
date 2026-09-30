@@ -20,6 +20,16 @@ import type { HousekeepingAccessState as ResolvedState } from './resolveHousekee
 // this hook only resolves the async inputs it needs.
 export type HousekeepingAccessState = { status: 'loading' } | { status: 'error'; message: string } | ResolvedState
 
+// This hook runs independently in both ShellLayout (nav visibility) and
+// HousekeepingModuleGate (deep-link gating), and its own consumer remounts
+// every time the module is left and re-entered -- without a shared cache,
+// each of those redid the legacy-hotel-mapping + staff_profiles round trip
+// and re-showed the loading skeleton for data that hadn't changed. Cached
+// per property+user for the tab's lifetime; a real permission change only
+// takes effect on reload, matching how the rest of the shell's entitlements
+// already behave (see ModuleRuntimeContext).
+const resolvedAccessCache = new Map<string, ResolvedState>()
+
 function errorMessage(cause: unknown): string {
   if (cause && typeof cause === 'object') {
     const candidate = cause as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown }
@@ -32,17 +42,23 @@ function errorMessage(cause: unknown): string {
 
 export function useHousekeepingAccess(): HousekeepingAccessState {
   const runtime = useModuleRuntime()
-  const [state, setState] = useState<HousekeepingAccessState>({ status: 'loading' })
 
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'guest_requests')
   const propertyId = runtime.property?.id ?? null
   const userId = runtime.session?.user.id ?? null
+  const cacheKey = entitled ? (propertyId && userId ? `${propertyId}:${userId}` : null) : 'not-entitled'
+
+  const [state, setState] = useState<HousekeepingAccessState>(() => (cacheKey && resolvedAccessCache.get(cacheKey)) || { status: 'loading' })
 
   useEffect(() => {
+    if (cacheKey && resolvedAccessCache.has(cacheKey)) return
+
     let cancelled = false
 
     if (!entitled) {
-      setState(resolveHousekeepingAccess({ entitled: false, legacyHotelId: null, hasCompatibleProfile: false }))
+      const resolved = resolveHousekeepingAccess({ entitled: false, legacyHotelId: null, hasCompatibleProfile: false })
+      resolvedAccessCache.set('not-entitled', resolved)
+      setState(resolved)
       return () => {
         cancelled = true
       }
@@ -61,7 +77,9 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
       .then(async (hotelId) => {
         if (cancelled) return
         if (!hotelId) {
-          setState(resolveHousekeepingAccess({ entitled: true, legacyHotelId: null, hasCompatibleProfile: false }))
+          const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: null, hasCompatibleProfile: false })
+          resolvedAccessCache.set(`${propertyId}:${userId}`, resolved)
+          setState(resolved)
           return
         }
         const { data, error } = await supabase
@@ -80,7 +98,9 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
           setState({ status: 'error', message: errorMessage(error) })
           return
         }
-        setState(resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: Boolean(data) }))
+        const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: Boolean(data) })
+        resolvedAccessCache.set(`${propertyId}:${userId}`, resolved)
+        setState(resolved)
       })
       .catch((cause: unknown) => {
         if (cancelled) return
@@ -91,7 +111,7 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
     return () => {
       cancelled = true
     }
-  }, [propertyId, entitled, userId])
+  }, [propertyId, entitled, userId, cacheKey])
 
   return state
 }
