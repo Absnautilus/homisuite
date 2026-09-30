@@ -13,6 +13,7 @@ import { saveShiftCode, deleteOrArchiveShiftCode } from './saveShiftCode'
 import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
 import { saveUnit, archiveUnit } from './saveUnit'
+import { setShiftLocked } from './saveShiftLock'
 
 type State =
   | { status: 'loading' }
@@ -110,6 +111,9 @@ export function ShiftPlannerPage() {
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     return generateUnitAssignments(supabase, propertyId, profileId, unit)
+  }} onSetShiftLocked={async (planningUnitId, staffProfileId, shiftDate, locked) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await setShiftLocked(supabase, propertyId, planningUnitId, staffProfileId, shiftDate, locked)
   }} onSaveUnit={async (input) => {
     if (!propertyId) throw new Error('Missing active property')
     return saveUnit(supabase, propertyId, input)
