@@ -157,5 +157,7 @@
 }
 
 
+/* Was desktop-only; OnDutyToggle already collapses to a bare circle below
+   its own `sm:` breakpoint, so it belongs next to the bell on mobile too
+   instead of disappearing. */
 .hk-module-duty-desktop { display: contents; }
-@media (max-width: 640px) { .hk-module-duty-desktop { display: none; } }
