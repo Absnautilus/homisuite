@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Download, GripVertical } from 'lucide-react'
+import { Download, GripVertical } from 'lucide-react'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
 import { ASSIGNMENT_ROLES, DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, type RoleCodes, initRestRotationPairsPerCycle, initRoleCodes, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
@@ -396,40 +396,42 @@ export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
 const MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
 
-function assignmentForDay(unit: ShiftPlanningUnit, personId: string, day: number) {
-  const pattern = unit.assignments[personId] ?? []
-  return pattern.length ? pattern[(day - 1) % pattern.length] : undefined
+function assignmentForDate(unit: ShiftPlanningUnit, personId: string, date: string) {
+  const index = unit.assignmentDates?.indexOf(date) ?? -1
+  return index >= 0 ? unit.assignments[personId]?.[index] : undefined
 }
 
-function buildYearEvents(unit: ShiftPlanningUnit, personId: string, year: number): ShiftCalendarEvent[] {
-  const events: ShiftCalendarEvent[] = []
-  for (let month = 1; month <= 12; month += 1) {
-    const days = new Date(year, month, 0).getDate()
-    for (let day = 1; day <= days; day += 1) {
-      const code = assignmentForDay(unit, personId, day)
-      if (code) events.push({ year, month, day, code })
-    }
-  }
-  return events
+function buildLoadedMonthEvents(unit: ShiftPlanningUnit, personId: string): ShiftCalendarEvent[] {
+  return (unit.assignmentDates ?? []).flatMap((date) => {
+    const code = assignmentForDate(unit, personId, date)
+    if (!code) return []
+    const [year, month, day] = date.split('-').map(Number)
+    return [{ year: year!, month: month!, day: day!, code }]
+  })
 }
 
-export function MyShiftsPanel({ unit }: { unit: ShiftPlanningUnit }) {
-  const person = unit.people[0]
-  const [visibleDate, setVisibleDate] = useState(() => new Date(2026, 8, 1))
-  const year = visibleDate.getFullYear()
-  const month = visibleDate.getMonth()
+export function MyShiftsPanel({ unit, currentStaffProfileId }: { unit: ShiftPlanningUnit; currentStaffProfileId?: string }) {
+  const person = unit.people.find((candidate) => candidate.id === currentStaffProfileId)
+  const visibleDate = new Date(`${unit.month ?? new Date().toISOString().slice(0, 7)}-01T00:00:00Z`)
+  const year = visibleDate.getUTCFullYear()
+  const month = visibleDate.getUTCMonth()
   const codeMap = useMemo(() => new Map(unit.codes.map((code) => [code.code, code])), [unit.codes])
-  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const previousMonthDays = new Date(year, month, 0).getDate()
+  const firstWeekday = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const previousMonthDays = new Date(Date.UTC(year, month, 0)).getUTCDate()
   const cells = Array.from({ length: 42 }, (_, index) => {
     const relativeDay = index - firstWeekday + 1
     if (relativeDay < 1) return { day: previousMonthDays + relativeDay, inMonth: false }
     if (relativeDay > daysInMonth) return { day: relativeDay - daysInMonth, inMonth: false }
     return { day: relativeDay, inMonth: true }
   })
-  const todayCode = assignmentForDay(unit, person?.id ?? '', 18)
-  const tomorrowCode = assignmentForDay(unit, person?.id ?? '', 19)
+  const today = new Date()
+  const todayIso = today.toISOString().slice(0, 10)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowIso = tomorrow.toISOString().slice(0, 10)
+  const todayCode = person ? assignmentForDate(unit, person.id, todayIso) : undefined
+  const tomorrowCode = person ? assignmentForDate(unit, person.id, tomorrowIso) : undefined
 
   function describe(code: string | undefined) {
     const definition = code ? codeMap.get(code) : undefined
@@ -438,11 +440,12 @@ export function MyShiftsPanel({ unit }: { unit: ShiftPlanningUnit }) {
 
   function exportCalendar() {
     if (!person) return
-    const content = generateShiftCalendarIcs(person.id, unit.codes, buildYearEvents(unit, person.id, year))
-    downloadShiftCalendar(`turni-${person.id}-${year}.ics`, content)
+    const content = generateShiftCalendarIcs(person.id, unit.codes, buildLoadedMonthEvents(unit, person.id))
+    downloadShiftCalendar(`turni-${person.id}-${unit.month ?? year}.ics`, content)
   }
 
-  if (!person) return <section className="shift-panel"><p>Nessun dipendente disponibile per questa unità.</p></section>
+  if (!currentStaffProfileId) return <section className="shift-panel"><p>Il tuo profilo non è ancora associato a Turni per questa struttura.</p></section>
+  if (!person) return <section className="shift-panel"><p>Non fai parte dell'unità di pianificazione selezionata.</p></section>
 
   return <div className="shift-my-shifts">
     <section className="shift-today-summary" aria-label="Turni imminenti">
@@ -452,16 +455,17 @@ export function MyShiftsPanel({ unit }: { unit: ShiftPlanningUnit }) {
     <section className="shift-panel shift-my-calendar">
       <div className="shift-my-calendar-header">
         <div><h2>I miei turni</h2><p>{person.name} · {person.assignmentProfile}</p></div>
-        <div className="shift-my-period"><button type="button" aria-label="Mese precedente" onClick={() => setVisibleDate((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}><ChevronLeft size={17} /></button><strong>{MONTHS[month]} {year}</strong><button type="button" aria-label="Mese successivo" onClick={() => setVisibleDate((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}><ChevronRight size={17} /></button></div>
-        <button className="shift-export-button" type="button" onClick={exportCalendar}><Download size={16} />Esporta calendario ({year})</button>
+        <div className="shift-my-period"><strong>{MONTHS[month]} {year}</strong></div>
+        <button className="shift-export-button" type="button" onClick={exportCalendar}><Download size={16} />Esporta mese</button>
       </div>
       <div className="shift-my-calendar-scroll" tabIndex={0} aria-label={`Calendario personale di ${MONTHS[month]} ${year}`}>
         <div className="shift-my-calendar-grid">
           {WEEKDAYS.map((weekday) => <div className="shift-my-weekday" key={weekday}>{weekday}</div>)}
           {cells.map((cell, index) => {
-            const code = cell.inMonth ? assignmentForDay(unit, person.id, cell.day) : undefined
+            const date = cell.inMonth ? `${year}-${String(month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}` : ''
+            const code = cell.inMonth ? assignmentForDate(unit, person.id, date) : undefined
             const definition = code ? codeMap.get(code) : undefined
-            const isToday = cell.inMonth && year === 2026 && month === 8 && cell.day === 18
+            const isToday = date === todayIso
             return <div className={`shift-my-day${cell.inMonth ? '' : ' is-outside'}${isToday ? ' is-today' : ''}`} key={`${index}-${cell.day}`}><span>{cell.day}</span>{definition ? <strong style={{ background: definition.color, color: definition.textColor ?? '#fff' }}>{definition.code}<small>{definition.time}</small></strong> : null}</div>
           })}
         </div>
