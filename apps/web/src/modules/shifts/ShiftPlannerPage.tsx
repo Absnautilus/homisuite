@@ -8,7 +8,7 @@ import { loadLiveShiftData } from './shiftLiveData'
 import { saveShiftAssignments } from './saveShiftAssignments'
 import { saveMemberOrder } from './saveMemberOrder'
 import { saveRuleSet } from './saveRuleSet'
-import { setUnitRestDays } from './saveRestDays'
+import { setUnitRestDays, setUnitFutureRestDays } from './saveRestDays'
 import { saveShiftCode, deleteOrArchiveShiftCode } from './saveShiftCode'
 import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
@@ -114,6 +114,11 @@ export function ShiftPlannerPage() {
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     return setUnitRestDays(supabase, propertyId, profileId, unit)
+  }} onSetFutureRestDays={async (planningUnitId) => {
+    if (!propertyId || !profileId) throw new Error('Missing active property/profile')
+    const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
+    if (!unit) throw new Error('Unknown planning unit')
+    return setUnitFutureRestDays(supabase, propertyId, profileId, unit, 12)
   }} onSaveCode={async (input) => {
     if (!propertyId) throw new Error('Missing active property')
     return saveShiftCode(supabase, propertyId, input)
