@@ -13,9 +13,11 @@ export async function loadStaffShiftPreferences(supabase: SupabaseClient, proper
 }
 
 export async function saveStaffShiftPreferences(supabase: SupabaseClient, propertyId: string, staffProfileId: string, preferences: StaffShiftPreferences): Promise<void> {
-  const { error } = await supabase.from('shift_staff_profiles').update({
-    preferred_shift_codes: preferences.preferredShiftCodes,
-    weekday_shift_preferences: preferences.weekdayShiftPreferences,
-  }).eq('property_id', propertyId).eq('id', staffProfileId)
+  void propertyId
+  const { error } = await supabase.rpc('save_my_shift_preferences', {
+    p_staff_profile_id: staffProfileId,
+    p_preferred_shift_codes: preferences.preferredShiftCodes,
+    p_weekday_shift_preferences: preferences.weekdayShiftPreferences,
+  })
   if (error) throw error
 }
