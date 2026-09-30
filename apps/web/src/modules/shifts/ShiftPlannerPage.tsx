@@ -14,10 +14,12 @@ import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
 import { saveUnit, archiveUnit } from './saveUnit'
 import { setShiftLocked } from './saveShiftLock'
+import { createAbsenceRequest, createPreassignmentRequest } from './shiftRequestActions'
+import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPreferences } from './staffPreferences'
 
 type State =
   | { status: 'loading' }
-  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string }
+  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences }
   | { status: 'not-entitled' | 'forbidden' | 'empty' | 'error' }
 
 export function ShiftPlannerPage() {
@@ -56,7 +58,9 @@ export function ShiftPlannerPage() {
         setState({ status: 'empty' })
         return
       }
-      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId })
+      const preferences = live.currentStaffProfileId ? await loadStaffShiftPreferences(supabase, propertyId, live.currentStaffProfileId) : undefined
+      if (cancelled) return
+      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId, preferences })
     }).catch((cause) => {
       console.error('ShiftPlannerPage: live data load failed', cause)
       if (!cancelled) setState({ status: 'error' })
@@ -74,7 +78,21 @@ export function ShiftPlannerPage() {
 
   const readyState = state
   const profileId = runtime.profile?.id
-  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} onSaveAssignments={async (changes) => {
+  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} initialPreferences={readyState.preferences} onSavePreferences={async (preferences) => {
+    if (!propertyId || !readyState.currentStaffProfileId) throw new Error('Missing active staff profile')
+    await saveStaffShiftPreferences(supabase, propertyId, readyState.currentStaffProfileId, preferences)
+  }} onSubmitRequest={async (planningUnitId, request) => {
+    if (!propertyId || !readyState.currentStaffProfileId) throw new Error('Missing active staff profile')
+    if (request.kind === 'absences' && request.absenceKind) {
+      await createAbsenceRequest(supabase, propertyId, planningUnitId, readyState.currentStaffProfileId, request.date, request.absenceKind, request.note)
+      return
+    }
+    if (request.kind === 'preassignments' && request.shiftCodeId) {
+      await createPreassignmentRequest(supabase, propertyId, planningUnitId, readyState.currentStaffProfileId, request.shiftCodeId, request.date, request.note)
+      return
+    }
+    throw new Error('Invalid shift request')
+  }} onSaveAssignments={async (changes) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const byUnit = new Map<string, typeof changes>()
     for (const change of changes) byUnit.set(change.planningUnitId, [...(byUnit.get(change.planningUnitId) ?? []), change])
