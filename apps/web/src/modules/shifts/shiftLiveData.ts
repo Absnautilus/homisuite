@@ -33,6 +33,7 @@ function restDays(days: number[]) {
 export interface LiveShiftData {
   property: ShiftPreviewProperty
   month: string
+  currentStaffProfileId?: string
 }
 
 /**
@@ -209,5 +210,7 @@ export async function loadLiveShiftData(
     }
   })
 
-  return { property: { id: propertyId, name: propertyName, units: projectedUnits, jobTitleRoster }, month }
+  const { data: auth } = await supabase.auth.getUser()
+  const currentStaff = auth.user ? staffProfiles.find((staff) => staff.profile_id === auth.user.id) : undefined
+  return { property: { id: propertyId, name: propertyName, units: projectedUnits, jobTitleRoster }, month, currentStaffProfileId: currentStaff ? String(currentStaff.id) : undefined }
 }
