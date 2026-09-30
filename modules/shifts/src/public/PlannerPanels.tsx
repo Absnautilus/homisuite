@@ -361,7 +361,7 @@ export function PersonalPanel({ unit, initialPreferences, onSavePreferences }: {
   const [order, setOrder] = useState(() => initialPreferences?.preferredShiftCodes?.length ? initialPreferences.preferredShiftCodes : preferredCodes.map((code) => code.code))
   const [dayPreferences, setDayPreferences] = useState<Record<string, string[]>>(() => initialPreferences?.weekdayShiftPreferences ?? {})
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+  const days = [{ key: '1', label: 'Lun' }, { key: '2', label: 'Mar' }, { key: '3', label: 'Mer' }, { key: '4', label: 'Gio' }, { key: '5', label: 'Ven' }, { key: '6', label: 'Sab' }, { key: '7', label: 'Dom' }]
   function toggleDayPreference(day: string, code: string) {
     setDayPreferences((current) => {
       const existing = current[day] ?? []
@@ -395,10 +395,10 @@ export function PersonalPanel({ unit, initialPreferences, onSavePreferences }: {
     })}</div>
     <div className="shift-form-label shift-section-label">Preferenze per giorno della settimana</div>
     <p className="shift-form-help">Es. “il lunedì preferisco C2, poi C1”. Seleziona uno o più turni per ciascun giorno, poi ordina la priorità con le frecce. Se imposti una preferenza qui, ha la precedenza su quella generale per quel giorno.</p>
-    <div className="shift-weekday-preferences">{days.map((day) => <div key={day}><strong>{day}</strong><span>{order.map((code) => {
+    <div className="shift-weekday-preferences">{days.map((day) => <div key={day.key}><strong>{day.label}</strong><span>{order.map((code) => {
       const def = codeMap.get(code)
-      const selected = (dayPreferences[day] ?? []).includes(code)
-      return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day, code)}>{code}</button>
+      const selected = (dayPreferences[day.key] ?? []).includes(code)
+      return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day.key, code)}>{code}</button>
     })}</span></div>)}</div>
     <button className="shift-original-primary" type="button" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
       if (!onSavePreferences) return
