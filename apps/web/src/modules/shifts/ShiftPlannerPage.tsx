@@ -13,10 +13,11 @@ import { saveShiftCode, deleteOrArchiveShiftCode } from './saveShiftCode'
 import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
 import { saveUnit, archiveUnit } from './saveUnit'
+import { setShiftLocked } from './saveShiftLock'
 
 type State =
   | { status: 'loading' }
-  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities }
+  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string }
   | { status: 'not-entitled' | 'forbidden' | 'empty' | 'error' }
 
 export function ShiftPlannerPage() {
@@ -25,6 +26,7 @@ export function ShiftPlannerPage() {
   const propertyName = runtime.property?.name ?? 'Struttura'
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'shifts')
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
 
   useEffect(() => {
     let cancelled = false
@@ -48,19 +50,19 @@ export function ShiftPlannerPage() {
         setState({ status: 'forbidden' })
         return
       }
-      const live = await loadLiveShiftData(supabase, propertyId, propertyName)
+      const live = await loadLiveShiftData(supabase, propertyId, propertyName, month)
       if (cancelled) return
       if (live.property.units.length === 0) {
         setState({ status: 'empty' })
         return
       }
-      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests } })
+      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId })
     }).catch((cause) => {
       console.error('ShiftPlannerPage: live data load failed', cause)
       if (!cancelled) setState({ status: 'error' })
     })
     return () => { cancelled = true }
-  }, [entitled, propertyId, propertyName, runtime.hasPermission])
+  }, [entitled, propertyId, propertyName, runtime.hasPermission, month])
 
   if (state.status === 'loading') return <PageState kind="loading" title="Caricamento Turni…" />
   if (state.status === 'not-entitled') return <PageState kind="unavailable" title="Turni non è abilitato per questa struttura." />
@@ -72,7 +74,7 @@ export function ShiftPlannerPage() {
 
   const readyState = state
   const profileId = runtime.profile?.id
-  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} onSaveAssignments={async (changes) => {
+  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} onSaveAssignments={async (changes) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const byUnit = new Map<string, typeof changes>()
     for (const change of changes) byUnit.set(change.planningUnitId, [...(byUnit.get(change.planningUnitId) ?? []), change])
@@ -110,6 +112,9 @@ export function ShiftPlannerPage() {
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     return generateUnitAssignments(supabase, propertyId, profileId, unit)
+  }} onSetShiftLocked={async (planningUnitId, staffProfileId, shiftDate, locked) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await setShiftLocked(supabase, propertyId, planningUnitId, staffProfileId, shiftDate, locked)
   }} onSaveUnit={async (input) => {
     if (!propertyId) throw new Error('Missing active property')
     return saveUnit(supabase, propertyId, input)
