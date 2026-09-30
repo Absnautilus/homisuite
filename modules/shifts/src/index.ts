@@ -1,7 +1,7 @@
 import './shifts.css'
 
 export { ShiftPlannerModule } from './public/ShiftPlannerModule'
-export type { ShiftPlannerModuleProps, ShiftPlannerCapabilities, ShiftAssignmentEdit, ShiftMemberReorder, ShiftRuleSetSave, ShiftCodeSave, GenerateAssignmentsResult, UnitSave, UnitSaveResult } from './public/ShiftPlannerModule'
+export type { ShiftPlannerModuleProps, ShiftPlannerCapabilities, ShiftAssignmentEdit, ShiftMemberReorder, ShiftRuleSetSave, ShiftCodeSave, GenerateAssignmentsResult, UnitSave, UnitSaveResult, ShiftRequestInboxItem } from './public/ShiftPlannerModule'
 export { shiftPreviewProperties } from './preview/fixtures'
 export type { ShiftPreviewProperty, ShiftPlanningUnit, ShiftCode, ShiftJobTitle } from './preview/fixtures'
 export { computeMonthRestDays, nextFreeRotationSlot } from './domain/restRotation'
