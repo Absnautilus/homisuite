@@ -355,10 +355,12 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
   </section>
 }
 
-export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
+export interface StaffPreferenceSave { preferredShiftCodes: string[]; weekdayShiftPreferences: Record<string, string[]> }
+export function PersonalPanel({ unit, initialPreferences, onSavePreferences }: { unit: ShiftPlanningUnit; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void> }) {
   const preferredCodes = unit.codes.filter((code) => code.time && code.code !== 'N').slice(0, 5)
-  const [order, setOrder] = useState(() => preferredCodes.map((code) => code.code))
-  const [dayPreferences, setDayPreferences] = useState<Record<string, string[]>>({})
+  const [order, setOrder] = useState(() => initialPreferences?.preferredShiftCodes?.length ? initialPreferences.preferredShiftCodes : preferredCodes.map((code) => code.code))
+  const [dayPreferences, setDayPreferences] = useState<Record<string, string[]>>(() => initialPreferences?.weekdayShiftPreferences ?? {})
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
   function toggleDayPreference(day: string, code: string) {
     setDayPreferences((current) => {
@@ -398,6 +400,11 @@ export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
       const selected = (dayPreferences[day] ?? []).includes(code)
       return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day, code)}>{code}</button>
     })}</span></div>)}</div>
+    <button className="shift-original-primary" type="button" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
+      if (!onSavePreferences) return
+      setSaveState('saving')
+      void onSavePreferences({ preferredShiftCodes: order, weekdayShiftPreferences: dayPreferences }).then(() => setSaveState('saved')).catch(() => setSaveState('error'))
+    }}>{saveState === 'saving' ? 'Salvataggio…' : saveState === 'saved' ? 'Salvate' : 'Salva preferenze'}</button>
   </section>
 }
 
