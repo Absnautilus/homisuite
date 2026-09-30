@@ -47,11 +47,7 @@ export async function listMyShiftRequests(supabase: SupabaseClient, propertyId: 
 }
 
 export async function decideAbsenceRequest(supabase: SupabaseClient, requestId: string, approve: boolean) {
-  const { data: user, error: userError } = await supabase.auth.getUser()
-  if (userError || !user.user) throw userError ?? new Error('Not authenticated')
-  const { error } = await supabase.from('shift_absence_requests').update({
-    status: approve ? 'approved' : 'rejected', decided_by: user.user.id, decided_at: new Date().toISOString(),
-  }).eq('id', requestId)
+  const { error } = await supabase.rpc('decide_shift_absence', { p_request_id: requestId, p_approve: approve })
   if (error) throw error
 }
 
