@@ -10,13 +10,23 @@ import { useHousekeepingAccess } from './useHousekeepingAccess'
 // directly even when the nav/Home entry point that normally leads here is
 // hidden (see useHousekeepingAccess) -- so every non-"compatible" state must
 // explain itself rather than fall through to a blank or ambiguous screen.
+// This gate's own capability check re-remounts (and re-queries) every time
+// a user leaves and re-enters the module, same reasoning as
+// resolvedAccessCache in useHousekeepingAccess -- cached per property+profile
+// for the tab's lifetime so a revisit renders straight through instead of
+// flashing the loading skeleton again for an answer that hasn't changed.
+const capabilitiesCache = new Map<string, { canManage: boolean; canManageQueue: boolean }>()
+
 export function HousekeepingModuleGate() {
   const runtime = useModuleRuntime()
   const { hasPermission } = runtime
   const access = useHousekeepingAccess()
   const propertyId = runtime.property?.id ?? null
-  const [canManage, setCanManage] = useState<boolean | null>(null)
-  const [canManageQueue, setCanManageQueue] = useState<boolean | null>(null)
+  const profileId = runtime.profile?.id ?? null
+  const capabilitiesKey = propertyId && profileId ? `${propertyId}:${profileId}` : null
+  const cachedCapabilities = capabilitiesKey ? capabilitiesCache.get(capabilitiesKey) : undefined
+  const [canManage, setCanManage] = useState<boolean | null>(cachedCapabilities?.canManage ?? null)
+  const [canManageQueue, setCanManageQueue] = useState<boolean | null>(cachedCapabilities?.canManageQueue ?? null)
 
   // Housekeeping's own staff_profiles.role is no longer meaningful for
   // authorization (every Team member bridged in via grant-housekeeping-access
@@ -28,6 +38,7 @@ export function HousekeepingModuleGate() {
   // bridging anyone in, is what actually gates "Gestione" to admin/manager.
   useEffect(() => {
     if (!propertyId || !runtime.profile?.id) return
+    if (capabilitiesKey && capabilitiesCache.has(capabilitiesKey)) return
     const resolvedPropertyId = propertyId
     const resolvedProfileId = runtime.profile.id
     let cancelled = false
@@ -62,6 +73,7 @@ export function HousekeepingModuleGate() {
         }
 
         if (!cancelled) {
+          if (capabilitiesKey) capabilitiesCache.set(capabilitiesKey, { canManage: manage, canManageQueue: reception })
           setCanManage(manage)
           setCanManageQueue(reception)
         }
@@ -78,7 +90,7 @@ export function HousekeepingModuleGate() {
     return () => {
       cancelled = true
     }
-  }, [propertyId, runtime.profile?.id, hasPermission])
+  }, [propertyId, runtime.profile?.id, hasPermission, capabilitiesKey])
 
   if (access.status === 'loading' || canManage === null || canManageQueue === null) {
     return <PageState kind="loading" title="Caricamento Housekeeping…" />

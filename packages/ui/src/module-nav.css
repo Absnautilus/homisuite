@@ -117,8 +117,14 @@
     scrollbar-width: none;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 6px;
-    -webkit-mask-image: linear-gradient(to right, transparent, black 14px, black calc(100% - 22px), transparent);
-    mask-image: linear-gradient(to right, transparent, black 14px, black calc(100% - 22px), transparent);
+    /* A tight vignette right at the boundary, not a broad translucent band --
+       mask-image is applied to the scroll container's own box (unaffected by
+       its internal scroll offset, so it stays put at the visible edges as
+       you scroll), but a wide fade reads as the card itself dissolving.
+       Keeping it to a few pixels makes it read as just the last sliver of
+       text softening, not a container-wide blur. */
+    -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
   }
   .ui-module-nav-primary.ui-tabs::-webkit-scrollbar,
   .ui-module-nav-secondary.ui-tabs::-webkit-scrollbar { display: none; }
