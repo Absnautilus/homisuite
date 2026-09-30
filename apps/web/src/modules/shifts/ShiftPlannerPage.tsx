@@ -17,7 +17,7 @@ import { setShiftLocked } from './saveShiftLock'
 
 type State =
   | { status: 'loading' }
-  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities }
+  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string }
   | { status: 'not-entitled' | 'forbidden' | 'empty' | 'error' }
 
 export function ShiftPlannerPage() {
@@ -56,7 +56,7 @@ export function ShiftPlannerPage() {
         setState({ status: 'empty' })
         return
       }
-      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests } })
+      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId })
     }).catch((cause) => {
       console.error('ShiftPlannerPage: live data load failed', cause)
       if (!cancelled) setState({ status: 'error' })
@@ -74,7 +74,7 @@ export function ShiftPlannerPage() {
 
   const readyState = state
   const profileId = runtime.profile?.id
-  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentProfileId={profileId} month={month} onMonthChange={setMonth} onSaveAssignments={async (changes) => {
+  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} onSaveAssignments={async (changes) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const byUnit = new Map<string, typeof changes>()
     for (const change of changes) byUnit.set(change.planningUnitId, [...(byUnit.get(change.planningUnitId) ?? []), change])
