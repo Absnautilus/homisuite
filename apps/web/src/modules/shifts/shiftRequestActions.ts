@@ -51,6 +51,10 @@ export async function decideAbsenceRequest(supabase: SupabaseClient, requestId: 
   if (error) throw error
 }
 
+export interface ShiftAbsenceInboxRow { id:string; planning_unit_id:string; staff_profile_id:string; starts_on:string; ends_on:string; absence_kind:string; status:string; note:string|null }
+export interface ShiftPreassignmentInboxRow { id:string; planning_unit_id:string; staff_profile_id:string; shift_date:string; status:string; note:string|null; shift_codes:{code:string}|{code:string}[]|null }
+export interface ShiftSwapInboxRow { id:string; planning_unit_id:string; requester_staff_profile_id:string; target_staff_profile_id:string|null; status:string; note:string|null }
+
 export async function loadShiftRequestInbox(supabase: SupabaseClient, propertyId: string) {
   const [absence, preassignment, swap] = await Promise.all([
     supabase.from('shift_absence_requests').select('id,planning_unit_id,staff_profile_id,starts_on,ends_on,absence_kind,status,note').eq('property_id', propertyId).eq('status', 'pending').order('created_at'),
