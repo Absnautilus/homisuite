@@ -45,3 +45,24 @@ export async function listMyShiftRequests(supabase: SupabaseClient, propertyId: 
   if (swap.error) throw swap.error
   return { absences: absence.data ?? [], preassignments: preassignment.data ?? [], swaps: swap.data ?? [] }
 }
+
+export async function decideAbsenceRequest(supabase: SupabaseClient, requestId: string, approve: boolean) {
+  const { data: user, error: userError } = await supabase.auth.getUser()
+  if (userError || !user.user) throw userError ?? new Error('Not authenticated')
+  const { error } = await supabase.from('shift_absence_requests').update({
+    status: approve ? 'approved' : 'rejected', decided_by: user.user.id, decided_at: new Date().toISOString(),
+  }).eq('id', requestId)
+  if (error) throw error
+}
+
+export async function loadShiftRequestInbox(supabase: SupabaseClient, propertyId: string) {
+  const [absence, preassignment, swap] = await Promise.all([
+    supabase.from('shift_absence_requests').select('id,planning_unit_id,staff_profile_id,starts_on,ends_on,absence_kind,status,note').eq('property_id', propertyId).eq('status', 'pending').order('created_at'),
+    supabase.from('shift_preassignments').select('id,planning_unit_id,staff_profile_id,shift_date,status,note,shift_codes(code)').eq('property_id', propertyId).eq('status', 'pending').order('created_at'),
+    supabase.from('shift_swap_requests').select('id,planning_unit_id,requester_staff_profile_id,target_staff_profile_id,status,note').eq('property_id', propertyId).in('status', ['pending','accepted']).order('created_at'),
+  ])
+  if (absence.error) throw absence.error
+  if (preassignment.error) throw preassignment.error
+  if (swap.error) throw swap.error
+  return { absences: absence.data ?? [], preassignments: preassignment.data ?? [], swaps: swap.data ?? [] }
+}
