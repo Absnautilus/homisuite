@@ -14,7 +14,7 @@ import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
 import { saveUnit, archiveUnit } from './saveUnit'
 import { setShiftLocked } from './saveShiftLock'
-import { createAbsenceRequest, createPreassignmentRequest } from './shiftRequestActions'
+import { createAbsenceRequest, createPreassignmentRequest, createShiftSwapRequest } from './shiftRequestActions'
 import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPreferences } from './staffPreferences'
 
 type State =
@@ -85,6 +85,10 @@ export function ShiftPlannerPage() {
     if (!propertyId || !readyState.currentStaffProfileId) throw new Error('Missing active staff profile')
     if (request.kind === 'absences' && request.absenceKind) {
       await createAbsenceRequest(supabase, propertyId, planningUnitId, readyState.currentStaffProfileId, request.date, request.absenceKind, request.note)
+      return
+    }
+    if (request.kind === 'swaps' && request.targetStaffProfileId && request.requestedShiftId && request.offeredShiftId) {
+      await createShiftSwapRequest(supabase, propertyId, planningUnitId, readyState.currentStaffProfileId, request.requestedShiftId, request.targetStaffProfileId, request.offeredShiftId, request.note)
       return
     }
     if (request.kind === 'preassignments' && request.shiftCodeId) {
