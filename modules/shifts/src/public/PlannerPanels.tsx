@@ -292,11 +292,19 @@ export function RulesPanel({ unit, onSaveRules }: {
   )
 }
 
-export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit }) {
+export interface ShiftRequestSubmit { kind: 'absences' | 'preassignments'; date: string; absenceKind?: string; shiftCodeId?: string; note?: string }
+export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitRequest }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit; currentStaffProfileId?: string; onSubmitRequest?: (request: ShiftRequestSubmit) => Promise<void> }) {
   const [date, setDate] = useState('2026-09-01')
   const [absenceType, setAbsenceType] = useState('Ferie')
   const [affectedShift, setAffectedShift] = useState('Giornata intera')
   const [preCode, setPreCode] = useState('')
+  const [note, setNote] = useState('')
+  const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  async function submit(request: ShiftRequestSubmit) {
+    if (!onSubmitRequest || !currentStaffProfileId) return
+    setSubmitState('saving')
+    try { await onSubmitRequest(request); setSubmitState('saved'); setNote('') } catch { setSubmitState('error') }
+  }
   const people = unit.people
 
   if (kind === 'swaps') return <section className="shift-original-panel">
@@ -323,7 +331,7 @@ export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'pr
       <label><span>Tipo</span><ShiftSelect ariaLabel="Tipo richiesta" value={absenceType} onChange={setAbsenceType} options={[{ value: "Ferie", label: "Ferie" }, { value: "Permesso", label: "Permesso" }, { value: "R.O.L.", label: "R.O.L." }, { value: "Malattia", label: "Malattia" }]} /></label>
       <label><span>Turno interessato</span><ShiftSelect ariaLabel="Turno interessato" value={affectedShift} onChange={setAffectedShift} options={[{ value: "Giornata intera", label: "Giornata intera" }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
     </div>
-    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" /></label><button className="shift-original-primary" type="button">Invia richiesta</button></div>
+    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="shift-original-primary" type="button" disabled={!onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => void submit({ kind: 'absences', date, absenceKind: absenceType === 'Ferie' ? 'leave' : absenceType === 'Malattia' ? 'illness' : absenceType === 'Permesso' || absenceType === 'R.O.L.' ? 'permission' : 'other', note })}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button></div>
     <p className="shift-form-help">Se il permesso copre solo una parte del turno, indica ore e orario a quale turno si riferisce; altrimenti lascia “Giornata intera”.</p>
     <h3 className="shift-original-subtitle">Le mie richieste</h3>
     <p className="shift-empty-copy">Nessuna richiesta.</p>
@@ -338,8 +346,8 @@ export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'pr
     <div className="shift-inline-form shift-preassignment-form">
       <label><span>Giorno</span><ShiftDatePicker ariaLabel="Giorno pre-assegnazione" value={date} onChange={setDate} /></label>
       <label><span>Turno</span><ShiftSelect ariaLabel="Turno pre-assegnazione" value={preCode} onChange={setPreCode} options={[{ value: "", label: "Seleziona..." }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
-      <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" /></label>
-      <button className="shift-original-primary" type="button" disabled={!preCode}>Invia richiesta</button>
+      <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" value={note} onChange={(event) => setNote(event.target.value)} /></label>
+      <button className="shift-original-primary" type="button" disabled={!preCode || !onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => { const code = unit.codes.find((item) => item.code === preCode); if (code) void submit({ kind: 'preassignments', date, shiftCodeId: code.id, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button>
     </div>
     <p className="shift-form-help">Puoi scegliere solo tra i turni ammessi per il tuo ruolo. La richiesta resta in sospeso finché l'admin non la conferma; una volta accettata, il turno si blocca automaticamente.</p>
     <h3 className="shift-original-subtitle">Le mie richieste</h3>
