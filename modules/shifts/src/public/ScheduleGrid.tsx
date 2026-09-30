@@ -1,5 +1,5 @@
 import { LockKeyhole } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { ShiftPlanningUnit } from '../preview/fixtures'
 import { ShiftSelect } from './ShiftSelect'
 
@@ -17,6 +17,30 @@ function fallbackDates(length: number) {
 }
 
 export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange }: ScheduleGridProps) {
+  const [compactPeople, setCompactPeople] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
+  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set())
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)')
+    const sync = () => {
+      setCompactPeople(media.matches)
+      if (!media.matches) setExpandedPeople(new Set())
+    }
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  function togglePerson(personId: string) {
+    if (!compactPeople) return
+    setExpandedPeople((current) => {
+      const next = new Set(current)
+      if (next.has(personId)) next.delete(personId)
+      else next.add(personId)
+      return next
+    })
+  }
+
   const codeMap = new Map(unit.codes.map((code) => [code.code, code]))
   const dates = unit.assignmentDates?.length ? unit.assignmentDates : fallbackDates(view === 'week' ? 7 : 30)
   const visibleDates = view === 'week' ? dates.slice(0, 7) : dates
@@ -30,7 +54,19 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange 
           return <th className={weekend ? 'is-weekend' : undefined} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>
         })}</tr></thead>
         <tbody>{unit.people.map((person) => <tr key={person.id}>
-          <th scope="row" className="shift-person-column"><span className="shift-avatar" aria-hidden="true">{person.initials}</span><span className="shift-person-copy"><strong>{person.name}</strong><small>{person.assignmentProfile}</small></span></th>
+          <th scope="row" className={`shift-person-column${compactPeople && !expandedPeople.has(person.id) ? ' is-compact' : ''}`}>
+            <button
+              type="button"
+              className="shift-person-trigger"
+              onClick={() => togglePerson(person.id)}
+              aria-expanded={!compactPeople || expandedPeople.has(person.id)}
+              aria-label={compactPeople ? `${expandedPeople.has(person.id) ? 'Riduci' : 'Mostra'} ${person.name}` : undefined}
+              disabled={!compactPeople}
+            >
+              <span className="shift-avatar" aria-hidden="true">{person.initials}</span>
+              {(!compactPeople || expandedPeople.has(person.id)) ? <span className="shift-person-copy"><strong>{person.name}</strong><small>{person.assignmentProfile}</small></span> : null}
+            </button>
+          </th>
           {visibleDates.map((date) => {
             const sourceIndex = dates.indexOf(date)
             const code = unit.assignments[person.id]?.[sourceIndex] ?? ''
