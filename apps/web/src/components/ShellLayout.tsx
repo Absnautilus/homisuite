@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, X } from 'lucide-react'
+import { ArrowLeft, Menu, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useDropdownTransition } from '@homisuite/ui'
 import { shellNavigation } from '../app/navigation'
@@ -172,14 +172,15 @@ export function ShellLayout() {
   )
 }
 
-// The hamburger morphs into an X in place, instead of swapping icons, so the
-// same button reads as one continuous control for opening and closing.
+// Menu morphs into X in place, instead of swapping to a different button, so
+// the same control reads as continuous across opening and closing. Both
+// icons come from lucide (same stroke weight as the rest of the header,
+// e.g. the back arrow) rather than hand-drawn bars.
 function MenuToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <button type="button" aria-label={open ? 'Chiudi menu' : 'Apri menu'} className={`menu-toggle${open ? ' is-open' : ''}`} onClick={onToggle}>
-      <span className="menu-toggle-bar" />
-      <span className="menu-toggle-bar" />
-      <span className="menu-toggle-bar" />
+    <button type="button" aria-label={open ? 'Chiudi menu' : 'Apri menu'} className="menu-toggle" onClick={onToggle}>
+      <Menu size={20} className={`menu-toggle-icon${open ? ' is-hidden' : ''}`} aria-hidden="true" />
+      <X size={20} className={`menu-toggle-icon${open ? '' : ' is-hidden'}`} aria-hidden="true" />
     </button>
   )
 }

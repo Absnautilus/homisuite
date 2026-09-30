@@ -347,11 +347,8 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
   .mobile-header .brand { color: var(--navbar-text); }
   .mobile-header small { color: var(--navbar-icon); }
   .mobile-header button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--navbar-surface); color: var(--navbar-text); }
-  .menu-toggle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5px; }
-  .menu-toggle-bar { width: 16px; height: 1.5px; border-radius: 999px; background: currentColor; transition: transform 260ms cubic-bezier(.4, 0, .2, 1), opacity 180ms ease; }
-  .menu-toggle.is-open .menu-toggle-bar:nth-child(1) { transform: translateY(4px) rotate(45deg); }
-  .menu-toggle.is-open .menu-toggle-bar:nth-child(2) { opacity: 0; }
-  .menu-toggle.is-open .menu-toggle-bar:nth-child(3) { transform: translateY(-4px) rotate(-45deg); }
+  .menu-toggle-icon { grid-column: 1; grid-row: 1; transition: opacity 180ms ease, transform 260ms cubic-bezier(.4, 0, .2, 1); }
+  .menu-toggle-icon.is-hidden { opacity: 0; transform: rotate(-90deg) scale(0.6); }
   .page-content { padding: 24px 16px 92px; }
   .module-grid { grid-template-columns: 1fr; gap: 14px; }
   .module-card { padding: 20px 20px 18px; }
