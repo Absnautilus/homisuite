@@ -6,7 +6,7 @@ import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fi
 import type { AssignmentConflict } from '../domain/assignment'
 import { contrastTextColor } from '../domain/contrastColor'
 import { CodesPanel, type ShiftCodeSave } from './CodesPanel'
-import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel, type ShiftRuleSetSave } from './PlannerPanels'
+import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestsPanel, RulesPanel, type ShiftRuleSetSave, type ShiftRequestSubmit, type StaffPreferenceSave } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
 import { UnitsPanel, type UnitSave, type UnitSaveResult } from './UnitsPanel'
 
@@ -15,7 +15,7 @@ export interface ShiftAssignmentEdit { planningUnitId: string; staffProfileId: s
 export interface ShiftMemberReorder { planningUnitId: string; staffProfileIds: string[] }
 export interface GenerateAssignmentsResult { assignments: Record<string, Record<string, string>>; conflicts: AssignmentConflict[] }
 export type { ShiftRuleSetSave, ShiftCodeSave, AssignmentConflict, UnitSave, UnitSaveResult }
-export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult>; onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>; onArchiveUnit?: (unitId: string) => Promise<void>; currentStaffProfileId?: string; month?: string; onMonthChange?: (month: string) => void; onSetShiftLocked?: (planningUnitId: string, staffProfileId: string, shiftDate: string, locked: boolean) => Promise<void> }
+export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult>; onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>; onArchiveUnit?: (unitId: string) => Promise<void>; currentStaffProfileId?: string; month?: string; onMonthChange?: (month: string) => void; onSetShiftLocked?: (planningUnitId: string, staffProfileId: string, shiftDate: string, locked: boolean) => Promise<void>; onSubmitRequest?: (planningUnitId: string, request: ShiftRequestSubmit) => Promise<void>; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void> }
 type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'codes' | 'units' | 'preferences' | 'swaps' | 'absences' | 'preassignments'
 type CalendarView = 'month' | 'week'
 type NavGroup = 'operativo' | 'impostazioni'
@@ -42,7 +42,7 @@ const SETTINGS_TABS = [
   { id: 'codes' as ModuleTab, label: 'Codici turno', icon: <Badge /> },
 ]
 
-export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveRules, onSetRestDays, onSaveCode, onDeleteCode, onSetMonthStatus, onGenerateAssignments, onSaveUnit, onArchiveUnit, currentStaffProfileId, month, onMonthChange, onSetShiftLocked }: ShiftPlannerModuleProps) {
+export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveRules, onSetRestDays, onSaveCode, onDeleteCode, onSetMonthStatus, onGenerateAssignments, onSaveUnit, onArchiveUnit, currentStaffProfileId, month, onMonthChange, onSetShiftLocked, onSubmitRequest, initialPreferences, onSavePreferences }: ShiftPlannerModuleProps) {
   const initialProperty = previewProperties.find((property) => property.id === initialPropertyId) ?? previewProperties[0]
   const [propertyId, setPropertyId] = useState(initialProperty?.id ?? '')
   const [unitId, setUnitId] = useState(initialProperty?.units[0]?.id ?? '')
@@ -330,8 +330,8 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
       {tab === 'units' ? <UnitsPanel units={property.units} jobTitleRoster={property.jobTitleRoster ?? []} onSaveUnit={onSaveUnit ? saveUnit : undefined} onArchiveUnit={onArchiveUnit ? archiveUnit : undefined} /> : null}
       {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} onSaveRules={onSaveRules ? saveRules : undefined} /></> : null}
       {tab === 'codes' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><CodesPanel unit={unit} onSaveCode={onSaveCode ? saveCode : undefined} onDeleteCode={onDeleteCode ? (codeId) => deleteCode(unit.id, codeId) : undefined} /></> : null}
-      {tab === 'mine' ? <MyShiftsPanel unit={unit} currentStaffProfileId={currentStaffProfileId} /> : null}{tab === 'preferences' ? <PersonalPanel unit={unit} /> : null}
-      {tab === 'swaps' ? <RequestsPanel kind="swaps" unit={unit} /> : null}{tab === 'absences' ? <RequestsPanel kind="absences" unit={unit} /> : null}{tab === 'preassignments' ? <RequestsPanel kind="preassignments" unit={unit} /> : null}
+      {tab === 'mine' ? <MyShiftsPanel unit={unit} currentStaffProfileId={currentStaffProfileId} /> : null}{tab === 'preferences' ? <PersonalPanel unit={unit} initialPreferences={initialPreferences} onSavePreferences={onSavePreferences} /> : null}
+      {tab === 'swaps' ? <RequestsPanel kind="swaps" unit={unit} currentStaffProfileId={currentStaffProfileId} /> : null}{tab === 'absences' ? <RequestsPanel kind="absences" unit={unit} currentStaffProfileId={currentStaffProfileId} onSubmitRequest={onSubmitRequest ? (request) => onSubmitRequest(unit.id, request) : undefined} /> : null}{tab === 'preassignments' ? <RequestsPanel kind="preassignments" unit={unit} currentStaffProfileId={currentStaffProfileId} onSubmitRequest={onSubmitRequest ? (request) => onSubmitRequest(unit.id, request) : undefined} /> : null}
     </div>
   </div>
 }
