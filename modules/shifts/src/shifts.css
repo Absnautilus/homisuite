@@ -84,8 +84,10 @@
 .shift-grid thead th span, .shift-grid thead th strong { display: block; }
 .shift-grid thead th strong { color: var(--shift-ink); font-size: 15px; margin-top: 2px; }
 .shift-grid thead th.is-weekend { background: #f4f1f8; }
-.shift-grid .shift-person-column { left: 0; min-width: 210px; position: sticky; text-align: left; z-index: 2; }
-.shift-grid tbody .shift-person-column { align-items: center; background: white; display: flex; gap: 10px; }
+.shift-grid .shift-person-column { background: #fafafe; left: 0; min-width: 210px; position: sticky; text-align: left; z-index: 3; }
+.shift-grid tbody .shift-person-column { background: white; z-index: 2; }
+.shift-person-trigger { align-items: center; background: transparent; border: 0; color: inherit; display: flex; font: inherit; gap: 10px; padding: 0; text-align: left; width: 100%; }
+.shift-person-trigger:disabled { cursor: default; opacity: 1; }
 .shift-avatar { align-items: center; background: #eee6f6; border-radius: 999px; color: #754099; display: inline-flex; flex: 0 0 34px; font-size: 11px; font-weight: 800; height: 34px; justify-content: center; width: 34px; }
 .shift-person-copy { display: grid; min-width: 0; }
 .shift-person-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -172,6 +174,11 @@
    narrows the Dipendente column once every row is name-collapsed. */
 .shift-employees-table.is-compact-names tbody th { min-width: 0; }
 @media (max-width: 760px) {
+  .shift-grid .shift-person-column { min-width: 58px; width: 58px; }
+  .shift-grid .shift-person-column:not(.is-compact) { min-width: 190px; width: 190px; }
+  .shift-person-trigger { cursor: pointer; }
+  .shift-person-column.is-compact .shift-person-trigger { justify-content: center; }
+
   .shift-employees-table.is-compact-names { min-width: 860px; }
 }
 .shift-custom-select { min-width: 130px; position: relative; }
