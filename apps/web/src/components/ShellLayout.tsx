@@ -65,8 +65,50 @@ export function ShellLayout() {
     }
   }, [drawerOpen])
 
+  const brandMark = <div className="brand"><img className="mark" src="/icon-192.png" alt="" width={28} height={28} /><span>Homisuite</span></div>
+
   if (runtime.status === 'loading') {
-    return <main><PageState kind="loading" title="Caricamento Homisuite…" variant="fullscreen" /></main>
+    // The real shell frame renders immediately -- brand mark is static, and
+    // everything that depends on data we don't have yet (property, nav
+    // entitlements, account) is a skeleton placeholder using the same
+    // shimmer as the module-content skeleton below, rather than a blank
+    // screen with just a bar and a title.
+    const navSkeletonWidths = ['70%', '55%', '65%', '50%', '60%']
+    return (
+      <div className="app-shell">
+        <aside className="sidebar">
+          {brandMark}
+          <div className="property-switcher-skel" aria-hidden="true">
+            <span className="sidebar-skel-circle" style={{ width: 26, height: 26 }} />
+            <span className="property-switcher-skel-lines">
+              <span className="sidebar-skel-row" style={{ width: '78%', height: 10 }} />
+              <span className="sidebar-skel-row" style={{ width: '48%', height: 8 }} />
+            </span>
+          </div>
+          <nav className="sidebar-nav" aria-label="Navigazione principale">
+            {navSkeletonWidths.map((width, index) => (
+              <div className="nav-item-skel" key={index}>
+                <span className="sidebar-skel-circle" style={{ width: 18, height: 18, borderRadius: 6 }} />
+                <span className="sidebar-skel-row" style={{ width }} />
+              </div>
+            ))}
+          </nav>
+          <div className="sidebar-account">
+            <div className="account-trigger-skel" aria-hidden="true">
+              <span className="sidebar-skel-circle" style={{ width: 26, height: 26 }} />
+              <span className="sidebar-skel-row" style={{ width: '55%', height: 10 }} />
+            </div>
+          </div>
+        </aside>
+        <div className="shell-content">
+          <header className="mobile-header">
+            <div>{brandMark}</div>
+            <span className="sidebar-skel-circle mobile-header-btn-skel" aria-hidden="true" />
+          </header>
+          <main className="page-content"><PageState kind="loading" title="Caricamento Homisuite…" /></main>
+        </div>
+      </div>
+    )
   }
   if (runtime.status === 'signed-out') return <LoginScreen />
   if (runtime.status === 'no-property') {
@@ -108,8 +150,6 @@ export function ShellLayout() {
       ))}
     </>
   )
-
-  const brandMark = <div className="brand"><img className="mark" src="/icon-192.png" alt="" width={28} height={28} /><span>Homisuite</span></div>
 
   const propertySwitcher = (
     <PropertySwitcher
