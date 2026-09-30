@@ -26,6 +26,7 @@ export function ShiftPlannerPage() {
   const propertyName = runtime.property?.name ?? 'Struttura'
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'shifts')
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
 
   useEffect(() => {
     let cancelled = false
@@ -49,7 +50,7 @@ export function ShiftPlannerPage() {
         setState({ status: 'forbidden' })
         return
       }
-      const live = await loadLiveShiftData(supabase, propertyId, propertyName)
+      const live = await loadLiveShiftData(supabase, propertyId, propertyName, month)
       if (cancelled) return
       if (live.property.units.length === 0) {
         setState({ status: 'empty' })
@@ -61,7 +62,7 @@ export function ShiftPlannerPage() {
       if (!cancelled) setState({ status: 'error' })
     })
     return () => { cancelled = true }
-  }, [entitled, propertyId, propertyName, runtime.hasPermission])
+  }, [entitled, propertyId, propertyName, runtime.hasPermission, month])
 
   if (state.status === 'loading') return <PageState kind="loading" title="Caricamento Turni…" />
   if (state.status === 'not-entitled') return <PageState kind="unavailable" title="Turni non è abilitato per questa struttura." />
@@ -73,7 +74,7 @@ export function ShiftPlannerPage() {
 
   const readyState = state
   const profileId = runtime.profile?.id
-  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} onSaveAssignments={async (changes) => {
+  return <ShiftPlannerModule initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentProfileId={profileId} month={month} onMonthChange={setMonth} onSaveAssignments={async (changes) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const byUnit = new Map<string, typeof changes>()
     for (const change of changes) byUnit.set(change.planningUnitId, [...(byUnit.get(change.planningUnitId) ?? []), change])
