@@ -292,6 +292,21 @@ export function RulesPanel({ unit, onSaveRules }: {
   )
 }
 
+export interface ShiftRequestInboxItem { id: string; kind: 'absences' | 'preassignments' | 'swaps'; planningUnitId: string; staffProfileId: string; targetStaffProfileId?: string; status: string; date?: string; label: string; note?: string | null }
+export function RequestInboxPanel({ items, people, currentStaffProfileId, canManage, onDecision }: { items: ShiftRequestInboxItem[]; people: ShiftPerson[]; currentStaffProfileId?: string; canManage: boolean; onDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void> }) {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const name = (id: string) => people.find((person) => person.id === id)?.name ?? 'Dipendente'
+  const actionable = (item: ShiftRequestInboxItem) => item.kind === 'swaps' ? (item.status === 'pending' ? item.targetStaffProfileId === currentStaffProfileId : item.status === 'accepted' && canManage) : canManage
+  async function decide(item: ShiftRequestInboxItem, approve: boolean) {
+    if (!onDecision) return
+    setBusy(item.id); setError(false)
+    try { await onDecision(item, approve) } catch { setError(true) } finally { setBusy(null) }
+  }
+  if (!items.length) return null
+  return <section className="shift-original-panel"><h2>Richieste da gestire</h2><div className="shift-request-inbox">{items.map((item) => <div className="shift-request-card" key={item.kind + item.id}><div><strong>{item.label}</strong><span>{name(item.staffProfileId)}{item.date ? ` · ${item.date}` : ''}</span>{item.note ? <small>{item.note}</small> : null}</div>{actionable(item) ? <div className="shift-request-actions"><button type="button" disabled={busy === item.id} onClick={() => void decide(item, false)}>Rifiuta</button><button className="shift-original-primary" type="button" disabled={busy === item.id} onClick={() => void decide(item, true)}>{busy === item.id ? 'Aggiornamento…' : (item.kind === 'swaps' && item.status === 'pending' ? 'Accetta' : 'Approva')}</button></div> : <span className="shift-status-pill">{item.status === 'accepted' ? 'In attesa del responsabile' : item.status}</span>}</div>)}</div>{error ? <div className="shift-inline-warning" role="alert">Impossibile aggiornare la richiesta.</div> : null}</section>
+}
+
 export interface ShiftRequestSubmit { kind: 'absences' | 'preassignments' | 'swaps'; date: string; absenceKind?: string; shiftCodeId?: string; targetStaffProfileId?: string; requestedShiftId?: string; offeredShiftId?: string; note?: string }
 export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitRequest }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit; currentStaffProfileId?: string; onSubmitRequest?: (request: ShiftRequestSubmit) => Promise<void> }) {
   const [date, setDate] = useState('2026-09-01')
