@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ShiftPlannerModule, type ShiftPlannerCapabilities, type ShiftPreviewProperty } from '@homisuite/shifts-module'
+import { ShiftPlannerModule, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem } from '@homisuite/shifts-module'
 import '@homisuite/shifts-module/style.css'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
@@ -19,7 +19,7 @@ import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPr
 
 type State =
   | { status: 'loading' }
-  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences; requestInbox?: any[] }
+  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences; requestInbox?: ShiftRequestInboxItem[] }
   | { status: 'not-entitled' | 'forbidden' | 'empty' | 'error' }
 
 export function ShiftPlannerPage() {
@@ -29,6 +29,7 @@ export function ShiftPlannerPage() {
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'shifts')
   const [state, setState] = useState<State>({ status: 'loading' })
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [requestRevision, setRequestRevision] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -73,7 +74,7 @@ export function ShiftPlannerPage() {
       if (!cancelled) setState({ status: 'error' })
     })
     return () => { cancelled = true }
-  }, [entitled, propertyId, propertyName, runtime.hasPermission, month])
+  }, [entitled, propertyId, propertyName, runtime.hasPermission, month, requestRevision])
 
   if (state.status === 'loading') return <PageState kind="loading" title="Caricamento Turni…" />
   if (state.status === 'not-entitled') return <PageState kind="unavailable" title="Turni non è abilitato per questa struttura." />
@@ -85,11 +86,11 @@ export function ShiftPlannerPage() {
 
   const readyState = state
   const profileId = runtime.profile?.id
-  return <ShiftPlannerModule requestInbox={readyState.requestInbox as any} onRequestDecision={async (item, approve) => {
+  return <ShiftPlannerModule requestInbox={readyState.requestInbox} onRequestDecision={async (item, approve) => {
     if (item.kind === 'absences') await decideAbsenceRequest(supabase, item.id, approve)
     else if (item.kind === 'preassignments') await decidePreassignment(supabase, item.id, approve)
     else await respondShiftSwap(supabase, item.id, approve)
-    setMonth((value) => value + '')
+    setRequestRevision((value) => value + 1)
   }} initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} initialPreferences={readyState.preferences} onSavePreferences={async (preferences) => {
     if (!propertyId || !readyState.currentStaffProfileId) throw new Error('Missing active staff profile')
     await saveStaffShiftPreferences(supabase, propertyId, readyState.currentStaffProfileId, preferences)
