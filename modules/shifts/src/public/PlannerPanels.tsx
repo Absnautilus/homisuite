@@ -292,12 +292,13 @@ export function RulesPanel({ unit, onSaveRules }: {
   )
 }
 
-export interface ShiftRequestSubmit { kind: 'absences' | 'preassignments'; date: string; absenceKind?: string; shiftCodeId?: string; note?: string }
+export interface ShiftRequestSubmit { kind: 'absences' | 'preassignments' | 'swaps'; date: string; absenceKind?: string; shiftCodeId?: string; targetStaffProfileId?: string; requestedShiftId?: string; offeredShiftId?: string; note?: string }
 export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitRequest }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit; currentStaffProfileId?: string; onSubmitRequest?: (request: ShiftRequestSubmit) => Promise<void> }) {
   const [date, setDate] = useState('2026-09-01')
   const [absenceType, setAbsenceType] = useState('Ferie')
   const [affectedShift, setAffectedShift] = useState('Giornata intera')
   const [preCode, setPreCode] = useState('')
+  const [swapTarget, setSwapTarget] = useState('')
   const [note, setNote] = useState('')
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   async function submit(request: ShiftRequestSubmit) {
@@ -307,21 +308,30 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
   }
   const people = unit.people
 
-  if (kind === 'swaps') return <section className="shift-original-panel">
-    <h2>Richiedi cambio turno</h2>
-    <p>Scegli un giorno e vedi subito il tuo turno e quello di ogni collega quel giorno, per proporre uno scambio in base al turno che ti serve. Resta soggetto a conferma del collega e, a mese Definitivo, dell'admin.</p>
-    <div className="shift-form-label">Giorno</div>
-    <p className="shift-form-help">Scegli la data: sotto vedi subito il tuo turno e quello di ogni collega quel giorno, per scegliere in base al turno che ti serve.</p>
-    <div className="shift-swap-date-row"><ShiftDatePicker ariaLabel="Giorno del cambio turno" value={date} onChange={setDate} /><span>Non hai ancora un turno assegnato in questa data<br /><small>Il giorno prima: —</small></span></div>
-    <div className="shift-form-label shift-section-label">Con chi vuoi scambiare</div>
-    <div className="shift-swap-list">{people.map((person) => <button type="button" className="shift-swap-person" key={person.id}>
-      <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>ieri: —</span><span>nessun turno</span><span>✓ 0 · × 0</span>
-    </button>)}</div>
-    <button className="shift-original-primary" type="button" disabled>Invia richiesta</button>
-    <div className="shift-inline-warning">Non è possibile scambiare un turno che non esiste ancora. Il tuo giorno non ha ancora un turno assegnato: serve prima una pre-assegnazione.</div>
-    <h3 className="shift-original-subtitle">Richieste</h3>
-    <p className="shift-empty-copy">Nessuna richiesta.</p>
-  </section>
+  if (kind === 'swaps') {
+    const dateIndex = unit.assignmentDates?.indexOf(date) ?? -1
+    const ownShiftId = dateIndex >= 0 && currentStaffProfileId ? unit.shiftIds?.[currentStaffProfileId]?.[dateIndex] : undefined
+    const ownCode = dateIndex >= 0 && currentStaffProfileId ? unit.assignments[currentStaffProfileId]?.[dateIndex] : undefined
+    const candidates = people.filter((person) => person.id !== currentStaffProfileId).map((person) => ({
+      person,
+      shiftId: dateIndex >= 0 ? unit.shiftIds?.[person.id]?.[dateIndex] : undefined,
+      code: dateIndex >= 0 ? unit.assignments[person.id]?.[dateIndex] : undefined,
+      locked: unit.lockedAssignments?.[person.id]?.includes(date) ?? false,
+    })).filter((item) => item.shiftId && !item.locked)
+    const selected = candidates.find((item) => item.person.id === swapTarget)
+    return <section className="shift-original-panel">
+      <h2>Richiedi cambio turno</h2>
+      <p>Scegli un giorno e un collega. Il cambio viene rivalidato sui turni reali al momento della risposta; i turni bloccati non sono scambiabili.</p>
+      <div className="shift-form-label">Giorno</div>
+      <div className="shift-swap-date-row"><ShiftDatePicker ariaLabel="Giorno del cambio turno" value={date} onChange={(value) => { setDate(value); setSwapTarget('') }} /><span>{ownCode ? `Il tuo turno: ${ownCode}` : 'Non hai un turno assegnato in questa data'}</span></div>
+      <div className="shift-form-label shift-section-label">Con chi vuoi scambiare</div>
+      <div className="shift-swap-list">{candidates.map(({ person, code }) => <button type="button" className="shift-swap-person" aria-pressed={swapTarget === person.id} key={person.id} onClick={() => setSwapTarget(person.id)}>
+        <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>{code || '—'}</span>
+      </button>)}</div>
+      <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="shift-original-primary" type="button" disabled={!ownShiftId || !selected?.shiftId || !onSubmitRequest || submitState === 'saving'} onClick={() => { if (ownShiftId && selected?.shiftId) void submit({ kind: 'swaps', date, targetStaffProfileId: selected.person.id, requestedShiftId: ownShiftId, offeredShiftId: selected.shiftId, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button></div>
+      {!ownShiftId ? <div className="shift-inline-warning">Non è possibile scambiare un turno che non esiste ancora.</div> : null}
+    </section>
+  }
 
   if (kind === 'absences') return <section className="shift-original-panel">
     <h2>Ferie e permessi</h2>
