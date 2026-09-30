@@ -103,6 +103,10 @@
   }
   .ui-module-nav-topline { min-height: 38px; }
   .ui-module-nav-identity { display: none; }
+  /* The identity text is hidden above, so a module with no actions (Turni,
+     Dining) has nothing left in this row -- collapse it instead of leaving
+     a blank 38px bar. */
+  .ui-module-nav-topline:not(:has(.ui-module-nav-actions)) { display: none; }
   .ui-module-nav-actions { max-width: 100%; margin-left: auto; }
   .ui-module-nav-primary.ui-tabs,
   .ui-module-nav-secondary.ui-tabs {
@@ -113,6 +117,8 @@
     scrollbar-width: none;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 6px;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 14px, black calc(100% - 22px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 14px, black calc(100% - 22px), transparent);
   }
   .ui-module-nav-primary.ui-tabs::-webkit-scrollbar,
   .ui-module-nav-secondary.ui-tabs::-webkit-scrollbar { display: none; }

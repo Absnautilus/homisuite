@@ -369,8 +369,11 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
   .mobile-header .brand { color: var(--navbar-text); }
   .mobile-header small { color: var(--navbar-icon); }
   .mobile-header button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--navbar-surface); color: var(--navbar-text); }
-  .menu-toggle-icon { grid-column: 1; grid-row: 1; transition: opacity 180ms ease, transform 260ms cubic-bezier(.4, 0, .2, 1); }
-  .menu-toggle-icon.is-hidden { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+  .menu-toggle-icon { grid-column: 1; grid-row: 1; transition: opacity 200ms cubic-bezier(.4, 0, .2, 1), transform 200ms cubic-bezier(.4, 0, .2, 1); }
+  .menu-toggle-icon.is-hidden { opacity: 0; transform: rotate(45deg) scale(0.82); }
+  @media (prefers-reduced-motion: reduce) {
+    .menu-toggle-icon { transition: none; }
+  }
   .mobile-header-btn-skel { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
   .page-content { padding: 24px 16px 92px; }
   .module-grid { grid-template-columns: 1fr; gap: 14px; }
