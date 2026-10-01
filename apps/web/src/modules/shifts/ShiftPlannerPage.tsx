@@ -77,7 +77,7 @@ export function ShiftPlannerPage() {
     return () => { cancelled = true }
   }, [entitled, propertyId, propertyName, runtime.hasPermission, month, requestRevision])
 
-  if (state.status === 'loading') return <PageState kind="loading" title="Caricamento Turni…" />
+  if (state.status === 'loading') return <PageState kind="loading" title="Caricamento…" />
   if (state.status === 'not-entitled') return <PageState kind="unavailable" title="Turni non è abilitato per questa struttura." />
   if (state.status === 'forbidden') return <PageState kind="unavailable" title="Non hai accesso al modulo Turni per questa struttura." />
   if (state.status === 'empty') return <PageState kind="empty" title="Turni non è ancora configurato." description="Crea almeno un’unità di pianificazione per iniziare." />
