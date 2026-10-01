@@ -12,7 +12,8 @@ import { setUnitRestDays, setUnitFutureRestDays } from './saveRestDays'
 import { saveShiftCode, deleteOrArchiveShiftCode } from './saveShiftCode'
 import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
-import { saveUnit, archiveUnit } from './saveUnit'
+import { saveUnit, archiveUnit, restoreUnit } from './saveUnit'
+import { saveStaffRestSettings } from './saveStaffRestSettings'
 import { setShiftLocked } from './saveShiftLock'
 import { createAbsenceRequest, createPreassignmentRequest, createShiftSwapRequest, decideAbsenceRequest, decidePreassignment, loadShiftRequestInbox, respondShiftSwap, type ShiftAbsenceInboxRow, type ShiftPreassignmentInboxRow, type ShiftSwapInboxRow } from './shiftRequestActions'
 import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPreferences } from './staffPreferences'
@@ -121,6 +122,9 @@ export function ShiftPlannerPage() {
   }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
+  }} onSaveStaffPlanning={async ({ staffProfileId, restMode, restDays }) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await saveStaffRestSettings(supabase, propertyId, staffProfileId, restMode, restDays)
   }} onSaveRules={async ({ planningUnitId, coverage, hard, soft, restRotationPairsPerCycle, roleCodes }) => {
     if (!propertyId) throw new Error('Missing active property')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
@@ -161,5 +165,8 @@ export function ShiftPlannerPage() {
   }} onArchiveUnit={async (unitId) => {
     if (!propertyId) throw new Error('Missing active property')
     await archiveUnit(supabase, propertyId, unitId)
+  }} onRestoreUnit={async (unitId) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await restoreUnit(supabase, propertyId, unitId)
   }} />
 }
