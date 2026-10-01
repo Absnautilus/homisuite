@@ -1088,3 +1088,31 @@
   .shift-person-column.is-compact .shift-person-trigger { justify-content: center; }
   .shift-legend { padding: 16px 14px 20px; }
 }
+
+/* DNM is a corner affordance on the shift chip, never a second full-size control. */
+.shift-cell,
+.shift-cell-editor { position: relative; }
+.shift-lock-toggle,
+.shift-cell-editor .shift-lock-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 11px;
+  min-width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 3px;
+  padding: 0;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 0 0 1px rgba(20,24,45,.12);
+  opacity: .48;
+  z-index: 2;
+}
+.shift-cell-editor .shift-lock-toggle { opacity: .18; pointer-events: auto; }
+.shift-cell-editor:hover .shift-lock-toggle,
+.shift-cell-editor:focus-within .shift-lock-toggle,
+.shift-lock-toggle.is-locked { opacity: .72; }
+.shift-legend { padding: 20px 28px 24px; }
+@media (max-width: 760px) {
+  .shift-legend { padding: 18px 20px 22px; }
+}
