@@ -20,6 +20,7 @@ function fallbackDates(length: number) {
 export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange }: ScheduleGridProps) {
   const [compactPeople, setCompactPeople] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set())
+  const [dnmEditor, setDnmEditor] = useState<string | null>(null)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)')
@@ -73,9 +74,10 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
             const code = unit.assignments[person.id]?.[sourceIndex] ?? ''
             const definition = codeMap.get(code)
             const locked = unit.lockedAssignments?.[person.id]?.includes(date) ?? false
-            return <td key={`${person.id}-${date}`}>
-              {editable && !locked ? <div className="shift-cell-editor"><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} />{code && onLockChange ? <button type="button" className="shift-lock-toggle" title="Non spostare questo turno" aria-label={`Blocca ${person.name}, ${date}`} onClick={() => void onLockChange(person.id, date, true)}><LockKeyhole size={8} /></button> : null}</div> : <div className={`shift-cell${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
-                <strong>{code}</strong>{locked ? <button type="button" className="shift-lock-toggle is-locked" title={editable ? 'Consenti di nuovo lo spostamento' : 'Turno bloccato'} aria-label={editable ? `Sblocca ${person.name}, ${date}` : 'Bloccato'} disabled={!editable || !onLockChange} onClick={() => void onLockChange?.(person.id, date, false)}><LockKeyhole size={8} /></button> : null}
+            const cellKey = `${person.id}:${date}`
+            return <td key={`${person.id}-${date}`} onClick={() => { if (editable && code && !locked) setDnmEditor((current) => current === cellKey ? null : cellKey) }}>
+              {editable && !locked ? <div className="shift-cell-editor"><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} />{code && onLockChange && dnmEditor === cellKey ? <button type="button" className="shift-lock-toggle is-offer" title="Non spostare questo turno" aria-label={`Blocca ${person.name}, ${date}`} onClick={(event) => { event.stopPropagation(); setDnmEditor(null); void onLockChange(person.id, date, true) }}><LockKeyhole size={8} /></button> : null}</div> : <div className={`shift-cell${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
+                <strong>{code}</strong>{locked ? <button type="button" className="shift-lock-toggle is-locked" title={editable ? 'Consenti di nuovo lo spostamento' : 'Turno bloccato'} aria-label={editable ? `Sblocca ${person.name}, ${date}` : 'Bloccato'} disabled={!editable || !onLockChange} onClick={(event) => { event.stopPropagation(); void onLockChange?.(person.id, date, false) }}><LockKeyhole size={8} /></button> : null}
               </div>}
             </td>
           })}
