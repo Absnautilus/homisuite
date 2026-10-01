@@ -1,4 +1,4 @@
-import { LockKeyhole, MoreHorizontal } from 'lucide-react'
+import { LockKeyhole } from 'lucide-react'
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { ShiftPlanningUnit } from '../preview/fixtures'
 import { ShiftSelect } from './ShiftSelect'
@@ -20,7 +20,6 @@ function fallbackDates(length: number) {
 export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange }: ScheduleGridProps) {
   const [compactPeople, setCompactPeople] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set())
-  const [, setDnmEditor] = useState<string | null>(null)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)')
@@ -75,7 +74,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
             const definition = codeMap.get(code)
             const locked = unit.lockedAssignments?.[person.id]?.includes(date) ?? false
             return <td key={`${person.id}-${date}`}>
-              {editable && !locked ? <div className="shift-cell-editor"><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} onOpenChange={(open) => { if (!open) setDnmEditor(null) }} extraAction={code && onLockChange ? { label: 'Non spostare (DNM)', icon: <LockKeyhole size={14} />, onSelect: () => { setDnmEditor(null); void onLockChange(person.id, date, true) } } : undefined} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
+              {editable && !locked ? <div className="shift-cell-editor"><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} extraAction={code && onLockChange ? { label: 'Non spostare (DNM)', icon: <LockKeyhole size={14} />, onSelect: () => { void onLockChange(person.id, date, true) } } : undefined} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
                 <strong>{code}</strong>{locked ? <button type="button" className="shift-lock-toggle is-locked" title={editable ? 'Consenti di nuovo lo spostamento' : 'Turno bloccato'} aria-label={editable ? `Sblocca ${person.name}, ${date}` : 'Bloccato'} disabled={!editable || !onLockChange} onClick={(event) => { event.stopPropagation(); void onLockChange?.(person.id, date, false) }}><LockKeyhole size={8} /></button> : null}
               </div>}
             </td>
