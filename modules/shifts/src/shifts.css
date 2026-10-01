@@ -1043,3 +1043,48 @@
   .shift-date-trigger { width: 100%; }
   .shift-date-popover { min-width: min(280px, calc(100vw - 32px)); }
 }
+
+
+/* Turni mobile usability: keep the employee rail genuinely compact until the
+   user asks for a name, give the legend breathing room, and keep DNM controls
+   available without repeating a large control in every assigned cell. */
+.shift-legend { padding: 16px 18px 20px; }
+.shift-lock-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  display: inline-flex;
+  height: 16px;
+  justify-content: center;
+  min-width: 16px;
+  padding: 0;
+}
+.shift-cell-editor .shift-lock-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+.shift-cell-editor:focus-within .shift-lock-toggle,
+.shift-cell-editor:hover .shift-lock-toggle {
+  opacity: .65;
+  pointer-events: auto;
+}
+.shift-lock-toggle.is-locked { opacity: .7; }
+
+@media (max-width: 760px) {
+  .shift-grid .shift-person-column,
+  .shift-grid tbody .shift-person-column,
+  .shift-grid thead .shift-person-column {
+    min-width: 58px;
+    width: 58px;
+    padding-inline: 4px;
+  }
+  .shift-grid .shift-person-column:not(.is-compact) {
+    min-width: 172px;
+    width: 172px;
+    padding-inline: 8px;
+  }
+  .shift-person-column.is-compact .shift-person-trigger { justify-content: center; }
+  .shift-legend { padding: 16px 14px 20px; }
+}
