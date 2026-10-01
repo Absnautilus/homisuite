@@ -1116,3 +1116,7 @@
 @media (max-width: 760px) {
   .shift-legend { padding: 18px 20px 22px; }
 }
+
+/* An unlocked shift has no DNM chrome until that shift is explicitly selected. */
+.shift-cell-editor .shift-lock-toggle { display: none; }
+.shift-cell-editor .shift-lock-toggle.is-offer { display: inline-flex; opacity: .72; }
