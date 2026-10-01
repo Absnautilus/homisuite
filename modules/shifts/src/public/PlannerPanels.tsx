@@ -24,6 +24,8 @@ type PersonDraft = {
 
 export interface ShiftStaffPlanningSave { staffProfileId: string; restMode: 'fixed' | 'rotating'; restDays: string }
 
+const REST_DAY_OPTIONS = ['Sab + Dom', 'Dom + Lun', 'Lun + Mar']
+
 export function EmployeesPanel({ property, onReorderMembers, onSavePlanning }: {
   property: ShiftPreviewProperty
   onReorderMembers?: (change: { planningUnitId: string; staffProfileIds: string[] }) => Promise<void>
@@ -129,8 +131,8 @@ export function EmployeesPanel({ property, onReorderMembers, onSavePlanning }: {
                 </th>
                 <td><ShiftSelect ariaLabel={`Unità di ${person.name}`} value={draft.unitId} onChange={(unitId) => update(person.id, { unitId })} options={property.units.map((unit) => ({ value: unit.id, label: unit.name }))} /></td>
                 <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => update(person.id, { assignmentProfile })} options={['Diurno', 'Turnante', 'Notturno', 'Direttore', 'FOM'].map((label) => ({ value: label, label }))} /></td>
-                <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => { const mode = restMode as PersonDraft['restMode']; if (mode === 'fixed' && !draft.restDays) update(person.id, { restMode: mode }); else void savePlanning(person.id, { restMode: mode }) }} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
-                <td><ShiftSelect ariaLabel={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(restDays) => void savePlanning(person.id, { restDays })} options={[{ value: '', label: '—' }, ...['Sab + Dom', 'Dom + Lun', 'Lun + Mar'].map((label) => ({ value: label, label }))]} /></td>
+                <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => { const mode = restMode as PersonDraft['restMode']; if (mode === 'fixed' && !draft.restDays) void savePlanning(person.id, { restMode: mode, restDays: REST_DAY_OPTIONS[0] }); else void savePlanning(person.id, { restMode: mode }) }} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
+                <td><ShiftSelect ariaLabel={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(restDays) => void savePlanning(person.id, { restDays })} options={[{ value: '', label: '—' }, ...REST_DAY_OPTIONS.map((label) => ({ value: label, label }))]} /></td>
                 <td><span className="shift-status-chip">{saveStates[person.id] === 'saving' ? 'Salvataggio…' : saveStates[person.id] === 'saved' ? 'Salvato' : saveStates[person.id] === 'error' ? 'Errore' : (person.includedBy === 'manual' ? 'Manuale' : 'Da Team')}</span></td>
               </tr>
             )
