@@ -292,28 +292,61 @@ export function RulesPanel({ unit, onSaveRules }: {
   )
 }
 
-export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit }) {
+export interface ShiftRequestInboxItem { id: string; kind: 'absences' | 'preassignments' | 'swaps'; planningUnitId: string; staffProfileId: string; targetStaffProfileId?: string; status: string; date?: string; label: string; note?: string | null }
+export function RequestInboxPanel({ items, people, currentStaffProfileId, canManage, onDecision }: { items: ShiftRequestInboxItem[]; people: ShiftPlanningUnit['people']; currentStaffProfileId?: string; canManage: boolean; onDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void> }) {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const name = (id: string) => people.find((person) => person.id === id)?.name ?? 'Dipendente'
+  const actionable = (item: ShiftRequestInboxItem) => item.kind === 'swaps' ? (item.status === 'pending' ? item.targetStaffProfileId === currentStaffProfileId : item.status === 'accepted' && canManage) : canManage
+  async function decide(item: ShiftRequestInboxItem, approve: boolean) {
+    if (!onDecision) return
+    setBusy(item.id); setError(false)
+    try { await onDecision(item, approve) } catch { setError(true) } finally { setBusy(null) }
+  }
+  if (!items.length) return null
+  return <section className="shift-original-panel"><h2>Richieste da gestire</h2><div className="shift-request-inbox">{items.map((item) => <div className="shift-request-card" key={item.kind + item.id}><div><strong>{item.label}</strong><span>{name(item.staffProfileId)}{item.date ? ` · ${item.date}` : ''}</span>{item.note ? <small>{item.note}</small> : null}</div>{actionable(item) ? <div className="shift-request-actions"><button type="button" disabled={busy === item.id} onClick={() => void decide(item, false)}>Rifiuta</button><button className="shift-original-primary" type="button" disabled={busy === item.id} onClick={() => void decide(item, true)}>{busy === item.id ? 'Aggiornamento…' : (item.kind === 'swaps' && item.status === 'pending' ? 'Accetta' : 'Approva')}</button></div> : <span className="shift-status-pill">{item.status === 'accepted' ? 'In attesa del responsabile' : item.status}</span>}</div>)}</div>{error ? <div className="shift-inline-warning" role="alert">Impossibile aggiornare la richiesta.</div> : null}</section>
+}
+
+export interface ShiftRequestSubmit { kind: 'absences' | 'preassignments' | 'swaps'; date: string; absenceKind?: string; shiftCodeId?: string; targetStaffProfileId?: string; requestedShiftId?: string; offeredShiftId?: string; note?: string }
+export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitRequest }: { kind: 'swaps' | 'absences' | 'preassignments'; unit: ShiftPlanningUnit; currentStaffProfileId?: string; onSubmitRequest?: (request: ShiftRequestSubmit) => Promise<void> }) {
   const [date, setDate] = useState('2026-09-01')
   const [absenceType, setAbsenceType] = useState('Ferie')
   const [affectedShift, setAffectedShift] = useState('Giornata intera')
   const [preCode, setPreCode] = useState('')
+  const [swapTarget, setSwapTarget] = useState('')
+  const [note, setNote] = useState('')
+  const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  async function submit(request: ShiftRequestSubmit) {
+    if (!onSubmitRequest || !currentStaffProfileId) return
+    setSubmitState('saving')
+    try { await onSubmitRequest(request); setSubmitState('saved'); setNote('') } catch { setSubmitState('error') }
+  }
   const people = unit.people
 
-  if (kind === 'swaps') return <section className="shift-original-panel">
-    <h2>Richiedi cambio turno</h2>
-    <p>Scegli un giorno e vedi subito il tuo turno e quello di ogni collega quel giorno, per proporre uno scambio in base al turno che ti serve. Resta soggetto a conferma del collega e, a mese Definitivo, dell'admin.</p>
-    <div className="shift-form-label">Giorno</div>
-    <p className="shift-form-help">Scegli la data: sotto vedi subito il tuo turno e quello di ogni collega quel giorno, per scegliere in base al turno che ti serve.</p>
-    <div className="shift-swap-date-row"><ShiftDatePicker ariaLabel="Giorno del cambio turno" value={date} onChange={setDate} /><span>Non hai ancora un turno assegnato in questa data<br /><small>Il giorno prima: —</small></span></div>
-    <div className="shift-form-label shift-section-label">Con chi vuoi scambiare</div>
-    <div className="shift-swap-list">{people.map((person) => <button type="button" className="shift-swap-person" key={person.id}>
-      <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>ieri: —</span><span>nessun turno</span><span>✓ 0 · × 0</span>
-    </button>)}</div>
-    <button className="shift-original-primary" type="button" disabled>Invia richiesta</button>
-    <div className="shift-inline-warning">Non è possibile scambiare un turno che non esiste ancora. Il tuo giorno non ha ancora un turno assegnato: serve prima una pre-assegnazione.</div>
-    <h3 className="shift-original-subtitle">Richieste</h3>
-    <p className="shift-empty-copy">Nessuna richiesta.</p>
-  </section>
+  if (kind === 'swaps') {
+    const dateIndex = unit.assignmentDates?.indexOf(date) ?? -1
+    const ownShiftId = dateIndex >= 0 && currentStaffProfileId ? unit.shiftIds?.[currentStaffProfileId]?.[dateIndex] : undefined
+    const ownCode = dateIndex >= 0 && currentStaffProfileId ? unit.assignments[currentStaffProfileId]?.[dateIndex] : undefined
+    const candidates = people.filter((person) => person.id !== currentStaffProfileId).map((person) => ({
+      person,
+      shiftId: dateIndex >= 0 ? unit.shiftIds?.[person.id]?.[dateIndex] : undefined,
+      code: dateIndex >= 0 ? unit.assignments[person.id]?.[dateIndex] : undefined,
+      locked: unit.lockedAssignments?.[person.id]?.includes(date) ?? false,
+    })).filter((item) => item.shiftId && !item.locked)
+    const selected = candidates.find((item) => item.person.id === swapTarget)
+    return <section className="shift-original-panel">
+      <h2>Richiedi cambio turno</h2>
+      <p>Scegli un giorno e un collega. Il cambio viene rivalidato sui turni reali al momento della risposta; i turni bloccati non sono scambiabili.</p>
+      <div className="shift-form-label">Giorno</div>
+      <div className="shift-swap-date-row"><ShiftDatePicker ariaLabel="Giorno del cambio turno" value={date} onChange={(value) => { setDate(value); setSwapTarget('') }} /><span>{ownCode ? `Il tuo turno: ${ownCode}` : 'Non hai un turno assegnato in questa data'}</span></div>
+      <div className="shift-form-label shift-section-label">Con chi vuoi scambiare</div>
+      <div className="shift-swap-list">{candidates.map(({ person, code }) => <button type="button" className="shift-swap-person" aria-pressed={swapTarget === person.id} key={person.id} onClick={() => setSwapTarget(person.id)}>
+        <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>{code || '—'}</span>
+      </button>)}</div>
+      <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="shift-original-primary" type="button" disabled={!ownShiftId || !selected?.shiftId || !onSubmitRequest || submitState === 'saving'} onClick={() => { if (ownShiftId && selected?.shiftId) void submit({ kind: 'swaps', date, targetStaffProfileId: selected.person.id, requestedShiftId: ownShiftId, offeredShiftId: selected.shiftId, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button></div>
+      {!ownShiftId ? <div className="shift-inline-warning">Non è possibile scambiare un turno che non esiste ancora.</div> : null}
+    </section>
+  }
 
   if (kind === 'absences') return <section className="shift-original-panel">
     <h2>Ferie e permessi</h2>
@@ -323,7 +356,7 @@ export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'pr
       <label><span>Tipo</span><ShiftSelect ariaLabel="Tipo richiesta" value={absenceType} onChange={setAbsenceType} options={[{ value: "Ferie", label: "Ferie" }, { value: "Permesso", label: "Permesso" }, { value: "R.O.L.", label: "R.O.L." }, { value: "Malattia", label: "Malattia" }]} /></label>
       <label><span>Turno interessato</span><ShiftSelect ariaLabel="Turno interessato" value={affectedShift} onChange={setAffectedShift} options={[{ value: "Giornata intera", label: "Giornata intera" }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
     </div>
-    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" /></label><button className="shift-original-primary" type="button">Invia richiesta</button></div>
+    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="shift-original-primary" type="button" disabled={!onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => void submit({ kind: 'absences', date, absenceKind: absenceType === 'Ferie' ? 'leave' : absenceType === 'Malattia' ? 'illness' : absenceType === 'Permesso' || absenceType === 'R.O.L.' ? 'permission' : 'other', note })}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button></div>
     <p className="shift-form-help">Se il permesso copre solo una parte del turno, indica ore e orario a quale turno si riferisce; altrimenti lascia “Giornata intera”.</p>
     <h3 className="shift-original-subtitle">Le mie richieste</h3>
     <p className="shift-empty-copy">Nessuna richiesta.</p>
@@ -338,8 +371,8 @@ export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'pr
     <div className="shift-inline-form shift-preassignment-form">
       <label><span>Giorno</span><ShiftDatePicker ariaLabel="Giorno pre-assegnazione" value={date} onChange={setDate} /></label>
       <label><span>Turno</span><ShiftSelect ariaLabel="Turno pre-assegnazione" value={preCode} onChange={setPreCode} options={[{ value: "", label: "Seleziona..." }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
-      <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" /></label>
-      <button className="shift-original-primary" type="button" disabled={!preCode}>Invia richiesta</button>
+      <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" value={note} onChange={(event) => setNote(event.target.value)} /></label>
+      <button className="shift-original-primary" type="button" disabled={!preCode || !onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => { const code = unit.codes.find((item) => item.code === preCode); if (code) void submit({ kind: 'preassignments', date, shiftCodeId: code.id, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button>
     </div>
     <p className="shift-form-help">Puoi scegliere solo tra i turni ammessi per il tuo ruolo. La richiesta resta in sospeso finché l'admin non la conferma; una volta accettata, il turno si blocca automaticamente.</p>
     <h3 className="shift-original-subtitle">Le mie richieste</h3>
@@ -347,11 +380,13 @@ export function RequestsPanel({ kind, unit }: { kind: 'swaps' | 'absences' | 'pr
   </section>
 }
 
-export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
+export interface StaffPreferenceSave { preferredShiftCodes: string[]; weekdayShiftPreferences: Record<string, string[]> }
+export function PersonalPanel({ unit, initialPreferences, onSavePreferences }: { unit: ShiftPlanningUnit; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void> }) {
   const preferredCodes = unit.codes.filter((code) => code.time && code.code !== 'N').slice(0, 5)
-  const [order, setOrder] = useState(() => preferredCodes.map((code) => code.code))
-  const [dayPreferences, setDayPreferences] = useState<Record<string, string[]>>({})
-  const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+  const [order, setOrder] = useState(() => initialPreferences?.preferredShiftCodes?.length ? initialPreferences.preferredShiftCodes : preferredCodes.map((code) => code.code))
+  const [dayPreferences, setDayPreferences] = useState<Record<string, string[]>>(() => initialPreferences?.weekdayShiftPreferences ?? {})
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const days = [{ key: '1', label: 'Lun' }, { key: '2', label: 'Mar' }, { key: '3', label: 'Mer' }, { key: '4', label: 'Gio' }, { key: '5', label: 'Ven' }, { key: '6', label: 'Sab' }, { key: '7', label: 'Dom' }]
   function toggleDayPreference(day: string, code: string) {
     setDayPreferences((current) => {
       const existing = current[day] ?? []
@@ -385,11 +420,16 @@ export function PersonalPanel({ unit }: { unit: ShiftPlanningUnit }) {
     })}</div>
     <div className="shift-form-label shift-section-label">Preferenze per giorno della settimana</div>
     <p className="shift-form-help">Es. “il lunedì preferisco C2, poi C1”. Seleziona uno o più turni per ciascun giorno, poi ordina la priorità con le frecce. Se imposti una preferenza qui, ha la precedenza su quella generale per quel giorno.</p>
-    <div className="shift-weekday-preferences">{days.map((day) => <div key={day}><strong>{day}</strong><span>{order.map((code) => {
+    <div className="shift-weekday-preferences">{days.map((day) => <div key={day.key}><strong>{day.label}</strong><span>{order.map((code) => {
       const def = codeMap.get(code)
-      const selected = (dayPreferences[day] ?? []).includes(code)
-      return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day, code)}>{code}</button>
+      const selected = (dayPreferences[day.key] ?? []).includes(code)
+      return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day.key, code)}>{code}</button>
     })}</span></div>)}</div>
+    <button className="shift-original-primary" type="button" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
+      if (!onSavePreferences) return
+      setSaveState('saving')
+      void onSavePreferences({ preferredShiftCodes: order, weekdayShiftPreferences: dayPreferences }).then(() => setSaveState('saved')).catch(() => setSaveState('error'))
+    }}>{saveState === 'saving' ? 'Salvataggio…' : saveState === 'saved' ? 'Salvate' : 'Salva preferenze'}</button>
   </section>
 }
 

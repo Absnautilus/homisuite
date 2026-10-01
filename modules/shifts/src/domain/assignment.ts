@@ -24,6 +24,8 @@ export interface AssignmentEmployee {
   fixedRestDays: number[]
   rotationSlot: number | null
   extraCodes?: string[]
+  preferredShiftCodes?: string[]
+  weekdayShiftPreferences?: Record<string, string[]>
 }
 
 export type ShiftCodeKind = 'work' | 'rest' | 'leave' | 'permission' | 'absence'
@@ -178,7 +180,16 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
       return imbalanceA - imbalanceB
     },
     variazioneSettimanale: (a, b, code, day) => weekCountOf(a.id, day, code) - weekCountOf(b.id, day, code),
-    preferenzePersonali: () => 0,
+    preferenzePersonali: (a, b, code, day) => {
+      const weekday = String(((new Date(Date.UTC(year, month, day)).getUTCDay() + 6) % 7) + 1)
+      const rank = (employee: AssignmentEmployee) => {
+        const specific = employee.weekdayShiftPreferences?.[weekday]
+        const ordered = specific && specific.length > 0 ? specific : (employee.preferredShiftCodes ?? [])
+        const index = ordered.indexOf(code)
+        return index < 0 ? ordered.length + 1 : index
+      }
+      return rank(a) - rank(b)
+    },
   }
 
   function sortCandidates(list: AssignmentEmployee[], code: string, day: number): AssignmentEmployee[] {

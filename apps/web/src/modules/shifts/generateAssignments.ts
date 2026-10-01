@@ -12,6 +12,7 @@ export interface GenerateAssignmentsResult {
 }
 
 interface ShiftCodeRow { id: string; code: string; kind: string }
+interface PreferenceStaffRow extends StaffProfileRow { preferred_shift_codes?: string[]; weekday_shift_preferences?: Record<string, string[]> }
 interface ExistingShiftRow {
   id: string
   staff_profile_id: string
@@ -60,7 +61,7 @@ export async function generateUnitAssignments(
   if (memberIds.length === 0) return { assignments: {}, conflicts: [] }
 
   const [{ data: unitStaff, error: unitStaffError }, { data: unitCodes, error: unitCodesError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
-    supabase.from('shift_staff_profiles').select('id,shift_type,rest_mode,fixed_rest_days,rotation_slot').eq('property_id', propertyId).in('id', memberIds),
+    supabase.from('shift_staff_profiles').select('id,shift_type,rest_mode,fixed_rest_days,rotation_slot,preferred_shift_codes,weekday_shift_preferences').eq('property_id', propertyId).in('id', memberIds),
     supabase.from('shift_codes').select('id,code,kind').eq('property_id', propertyId).eq('planning_unit_id', unit.id),
     supabase.from('shifts').select('id,staff_profile_id,shift_date,locked,shift_codes!inner(code,kind)').eq('property_id', propertyId).eq('planning_unit_id', unit.id).gte('shift_date', `${unit.month}-01`).lt('shift_date', nextMonthStart(year, month)),
   ])
@@ -68,7 +69,7 @@ export async function generateUnitAssignments(
   if (unitCodesError) throw unitCodesError
   if (existingShiftsError) throw existingShiftsError
 
-  const unitStaffRows = (unitStaff ?? []) as StaffProfileRow[]
+  const unitStaffRows = (unitStaff ?? []) as PreferenceStaffRow[]
   const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unitStaffRows)
 
   const employees: AssignmentEmployee[] = unitStaffRows.map((staff) => ({
@@ -78,6 +79,8 @@ export async function generateUnitAssignments(
     restMode: staff.rest_mode as AssignmentEmployee['restMode'],
     fixedRestDays: staff.fixed_rest_days ?? [],
     rotationSlot: newSlotByProfileId.get(staff.id) ?? staff.rotation_slot,
+    preferredShiftCodes: staff.preferred_shift_codes ?? [],
+    weekdayShiftPreferences: staff.weekday_shift_preferences ?? {},
   }))
 
   const codeRows = (unitCodes ?? []) as ShiftCodeRow[]
