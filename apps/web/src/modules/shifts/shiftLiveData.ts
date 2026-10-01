@@ -57,9 +57,8 @@ export async function loadLiveShiftData(
 
   const { data: units, error: unitsError } = await supabase
     .from('shift_planning_units')
-    .select('id,name,current_rule_set_id')
+    .select('id,name,current_rule_set_id,status')
     .eq('property_id', propertyId)
-    .eq('status', 'active')
     .order('name')
   if (unitsError) throw unitsError
 
@@ -154,7 +153,7 @@ export async function loadLiveShiftData(
     return {
       id: String(unit.id),
       name: typeof unit.name === 'string' ? unit.name : 'Unità',
-      status: 'active',
+      status: unit.status === 'inactive' ? 'inactive' : 'active',
       includedJobTitleIds: unitJobTitles.filter((row) => row.planning_unit_id === unit.id).map((row) => String(row.job_title_id)),
       ruleSetName: typeof activeRule?.preset_key === 'string' ? activeRule.preset_key : (typeof unit.name === 'string' ? unit.name : 'Unità'),
       ruleSetVersion: typeof activeRule?.version === 'number' ? activeRule.version : 1,

@@ -22,9 +22,12 @@ type PersonDraft = {
   restDays: string
 }
 
-export function EmployeesPanel({ property, onReorderMembers }: {
+export interface ShiftStaffPlanningSave { staffProfileId: string; restMode: 'fixed' | 'rotating'; restDays: string }
+
+export function EmployeesPanel({ property, onReorderMembers, onSavePlanning }: {
   property: ShiftPreviewProperty
   onReorderMembers?: (change: { planningUnitId: string; staffProfileIds: string[] }) => Promise<void>
+  onSavePlanning?: (change: ShiftStaffPlanningSave) => Promise<void>
 }) {
   const roster = useMemo(() => {
     const people = new Map<string, { person: ShiftPlanningUnit['people'][number]; unitId: string }>()
@@ -39,6 +42,7 @@ export function EmployeesPanel({ property, onReorderMembers }: {
   const orderedRoster = personOrder.map((id) => rosterById.get(id)).filter((entry): entry is NonNullable<typeof entry> => entry != null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [reorderError, setReorderError] = useState(false)
+  const [saveStates, setSaveStates] = useState<Record<string, 'saving' | 'saved' | 'error'>>({})
   // Column widths are shared across every row in an HTML table, so
   // collapsing one person's name alone can't reclaim any space -- clicking
   // any name instead compacts the whole Dipendente column down to just
@@ -59,6 +63,22 @@ export function EmployeesPanel({ property, onReorderMembers }: {
       const existing = current[personId]
       return existing ? { ...current, [personId]: { ...existing, ...patch } } : current
     })
+  }
+
+  async function savePlanning(personId: string, patch: Partial<PersonDraft>) {
+    const existing = drafts[personId]
+    if (!existing || !onSavePlanning) { update(personId, patch); return }
+    const next = { ...existing, ...patch }
+    update(personId, patch)
+    setSaveStates((current) => ({ ...current, [personId]: 'saving' }))
+    try {
+      await onSavePlanning({ staffProfileId: personId, restMode: next.restMode, restDays: next.restMode === 'fixed' ? next.restDays : '' })
+      setSaveStates((current) => ({ ...current, [personId]: 'saved' }))
+      window.setTimeout(() => setSaveStates((current) => current[personId] === 'saved' ? { ...current, [personId]: undefined as never } : current), 2200)
+    } catch {
+      setDrafts((current) => ({ ...current, [personId]: existing }))
+      setSaveStates((current) => ({ ...current, [personId]: 'error' }))
+    }
   }
 
   function reorder(sourceId: string, targetId: string) {
@@ -109,15 +129,15 @@ export function EmployeesPanel({ property, onReorderMembers }: {
                 </th>
                 <td><ShiftSelect ariaLabel={`Unità di ${person.name}`} value={draft.unitId} onChange={(unitId) => update(person.id, { unitId })} options={property.units.map((unit) => ({ value: unit.id, label: unit.name }))} /></td>
                 <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => update(person.id, { assignmentProfile })} options={['Diurno', 'Turnante', 'Notturno', 'Direttore', 'FOM'].map((label) => ({ value: label, label }))} /></td>
-                <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => update(person.id, { restMode: restMode as PersonDraft['restMode'] })} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
-                <td><ShiftSelect ariaLabel={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(restDays) => update(person.id, { restDays })} options={[{ value: '', label: '—' }, ...['Sab + Dom', 'Dom + Lun', 'Lun + Mar'].map((label) => ({ value: label, label }))]} /></td>
-                <td><span className="shift-status-chip">{person.includedBy === 'manual' ? 'Manuale' : 'Da Team'}</span></td>
+                <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => void savePlanning(person.id, { restMode: restMode as PersonDraft['restMode'] })} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
+                <td><ShiftSelect ariaLabel={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(restDays) => void savePlanning(person.id, { restDays })} options={[{ value: '', label: '—' }, ...['Sab + Dom', 'Dom + Lun', 'Lun + Mar'].map((label) => ({ value: label, label }))]} /></td>
+                <td><span className="shift-status-chip">{saveStates[person.id] === 'saving' ? 'Salvataggio…' : saveStates[person.id] === 'saved' ? 'Salvato' : saveStates[person.id] === 'error' ? 'Errore' : (person.includedBy === 'manual' ? 'Manuale' : 'Da Team')}</span></td>
               </tr>
             )
           })}</tbody>
         </table>
       </div>
-      <p className="shift-panel-note">L'ordine si salva subito. Le altre modifiche restano locali nella preview: creazione account, ruolo Homisuite e mansione lavorativa continuano a essere gestiti da Team.</p>
+      <p className="shift-panel-note">Ordine e parametri di riposo vengono salvati subito. Creazione account, ruolo Homisuite e mansione lavorativa continuano a essere gestiti da Team.</p>
     </section>
   )
 }

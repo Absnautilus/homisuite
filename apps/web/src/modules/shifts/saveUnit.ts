@@ -96,3 +96,8 @@ export async function archiveUnit(supabase: SupabaseClient, propertyId: string, 
   const { error } = await supabase.from('shift_planning_units').update({ status: 'inactive' }).eq('property_id', propertyId).eq('id', unitId)
   if (error) throw error
 }
+
+export async function restoreUnit(supabase: SupabaseClient, propertyId: string, unitId: string): Promise<void> {
+  const { error } = await supabase.from('shift_planning_units').update({ status: 'active' }).eq('property_id', propertyId).eq('id', unitId)
+  if (error) throw error
+}

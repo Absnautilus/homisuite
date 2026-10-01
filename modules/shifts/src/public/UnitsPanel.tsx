@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Modal } from '@homisuite/ui'
-import { Archive, Pencil, Plus } from 'lucide-react'
+import { Archive, Pencil, Plus, RotateCcw } from 'lucide-react'
 import type { ShiftJobTitle, ShiftPlanningUnit } from '../preview/fixtures'
 
 export interface UnitSave {
@@ -16,14 +16,16 @@ export interface UnitSaveResult {
   status: 'active' | 'inactive'
 }
 
-export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit }: {
+export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit, onRestoreUnit }: {
   units: ShiftPlanningUnit[]
   jobTitleRoster: ShiftJobTitle[]
   onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>
   onArchiveUnit?: (unitId: string) => Promise<void>
+  onRestoreUnit?: (unitId: string) => Promise<void>
 }) {
   const [editing, setEditing] = useState<ShiftPlanningUnit | 'new' | null>(null)
   const [archivingId, setArchivingId] = useState<string | null>(null)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
   const [result, setResult] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
   // Points at whichever button (a row's pencil/archive, or "Nuova unità")
   // was clicked most recently, so the modal that follows can morph out of it.
@@ -45,6 +47,20 @@ export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit }:
       setResult({ kind: 'error', message: "Impossibile archiviare l'unità. Riprova." })
     } finally {
       setArchivingId(null)
+    }
+  }
+
+  async function handleRestore(event: { currentTarget: HTMLElement }, unit: ShiftPlanningUnit) {
+    if (!onRestoreUnit || restoringId || unit.status !== 'inactive') return
+    triggerRef.current = event.currentTarget
+    setRestoringId(unit.id)
+    try {
+      await onRestoreUnit(unit.id)
+      setResult({ kind: 'success', message: `"${unit.name}" ripristinata.` })
+    } catch {
+      setResult({ kind: 'error', message: "Impossibile ripristinare l'unità. Riprova." })
+    } finally {
+      setRestoringId(null)
     }
   }
 
@@ -72,6 +88,9 @@ export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit }:
                     <button type="button" className="shift-code-action" aria-label={`Modifica ${unit.name}`} onClick={(event) => openEditor(event, unit)}><Pencil size={14} /></button>
                     {onArchiveUnit && unit.status !== 'inactive' ? (
                       <button type="button" className="shift-code-action is-danger" aria-label={`Archivia ${unit.name}`} disabled={archivingId === unit.id} onClick={(event) => void handleArchive(event, unit)}><Archive size={14} /></button>
+                    ) : null}
+                    {onRestoreUnit && unit.status === 'inactive' ? (
+                      <button type="button" className="shift-code-action" aria-label={`Ripristina ${unit.name}`} disabled={restoringId === unit.id} onClick={(event) => void handleRestore(event, unit)}><RotateCcw size={14} /> <span>Ripristina</span></button>
                     ) : null}
                   </td>
                 ) : null}
