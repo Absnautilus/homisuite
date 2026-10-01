@@ -13,14 +13,14 @@ export async function saveStaffRestSettings(
   restMode: 'fixed' | 'rotating',
   restDays: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('shift_staff_profiles')
-    .update({
-      rest_mode: restMode,
-      fixed_rest_days: restMode === 'fixed' ? parseRestDays(restDays) : [],
-      updated_at: new Date().toISOString(),
-    })
-    .eq('property_id', propertyId)
-    .eq('id', staffProfileId)
+  const fixedRestDays = restMode === 'fixed' ? parseRestDays(restDays) : []
+  if (restMode === 'fixed' && fixedRestDays.length === 0) throw new Error('Seleziona almeno un giorno di riposo fisso')
+  const { data, error } = await supabase.rpc('save_shift_staff_rest_settings', {
+    p_property_id: propertyId,
+    p_staff_profile_id: staffProfileId,
+    p_rest_mode: restMode,
+    p_fixed_rest_days: fixedRestDays,
+  })
   if (error) throw error
+  if (!data) throw new Error('Il salvataggio non è stato confermato dal database')
 }

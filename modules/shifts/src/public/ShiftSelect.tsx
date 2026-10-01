@@ -1,17 +1,19 @@
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 import { getShiftPortalTarget } from './portal-target'
 
 export interface ShiftSelectOption { value: string; label: string; shortLabel?: string; color?: string; textColor?: string }
 
-export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = false, compact = false }: {
+export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = false, compact = false, extraAction, onOpenChange }: {
   value: string
   options: ShiftSelectOption[]
   onChange: (value: string) => void
   ariaLabel: string
   disabled?: boolean
   compact?: boolean
+  extraAction?: { label: string; icon?: ReactNode; onSelect: () => void }
+  onOpenChange?: (open: boolean) => void
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -36,6 +38,7 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
     positionMenu()
     setActiveIndex(selectedIndex)
     setOpen(true)
+    onOpenChange?.(true)
   }
 
   useEffect(() => {
@@ -43,9 +46,9 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
     optionRefs.current[activeIndex]?.focus()
     function closeOnOutside(event: PointerEvent) {
       const target = event.target as Node
-      if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false)
+      if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) { setOpen(false); onOpenChange?.(false) }
     }
-    function closeOnViewportChange() { setOpen(false) }
+    function closeOnViewportChange() { setOpen(false); onOpenChange?.(false) }
     document.addEventListener('pointerdown', closeOnOutside)
     window.addEventListener('resize', closeOnViewportChange)
     window.addEventListener('scroll', closeOnViewportChange, true)
@@ -54,7 +57,7 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
       window.removeEventListener('resize', closeOnViewportChange)
       window.removeEventListener('scroll', closeOnViewportChange, true)
     }
-  }, [activeIndex, open])
+  }, [activeIndex, open, onOpenChange])
 
   function focusOption(index: number) {
     const next = (index + options.length) % options.length
@@ -65,14 +68,16 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
   function choose(nextValue: string) {
     onChange(nextValue)
     setOpen(false)
+    onOpenChange?.(false)
     requestAnimationFrame(() => triggerRef.current?.focus())
   }
 
   return <div className={`shift-custom-select${open ? ' is-open' : ''}${compact ? ' is-compact' : ''}`}>
-    <button ref={triggerRef} className="shift-custom-select-trigger" type="button" disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => open ? setOpen(false) : showMenu()} onKeyDown={(event) => {
+    <button ref={triggerRef} className="shift-custom-select-trigger" type="button" disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => { if (open) { setOpen(false); onOpenChange?.(false) } else showMenu() }} onKeyDown={(event) => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); showMenu() }
     }}><span className="shift-select-value">{compact ? <b className="shift-select-code" style={{ background: selected?.color, color: selected?.color ? (selected.textColor ?? '#fff') : undefined }}>{selected?.value ? (selected.shortLabel ?? selected.value) : ''}</b> : <span>{selected?.label ?? '—'}</span>}</span><ChevronDown size={16} aria-hidden="true" /></button>
     {open ? createPortal(<div ref={menuRef} id={`${id}-menu`} className="shift-custom-select-menu" role="listbox" aria-label={ariaLabel} style={menuStyle}>
+      {extraAction ? <button type="button" className="shift-select-extra-action" onClick={() => { extraAction.onSelect(); setOpen(false); onOpenChange?.(false); requestAnimationFrame(() => triggerRef.current?.focus()) }}><span>{extraAction.icon}{extraAction.label}</span></button> : null}
       {options.map((option, index) => <button ref={(element) => { optionRefs.current[index] = element }} type="button" role="option" aria-selected={option.value === value} className={option.value === value ? 'is-selected' : undefined} key={option.value} onClick={() => choose(option.value)} onMouseEnter={() => setActiveIndex(index)} onKeyDown={(event) => {
         if (event.key === 'ArrowDown') { event.preventDefault(); focusOption(activeIndex + 1) }
         if (event.key === 'ArrowUp') { event.preventDefault(); focusOption(activeIndex - 1) }
