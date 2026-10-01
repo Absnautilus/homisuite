@@ -293,7 +293,7 @@ export function RulesPanel({ unit, onSaveRules }: {
 }
 
 export interface ShiftRequestInboxItem { id: string; kind: 'absences' | 'preassignments' | 'swaps'; planningUnitId: string; staffProfileId: string; targetStaffProfileId?: string; status: string; date?: string; label: string; note?: string | null }
-export function RequestInboxPanel({ items, people, currentStaffProfileId, canManage, onDecision }: { items: ShiftRequestInboxItem[]; people: ShiftPerson[]; currentStaffProfileId?: string; canManage: boolean; onDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void> }) {
+export function RequestInboxPanel({ items, people, currentStaffProfileId, canManage, onDecision }: { items: ShiftRequestInboxItem[]; people: ShiftPlanningUnit['people']; currentStaffProfileId?: string; canManage: boolean; onDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void> }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const name = (id: string) => people.find((person) => person.id === id)?.name ?? 'Dipendente'
