@@ -57,7 +57,7 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
       window.removeEventListener('resize', closeOnViewportChange)
       window.removeEventListener('scroll', closeOnViewportChange, true)
     }
-  }, [activeIndex, open])
+  }, [activeIndex, open, onOpenChange])
 
   function focusOption(index: number) {
     const next = (index + options.length) % options.length
@@ -73,7 +73,7 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
   }
 
   return <div className={`shift-custom-select${open ? ' is-open' : ''}${compact ? ' is-compact' : ''}`}>
-    <button ref={triggerRef} className="shift-custom-select-trigger" type="button" disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => open ? setOpen(false) : showMenu()} onKeyDown={(event) => {
+    <button ref={triggerRef} className="shift-custom-select-trigger" type="button" disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => { if (open) { setOpen(false); onOpenChange?.(false) } else showMenu() }} onKeyDown={(event) => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); showMenu() }
     }}><span className="shift-select-value">{compact ? <b className="shift-select-code" style={{ background: selected?.color, color: selected?.color ? (selected.textColor ?? '#fff') : undefined }}>{selected?.value ? (selected.shortLabel ?? selected.value) : ''}</b> : <span>{selected?.label ?? '—'}</span>}</span><ChevronDown size={16} aria-hidden="true" /></button>
     {open ? createPortal(<div ref={menuRef} id={`${id}-menu`} className="shift-custom-select-menu" role="listbox" aria-label={ariaLabel} style={menuStyle}>
