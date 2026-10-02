@@ -91,6 +91,29 @@ export async function generateUnitAssignments(
     weekdayShiftPreferences: staff.weekday_shift_preferences ?? {},
   }))
 
+  const roleCodes = initRoleCodes(unit.rules.roleCodes)
+
+  // "Tocca al backup": when both the notturno titolare and the rotating
+  // turnante are unavailable that day (rest, leave...), the night code
+  // falls to whoever is the diurno right above the turnante in the
+  // Employees panel order -- not a fixed person, so moving someone in that
+  // list changes who backs up the turnante. Modeled as a reserve code for
+  // just that employee: generateSchedule only reaches for reserve
+  // candidates once the base pool (notturno + turnante) is exhausted, which
+  // already is exactly "both are out" -- no separate condition needed.
+  const employeeById = new Map(employees.map((employee) => [employee.id, employee]))
+  const orderedStaffIds = unit.people.map((person) => person.id)
+  const turnanteIndex = orderedStaffIds.findIndex((id) => employeeById.get(id)?.shiftType === 'rotating')
+  if (turnanteIndex > 0) {
+    for (let i = turnanteIndex - 1; i >= 0; i -= 1) {
+      const backup = employeeById.get(orderedStaffIds[i]!)
+      if (backup?.shiftType === 'day') {
+        backup.extraCodes = [...new Set([...(backup.extraCodes ?? []), ...(roleCodes.night?.base ?? [])])]
+        break
+      }
+    }
+  }
+
   const codeRows = (unitCodes ?? []) as ShiftCodeRow[]
   const codeIdByCode = new Map(codeRows.map((row) => [row.code, row.id]))
   const codeKinds = Object.fromEntries(codeRows.map((row) => [row.code, row.kind])) as Record<string, ShiftCodeKind>
@@ -123,7 +146,7 @@ export async function generateUnitAssignments(
     softRulesEnabled: initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft),
     turnanteFollowsNotturno: hardRules.riposoTurnanteDopoNotturno ?? true,
     restRotationPairsPerCycle: initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle),
-    roleCodes: initRoleCodes(unit.rules.roleCodes),
+    roleCodes,
   })
 
   const idsToDelete = [...regeneratableKeys].map((key) => existingIdByKey.get(key)).filter((id): id is string => id != null)

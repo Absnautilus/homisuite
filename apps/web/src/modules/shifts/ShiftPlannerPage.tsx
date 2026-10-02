@@ -14,6 +14,7 @@ import { setUnitRestDays, setUnitFutureRestDays } from './saveRestDays'
 import { saveShiftCode, deleteOrArchiveShiftCode } from './saveShiftCode'
 import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
+import { clearDraftShifts } from './clearDraftShifts'
 import { saveUnit, archiveUnit, restoreUnit } from './saveUnit'
 import { saveStaffRestSettings } from './saveStaffRestSettings'
 import { saveStaffAssignmentRole } from './saveStaffAssignmentRole'
@@ -191,6 +192,13 @@ export function ShiftPlannerPage() {
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     const result = await generateUnitAssignments(supabase, propertyId, profileId, unit)
+    void refreshLiveData({ silent: true })
+    return result
+  }} onClearDraftShifts={async (planningUnitId) => {
+    if (!propertyId) throw new Error('Missing active property')
+    const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
+    if (!unit) throw new Error('Unknown planning unit')
+    const result = await clearDraftShifts(supabase, propertyId, unit)
     void refreshLiveData({ silent: true })
     return result
   }} onSetShiftLocked={async (planningUnitId, staffProfileId, shiftDate, locked) => {

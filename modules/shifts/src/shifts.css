@@ -164,6 +164,8 @@
    700-weight label) instead of the flat, heavier-set pills used before. */
 .shift-calendar-actions > button { background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 40px; padding: 0 13px; }
 .shift-calendar-actions > button.is-primary { background: var(--shift-accent); border-color: var(--shift-accent); color: white; margin-left: auto; }
+.shift-calendar-actions > button.is-danger { border-color: #e4b5ae; color: #c0392b; }
+.shift-calendar-actions > button.is-danger:hover:not(:disabled) { background: #fdecea; }
 .shift-calendar-actions > button:disabled { cursor: not-allowed; opacity: .58; }
 /* The view toggle reads as a segmented control -- a neutral track with a
    sliding white pill -- so it's never mistaken for one of the command
