@@ -215,6 +215,15 @@ a { color: inherit; text-decoration: none; }
 
 /* shell */
 .app-shell { min-height: 100vh; display: flex; }
+/* Facchino's bare frame (see ShellLayout's isFacchino branch): no sidebar, no
+   mobile header/drawer, no bottom nav -- just the module content, capped to
+   an app-like column instead of the full 1180px desktop width since there's
+   no chrome left to justify it. */
+.app-shell-minimal { display: block; }
+.app-shell-minimal .page-content { max-width: 640px; margin: 0 auto; padding: 0; }
+@media (max-width: 920px) {
+  .app-shell-minimal .page-content { padding: 0; }
+}
 .sidebar { position: fixed; inset: 0 auto 0 0; width: 236px; background: var(--navbar-bg); color: var(--navbar-text); display: flex; flex-direction: column; padding: 16px 12px; }
 .brand { display: flex; align-items: center; gap: 9px; font-family: var(--f-head); font-weight: 800; font-size: 14.5px; padding: 6px 8px 18px; }
 .brand .mark { width: 28px; height: 28px; border-radius: 8px; display: block; flex-shrink: 0; }

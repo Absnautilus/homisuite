@@ -120,10 +120,15 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const staysAllowed = embedded && capabilities ? capabilities.staysView : legacyStaysAllowed
 
   const queueManageAllowed = embedded && capabilities ? capabilities.queueManage : profile.department === 'reception'
+  // A facchino -- no manage, no queue-management capability -- never reaches
+  // soggiorni/admin (both gated below on staysAllowed/manageAllowed, which
+  // are false here too) and sees a stripped RequestQueue header instead of
+  // the full Richieste/Soggiorni/Gestione switcher; see MinimalTopBar.
+  const isFacchino = embedded && !!capabilities && !capabilities.manage && !capabilities.queueManage
   // Only embedded routes get the module-wide Richieste/Soggiorni/Gestione
   // switcher below their PageHeader -- standalone mode keeps its own
   // DashboardHeader (a full top bar, logo included) unchanged.
-  const embeddedNav = embedded ? { basePath, staysAllowed, manageAllowed } : undefined
+  const embeddedNav = embedded ? { basePath, staysAllowed, manageAllowed, minimal: isFacchino } : undefined
   const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} embeddedNav={embeddedNav} />} />
   const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} />} /> : null
   const adminRoute = manageAllowed ? (

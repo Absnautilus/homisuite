@@ -7,6 +7,7 @@ import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
+import { useHousekeepingCapabilities } from '../modules/housekeeping/useHousekeepingCapabilities'
 import { useDiningAccess } from '../modules/dining/useDiningAccess'
 import { LoginScreen } from './LoginScreen'
 import { PageState } from './PageState'
@@ -28,6 +29,10 @@ export function ShellLayout() {
   const housekeepingAccess = useHousekeepingAccess()
   // Same reasoning, same three-step check, for Dining.
   const diningAccess = useDiningAccess()
+  // Same reasoning again: called unconditionally so a facchino (no manage,
+  // no queueManage) can be detected before the runtime.status early returns,
+  // resolving to "not a facchino yet" rather than skipping the hook.
+  const housekeepingCapabilities = useHousekeepingCapabilities()
   const location = useLocation()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { state: drawerState, mounted: drawerMounted } = useDropdownTransition(drawerOpen, 220)
@@ -48,6 +53,13 @@ export function ShellLayout() {
   const home = shellNavigation.find((item) => item.path === '/')
   const platform = shellNavigation.filter((item) => item.kind === 'platform' && item.path !== '/')
   const activeModule = modules.find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+  // A facchino (no manage, no queue-management capability) has nothing to do
+  // with the sidebar, the Moduli/Piattaforma nav or the bottom nav's other
+  // module icons -- Housekeeping is the only screen they ever see, so they
+  // get a bare frame around it instead of the full shell chrome.
+  const isHousekeepingRoute = location.pathname === '/housekeeping' || location.pathname.startsWith('/housekeeping/')
+  const isFacchino = isHousekeepingRoute && housekeepingCapabilities !== null
+    && !housekeepingCapabilities.manage && !housekeepingCapabilities.queueManage
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -124,6 +136,14 @@ export function ShellLayout() {
           variant="fullscreen"
         />
       </main>
+    )
+  }
+
+  if (isFacchino) {
+    return (
+      <div className="app-shell app-shell-minimal">
+        <main className="page-content"><Outlet /></main>
+      </div>
     )
   }
 

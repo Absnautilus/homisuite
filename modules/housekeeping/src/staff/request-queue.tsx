@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PageHeader, Tabs } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
+import { MinimalTopBar } from '@/staff/minimal-top-bar'
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { cancelRequest, claimRequest, fetchQueue, listQueueJobTitles, subscribeToQueue } from '@/lib/staff-api'
@@ -21,7 +22,7 @@ const DONE_PAGE_SIZE = 15
 export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
   profile: StaffProfile
   canManageQueue: boolean
-  embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
+  embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean; minimal?: boolean }
 }) {
   const { t } = useLocale()
   const hotelName = useHotelName()
@@ -109,11 +110,15 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
 
   return (
     <div className="space-y-4">
-      {embeddedNav ? (
+      {embeddedNav?.minimal ? (
+        <MinimalTopBar profile={profile} />
+      ) : embeddedNav ? (
         <>
           <EmbeddedNav
             profile={profile}
-            {...embeddedNav}
+            basePath={embeddedNav.basePath}
+            staysAllowed={embeddedNav.staysAllowed}
+            manageAllowed={embeddedNav.manageAllowed}
             secondary={{
               items: [
                 { value: 'new', label: t('staff.queue.tabNew'), attention: pending.length > 0 ? pending.length : false },
@@ -138,7 +143,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
       )}
 
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
-        {!embeddedNav ? (
+        {!embeddedNav || embeddedNav.minimal ? (
           <div className="border-b border-line bg-surface px-4 py-3 sm:px-5">
             <Tabs
               items={[
