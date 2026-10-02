@@ -64,7 +64,18 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
       const target = event.target as Node
       if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) { setOpen(false); onOpenChange?.(false) }
     }
-    function closeOnViewportChange() { setOpen(false); onOpenChange?.(false) }
+    // Scroll listens in the capture phase so it also sees scrolling inside
+    // any ancestor container (the grid's own scroll wrapper), which could
+    // otherwise leave the menu positioned against a trigger that's since
+    // moved off-screen. But capture-phase scroll events also fire for the
+    // menu's OWN internal scrolling (it's a scrollable list, e.g. finding
+    // "Ferie" further down) -- without excluding those, scrolling the menu
+    // to reach an option closed it before the option could be clicked.
+    function closeOnViewportChange(event: Event) {
+      if (menuRef.current?.contains(event.target as Node)) return
+      setOpen(false)
+      onOpenChange?.(false)
+    }
     document.addEventListener('pointerdown', closeOnOutside)
     window.addEventListener('resize', closeOnViewportChange)
     window.addEventListener('scroll', closeOnViewportChange, true)
