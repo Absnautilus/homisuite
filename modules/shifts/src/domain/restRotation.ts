@@ -77,6 +77,40 @@ export function nextFreeRotationSlot(profiles: Array<{ rotationSlot: number | nu
 }
 
 /**
+ * Reverse-engineers the rotationSlot that would reproduce a month of
+ * manually-entered rest days exactly, by trying every one of the 7 possible
+ * starting weekdays and keeping the one whose predicted rest days match the
+ * real ones for every day of the month. Lets a property start from a month
+ * laid out by hand (matching whatever real-world arrangement already exists)
+ * and have every later month continue that exact cadence automatically,
+ * instead of continuing from an arbitrarily assigned slot that happens to
+ * land on different weekdays. Returns null when no single weekday
+ * reproduces the given days -- e.g. the month wasn't filled in following the
+ * pairs-of-2 pattern, or an exception was mixed in -- rather than guessing.
+ */
+export function inferRotationSlot(
+  restDates: ReadonlySet<string>,
+  year: number,
+  month: number,
+  daysInMonth: number,
+  pairsPerCycle: number = DEFAULT_PAIRS_PER_CYCLE,
+): number | null {
+  for (let slot = 0; slot < 7; slot += 1) {
+    const startWeekday = (slot * 2) % 7
+    let matchesEveryDay = true
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      if (isRotatingRestDay(startWeekday, year, month, day, pairsPerCycle) !== restDates.has(iso)) {
+        matchesEveryDay = false
+        break
+      }
+    }
+    if (matchesEveryDay) return slot
+  }
+  return null
+}
+
+/**
  * For one calendar day (month is 0-indexed, matching Date.UTC), whether each
  * profile is resting. `turnanteFollowsNotturno` mirrors the
  * "riposoTurnanteDopoNotturno" hard rule: the rotating-shift employee rests 2

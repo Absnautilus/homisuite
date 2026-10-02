@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { isRestDay, nextFreeRotationSlot } from './restRotation.ts'
+import { isRestDay, nextFreeRotationSlot, computeMonthRestDays, inferRotationSlot } from './restRotation.ts'
 
 // Walks day by day over a continuous range (crossing months and years) and
 // groups a profile's consecutive rest days -- same helper shape as the
@@ -135,4 +135,28 @@ test('an existing rotationSlot does not change when another profile is removed o
   // or reordering someone else must not perturb their rotation
   assert.equal(resultAfter[1], resultBefore[1])
   assert.equal(resultAfter[3], resultBefore[3])
+})
+
+test('inferRotationSlot recovers the exact slot that produced a month of rest days', () => {
+  const year = 2026
+  const month = 9 // October, 0-indexed
+  const daysInMonth = 31
+  for (let slot = 0; slot < 7; slot += 1) {
+    const profile = { id: 'x', shiftType: 'day', restMode: 'rotating', rotationSlot: slot, fixedRestDays: [] }
+    const restDays = computeMonthRestDays([profile], year, month, daysInMonth, true)
+    const inferred = inferRotationSlot(new Set(restDays.x), year, month, daysInMonth)
+    assert.equal(inferred, slot, `slot ${slot} was not recovered from its own generated month`)
+  }
+})
+
+test('inferRotationSlot returns null for a set of dates that matches no slot', () => {
+  // A single rest day with none of the surrounding pattern can't come from
+  // any of the 7 possible weekday starts.
+  const inferred = inferRotationSlot(new Set(['2026-10-07']), 2026, 9, 31)
+  assert.equal(inferred, null)
+})
+
+test('inferRotationSlot returns null for an empty set (no rest days entered yet)', () => {
+  const inferred = inferRotationSlot(new Set(), 2026, 9, 31)
+  assert.equal(inferred, null)
 })
