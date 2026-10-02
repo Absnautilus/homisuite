@@ -30,7 +30,23 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
     if (!rect) return
     const width = Math.max(rect.width, 180)
     const left = Math.min(rect.left, window.innerWidth - width - 12)
-    setMenuStyle({ left: Math.max(12, left), top: rect.bottom + 7, width })
+    const gap = 7
+    const margin = 12
+    const spaceBelow = window.innerHeight - rect.bottom - gap - margin
+    const spaceAbove = rect.top - gap - margin
+    // The option list can run to 15+ entries, far taller than most phone
+    // viewports have room for below the trigger -- without a clamp it just
+    // grows past the screen edge with no way to reach the rest. Flip it
+    // above the trigger when that side has more room, and always cap it to
+    // whichever side it ends up on so it scrolls internally instead.
+    const openUpward = spaceBelow < 160 && spaceAbove > spaceBelow
+    const maxHeight = Math.max(120, openUpward ? spaceAbove : spaceBelow)
+    setMenuStyle({
+      left: Math.max(margin, left),
+      width,
+      maxHeight,
+      ...(openUpward ? { bottom: window.innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
+    })
   }
 
   function showMenu() {
