@@ -64,7 +64,7 @@
 .shift-section-tabs button { border-radius: 10px; min-height: 38px; }
 .shift-section-tabs button.is-active { background: white; box-shadow: 0 2px 8px #25204712; color: var(--shift-ink); }
 .shift-month-copy { align-items: center; display: flex; font-weight: 700; gap: 9px; }
-.shift-status-chip { background: #f0f1f7; border-radius: 999px; color: var(--shift-muted); display: inline-flex; font-size: 11px; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
+.shift-status-chip { background: #f0f1f7; border-radius: 999px; color: var(--shift-muted); display: inline-flex; font-size: 11px; font-weight: 700; padding: 5px 9px; white-space: nowrap; }
 .shift-status-chip.is-on { background: #e5f4ea; color: #287446; }
 
 .shift-summary-row { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 14px; }
@@ -137,27 +137,28 @@
   .shift-calendar-actions > button.is-primary { display: none; }
 }
 
-.shift-calendar-toolbar { display: flex; flex-direction: column; gap: 12px; }
+.shift-calendar-toolbar { display: flex; flex-direction: column; gap: 10px; }
 .shift-calendar-view-row, .shift-period-control, .shift-calendar-actions, .shift-view-segment { align-items: center; display: flex; gap: 8px; }
 .shift-calendar-view-row { flex-wrap: wrap; justify-content: flex-start; }
-.shift-period-control > button { align-items: center; background: #f0f1f8; border: 0; border-radius: 999px; cursor: pointer; display: inline-flex; height: 38px; justify-content: center; width: 38px; }
+.shift-period-control > button { align-items: center; background: var(--shift-soft); border: 0; border-radius: 999px; cursor: pointer; display: inline-flex; height: 34px; justify-content: center; width: 34px; }
 .shift-period-control strong { min-width: 120px; }
 .shift-status-chip.is-draft { background: #fff0ce; color: #916215; }
 .shift-calendar-actions { flex-wrap: wrap; }
-.shift-calendar-actions > button { background: #eeeef8; border: 0; border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 750; min-height: 40px; padding: 0 13px; }
-.shift-calendar-actions > button.is-primary { background: var(--shift-accent); color: white; margin-left: auto; }
+/* Buttons mirror the suite's own .btn/.btn-secondary (8px radius, bordered,
+   700-weight label) instead of the flat, heavier-set pills used before. */
+.shift-calendar-actions > button { background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 40px; padding: 0 13px; }
+.shift-calendar-actions > button.is-primary { background: var(--shift-accent); border-color: var(--shift-accent); color: white; margin-left: auto; }
 .shift-calendar-actions > button:disabled { cursor: not-allowed; opacity: .58; }
-/* The view toggle reads as a tab-style segmented control -- a neutral
-   track with a sliding white pill -- so it's never mistaken for one of
-   the command buttons (Assegna automaticamente, Salva turni, ...) that
-   sit in the separate actions row below it. */
-.shift-view-segment { background: #efeefb; border-radius: 999px; margin-left: auto; padding: 3px; }
-.shift-view-segment button { background: transparent; border-radius: 999px; color: var(--shift-muted); font-weight: 700; min-height: 32px; padding: 0 14px; }
-.shift-view-segment button.is-active { background: white; box-shadow: 0 2px 8px rgba(23,16,46,.1); color: var(--shift-ink); }
+/* The view toggle reads as a segmented control -- a neutral track with a
+   sliding white pill -- so it's never mistaken for one of the command
+   buttons (Assegna automaticamente, Salva turni, ...) in the actions row. */
+.shift-view-segment { background: var(--shift-soft); border-radius: 10px; margin-left: auto; padding: 3px; }
+.shift-view-segment button { background: transparent; border-radius: 7px; color: var(--shift-muted); font-weight: 700; min-height: 32px; padding: 0 14px; }
+.shift-view-segment button.is-active { background: var(--shift-panel); box-shadow: 0 2px 8px rgba(23,16,46,.1); color: var(--shift-ink); }
 .shift-toolbar-menu { position: relative; }
-.shift-toolbar-menu-trigger { align-items: center; background: #eeeef8; border: 0; border-radius: 999px; color: var(--shift-ink); cursor: pointer; display: inline-flex; height: 40px; justify-content: center; width: 40px; }
-.shift-toolbar-menu-list { background: white; border: 1px solid var(--shift-line); border-radius: 12px; box-shadow: 0 16px 40px rgba(22, 24, 43, 0.18); display: grid; gap: 2px; padding: 6px; position: absolute; right: 0; top: calc(100% + 6px); width: max-content; z-index: 20; }
-.shift-toolbar-menu-list button { background: transparent; border: 0; border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 38px; padding: 0 12px; text-align: left; white-space: nowrap; }
+.shift-toolbar-menu-trigger { align-items: center; background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; display: inline-flex; height: 40px; justify-content: center; width: 40px; }
+.shift-toolbar-menu-list { background: var(--shift-panel); border: 1px solid var(--shift-line); border-radius: 10px; box-shadow: 0 16px 40px rgba(22, 24, 43, 0.18); display: grid; gap: 2px; padding: 6px; position: absolute; right: 0; top: calc(100% + 6px); width: max-content; z-index: 20; }
+.shift-toolbar-menu-list button { background: transparent; border: 0; border-radius: 7px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 38px; padding: 0 12px; text-align: left; white-space: nowrap; }
 .shift-toolbar-menu-list button:hover, .shift-toolbar-menu-list button:focus-visible { background: var(--shift-soft); outline: none; }
 .shift-toolbar-menu-list button:disabled { cursor: not-allowed; opacity: .5; }
 .shift-unit-selector { background: white; border-inline: 1px solid var(--shift-line); display: flex; gap: 7px; overflow-x: auto; padding: 14px 18px 16px; }
@@ -371,23 +372,11 @@
 }
 
 
-/* A soft card, matching the ModuleNav tabs above it, instead of a flat
-   row with no visual identity of its own. */
+/* No card of its own: the ModuleNav above stays the page's one "card"
+   element, and the toolbar continues directly on the page background
+   using the same button/radius language as the rest of the suite. */
 .shift-calendar-toolbar {
-  background:
-    radial-gradient(circle at 18% 10%, rgba(255,255,255,.7), transparent 38%),
-    linear-gradient(135deg, #faf8ff 0%, #f4f2fd 100%);
-  border: 1px solid rgba(190, 170, 230, .32);
-  border-radius: 20px;
-  box-shadow: 0 12px 28px rgba(83, 55, 150, .08);
-  margin-bottom: 14px;
-  padding: 14px 16px;
-}
-.shift-period-control { gap: 8px; }
-.shift-period-control > button {
-  background: #f1f2fb;
-  height: 34px;
-  width: 34px;
+  padding: 0 2px 4px;
 }
 .shift-period-control strong {
   font-size: 14px;
@@ -397,9 +386,6 @@
   background: #fff0cf;
   color: #9a6815;
   padding: 5px 12px;
-}
-.shift-calendar-actions {
-  opacity: .94;
 }
 .shift-calendar-help {
   color: var(--shift-muted);
