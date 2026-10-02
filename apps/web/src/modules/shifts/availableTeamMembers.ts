@@ -21,7 +21,11 @@ function related(value: unknown): Row | undefined {
  */
 export async function loadAvailableTeamMembers(supabase: SupabaseClient, propertyId: string): Promise<ShiftAvailableTeamMember[]> {
   const [{ data: staffDetails, error: staffDetailsError }, { data: existingStaff, error: existingStaffError }] = await Promise.all([
-    supabase.from('property_staff_details').select('profile_id,profiles(full_name),property_job_titles(name)').eq('property_id', propertyId).eq('employment_status', 'active'),
+    // property_staff_details has two FKs into profiles (profile_id and
+    // created_by), so the embed needs an explicit constraint hint -- left
+    // bare, PostgREST can't tell which relationship to embed and rejects
+    // the whole query (PGRST201), which is exactly what was happening here.
+    supabase.from('property_staff_details').select('profile_id,profiles!property_staff_details_profile_id_fkey(full_name),property_job_titles(name)').eq('property_id', propertyId).eq('employment_status', 'active'),
     supabase.from('shift_staff_profiles').select('profile_id').eq('property_id', propertyId),
   ])
   if (staffDetailsError) throw staffDetailsError
