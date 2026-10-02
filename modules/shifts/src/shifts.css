@@ -136,7 +136,12 @@
 .shift-assign-conflicts li { margin-bottom: 4px; }
 
 .ui-module-nav-actions .shift-view-toggle { margin: 0; min-height: 44px; }
-.shift-tab-scene { opacity: 1; transform: translateX(0); transition: transform var(--motion-content, 150ms) cubic-bezier(.22,1,.36,1), opacity var(--motion-content, 150ms) ease; }
+/* transform: none (not translateX(0)) at rest -- ANY transform value, even
+   a no-op one, makes this the containing block for position:fixed
+   descendants, which traps a modal opened from inside a tab (e.g. "Nuova
+   unità") in this element's own stacking context instead of the viewport's,
+   so it paints behind the module's sticky secondary nav instead of over it. */
+.shift-tab-scene { opacity: 1; transform: none; transition: transform var(--motion-content, 150ms) cubic-bezier(.22,1,.36,1), opacity var(--motion-content, 150ms) ease; }
 .shift-tab-scene.is-entering { opacity: 0; transform: translateX(var(--shift-tab-offset)); transition: none; }
 @media (prefers-reduced-motion: reduce) { .shift-tab-scene { transition: none; } .shift-tab-scene.is-entering { opacity: 1; transform: none; } }
 
