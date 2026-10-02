@@ -169,7 +169,7 @@
    sliding white pill -- so it's never mistaken for one of the command
    buttons (Assegna automaticamente, Salva turni, ...) in the actions row. */
 .shift-view-segment { background: var(--shift-soft); border-radius: 10px; margin-left: auto; padding: 3px; }
-.shift-view-segment button { background: transparent; border-radius: 7px; color: var(--shift-muted); font-weight: 700; min-height: 32px; padding: 0 14px; }
+.shift-view-segment button { background: transparent; border: 0; border-radius: 7px; color: var(--shift-muted); font-weight: 700; min-height: 32px; padding: 0 14px; }
 .shift-view-segment button.is-active { background: var(--shift-panel); box-shadow: 0 2px 8px rgba(23,16,46,.1); color: var(--shift-ink); }
 .shift-toolbar-menu { position: relative; }
 .shift-toolbar-menu-trigger { align-items: center; background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; display: inline-flex; height: 40px; justify-content: center; width: 40px; }
