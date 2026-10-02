@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ShiftPlannerModule, type ShiftAvailableTeamMember, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem } from '@homisuite/shifts-module'
 import '@homisuite/shifts-module/style.css'
 import { PageState } from '../../components/PageState'
@@ -34,51 +34,65 @@ export function ShiftPlannerPage() {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [requestRevision, setRequestRevision] = useState(0)
 
-  useEffect(() => {
-    let cancelled = false
+  // Monotonic token guarding every refresh (the initial load and any silent
+  // post-mutation refresh below): a refresh only commits state if it's still
+  // the most recent one in flight, so a slow stale call can't clobber a
+  // newer load that started after it (e.g. switching property mid-fetch).
+  const loadTokenRef = useRef(0)
+
+  const refreshLiveData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false
+    const token = ++loadTokenRef.current
+    const isCurrent = () => loadTokenRef.current === token
     if (!entitled) {
-      setState({ status: 'not-entitled' })
-      return () => { cancelled = true }
+      if (!silent) setState({ status: 'not-entitled' })
+      return
     }
     if (!propertyId) {
-      setState({ status: 'loading' })
-      return () => { cancelled = true }
+      if (!silent) setState({ status: 'loading' })
+      return
     }
-
-    setState({ status: 'loading' })
-    void Promise.all([
-      runtime.hasPermission('shifts.view'),
-      runtime.hasPermission('shifts.manage'),
-      runtime.hasPermission('shifts.requests.manage'),
-    ]).then(async ([view, manage, manageRequests]) => {
-      if (cancelled) return
+    if (!silent) setState({ status: 'loading' })
+    try {
+      const [view, manage, manageRequests] = await Promise.all([
+        runtime.hasPermission('shifts.view'),
+        runtime.hasPermission('shifts.manage'),
+        runtime.hasPermission('shifts.requests.manage'),
+      ])
+      if (!isCurrent()) return
       if (!view) {
-        setState({ status: 'forbidden' })
+        if (!silent) setState({ status: 'forbidden' })
         return
       }
       const live = await loadLiveShiftData(supabase, propertyId, propertyName, month)
-      if (cancelled) return
+      if (!isCurrent()) return
       if (live.property.units.length === 0) {
-        setState({ status: 'empty' })
+        if (!silent) setState({ status: 'empty' })
         return
       }
       const preferences = live.currentStaffProfileId ? await loadStaffShiftPreferences(supabase, propertyId, live.currentStaffProfileId) : undefined
       const rawInbox = manageRequests || live.currentStaffProfileId ? await loadShiftRequestInbox(supabase, propertyId) : { absences: [], preassignments: [], swaps: [] }
       const availableTeamMembers = manage ? await loadAvailableTeamMembers(supabase, propertyId) : []
+      if (!isCurrent()) return
       const personName = (id: string) => live.property.units.flatMap((unit) => unit.people).find((person) => person.id === id)?.name ?? 'Dipendente'
       const requestInbox = [
         ...(manageRequests ? rawInbox.absences.map((item: ShiftAbsenceInboxRow) => ({ id: item.id, kind: 'absences' as const, planningUnitId: item.planning_unit_id, staffProfileId: item.staff_profile_id, status: item.status, date: item.starts_on, label: item.absence_kind === 'leave' ? 'Ferie' : item.absence_kind === 'permission' ? 'Permesso' : item.absence_kind === 'illness' ? 'Malattia' : 'Assenza', note: item.note })) : []),
         ...(manageRequests ? rawInbox.preassignments.map((item: ShiftPreassignmentInboxRow) => ({ id: item.id, kind: 'preassignments' as const, planningUnitId: item.planning_unit_id, staffProfileId: item.staff_profile_id, status: item.status, date: item.shift_date, label: `Pre-assegnazione ${Array.isArray(item.shift_codes) ? item.shift_codes[0]?.code ?? '' : item.shift_codes?.code ?? ''}`, note: item.note })) : []),
         ...rawInbox.swaps.filter((item: ShiftSwapInboxRow) => manageRequests || item.target_staff_profile_id === live.currentStaffProfileId).map((item: ShiftSwapInboxRow) => ({ id: item.id, kind: 'swaps' as const, planningUnitId: item.planning_unit_id, staffProfileId: item.requester_staff_profile_id, targetStaffProfileId: item.target_staff_profile_id ?? undefined, status: item.status, label: `Cambio turno · ${personName(item.requester_staff_profile_id)} → ${item.target_staff_profile_id ? personName(item.target_staff_profile_id) : 'Da assegnare'}`, note: item.note })),
       ]
-      if (cancelled) return
+      if (!isCurrent()) return
       setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId, preferences, requestInbox, availableTeamMembers })
-    }).catch((cause) => {
+    } catch (cause) {
       console.error('ShiftPlannerPage: live data load failed', cause)
-      if (!cancelled) setState({ status: 'error' })
-    })
-    return () => { cancelled = true }
-  }, [entitled, propertyId, propertyName, runtime.hasPermission, month, requestRevision])
+      if (isCurrent() && !silent) setState({ status: 'error' })
+    }
+  }, [entitled, propertyId, propertyName, runtime, month])
+
+  useEffect(() => {
+    void refreshLiveData()
+    // requestRevision is a manual bump (e.g. after a request decision); it
+    // isn't a dependency of refreshLiveData itself, so it's listed here too.
+  }, [refreshLiveData, requestRevision])
 
   if (state.status === 'loading') return <PageState kind="loading" title="" />
   if (state.status === 'not-entitled') return <PageState kind="unavailable" title="Turni non è abilitato per questa struttura." />
@@ -125,17 +139,26 @@ export function ShiftPlannerPage() {
   }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
+    void refreshLiveData({ silent: true })
   }} onSaveStaffPlanning={async ({ staffProfileId, restMode, restDays }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveStaffRestSettings(supabase, propertyId, staffProfileId, restMode, restDays)
   }} availableTeamMembers={readyState.availableTeamMembers} onAddStaffMember={async ({ profileId, planningUnitId }) => {
     if (!propertyId) throw new Error('Missing active property')
-    return addStaffMember(supabase, propertyId, profileId, planningUnitId)
+    const staffId = await addStaffMember(supabase, propertyId, profileId, planningUnitId)
+    // ShiftPlannerModule only updates its own local copy of the roster so the
+    // new person shows up immediately -- this page's own state (what
+    // onGenerateAssignments reads to decide who's in the unit) is otherwise
+    // never told about the change until the next unrelated reload, so a new
+    // hire silently gets skipped by "Assegna automaticamente" until then.
+    void refreshLiveData({ silent: true })
+    return staffId
   }} onSaveRules={async ({ planningUnitId, coverage, hard, soft, restRotationPairsPerCycle, roleCodes }) => {
     if (!propertyId) throw new Error('Missing active property')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     await saveRuleSet(supabase, propertyId, unit, { coverage, hard, soft, restRotationPairsPerCycle, roleCodes })
+    void refreshLiveData({ silent: true })
   }} onSetRestDays={async (planningUnitId) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
@@ -157,22 +180,29 @@ export function ShiftPlannerPage() {
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
     await setMonthStatus(supabase, propertyId, profileId, unit, status)
+    void refreshLiveData({ silent: true })
   }} onGenerateAssignments={async (planningUnitId) => {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)
     if (!unit) throw new Error('Unknown planning unit')
-    return generateUnitAssignments(supabase, propertyId, profileId, unit)
+    const result = await generateUnitAssignments(supabase, propertyId, profileId, unit)
+    void refreshLiveData({ silent: true })
+    return result
   }} onSetShiftLocked={async (planningUnitId, staffProfileId, shiftDate, locked) => {
     if (!propertyId) throw new Error('Missing active property')
     await setShiftLocked(supabase, propertyId, planningUnitId, staffProfileId, shiftDate, locked)
   }} onSaveUnit={async (input) => {
     if (!propertyId) throw new Error('Missing active property')
-    return saveUnit(supabase, propertyId, input)
+    const result = await saveUnit(supabase, propertyId, input)
+    void refreshLiveData({ silent: true })
+    return result
   }} onArchiveUnit={async (unitId) => {
     if (!propertyId) throw new Error('Missing active property')
     await archiveUnit(supabase, propertyId, unitId)
+    void refreshLiveData({ silent: true })
   }} onRestoreUnit={async (unitId) => {
     if (!propertyId) throw new Error('Missing active property')
     await restoreUnit(supabase, propertyId, unitId)
+    void refreshLiveData({ silent: true })
   }} />
 }
