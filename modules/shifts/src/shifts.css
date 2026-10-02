@@ -184,6 +184,7 @@
 .shift-unit-selector + .shift-schedule-card { border-radius: 0 0 18px 18px; border-top: 0; }
 .shift-grid:has(th:nth-child(n+15)) { min-width: 2300px; }
 .shift-panel-title { align-items: start; display: flex; gap: 20px; justify-content: space-between; margin-bottom: 18px; }
+.shift-panel-title-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
 .shift-panel-title h2 { margin: 0 0 5px; }
 .shift-panel-title p { color: var(--shift-muted); margin: 0; }
 

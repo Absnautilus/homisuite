@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ShiftPlannerModule, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem } from '@homisuite/shifts-module'
+import { ShiftPlannerModule, type ShiftAvailableTeamMember, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem } from '@homisuite/shifts-module'
 import '@homisuite/shifts-module/style.css'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { loadLiveShiftData } from './shiftLiveData'
+import { loadAvailableTeamMembers } from './availableTeamMembers'
+import { addStaffMember } from './addStaffMember'
 import { saveShiftAssignments } from './saveShiftAssignments'
 import { saveMemberOrder } from './saveMemberOrder'
 import { saveRuleSet } from './saveRuleSet'
@@ -20,7 +22,7 @@ import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPr
 
 type State =
   | { status: 'loading' }
-  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences; requestInbox?: ShiftRequestInboxItem[] }
+  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences; requestInbox?: ShiftRequestInboxItem[]; availableTeamMembers: ShiftAvailableTeamMember[] }
   | { status: 'not-entitled' | 'forbidden' | 'empty' | 'error' }
 
 export function ShiftPlannerPage() {
@@ -62,6 +64,7 @@ export function ShiftPlannerPage() {
       }
       const preferences = live.currentStaffProfileId ? await loadStaffShiftPreferences(supabase, propertyId, live.currentStaffProfileId) : undefined
       const rawInbox = manageRequests || live.currentStaffProfileId ? await loadShiftRequestInbox(supabase, propertyId) : { absences: [], preassignments: [], swaps: [] }
+      const availableTeamMembers = manage ? await loadAvailableTeamMembers(supabase, propertyId) : []
       const personName = (id: string) => live.property.units.flatMap((unit) => unit.people).find((person) => person.id === id)?.name ?? 'Dipendente'
       const requestInbox = [
         ...(manageRequests ? rawInbox.absences.map((item: ShiftAbsenceInboxRow) => ({ id: item.id, kind: 'absences' as const, planningUnitId: item.planning_unit_id, staffProfileId: item.staff_profile_id, status: item.status, date: item.starts_on, label: item.absence_kind === 'leave' ? 'Ferie' : item.absence_kind === 'permission' ? 'Permesso' : item.absence_kind === 'illness' ? 'Malattia' : 'Assenza', note: item.note })) : []),
@@ -69,7 +72,7 @@ export function ShiftPlannerPage() {
         ...rawInbox.swaps.filter((item: ShiftSwapInboxRow) => manageRequests || item.target_staff_profile_id === live.currentStaffProfileId).map((item: ShiftSwapInboxRow) => ({ id: item.id, kind: 'swaps' as const, planningUnitId: item.planning_unit_id, staffProfileId: item.requester_staff_profile_id, targetStaffProfileId: item.target_staff_profile_id ?? undefined, status: item.status, label: `Cambio turno · ${personName(item.requester_staff_profile_id)} → ${item.target_staff_profile_id ? personName(item.target_staff_profile_id) : 'Da assegnare'}`, note: item.note })),
       ]
       if (cancelled) return
-      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId, preferences, requestInbox })
+      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId, preferences, requestInbox, availableTeamMembers })
     }).catch((cause) => {
       console.error('ShiftPlannerPage: live data load failed', cause)
       if (!cancelled) setState({ status: 'error' })
@@ -125,6 +128,9 @@ export function ShiftPlannerPage() {
   }} onSaveStaffPlanning={async ({ staffProfileId, restMode, restDays }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveStaffRestSettings(supabase, propertyId, staffProfileId, restMode, restDays)
+  }} availableTeamMembers={readyState.availableTeamMembers} onAddStaffMember={async ({ profileId, planningUnitId }) => {
+    if (!propertyId) throw new Error('Missing active property')
+    return addStaffMember(supabase, propertyId, profileId, planningUnitId)
   }} onSaveRules={async ({ planningUnitId, coverage, hard, soft, restRotationPairsPerCycle, roleCodes }) => {
     if (!propertyId) throw new Error('Missing active property')
     const unit = readyState.property.units.find((candidate) => candidate.id === planningUnitId)

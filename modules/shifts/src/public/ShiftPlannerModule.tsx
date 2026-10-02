@@ -6,8 +6,8 @@ import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fi
 import type { AssignmentConflict } from '../domain/assignment'
 import { contrastTextColor } from '../domain/contrastColor'
 import { CodesPanel, type ShiftCodeSave } from './CodesPanel'
-export type { ShiftStaffPlanningSave } from './PlannerPanels'
-import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestInboxPanel, RequestsPanel, RulesPanel, type ShiftRequestInboxItem, type ShiftRuleSetSave, type ShiftRequestSubmit, type StaffPreferenceSave } from './PlannerPanels'
+export type { ShiftStaffPlanningSave, ShiftAvailableTeamMember, ShiftStaffAdd } from './PlannerPanels'
+import { EmployeesPanel, MyShiftsPanel, PersonalPanel, RequestInboxPanel, RequestsPanel, RulesPanel, type ShiftAvailableTeamMember, type ShiftRequestInboxItem, type ShiftRuleSetSave, type ShiftRequestSubmit, type ShiftStaffAdd, type StaffPreferenceSave } from './PlannerPanels'
 import { ScheduleGrid } from './ScheduleGrid'
 import { UnitsPanel, type UnitSave, type UnitSaveResult } from './UnitsPanel'
 
@@ -16,12 +16,15 @@ export interface ShiftAssignmentEdit { planningUnitId: string; staffProfileId: s
 export interface ShiftMemberReorder { planningUnitId: string; staffProfileIds: string[] }
 export interface GenerateAssignmentsResult { assignments: Record<string, Record<string, string>>; conflicts: AssignmentConflict[] }
 export type { ShiftRuleSetSave, ShiftCodeSave, AssignmentConflict, UnitSave, UnitSaveResult, ShiftRequestInboxItem }
-export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveStaffPlanning?: (change: import('./PlannerPanels').ShiftStaffPlanningSave) => Promise<void>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSetFutureRestDays?: (planningUnitId: string) => Promise<number>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult>; onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>; onArchiveUnit?: (unitId: string) => Promise<void>; onRestoreUnit?: (unitId: string) => Promise<void>; currentStaffProfileId?: string; month?: string; onMonthChange?: (month: string) => void; onSetShiftLocked?: (planningUnitId: string, staffProfileId: string, shiftDate: string, locked: boolean) => Promise<void>; onSubmitRequest?: (planningUnitId: string, request: ShiftRequestSubmit) => Promise<void>; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void>; requestInbox?: ShiftRequestInboxItem[]; onRequestDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void> }
+export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveStaffPlanning?: (change: import('./PlannerPanels').ShiftStaffPlanningSave) => Promise<void>; availableTeamMembers?: ShiftAvailableTeamMember[]; onAddStaffMember?: (input: ShiftStaffAdd) => Promise<string>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSetFutureRestDays?: (planningUnitId: string) => Promise<number>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult>; onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>; onArchiveUnit?: (unitId: string) => Promise<void>; onRestoreUnit?: (unitId: string) => Promise<void>; currentStaffProfileId?: string; month?: string; onMonthChange?: (month: string) => void; onSetShiftLocked?: (planningUnitId: string, staffProfileId: string, shiftDate: string, locked: boolean) => Promise<void>; onSubmitRequest?: (planningUnitId: string, request: ShiftRequestSubmit) => Promise<void>; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void>; requestInbox?: ShiftRequestInboxItem[]; onRequestDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void> }
 type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'codes' | 'units' | 'preferences' | 'swaps' | 'absences' | 'preassignments'
 type CalendarView = 'month' | 'week'
 type NavGroup = 'operativo' | 'impostazioni'
 
 const DEFAULT_CAPABILITIES: ShiftPlannerCapabilities = { view: true, manage: true, manageRequests: true }
+function initialsOf(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
+}
 // Split in two: day-to-day tabs every employee uses, and module-configuration
 // tabs only a manager needs -- rather than one long scrolling row mixing both.
 const NAV_GROUPS = [
@@ -43,7 +46,7 @@ const SETTINGS_TABS = [
   { id: 'codes' as ModuleTab, label: 'Codici turno', icon: <Badge /> },
 ]
 
-export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveStaffPlanning, onSaveRules, onSetRestDays, onSetFutureRestDays, onSaveCode, onDeleteCode, onSetMonthStatus, onGenerateAssignments, onSaveUnit, onArchiveUnit, onRestoreUnit, currentStaffProfileId, month, onMonthChange, onSetShiftLocked, onSubmitRequest, initialPreferences, onSavePreferences, requestInbox = [], onRequestDecision }: ShiftPlannerModuleProps) {
+export function ShiftPlannerModule({ preview = false, initialPropertyId, capabilities = DEFAULT_CAPABILITIES, previewProperties = shiftPreviewProperties, onSaveAssignments, onReorderMembers, onSaveStaffPlanning, availableTeamMembers = [], onAddStaffMember, onSaveRules, onSetRestDays, onSetFutureRestDays, onSaveCode, onDeleteCode, onSetMonthStatus, onGenerateAssignments, onSaveUnit, onArchiveUnit, onRestoreUnit, currentStaffProfileId, month, onMonthChange, onSetShiftLocked, onSubmitRequest, initialPreferences, onSavePreferences, requestInbox = [], onRequestDecision }: ShiftPlannerModuleProps) {
   const initialProperty = previewProperties.find((property) => property.id === initialPropertyId) ?? previewProperties[0]
   const [propertyId, setPropertyId] = useState(initialProperty?.id ?? '')
   const [unitId, setUnitId] = useState(initialProperty?.units.find((candidate) => candidate.status !== 'inactive')?.id ?? initialProperty?.units[0]?.id ?? '')
@@ -52,6 +55,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const [readOnlyDemo, setReadOnlyDemo] = useState(false)
   const [draftProperties, setDraftProperties] = useState(previewProperties)
+  const [draftAvailableTeamMembers, setDraftAvailableTeamMembers] = useState(availableTeamMembers)
   const [pendingChanges, setPendingChanges] = useState<ShiftAssignmentEdit[]>([])
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [restDaysState, setRestDaysState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -63,6 +67,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [tabDirection, setTabDirection] = useState<1 | -1>(1)
   const [tabTransitionActive, setTabTransitionActive] = useState(false)
   useEffect(() => { setDraftProperties(previewProperties); setPendingChanges([]); setSaveState('idle') }, [previewProperties])
+  useEffect(() => { setDraftAvailableTeamMembers(availableTeamMembers) }, [availableTeamMembers])
   const property = useMemo(() => draftProperties.find((candidate) => candidate.id === propertyId) ?? draftProperties[0], [draftProperties, propertyId])
   const activeUnits = property?.units.filter((candidate) => candidate.status !== 'inactive') ?? []
   const unit = activeUnits.find((candidate) => candidate.id === unitId) ?? activeUnits[0] ?? property?.units[0]
@@ -270,6 +275,28 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     })))
   }
   function togglePreviewRole() { setReadOnlyDemo((current) => { const next = !current; if (next) { setNavGroup('operativo'); if (SETTINGS_TABS.some((item) => item.id === tab)) setTab('calendar') } return next }) }
+  async function addStaffMember(input: ShiftStaffAdd) {
+    if (!onAddStaffMember || !property) return
+    const staffProfileId = await onAddStaffMember(input)
+    const member = draftAvailableTeamMembers.find((candidate) => candidate.profileId === input.profileId)
+    const name = member?.name ?? 'Dipendente'
+    setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
+      ...candidate,
+      units: candidate.units.map((candidateUnit) => candidateUnit.id !== input.planningUnitId ? candidateUnit : ({
+        ...candidateUnit,
+        people: [...candidateUnit.people, {
+          id: staffProfileId,
+          name,
+          initials: initialsOf(name),
+          jobTitle: member?.jobTitle ?? '—',
+          assignmentProfile: 'Diurno',
+          includedBy: 'manual' as const,
+          restMode: 'rotating' as const,
+        }],
+      })),
+    })))
+    setDraftAvailableTeamMembers((current) => current.filter((candidate) => candidate.profileId !== input.profileId))
+  }
   async function saveUnit(input: UnitSave): Promise<UnitSaveResult> {
     if (!onSaveUnit || !property) throw new Error('Missing onSaveUnit or property')
     const saved = await onSaveUnit(input)
@@ -351,7 +378,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     {(capabilities.manageRequests || requestInbox.some((item) => item.kind === 'swaps' && item.targetStaffProfileId === currentStaffProfileId)) ? <RequestInboxPanel items={requestInbox.filter((item) => item.planningUnitId === unit.id)} people={unit.people} currentStaffProfileId={currentStaffProfileId} canManage={capabilities.manageRequests} onDecision={onRequestDecision} /> : null}
       <div className={`shift-tab-scene${tabTransitionActive ? ' is-entering' : ''}`} style={sceneStyle}>
       {tab === 'calendar' ? <><div className="shift-calendar-toolbar"><div className="shift-calendar-view-row"><div className="shift-period-control"><button type="button" aria-label="Periodo precedente" onClick={() => changeMonth(-1)}><ChevronLeft size={17} /></button><strong>{periodLabel}</strong><button type="button" aria-label="Periodo successivo" onClick={() => changeMonth(1)}><ChevronRight size={17} /></button></div><span className={`shift-status-chip ${monthFinal ? 'is-final' : 'is-draft'}`}>{monthFinal ? 'Definitivo' : 'Bozza'}</span><div className="shift-view-segment" aria-label="Visualizzazione calendario"><button type="button" className={calendarView === 'month' ? 'is-active' : undefined} onClick={() => { setCalendarView('month') }}>Mese</button><button type="button" className={calendarView === 'week' ? 'is-active' : undefined} onClick={() => { setCalendarView('week') }}>Settimana</button></div></div>{!readOnly ? <div className="shift-calendar-actions"><button type="button" disabled={preview || monthFinal || !onGenerateAssignments || assignState === 'saving'} onClick={() => void generateAssignments()}>{assignState === 'saving' ? 'Assegnazione…' : 'Assegna automaticamente'}</button>{hasRestCode ? <ToolbarMenu label="Altre azioni sui riposi" items={[{ label: restDaysState === 'saving' ? 'Impostazione…' : 'Imposta riposi', disabled: preview || monthFinal || !onSetRestDays || restDaysState === 'saving', onClick: () => void setRestDays() }, { label: futureRestDaysState === 'saving' ? 'Impostazione…' : 'Imposta riposi 12 mesi', disabled: preview || !onSetFutureRestDays || futureRestDaysState === 'saving', onClick: () => void setFutureRestDays() }]} /> : <button type="button" disabled={preview || !onSaveCode || restCodeSetupState === 'saving'} onClick={() => void createDefaultRestCode()} title="Crea il codice turno &quot;R&quot; (Riposo), necessario per poter impostare i riposi">{restCodeSetupState === 'saving' ? 'Configurazione…' : 'Configura codice Riposo'}</button>}<button type="button" disabled={preview || !onSetMonthStatus || monthStatusState === 'saving'} onClick={() => void toggleMonthStatus()}>{monthStatusState === 'saving' ? 'Aggiornamento…' : (monthFinal ? 'Riporta a bozza' : 'Rendi definitivo')}</button><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></div> : null}</div><p className="shift-calendar-help">Lo stato Bozza/Definitivo riguarda solo {periodLabel.toLowerCase()}: ogni mese ha il proprio stato indipendente. “Assegna automaticamente” genera i turni solo per il mese visualizzato; gli altri mesi non vengono toccati. I turni bloccati restano fissi, mentre gli altri possono essere ricalcolati. Salva turni quando vuoi rendere permanenti le modifiche.</p><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} />{saveState === 'error' ? <div className="shift-empty" role="alert">Impossibile salvare le modifiche. Riprova.</div> : null}{restDaysState === 'error' ? <div className="shift-empty" role="alert">Impossibile impostare i riposi. Riprova.</div> : null}{futureRestDaysState === 'error' ? <div className="shift-empty" role="alert">Impossibile impostare i riposi dei mesi successivi. Riprova.</div> : null}{restCodeSetupState === 'error' ? <div className="shift-empty" role="alert">Impossibile creare il codice Riposo. Riprova.</div> : null}{!hasRestCode && !readOnly && onSaveCode && restCodeSetupState !== 'error' ? <div className="shift-empty" role="status">Questa unità non ha ancora un codice "R" (Riposo): creane uno per poter usare "Imposta riposi".</div> : null}{monthStatusState === 'error' ? <div className="shift-empty" role="alert">Impossibile aggiornare lo stato del mese. Riprova.</div> : null}{assignState === 'error' ? <div className="shift-empty" role="alert">Impossibile generare l'assegnazione automatica. Riprova.</div> : null}{assignConflicts.length > 0 ? <div className="shift-empty shift-assign-conflicts" role="alert"><strong>{assignConflicts.length} {assignConflicts.length === 1 ? 'turno non coperto' : 'turni non coperti'}:</strong><ul>{assignConflicts.slice(0, 8).map((conflict, index) => <li key={index}>{conflict.message}</li>)}</ul>{assignConflicts.length > 8 ? <span>…e altri {assignConflicts.length - 8}.</span> : null}</div> : null}<Toast open={saveState === 'saved'}>Turni salvati.</Toast><Toast open={restDaysState === 'saved'}>Riposi impostati.</Toast><Toast open={assignState === 'saved' && assignConflicts.length === 0}>Turni assegnati automaticamente.</Toast><section className="shift-schedule-card"><ScheduleGrid unit={unit} view={calendarView} editable={!readOnly && !preview && !monthFinal} onAssignmentChange={editAssignment} onLockChange={onSetShiftLocked ? setShiftLocked : undefined} /><div className="shift-legend">{unit.codes.map((code) => <span key={code.code}><strong style={{ background: code.color, color: code.textColor ?? '#fff' }}>{code.code}</strong>{code.label}{code.time ? ` (${code.time})` : ''}</span>)}</div></section>{!readOnly ? <BottomActionBar><strong>{periodLabel}</strong><button className="is-primary" type="button" disabled={preview || pendingChanges.length === 0 || saveState === 'saving'} onClick={() => void saveAssignments()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva turni'}</button></BottomActionBar> : null}</> : null}
-      {tab === 'employees' ? <EmployeesPanel property={{ ...property, units: property.units.filter((candidate) => candidate.status !== 'inactive') }} onReorderMembers={onReorderMembers} onSavePlanning={onSaveStaffPlanning} /> : null}
+      {tab === 'employees' ? <EmployeesPanel property={{ ...property, units: property.units.filter((candidate) => candidate.status !== 'inactive') }} onReorderMembers={onReorderMembers} onSavePlanning={onSaveStaffPlanning} availableTeamMembers={draftAvailableTeamMembers} onAddStaffMember={onAddStaffMember ? addStaffMember : undefined} /> : null}
       {tab === 'units' ? <UnitsPanel units={property.units} jobTitleRoster={property.jobTitleRoster ?? []} onSaveUnit={onSaveUnit ? saveUnit : undefined} onArchiveUnit={onArchiveUnit ? archiveUnit : undefined} onRestoreUnit={onRestoreUnit ? restoreUnit : undefined} /> : null}
       {tab === 'rules' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><RulesPanel unit={unit} onSaveRules={onSaveRules ? saveRules : undefined} /></> : null}
       {tab === 'codes' ? <><UnitSelector property={property} unitId={unit.id} onSelect={setUnitId} /><CodesPanel unit={unit} onSaveCode={onSaveCode ? saveCode : undefined} onDeleteCode={onDeleteCode ? (codeId) => deleteCode(unit.id, codeId) : undefined} /></> : null}

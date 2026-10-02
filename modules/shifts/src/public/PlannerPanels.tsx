@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Download, GripVertical } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { Download, GripVertical, Plus } from 'lucide-react'
+import { Modal } from '@homisuite/ui'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
 import { ASSIGNMENT_ROLES, DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, type RoleCodes, initRestRotationPairsPerCycle, initRoleCodes, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
@@ -23,14 +24,21 @@ type PersonDraft = {
 }
 
 export interface ShiftStaffPlanningSave { staffProfileId: string; restMode: 'fixed' | 'rotating'; restDays: string }
+export interface ShiftAvailableTeamMember { profileId: string; name: string; jobTitle?: string }
+export interface ShiftStaffAdd { profileId: string; planningUnitId: string }
 
 const REST_DAY_OPTIONS = ['Sab + Dom', 'Dom + Lun', 'Lun + Mar']
 
-export function EmployeesPanel({ property, onReorderMembers, onSavePlanning }: {
+export function EmployeesPanel({ property, availableTeamMembers = [], onReorderMembers, onSavePlanning, onAddStaffMember }: {
   property: ShiftPreviewProperty
+  availableTeamMembers?: ShiftAvailableTeamMember[]
   onReorderMembers?: (change: { planningUnitId: string; staffProfileIds: string[] }) => Promise<void>
   onSavePlanning?: (change: ShiftStaffPlanningSave) => Promise<void>
+  onAddStaffMember?: (input: ShiftStaffAdd) => Promise<void>
 }) {
+  const [addOpen, setAddOpen] = useState(false)
+  const addTriggerRef = useRef<HTMLElement | null>(null)
+  const activeUnits = property.units.filter((unit) => unit.status !== 'inactive')
   const roster = useMemo(() => {
     const people = new Map<string, { person: ShiftPlanningUnit['people'][number]; unitId: string }>()
     for (const unit of property.units) {
@@ -107,7 +115,10 @@ export function EmployeesPanel({ property, onReorderMembers, onSavePlanning }: {
     <section className="shift-panel shift-employees-panel">
       <div className="shift-panel-title">
         <div><h2>Dipendenti</h2><p>La lista arriva da Team. Qui assegni soltanto unità e parametri di pianificazione. Trascina per riordinare all'interno della stessa unità.</p></div>
-        <span className="shift-status-chip">{roster.length} persone</span>
+        <span className="shift-panel-title-actions">
+          <span className="shift-status-chip">{roster.length} persone</span>
+          {onAddStaffMember ? <button type="button" className="shift-original-primary shift-codes-add" disabled={availableTeamMembers.length === 0} title={availableTeamMembers.length === 0 ? 'Tutti i membri attivi di Team sono già presenti in Turni' : undefined} onClick={(event) => { addTriggerRef.current = event.currentTarget; setAddOpen(true) }}><Plus size={14} />Aggiungi da Team</button> : null}
+        </span>
       </div>
       {reorderError ? <div className="shift-empty" role="alert">Impossibile salvare il nuovo ordine. Riprova.</div> : null}
       <div className="shift-table-scroll" tabIndex={0} aria-label="Configurazione dipendenti per Turni">
@@ -140,7 +151,70 @@ export function EmployeesPanel({ property, onReorderMembers, onSavePlanning }: {
         </table>
       </div>
       <p className="shift-panel-note">Ordine e parametri di riposo vengono salvati subito. Creazione account, ruolo Homisuite e mansione lavorativa continuano a essere gestiti da Team.</p>
+      {addOpen ? (
+        <AddStaffMemberForm
+          availableTeamMembers={availableTeamMembers}
+          units={activeUnits}
+          originRef={addTriggerRef}
+          onAdd={onAddStaffMember}
+          onClose={() => setAddOpen(false)}
+        />
+      ) : null}
     </section>
+  )
+}
+
+function AddStaffMemberForm({ availableTeamMembers, units, originRef, onAdd, onClose }: {
+  availableTeamMembers: ShiftAvailableTeamMember[]
+  units: ShiftPlanningUnit[]
+  originRef: RefObject<HTMLElement | null>
+  onAdd?: (input: ShiftStaffAdd) => Promise<void>
+  onClose: () => void
+}) {
+  const [profileId, setProfileId] = useState(availableTeamMembers[0]?.profileId ?? '')
+  const [planningUnitId, setPlanningUnitId] = useState(units[0]?.id ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(event: { preventDefault: () => void }) {
+    event.preventDefault()
+    if (!onAdd || !profileId || !planningUnitId) return
+    setSaving(true)
+    setError(null)
+    try {
+      await onAdd({ profileId, planningUnitId })
+      onClose()
+    } catch {
+      setError('Impossibile aggiungere questa persona a Turni. Riprova.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      originRef={originRef}
+      title="Aggiungi da Team"
+      description="Scegli chi, tra i membri attivi di Team non ancora presenti in Turni, portare in questo modulo e in quale unità."
+      onClose={onClose}
+      dismissible={!saving}
+      footer={<>
+        <button type="button" className="shift-code-form-cancel" disabled={saving} onClick={onClose}>Annulla</button>
+        <button type="submit" form="shift-add-staff-form" className="shift-original-primary" disabled={saving || !profileId || !planningUnitId}>{saving ? 'Aggiunta…' : 'Aggiungi'}</button>
+      </>}
+    >
+      <form className="shift-code-form" id="shift-add-staff-form" onSubmit={submit}>
+        <label className="shift-unit-name-field">
+          Persona
+          <ShiftSelect ariaLabel="Persona da aggiungere" value={profileId} disabled={saving} onChange={setProfileId} options={availableTeamMembers.map((member) => ({ value: member.profileId, label: member.jobTitle ? `${member.name} · ${member.jobTitle}` : member.name }))} />
+        </label>
+        <label className="shift-unit-name-field">
+          Unità
+          <ShiftSelect ariaLabel="Unità di destinazione" value={planningUnitId} disabled={saving} onChange={setPlanningUnitId} options={units.map((unit) => ({ value: unit.id, label: unit.name }))} />
+        </label>
+        {error ? <p role="alert" className="shift-code-form-error">{error}</p> : null}
+      </form>
+    </Modal>
   )
 }
 
