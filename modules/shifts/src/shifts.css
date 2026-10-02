@@ -1207,3 +1207,94 @@
 }
 .shift-select-extra-action:hover > span > svg,
 .shift-select-extra-action:focus-visible > span > svg { color: var(--shift-accent); }
+
+/* ==================== Piano Ferie ==================== */
+.shift-vacation-root { display: grid; gap: 16px; }
+.shift-vacation-tabbar { display: inline-flex; gap: 3px; background: var(--shift-soft); border: 1px solid var(--shift-line); border-radius: 12px; padding: 3px; width: fit-content; }
+.shift-vacation-tabbar button { font: inherit; font-size: 13px; font-weight: 700; color: var(--shift-muted); background: transparent; border: 0; border-radius: 9px; padding: 9px 16px; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
+.shift-vacation-tabbar button[aria-selected="true"] { background: var(--shift-panel); color: var(--shift-ink); box-shadow: 0 1px 2px rgba(22,24,43,0.08); }
+.shift-vacation-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #b9770e; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 2px; }
+.shift-vacation-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--shift-muted); font-weight: 600; }
+.shift-vacation-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.shift-vacation-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.shift-vacation-legend i.is-taken { background: var(--shift-muted); opacity: .55; }
+.shift-vacation-legend i.is-confirmed { background: #1f8f5f; }
+.shift-vacation-legend i.is-pending { background: #b9770e; }
+.shift-vacation-legend i.is-missing { border: 1.5px dashed var(--shift-accent); background: transparent; }
+.shift-vacation-pane { display: grid; gap: 16px; animation: shift-vacation-fade-rise 220ms cubic-bezier(.22,1,.36,1); }
+@keyframes shift-vacation-fade-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .shift-vacation-pane, .shift-vacation-request-panel { animation: none; } }
+
+/* ---- shared timeline ---- */
+.shift-vacation-timeline-scroll { position: relative; overflow-x: auto; background: var(--shift-panel); border: 1px solid var(--shift-line); border-radius: 13px; padding: 16px; }
+.shift-vacation-timeline { min-width: 820px; }
+.shift-vacation-months-row { display: grid; grid-template-columns: 170px 1fr; }
+.shift-vacation-months { display: grid; grid-template-columns: repeat(12, 1fr); border-bottom: 1px solid var(--shift-line); padding-bottom: 6px; }
+.shift-vacation-months span { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--shift-muted); letter-spacing: .03em; }
+.shift-vacation-row { display: grid; grid-template-columns: 170px 1fr; align-items: center; min-height: 46px; border-bottom: 1px solid var(--shift-line); }
+.shift-vacation-row:last-child { border-bottom: none; }
+.shift-vacation-person { display: flex; align-items: center; gap: 9px; min-width: 0; padding-right: 10px; }
+.shift-vacation-person-copy { min-width: 0; }
+.shift-vacation-person-copy strong { display: block; font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shift-vacation-person-copy small { color: var(--shift-muted); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+.shift-vacation-track { position: relative; height: 26px; background: linear-gradient(to right, transparent calc(100%/12), var(--shift-line) calc(100%/12), var(--shift-line) calc(100%/12 + 1px)); background-size: calc(100%/12) 100%; border-radius: 6px; }
+.shift-vacation-bar { position: absolute; top: 2px; bottom: 2px; border: 0; border-radius: 6px; font: inherit; font-size: 10.5px; font-weight: 700; color: #fff; display: flex; align-items: center; padding: 0 7px; white-space: nowrap; overflow: hidden; cursor: default; transition: transform 130ms ease, box-shadow 130ms ease; }
+.shift-vacation-bar:hover { transform: scaleY(1.9); z-index: 4; box-shadow: 0 6px 16px rgba(22,24,43,0.28); overflow: visible; }
+.shift-vacation-bar.is-taken { background: var(--shift-muted); opacity: .55; }
+.shift-vacation-bar.is-confirmed { background: #1f8f5f; }
+.shift-vacation-bar.is-pending { background: #b9770e; }
+.shift-vacation-today-line { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--shift-accent); z-index: 3; }
+.shift-vacation-tooltip { position: fixed; z-index: 60; transform: translate(-50%, -100%); background: var(--shift-ink); color: #fff; border-radius: 9px; padding: 8px 11px; font-size: 11.5px; font-weight: 600; line-height: 1.4; pointer-events: none; box-shadow: 0 10px 24px rgba(0,0,0,.25); max-width: 220px; }
+.shift-vacation-tooltip strong { display: block; font-size: 12.5px; }
+.shift-vacation-tooltip span { opacity: .72; }
+
+/* ---- recap table ---- */
+table.shift-vacation-table { width: 100%; border-collapse: collapse; }
+table.shift-vacation-table th, table.shift-vacation-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--shift-line); font-size: 12.5px; }
+table.shift-vacation-table thead th { color: var(--shift-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; font-weight: 800; }
+table.shift-vacation-table tbody tr { transition: background 120ms ease; }
+table.shift-vacation-table tbody tr:hover { background: var(--shift-soft); }
+.shift-vacation-row-person { display: flex; align-items: center; gap: 9px; }
+.shift-vacation-pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.shift-vacation-pill.is-taken { background: var(--shift-soft); color: var(--shift-muted); }
+.shift-vacation-pill.is-confirmed { background: #e1f3ea; color: #1f8f5f; }
+.shift-vacation-pill.is-pending { background: #fbf0dc; color: #b9770e; }
+.shift-vacation-pill.is-missing { background: var(--shift-accent-soft); color: var(--shift-accent); }
+.shift-vacation-missing-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.shift-vacation-missing-chip { background: var(--shift-accent-soft); color: var(--shift-accent); border-radius: 999px; padding: 6px 11px; font-size: 11.5px; font-weight: 700; }
+
+/* ---- "Le mie ferie" ---- */
+.shift-vacation-mine { display: grid; gap: 16px; }
+.shift-vacation-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.shift-vacation-card { border: 1px solid var(--shift-line); border-radius: 13px; padding: 14px; display: grid; gap: 8px; align-content: start; background: var(--shift-panel); transition: transform 160ms ease, box-shadow 160ms ease; }
+.shift-vacation-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(22,24,43,0.08); }
+.shift-vacation-card.is-missing { border-style: dashed; border-color: var(--shift-accent); background: var(--shift-accent-soft); }
+.shift-vacation-card-label { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--shift-muted); }
+.shift-vacation-card-dates { font-size: 1.05rem; font-weight: 800; }
+.shift-vacation-card.is-missing .shift-vacation-card-dates { color: var(--shift-accent); font-size: .95rem; }
+.shift-vacation-mini-timeline .shift-vacation-months-row,
+.shift-vacation-mini-timeline .shift-vacation-row { grid-template-columns: 0 1fr; }
+.shift-vacation-mini-timeline .shift-vacation-person { display: none; }
+.shift-vacation-request-panel { border: 1px solid var(--shift-line); border-radius: 13px; padding: 16px; background: var(--shift-panel); display: grid; gap: 10px; animation: shift-vacation-fade-rise 220ms cubic-bezier(.22,1,.36,1); }
+.shift-vacation-request-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.shift-vacation-result { border-radius: 11px; padding: 11px 14px; font-size: 12.5px; font-weight: 600; }
+.shift-vacation-result.is-ok { background: #e1f3ea; color: #1f8f5f; }
+.shift-vacation-result.is-conflict { background: #fbe6e3; color: #c6433a; }
+@media (max-width: 760px) { .shift-vacation-cards { grid-template-columns: 1fr; } }
+
+/* ---- Approvazioni (manager) ---- */
+.shift-vacation-pending-list { display: grid; gap: 10px; margin-bottom: 18px; }
+.shift-vacation-pending-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--shift-line); border-radius: 12px; padding: 12px 14px; transition: opacity 160ms ease; }
+.shift-vacation-pending-row.is-resolving { opacity: .5; }
+.shift-vacation-pending-info { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; }
+.shift-vacation-pending-actions { display: flex; gap: 8px; align-items: center; }
+.shift-vacation-icon-btn { display: inline-flex; align-items: center; justify-content: center; border: 0; cursor: pointer; flex-shrink: 0; transition: color 140ms ease, background 140ms ease, filter 140ms ease, transform 100ms ease; }
+.shift-vacation-icon-btn:active { transform: scale(.92); }
+.shift-vacation-icon-btn:disabled { cursor: not-allowed; opacity: .35; }
+.shift-vacation-icon-btn.is-reject { width: 40px; height: 40px; border-radius: 9px; background: transparent; color: var(--shift-muted); }
+.shift-vacation-icon-btn.is-reject:hover { color: #974c27; background: #fbe6d8; }
+.shift-vacation-icon-btn.is-approve { width: 48px; height: 48px; border-radius: 999px; background: var(--shift-accent); color: #fff; }
+.shift-vacation-icon-btn.is-approve:hover { filter: brightness(1.06); }
+.shift-vacation-settings-form { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+.shift-vacation-settings-form input { background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); font: inherit; font-size: 13px; height: 40px; padding: 0 11px; width: 90px; }
+.shift-vacation-settings-form input:focus { outline: none; border-color: var(--shift-accent); box-shadow: var(--shift-focus-ring); }

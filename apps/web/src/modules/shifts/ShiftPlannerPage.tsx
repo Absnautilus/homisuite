@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ShiftPlannerModule, type ShiftAvailableTeamMember, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem } from '@homisuite/shifts-module'
+import { ShiftPlannerModule, type ShiftAvailableTeamMember, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem, type VacationPeriod, type VacationSettings } from '@homisuite/shifts-module'
 import '@homisuite/shifts-module/style.css'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
@@ -22,10 +22,11 @@ import { saveStaffAssignmentRole } from './saveStaffAssignmentRole'
 import { setShiftLocked } from './saveShiftLock'
 import { createAbsenceRequest, createPreassignmentRequest, createShiftSwapRequest, decideAbsenceRequest, decidePreassignment, loadShiftRequestInbox, respondShiftSwap, type ShiftAbsenceInboxRow, type ShiftPreassignmentInboxRow, type ShiftSwapInboxRow } from './shiftRequestActions'
 import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPreferences } from './staffPreferences'
+import { loadVacationData, requestVacationPeriod, decideVacationPeriod, saveVacationSettings } from './vacationData'
 
 type State =
   | { status: 'loading' }
-  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences; requestInbox?: ShiftRequestInboxItem[]; availableTeamMembers: ShiftAvailableTeamMember[] }
+  | { status: 'ready'; property: ShiftPreviewProperty; capabilities: ShiftPlannerCapabilities; currentStaffProfileId?: string; preferences?: StaffShiftPreferences; requestInbox?: ShiftRequestInboxItem[]; availableTeamMembers: ShiftAvailableTeamMember[]; vacationPeriods: VacationPeriod[]; vacationSettings: VacationSettings }
   | { status: 'not-entitled' | 'forbidden' | 'empty' | 'error' }
 
 export function ShiftPlannerPage() {
@@ -76,6 +77,7 @@ export function ShiftPlannerPage() {
       const preferences = live.currentStaffProfileId ? await loadStaffShiftPreferences(supabase, propertyId, live.currentStaffProfileId) : undefined
       const rawInbox = manageRequests || live.currentStaffProfileId ? await loadShiftRequestInbox(supabase, propertyId) : { absences: [], preassignments: [], swaps: [] }
       const availableTeamMembers = manage ? await loadAvailableTeamMembers(supabase, propertyId) : []
+      const { periods: vacationPeriods, settings: vacationSettings } = await loadVacationData(supabase, propertyId)
       if (!isCurrent()) return
       const personName = (id: string) => live.property.units.flatMap((unit) => unit.people).find((person) => person.id === id)?.name ?? 'Dipendente'
       const requestInbox = [
@@ -84,7 +86,7 @@ export function ShiftPlannerPage() {
         ...rawInbox.swaps.filter((item: ShiftSwapInboxRow) => manageRequests || item.target_staff_profile_id === live.currentStaffProfileId).map((item: ShiftSwapInboxRow) => ({ id: item.id, kind: 'swaps' as const, planningUnitId: item.planning_unit_id, staffProfileId: item.requester_staff_profile_id, targetStaffProfileId: item.target_staff_profile_id ?? undefined, status: item.status, label: `Cambio turno · ${personName(item.requester_staff_profile_id)} → ${item.target_staff_profile_id ? personName(item.target_staff_profile_id) : 'Da assegnare'}`, note: item.note })),
       ]
       if (!isCurrent()) return
-      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId, preferences, requestInbox, availableTeamMembers })
+      setState({ status: 'ready', property: live.property, capabilities: { view, manage, manageRequests }, currentStaffProfileId: live.currentStaffProfileId, preferences, requestInbox, availableTeamMembers, vacationPeriods, vacationSettings })
     } catch (cause) {
       console.error('ShiftPlannerPage: live data load failed', cause)
       if (isCurrent() && !silent) setState({ status: 'error' })
@@ -222,6 +224,18 @@ export function ShiftPlannerPage() {
   }} onRestoreUnit={async (unitId) => {
     if (!propertyId) throw new Error('Missing active property')
     await restoreUnit(supabase, propertyId, unitId)
+    void refreshLiveData({ silent: true })
+  }} vacationPeriods={readyState.vacationPeriods} vacationSettings={readyState.vacationSettings} onRequestVacationPeriod={async (input) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await requestVacationPeriod(supabase, propertyId, input)
+    void refreshLiveData({ silent: true })
+  }} onDecideVacationPeriod={async (periodId, approve) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await decideVacationPeriod(supabase, periodId, approve)
+    void refreshLiveData({ silent: true })
+  }} onSaveVacationSettings={async (settings) => {
+    if (!propertyId) throw new Error('Missing active property')
+    await saveVacationSettings(supabase, propertyId, settings)
     void refreshLiveData({ silent: true })
   }} />
 }
