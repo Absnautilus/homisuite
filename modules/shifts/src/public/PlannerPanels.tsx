@@ -23,7 +23,7 @@ type PersonDraft = {
   restDays: string
 }
 
-export interface ShiftStaffPlanningSave { staffProfileId: string; restMode: 'fixed' | 'rotating'; restDays: string }
+export interface ShiftStaffPlanningSave { staffProfileId: string; planningUnitId: string; assignmentProfile: string; restMode: 'fixed' | 'rotating'; restDays: string }
 export interface ShiftAvailableTeamMember { profileId: string; name: string; jobTitle?: string }
 export interface ShiftStaffAdd { profileId: string; planningUnitId: string }
 
@@ -82,7 +82,8 @@ export function EmployeesPanel({ property, availableTeamMembers = [], onReorderM
     update(personId, patch)
     setSaveStates((current) => ({ ...current, [personId]: 'saving' }))
     try {
-      await onSavePlanning({ staffProfileId: personId, restMode: next.restMode, restDays: next.restMode === 'fixed' ? next.restDays : '' })
+      const assignmentProfileKey = ASSIGNMENT_ROLES.find((role) => role.label === next.assignmentProfile)?.key ?? next.assignmentProfile
+      await onSavePlanning({ staffProfileId: personId, planningUnitId: next.unitId, assignmentProfile: assignmentProfileKey, restMode: next.restMode, restDays: next.restMode === 'fixed' ? next.restDays : '' })
       setSaveStates((current) => ({ ...current, [personId]: 'saved' }))
       window.setTimeout(() => setSaveStates((current) => current[personId] === 'saved' ? { ...current, [personId]: undefined as never } : current), 2200)
     } catch {
@@ -141,7 +142,7 @@ export function EmployeesPanel({ property, availableTeamMembers = [], onReorderM
                   </button>
                 </th>
                 <td><ShiftSelect ariaLabel={`Unità di ${person.name}`} value={draft.unitId} onChange={(unitId) => update(person.id, { unitId })} options={property.units.map((unit) => ({ value: unit.id, label: unit.name }))} /></td>
-                <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => update(person.id, { assignmentProfile })} options={['Diurno', 'Turnante', 'Notturno', 'Direttore', 'FOM'].map((label) => ({ value: label, label }))} /></td>
+                <td><ShiftSelect ariaLabel={`Tipo turno di ${person.name}`} value={draft.assignmentProfile} onChange={(assignmentProfile) => void savePlanning(person.id, { assignmentProfile })} options={ASSIGNMENT_ROLES.map(({ label }) => ({ value: label, label }))} /></td>
                 <td><ShiftSelect ariaLabel={`Riposo di ${person.name}`} value={draft.restMode} onChange={(restMode) => { const mode = restMode as PersonDraft['restMode']; if (mode === 'fixed' && !draft.restDays) void savePlanning(person.id, { restMode: mode, restDays: REST_DAY_OPTIONS[0] }); else void savePlanning(person.id, { restMode: mode }) }} options={[{ value: 'rotating', label: 'Rotante' }, { value: 'fixed', label: 'Fisso' }]} /></td>
                 <td><ShiftSelect ariaLabel={`Giorni fissi di ${person.name}`} value={draft.restDays} disabled={draft.restMode !== 'fixed'} onChange={(restDays) => void savePlanning(person.id, { restDays })} options={[{ value: '', label: '—' }, ...REST_DAY_OPTIONS.map((label) => ({ value: label, label }))]} /></td>
                 <td><span className="shift-status-chip">{saveStates[person.id] === 'saving' ? 'Salvataggio…' : saveStates[person.id] === 'saved' ? 'Salvato' : saveStates[person.id] === 'error' ? 'Errore' : (person.includedBy === 'manual' ? 'Manuale' : 'Da Team')}</span></td>

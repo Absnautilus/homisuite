@@ -60,21 +60,29 @@ export async function generateUnitAssignments(
   const memberIds = unit.people.map((person) => person.id)
   if (memberIds.length === 0) return { assignments: {}, conflicts: [] }
 
-  const [{ data: unitStaff, error: unitStaffError }, { data: unitCodes, error: unitCodesError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
+  const [{ data: unitStaff, error: unitStaffError }, { data: unitMembers, error: unitMembersError }, { data: unitCodes, error: unitCodesError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
     supabase.from('shift_staff_profiles').select('id,shift_type,rest_mode,fixed_rest_days,rotation_slot,preferred_shift_codes,weekday_shift_preferences').eq('property_id', propertyId).in('id', memberIds),
+    supabase.from('shift_unit_members').select('staff_profile_id,assignment_profile_key').eq('property_id', propertyId).eq('planning_unit_id', unit.id).in('staff_profile_id', memberIds),
     supabase.from('shift_codes').select('id,code,kind').eq('property_id', propertyId).eq('planning_unit_id', unit.id),
     supabase.from('shifts').select('id,staff_profile_id,shift_date,locked,shift_codes!inner(code,kind)').eq('property_id', propertyId).eq('planning_unit_id', unit.id).gte('shift_date', `${unit.month}-01`).lt('shift_date', nextMonthStart(year, month)),
   ])
   if (unitStaffError) throw unitStaffError
+  if (unitMembersError) throw unitMembersError
   if (unitCodesError) throw unitCodesError
   if (existingShiftsError) throw existingShiftsError
 
   const unitStaffRows = (unitStaff ?? []) as PreferenceStaffRow[]
   const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unitStaffRows)
+  // The employee's scheduling role (day/night/rotating/fom/director) is set
+  // per planning-unit membership (shift_unit_members.assignment_profile_key
+  // -- what the "Tipo turno" column in the Employees panel shows), not on
+  // shift_staff_profiles.shift_type, which is a leftover onboarding default
+  // ('day' for almost everyone) that the engine must not schedule against.
+  const roleByStaffId = new Map((unitMembers ?? []).map((row) => [String(row.staff_profile_id), row.assignment_profile_key as string | null]))
 
   const employees: AssignmentEmployee[] = unitStaffRows.map((staff) => ({
     id: staff.id,
-    shiftType: staff.shift_type as AssignmentEmployee['shiftType'],
+    shiftType: (roleByStaffId.get(staff.id) ?? staff.shift_type) as AssignmentEmployee['shiftType'],
     active: true,
     restMode: staff.rest_mode as AssignmentEmployee['restMode'],
     fixedRestDays: staff.fixed_rest_days ?? [],

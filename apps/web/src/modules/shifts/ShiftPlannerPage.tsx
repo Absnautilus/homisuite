@@ -16,6 +16,7 @@ import { setMonthStatus } from './saveMonthStatus'
 import { generateUnitAssignments } from './generateAssignments'
 import { saveUnit, archiveUnit, restoreUnit } from './saveUnit'
 import { saveStaffRestSettings } from './saveStaffRestSettings'
+import { saveStaffAssignmentRole } from './saveStaffAssignmentRole'
 import { setShiftLocked } from './saveShiftLock'
 import { createAbsenceRequest, createPreassignmentRequest, createShiftSwapRequest, decideAbsenceRequest, decidePreassignment, loadShiftRequestInbox, respondShiftSwap, type ShiftAbsenceInboxRow, type ShiftPreassignmentInboxRow, type ShiftSwapInboxRow } from './shiftRequestActions'
 import { loadStaffShiftPreferences, saveStaffShiftPreferences, type StaffShiftPreferences } from './staffPreferences'
@@ -140,9 +141,13 @@ export function ShiftPlannerPage() {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)
     void refreshLiveData({ silent: true })
-  }} onSaveStaffPlanning={async ({ staffProfileId, restMode, restDays }) => {
+  }} onSaveStaffPlanning={async ({ staffProfileId, planningUnitId, assignmentProfile, restMode, restDays }) => {
     if (!propertyId) throw new Error('Missing active property')
-    await saveStaffRestSettings(supabase, propertyId, staffProfileId, restMode, restDays)
+    await Promise.all([
+      saveStaffRestSettings(supabase, propertyId, staffProfileId, restMode, restDays),
+      saveStaffAssignmentRole(supabase, propertyId, planningUnitId, staffProfileId, assignmentProfile),
+    ])
+    void refreshLiveData({ silent: true })
   }} availableTeamMembers={readyState.availableTeamMembers} onAddStaffMember={async ({ profileId, planningUnitId }) => {
     if (!propertyId) throw new Error('Missing active property')
     const staffId = await addStaffMember(supabase, propertyId, profileId, planningUnitId)
