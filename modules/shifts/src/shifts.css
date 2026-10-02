@@ -77,7 +77,16 @@
 .shift-coverage-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; }
 .shift-coverage-list span { background: var(--shift-soft); border: 1px solid var(--shift-line); border-radius: 999px; color: var(--shift-muted); font-size: 11px; font-weight: 750; padding: 5px 8px; }
 
-.shift-grid-scroll { border-block: 1px solid var(--shift-line); overflow: auto; }
+.shift-grid-scroll {
+  border-block: 1px solid var(--shift-line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
+}
+.shift-grid-scroll::-webkit-scrollbar { display: none; }
 .shift-grid { border-collapse: separate; border-spacing: 0; min-width: 880px; width: 100%; }
 .shift-grid th, .shift-grid td { border-bottom: 1px solid var(--shift-line); padding: 9px 7px; text-align: center; }
 .shift-grid thead th { background: #fafafe; color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
@@ -178,7 +187,18 @@
 .shift-panel-title h2 { margin: 0 0 5px; }
 .shift-panel-title p { color: var(--shift-muted); margin: 0; }
 
-.shift-table-scroll { overflow: auto; }
+/* Horizontal-only scroll, with the bare native scrollbar hidden in favor
+   of an edge fade (same treatment as the suite's own scrollable tab rows)
+   instead of a stray, unstyled line cutting across the card. */
+.shift-table-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
+}
+.shift-table-scroll::-webkit-scrollbar { display: none; }
 .shift-employees-table { border-collapse: collapse; min-width: 1040px; width: 100%; }
 .shift-employees-table th, .shift-employees-table td { border-bottom: 1px solid var(--shift-line); padding: 8px 7px; text-align: left; }
 .shift-employees-table thead th { background: #f0f1fa; color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
@@ -411,19 +431,20 @@
   padding: 0 11px;
   font-size: 11px;
 }
-.shift-schedule-card,
-.shift-panel {
+/* .shift-panel keeps its base rounded/bordered card look (matching every
+   other module's panels); only .shift-schedule-card stays flat/borderless
+   here, since it sits directly attached below the unit-selector tabs. */
+.shift-schedule-card {
   background: #fff;
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  overflow: visible;
 }
-.shift-schedule-card { overflow: visible; }
 
 .shift-grid-scroll {
   border: 0;
   border-radius: 0;
-  overflow: auto;
 }
 .shift-grid:has(th:nth-child(n+15)) { min-width: 970px; }
 .shift-grid {
