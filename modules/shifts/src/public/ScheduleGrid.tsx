@@ -49,7 +49,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   return (
     <div className="shift-grid-scroll" tabIndex={0} aria-label={`Tabella turni ${unit.name}`}>
       <table className="shift-grid">
-        <thead><tr><th className="shift-person-column">Dipendente</th>{visibleDates.map((date) => {
+        <thead><tr><th className={`shift-person-column${compactPeople ? ' is-compact' : ''}`}>Dipendente</th>{visibleDates.map((date) => {
           const parsed = new Date(`${date}T00:00:00Z`)
           const weekend = [0, 6].includes(parsed.getUTCDay())
           return <th className={weekend ? 'is-weekend' : undefined} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>

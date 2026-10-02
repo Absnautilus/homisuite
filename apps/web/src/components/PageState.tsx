@@ -57,11 +57,20 @@ export function PageState({
             <span className="pss-chip" />
             <span className="pss-pill" />
           </div>
-          <span className="pss-row" style={{ width: '92%' }} />
-          <span className="pss-row" style={{ width: '78%' }} />
-          <span className="pss-row" style={{ width: '85%' }} />
+          {[1, 2, 3].map((row) => (
+            <div className="pss-card" key={row}>
+              <span className="pss-avatar" />
+              <span className="pss-lines">
+                <span className="pss-row" style={{ width: '62%' }} />
+                <span className="pss-row" style={{ width: '38%' }} />
+              </span>
+            </div>
+          ))}
         </div>
-        <p className="page-state-title">{title}</p>
+        {/* The skeleton already communicates "loading" visually; the title
+            stays for screen readers (role="status" announces it) without
+            also printing as a redundant caption underneath the shapes. */}
+        <p className="page-state-title sr-only">{title}</p>
       </div>
     )
   }
