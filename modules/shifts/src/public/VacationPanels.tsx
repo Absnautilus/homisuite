@@ -7,15 +7,12 @@ import {
 } from '../domain/vacationPeriods'
 import { ShiftDatePicker } from './ShiftDatePicker'
 
-const MONTH_NAMES = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC']
 const STATUS_LABEL: Record<VacationDisplayStatus, string> = { taken: 'Presa', confirmed: 'Confermata', pending: 'In attesa', missing: 'Da pianificare' }
 const MONTH_LONG = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
 
 function todayIso(): string { return new Date().toISOString().slice(0, 10) }
 function fmtShort(iso: string): string { const [, m, d] = iso.split('-'); return `${d}/${m}` }
 function fmtLong(iso: string): string { const [, m, d] = iso.split('-'); return `${Number(d)} ${MONTH_LONG[Number(m) - 1]}` }
-function dayOfYear(iso: string, year: number): number { return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.UTC(year, 0, 1)) / 86_400_000) }
-function pct(iso: string, year: number): number { return (dayOfYear(iso, year) / 365) * 100 }
 function initialsOf(name: string): string { return name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() }
 
 export function rosterOf(property: ShiftPreviewProperty): ShiftPerson[] {
@@ -36,86 +33,60 @@ function periodsByPerson(periods: VacationPeriod[], staffProfileId: string, peri
   return slots
 }
 
-interface Tooltip { x: number; y: number; title: string; subtitle: string }
-
-function BarTooltip({ tooltip }: { tooltip: Tooltip | null }) {
-  if (!tooltip) return null
-  return <div className="shift-vacation-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-    <strong>{tooltip.title}</strong><span>{tooltip.subtitle}</span>
-  </div>
-}
-
-function VacationTimeline({ people, periods, year }: { people: ShiftPerson[]; periods: VacationPeriod[]; year: number }) {
-  const [tooltip, setTooltip] = useState<Tooltip | null>(null)
+/**
+ * Team-wide "Piano Ferie" view: one row per person, grouped by status --
+ * replaces an earlier month-timeline + per-period-index table that only
+ * worked at desktop width (both required horizontal scrolling on a phone,
+ * and the table's summary chips at the bottom just repeated the same "da
+ * pianificare" count already visible in each row). A plain vertical list
+ * needs no horizontal scroll at any width.
+ */
+function VacationPeopleList({ people, periods, settings }: { people: ShiftPerson[]; periods: VacationPeriod[]; settings: VacationSettings }) {
   const today = todayIso()
-  const todayPct = pct(today, year)
-
-  return <div className="shift-vacation-timeline-scroll">
-    <div className="shift-vacation-timeline">
-      <div className="shift-vacation-months-row">
-        <div className="shift-vacation-name-spacer" />
-        <div className="shift-vacation-months">{MONTH_NAMES.map((month) => <span key={month}>{month}</span>)}</div>
-      </div>
-      {people.map((person) => {
-        const own = periods.filter((period) => period.staffProfileId === person.id)
-        return <div className="shift-vacation-row" key={person.id}>
-          <div className="shift-vacation-person">
-            <span className="shift-avatar">{person.initials || initialsOf(person.name)}</span>
-            <span className="shift-vacation-person-copy"><strong>{person.name}</strong><small>{person.jobTitle}</small></span>
-          </div>
-          <div className="shift-vacation-track">
-            {own.map((period) => {
-              const status = displayVacationStatus(period, today)
-              return <button
-                key={period.id ?? `${period.staffProfileId}-${period.periodIndex}`}
-                type="button"
-                className={`shift-vacation-bar is-${status}`}
-                style={{ left: `${pct(period.start, year)}%`, width: `${Math.max(pct(period.end, year) - pct(period.start, year), 1.6)}%` }}
-                onMouseEnter={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect()
-                  setTooltip({ x: rect.left + rect.width / 2, y: rect.top - 10, title: `${fmtLong(period.start)} – ${fmtLong(period.end)}`, subtitle: `${person.name} · ${STATUS_LABEL[status]}` })
-                }}
-                onMouseMove={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect()
-                  setTooltip((current) => current ? { ...current, x: rect.left + rect.width / 2, y: rect.top - 10 } : current)
-                }}
-                onMouseLeave={() => setTooltip(null)}
-              >{fmtShort(period.start)}–{fmtShort(period.end)}</button>
-            })}
-            <div className="shift-vacation-today-line" style={{ left: `${todayPct}%` }} />
-          </div>
+  return <div className="shift-vacation-people-list">
+    {people.map((person) => {
+      const slots = periodsByPerson(periods, person.id, settings.periodsPerYear)
+      const taken: VacationPeriod[] = []
+      const confirmed: VacationPeriod[] = []
+      const pending: VacationPeriod[] = []
+      const missingIndexes: number[] = []
+      slots.forEach((period, index) => {
+        if (!period) { missingIndexes.push(index); return }
+        const status = displayVacationStatus(period, today)
+        if (status === 'taken') taken.push(period)
+        else if (status === 'confirmed') confirmed.push(period)
+        else if (status === 'pending') pending.push(period)
+      })
+      return <div className="shift-vacation-person-card" key={person.id}>
+        <div className="shift-vacation-person">
+          <span className="shift-avatar">{person.initials || initialsOf(person.name)}</span>
+          <span className="shift-vacation-person-copy"><strong>{person.name}</strong><small>{person.jobTitle}</small></span>
         </div>
-      })}
-    </div>
-    <BarTooltip tooltip={tooltip} />
-  </div>
-}
-
-function VacationRecapTable({ people, periods, settings }: { people: ShiftPerson[]; periods: VacationPeriod[]; settings: VacationSettings }) {
-  const today = todayIso()
-  const missingByPerson = people.map((person) => {
-    const slots = periodsByPerson(periods, person.id, settings.periodsPerYear)
-    return { person, slots, missingCount: slots.filter((slot) => slot == null).length }
-  })
-  return <div className="shift-vacation-recap">
-    <div className="shift-table-scroll" tabIndex={0}>
-      <table className="shift-vacation-table">
-        <thead><tr><th>Dipendente</th>{Array.from({ length: settings.periodsPerYear }, (_, index) => <th key={index}>Periodo {index + 1}</th>)}</tr></thead>
-        <tbody>{missingByPerson.map(({ person, slots }) => <tr key={person.id}>
-          <td><div className="shift-vacation-row-person"><span className="shift-avatar" style={{ width: 24, height: 24, fontSize: 10 }}>{person.initials || initialsOf(person.name)}</span><strong>{person.name}</strong></div></td>
-          {slots.map((period, index) => <td key={index}>
-            {period == null
-              ? <span className="shift-vacation-pill is-missing">Da pianificare</span>
-              : <span className={`shift-vacation-pill is-${displayVacationStatus(period, today)}`}>{fmtShort(period.start)} – {fmtShort(period.end)}</span>}
-          </td>)}
-        </tr>)}</tbody>
-      </table>
-    </div>
-    <div className="shift-vacation-missing-summary">
-      {missingByPerson.filter(({ missingCount }) => missingCount > 0).map(({ person, missingCount }) => (
-        <span className="shift-vacation-missing-chip" key={person.id}>{person.name.split(' ')[0]}: {missingCount} da pianificare</span>
-      ))}
-    </div>
+        <div className="shift-vacation-person-groups">
+          {taken.length > 0 ? <div className="shift-vacation-group">
+            <span className="shift-vacation-group-label">Ferie godute</span>
+            <div className="shift-vacation-group-pills">{taken.map((period) => <span key={period.id} className="shift-vacation-pill is-taken">{fmtLong(period.start)} – {fmtLong(period.end)}</span>)}</div>
+          </div> : null}
+          {confirmed.length > 0 ? <div className="shift-vacation-group">
+            <span className="shift-vacation-group-label">Confermate</span>
+            <div className="shift-vacation-group-pills">{confirmed.map((period) => <span key={period.id} className="shift-vacation-pill is-confirmed">{fmtLong(period.start)} – {fmtLong(period.end)}</span>)}</div>
+          </div> : null}
+          {pending.length > 0 ? <div className="shift-vacation-group">
+            <span className="shift-vacation-group-label">In attesa di conferma</span>
+            <div className="shift-vacation-group-pills">{pending.map((period) => <span key={period.id} className="shift-vacation-pill is-pending">{fmtLong(period.start)} – {fmtLong(period.end)}</span>)}</div>
+          </div> : null}
+          {missingIndexes.length > 0 ? <div className="shift-vacation-group">
+            <span className="shift-vacation-group-label">Da selezionare</span>
+            <div className="shift-vacation-group-pills">{missingIndexes.map((index) => <span key={index} className="shift-vacation-pill is-missing">Periodo {index + 1}</span>)}</div>
+          </div> : null}
+        </div>
+        <div className="shift-vacation-person-remaining">
+          {missingIndexes.length > 0
+            ? <span>{missingIndexes.length} {missingIndexes.length === 1 ? 'periodo rimanente' : 'periodi rimanenti'} da pianificare</span>
+            : <span className="is-complete">Tutti i periodi pianificati</span>}
+        </div>
+      </div>
+    })}
   </div>
 }
 
@@ -130,7 +101,6 @@ function MyVacationPanel({ property, periods, settings, currentStaffProfileId, o
 }) {
   const roster = useMemo(() => rosterOf(property), [property])
   const me = roster.find((person) => person.id === currentStaffProfileId)
-  const year = new Date().getFullYear()
   const [panelOpenFor, setPanelOpenFor] = useState<number | null>(null)
   const [start, setStart] = useState(() => todayIso())
   const [end, setEnd] = useState(() => todayIso())
@@ -185,10 +155,6 @@ function MyVacationPanel({ property, periods, settings, currentStaffProfileId, o
           {status === 'missing' && onRequestPeriod ? <button type="button" className="shift-code-form-cancel" onClick={() => openFor(index)}>Richiedi questo periodo</button> : null}
         </div>
       })}
-    </div>
-
-    <div className="shift-vacation-mini-timeline">
-      <VacationTimeline people={[me]} periods={periods.filter((period) => period.staffProfileId === me.id)} year={year} />
     </div>
 
     {panelOpenFor != null ? <div className="shift-vacation-request-panel">
@@ -281,7 +247,6 @@ export interface VacationPlannerProps {
 export function VacationPlanner({ property, periods, settings, currentStaffProfileId, canManage, onRequestPeriod, onDecidePeriod, onSaveSettings }: VacationPlannerProps) {
   const [tab, setTab] = useState<'team' | 'mine' | 'admin'>('team')
   const roster = useMemo(() => rosterOf(property), [property])
-  const year = new Date().getFullYear()
   const pendingCount = periods.filter((period) => period.status === 'pending').length
 
   const tabs: Array<{ id: typeof tab; label: string }> = [
@@ -306,8 +271,7 @@ export function VacationPlanner({ property, periods, settings, currentStaffProfi
     </div>
 
     {tab === 'team' ? <div className="shift-vacation-pane">
-      <VacationTimeline people={roster} periods={periods} year={year} />
-      <VacationRecapTable people={roster} periods={periods} settings={settings} />
+      <VacationPeopleList people={roster} periods={periods} settings={settings} />
     </div> : null}
     {tab === 'mine' ? <div className="shift-vacation-pane">
       <MyVacationPanel property={property} periods={periods} settings={settings} currentStaffProfileId={currentStaffProfileId} onRequestPeriod={onRequestPeriod} />
