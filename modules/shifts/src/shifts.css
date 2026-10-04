@@ -426,8 +426,8 @@
   min-width: auto;
 }
 .shift-status-chip.is-draft {
-  background: #fff0cf;
-  color: #9a6815;
+  background: #fef9c3;
+  color: #a16207;
   padding: 5px 12px;
 }
 .shift-calendar-help {
@@ -1221,13 +1221,13 @@
 .shift-vacation-tabbar { display: inline-flex; gap: 3px; background: var(--shift-soft); border: 1px solid var(--shift-line); border-radius: 12px; padding: 3px; width: fit-content; }
 .shift-vacation-tabbar button { font: inherit; font-size: 13px; font-weight: 700; color: var(--shift-muted); background: transparent; border: 0; border-radius: 9px; padding: 9px 16px; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
 .shift-vacation-tabbar button[aria-selected="true"] { background: var(--shift-panel); color: var(--shift-ink); box-shadow: 0 1px 2px rgba(22,24,43,0.08); }
-.shift-vacation-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #b9770e; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 2px; }
+.shift-vacation-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #a16207; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 2px; }
 .shift-vacation-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--shift-muted); font-weight: 600; }
 .shift-vacation-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .shift-vacation-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .shift-vacation-legend i.is-taken { background: var(--shift-muted); opacity: .55; }
 .shift-vacation-legend i.is-confirmed { background: #1f8f5f; }
-.shift-vacation-legend i.is-pending { background: #b9770e; }
+.shift-vacation-legend i.is-pending { background: #a16207; }
 .shift-vacation-legend i.is-missing { border: 1.5px dashed var(--shift-accent); background: transparent; }
 .shift-vacation-pane { display: grid; gap: 16px; animation: shift-vacation-fade-rise 220ms cubic-bezier(.22,1,.36,1); }
 @keyframes shift-vacation-fade-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -1247,7 +1247,7 @@
 .shift-vacation-pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
 .shift-vacation-pill.is-taken { background: var(--shift-soft); color: var(--shift-muted); }
 .shift-vacation-pill.is-confirmed { background: #e1f3ea; color: #1f8f5f; }
-.shift-vacation-pill.is-pending { background: #fbf0dc; color: #b9770e; }
+.shift-vacation-pill.is-pending { background: #fef9c3; color: #a16207; }
 .shift-vacation-pill.is-missing { background: var(--shift-accent-soft); color: var(--shift-accent); }
 .shift-vacation-person-remaining { font-size: 11.5px; font-weight: 700; color: var(--shift-accent); border-top: 1px solid var(--shift-line); padding-top: 10px; }
 .shift-vacation-person-remaining .is-complete { color: #1f8f5f; }
