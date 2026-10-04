@@ -12,8 +12,6 @@ interface ScheduleGridProps {
 }
 
 interface CellPos { personIdx: number; dateIdx: number }
-interface SelectionBounds { rMin: number; rMax: number; cMin: number; cMax: number }
-interface ClipboardData { rows: number; cols: number; codes: string[][] }
 
 const WEEKDAY = new Intl.DateTimeFormat('it-IT', { weekday: 'short', timeZone: 'UTC' })
 
@@ -21,17 +19,27 @@ function fallbackDates(length: number) {
   return Array.from({ length }, (_, index) => `2026-09-${String(index + 1).padStart(2, '0')}`)
 }
 
+function cellKey(personIdx: number, dateIdx: number) {
+  return `${personIdx}:${dateIdx}`
+}
+
+function parseCellKey(key: string): CellPos {
+  const [personIdx, dateIdx] = key.split(':')
+  return { personIdx: Number(personIdx), dateIdx: Number(dateIdx) }
+}
+
 export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange }: ScheduleGridProps) {
   const [compactPeople, setCompactPeople] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set())
-  // Shift-click range selection, so several cells can be re-assigned in one
-  // action instead of one dropdown at a time; Ctrl/Cmd+C and +V copy the
-  // selected codes and paste them (as a block, or filled across a bigger
-  // selection from a single copied cell) starting at the current selection's
-  // top-left corner.
-  const [selStart, setSelStart] = useState<CellPos | null>(null)
-  const [selEnd, setSelEnd] = useState<CellPos | null>(null)
-  const [clipboard, setClipboard] = useState<ClipboardData | null>(null)
+  // Shift-click adds exactly the clicked cell to the selection -- never a
+  // filled rectangle between two distant clicks -- so several (possibly
+  // scattered) cells can be re-assigned in one action instead of one dropdown
+  // at a time. Ctrl/Cmd+C and +V copy the selected cells' codes and paste
+  // them back (a single copied code "fills" every target cell; several
+  // copied codes are replayed onto the target cells in the same top-to-
+  // bottom, left-to-right order).
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
+  const [clipboard, setClipboard] = useState<string[] | null>(null)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)')
@@ -48,8 +56,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   // all, so any row/column indices held in the selection would point at
   // different cells than the ones the user actually selected.
   useEffect(() => {
-    setSelStart(null)
-    setSelEnd(null)
+    setSelectedKeys(new Set())
   }, [view, unit.id])
 
   function togglePerson(personId: string) {
@@ -67,21 +74,12 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   const visibleDates = view === 'week' ? dates.slice(0, 7) : dates
   const people = unit.people
 
-  function bounds(): SelectionBounds | null {
-    if (!selStart || !selEnd) return null
-    return {
-      rMin: Math.min(selStart.personIdx, selEnd.personIdx),
-      rMax: Math.max(selStart.personIdx, selEnd.personIdx),
-      cMin: Math.min(selStart.dateIdx, selEnd.dateIdx),
-      cMax: Math.max(selStart.dateIdx, selEnd.dateIdx),
-    }
-  }
-  const selection = bounds()
-  const selectionSize = selection ? (selection.rMax - selection.rMin + 1) * (selection.cMax - selection.cMin + 1) : 0
-
+  const selectionSize = selectedKeys.size
+  // The selection ring/tint only shows once there are 2+ cells in play --
+  // a single plain click just opens that cell's own dropdown as always, so
+  // marking it as "selected" too would only add a redundant ring around it.
   function isSelected(personIdx: number, dateIdx: number) {
-    if (!selection) return false
-    return personIdx >= selection.rMin && personIdx <= selection.rMax && dateIdx >= selection.cMin && dateIdx <= selection.cMax
+    return selectionSize > 1 && selectedKeys.has(cellKey(personIdx, dateIdx))
   }
 
   function codeAt(personIdx: number, dateIdx: number): string {
@@ -101,79 +99,73 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
 
   function handleCellClick(event: MouseEvent, personIdx: number, dateIdx: number) {
     if (!editable) return
-    if (event.shiftKey && selStart) {
-      // Extend the existing selection instead of opening this cell's own
-      // editor -- a shift-click means "add to the range", never "edit just
-      // this one cell".
+    const key = cellKey(personIdx, dateIdx)
+    if (event.shiftKey) {
+      // Toggle exactly this cell in/out of the selection -- never fill in
+      // everything between it and a previous click, however far apart they
+      // are -- so this still has to block the cell's own dropdown from
+      // opening while shift is held.
       event.preventDefault()
       event.stopPropagation()
-      setSelEnd({ personIdx, dateIdx })
+      setSelectedKeys((current) => {
+        const next = new Set(current)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+        return next
+      })
       return
     }
-    setSelStart({ personIdx, dateIdx })
-    setSelEnd({ personIdx, dateIdx })
+    setSelectedKeys(new Set([key]))
     // No stopPropagation here: a plain click still lets ShiftSelect's own
     // trigger open its dropdown exactly as before, so single-cell editing is
     // unchanged.
   }
 
+  function orderedSelection(): CellPos[] {
+    return Array.from(selectedKeys, parseCellKey).sort((a, b) => a.personIdx - b.personIdx || a.dateIdx - b.dateIdx)
+  }
+
   function applyToSelection(code: string) {
-    if (!selection || !onAssignmentChange) return
-    for (let r = selection.rMin; r <= selection.rMax; r++) {
-      for (let c = selection.cMin; c <= selection.cMax; c++) {
-        if (isLockedAt(r, c)) continue
-        const person = people[r]
-        const date = visibleDates[c]
-        if (!person || date == null) continue
-        onAssignmentChange(person.id, date, code)
-      }
+    if (!onAssignmentChange || selectedKeys.size === 0) return
+    for (const { personIdx, dateIdx } of orderedSelection()) {
+      if (isLockedAt(personIdx, dateIdx)) continue
+      const person = people[personIdx]
+      const date = visibleDates[dateIdx]
+      if (!person || date == null) continue
+      onAssignmentChange(person.id, date, code)
     }
   }
 
   function copySelection() {
-    if (!selection) return
-    const rows = selection.rMax - selection.rMin + 1
-    const cols = selection.cMax - selection.cMin + 1
-    const codes: string[][] = []
-    for (let r = 0; r < rows; r++) {
-      const row: string[] = []
-      for (let c = 0; c < cols; c++) row.push(codeAt(selection.rMin + r, selection.cMin + c))
-      codes.push(row)
-    }
-    setClipboard({ rows, cols, codes })
+    if (selectedKeys.size === 0) return
+    setClipboard(orderedSelection().map(({ personIdx, dateIdx }) => codeAt(personIdx, dateIdx)))
   }
 
   function pasteSelection() {
-    if (!clipboard || !selection || !onAssignmentChange) return
-    // A single copied cell fills the whole current selection (spreadsheet
-    // "fill" behavior); a copied block pastes at the selection's top-left,
-    // clipped to the visible grid.
-    const fill = clipboard.rows === 1 && clipboard.cols === 1
-    const rows = fill ? selection.rMax - selection.rMin + 1 : clipboard.rows
-    const cols = fill ? selection.cMax - selection.cMin + 1 : clipboard.cols
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const personIdx = selection.rMin + r
-        const dateIdx = selection.cMin + c
-        const person = people[personIdx]
-        const date = visibleDates[dateIdx]
-        if (!person || date == null) continue
-        if (isLockedAt(personIdx, dateIdx)) continue
-        const code = fill ? clipboard.codes[0]![0]! : clipboard.codes[r % clipboard.rows]![c % clipboard.cols]!
-        onAssignmentChange(person.id, date, code)
-      }
-    }
+    if (!clipboard || !onAssignmentChange || selectedKeys.size === 0) return
+    // A single copied cell fills every selected cell (spreadsheet "fill"
+    // behavior); several copied cells are replayed onto the selected cells
+    // in the same top-to-bottom, left-to-right order, wrapping if there are
+    // more targets than copied codes.
+    const fill = clipboard.length === 1
+    orderedSelection().forEach(({ personIdx, dateIdx }, index) => {
+      if (isLockedAt(personIdx, dateIdx)) return
+      const person = people[personIdx]
+      const date = visibleDates[dateIdx]
+      if (!person || date == null) return
+      const code = fill ? clipboard[0]! : clipboard[index % clipboard.length]!
+      onAssignmentChange(person.id, date, code)
+    })
   }
 
   function handleGridKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (!editable) return
     if (event.key === 'Escape') {
-      setSelStart(null)
-      setSelEnd(null)
+      setSelectedKeys(new Set())
       return
     }
     const mod = event.ctrlKey || event.metaKey
-    if (!mod || !selection) return
+    if (!mod || selectedKeys.size === 0) return
     const key = event.key.toLowerCase()
     if (key === 'c') {
       event.preventDefault()
