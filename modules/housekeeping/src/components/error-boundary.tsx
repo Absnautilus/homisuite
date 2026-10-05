@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { Button } from '@/components/ui/button'
 
 export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   override state: { error: Error | null } = { error: null }
@@ -27,13 +28,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
           <p className="mt-2 text-xs leading-relaxed text-muted">
             {this.state.error.message || 'Errore imprevisto.'} Ricarica la pagina; se continua, segnalalo così com'è.
           </p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="mt-5 w-full cursor-pointer rounded-sm bg-accent px-4 py-2.5 text-sm font-bold text-accent-ink hover:brightness-[1.06]"
-          >
+          <Button variant="primary" className="mt-5 w-full" onClick={() => window.location.reload()}>
             Ricarica
-          </button>
+          </Button>
         </div>
       </div>
     )

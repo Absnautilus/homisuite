@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { Button } from '@/components/ui/button'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { getHkPortalTarget } from '@/lib/portal-target'
 
@@ -93,24 +94,12 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
         <p id={titleId} className="font-head text-[0.9375rem] font-extrabold text-foreground">{pending.title}</p>
         <p id={descriptionId} className="mt-2 text-xs leading-relaxed text-muted">{pending.description}</p>
         <div className="mt-5 flex gap-2">
-          <button
-            ref={cancelButtonRef}
-            type="button"
-            onClick={() => settle(false)}
-            className="h-8 flex-1 cursor-pointer rounded-sm border border-line-strong bg-surface px-3 text-xs font-bold text-foreground/70 hover:bg-surface-2"
-          >
+          <Button ref={cancelButtonRef} variant="secondary" size="sm" className="flex-1" onClick={() => settle(false)}>
             {t('staff.confirm.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={() => settle(true)}
-            className={
-              'h-8 flex-1 cursor-pointer rounded-sm px-3 text-xs font-bold ' +
-              (pending.tone === 'neutral' ? 'bg-accent text-accent-ink hover:brightness-[1.06]' : 'border border-bad-ink/25 bg-bad-bg text-bad-ink hover:bg-bad-ink/15')
-            }
-          >
+          </Button>
+          <Button variant={pending.tone === 'neutral' ? 'primary' : 'danger'} size="sm" className="flex-1" onClick={() => settle(true)}>
             {pending.confirmLabel ?? t('staff.confirm.confirm')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

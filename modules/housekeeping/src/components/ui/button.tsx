@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/cn'
@@ -25,9 +26,11 @@ const sizes: Record<Size, string> = {
 const base =
   'inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm font-bold transition-[filter,background-color,border-color,box-shadow] disabled:cursor-not-allowed cursor-pointer'
 
-export function Button({ variant = 'primary', size = 'md', className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
-  return <button className={cn(base, variants[variant], sizes[size], className)} {...props} />
-}
+export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }>(
+  function Button({ variant = 'primary', size = 'md', className, ...props }, ref) {
+    return <button ref={ref} className={cn(base, variants[variant], sizes[size], className)} {...props} />
+  },
+)
 
 export function LinkButton({ to, variant = 'primary', size = 'md', className, children }: { to: string; variant?: Variant; size?: Size; className?: string; children: ReactNode }) {
   return <Link to={to} className={cn(base, variants[variant], sizes[size], className)}>{children}</Link>
