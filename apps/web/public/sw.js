@@ -12,6 +12,21 @@
 
 const NEW_REQUEST_AUTO_CLOSE_MS = 3_000
 
+// Without this, a new deploy's service worker sits "waiting" until every tab
+// a client controls is closed -- fine for a desktop browser tab someone
+// actually closes, but an Android app installed to the home screen is almost
+// never fully closed (backgrounding it doesn't count), so it can be stuck
+// running whatever version of this file was installed, indefinitely, even
+// though a newer one (with this very fix, or any future push-handling fix)
+// has already been deployed. skipWaiting + clients.claim make a newly
+// installed worker take over immediately instead of waiting for that.
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 self.addEventListener('push', (event) => {
   let data = { title: 'Homisuite', body: 'Nuova richiesta', data: {} }
   try {
