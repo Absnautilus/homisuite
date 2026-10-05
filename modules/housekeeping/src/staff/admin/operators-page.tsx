@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardBody } from '@/components/ui/card'
 import { LinkButton } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableFrame, TableHead, TableHeaderCell, TableRow } from '@/components/ui/table'
 import { listStaff, setStaffActive, type OperatorSummary } from '@/lib/admin-api'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { TranslationKey } from '@/lib/i18n/dictionaries'
@@ -92,18 +93,18 @@ export function OperatorsPage({
 
       {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-        <table aria-label={t('staff.operators.title')} className="w-full min-w-max text-sm">
-          <thead className="bg-surface-2 text-left text-xs uppercase text-muted">
+      <TableFrame>
+        <Table aria-label={t('staff.operators.title')}>
+          <TableHead>
             <tr>
-              <th className="px-4 py-2">{t('staff.operators.colName')}</th>
-              <th className="px-4 py-2">{t('staff.operators.colRole')}</th>
-              <th className="px-4 py-2">{t('staff.operators.colAccess')}</th>
-              <th className="px-4 py-2">{t('staff.operators.colStatus')}</th>
-              <th className="px-4 py-2" />
+              <TableHeaderCell>{t('staff.operators.colName')}</TableHeaderCell>
+              <TableHeaderCell>{t('staff.operators.colRole')}</TableHeaderCell>
+              <TableHeaderCell>{t('staff.operators.colAccess')}</TableHeaderCell>
+              <TableHeaderCell>{t('staff.operators.colStatus')}</TableHeaderCell>
+              <TableHeaderCell />
             </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
+          </TableHead>
+          <TableBody>
             {staff?.map((person) => {
               // grant-housekeeping-access always inserts role: 'admin' for a
               // Team-bridged member regardless of their real Hotsflow role
@@ -125,16 +126,16 @@ export function OperatorsPage({
               // and nobody deactivates a master from this screen
               const canToggle = !platformStaffManagement && (person.role === 'operatore' || (person.role === 'admin' && isMaster))
               return (
-                <tr key={person.id}>
-                  <td className="px-4 py-2 font-medium text-foreground">{person.name}</td>
-                  <td className="px-4 py-2 text-muted">{roleLabel}</td>
-                  <td className="px-4 py-2 text-muted">{person.login_username ?? <span className="text-muted">{t('staff.operators.accessEmail')}</span>}</td>
-                  <td className="px-4 py-2">
+                <TableRow key={person.id}>
+                  <TableCell className="font-medium text-foreground">{person.name}</TableCell>
+                  <TableCell className="text-muted">{roleLabel}</TableCell>
+                  <TableCell className="text-muted">{person.login_username ?? <span className="text-muted">{t('staff.operators.accessEmail')}</span>}</TableCell>
+                  <TableCell>
                     <Badge className={person.active ? 'bg-ok-bg text-ok-ink' : undefined}>
                       {person.active ? t('staff.operators.statusActive') : t('staff.operators.statusInactive')}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-2 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     {canToggle && (
                       <button
                         type="button"
@@ -144,13 +145,13 @@ export function OperatorsPage({
                         {person.active ? t('staff.operators.deactivate') : t('staff.operators.reactivate')}
                       </button>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableFrame>
     </div>
   )
 }

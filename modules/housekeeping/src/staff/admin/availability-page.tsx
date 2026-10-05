@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { AutoText } from '@/components/auto-text'
+import { Table, TableBody, TableCell, TableFrame, TableHead, TableHeaderCell, TableRow } from '@/components/ui/table'
 import { fetchItemAvailability, type ItemAvailability } from '@/lib/admin-api'
 import { getErrorMessage } from '@/lib/errors'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -30,39 +31,39 @@ export function AvailabilityPage({ hotelId }: { hotelId: string }) {
       ) : items.length === 0 ? (
         <p className="text-sm text-muted">{t('staff.availability.empty')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-          <table aria-label={t('staff.availability.title')} className="w-full min-w-max text-sm">
-            <thead className="bg-surface-2 text-left text-xs uppercase text-muted">
+        <TableFrame>
+          <Table aria-label={t('staff.availability.title')}>
+            <TableHead>
               <tr>
-                <th className="px-4 py-2">{t('staff.availability.colItem')}</th>
-                <th className="px-4 py-2">{t('staff.availability.colTotal')}</th>
-                <th className="px-4 py-2">{t('staff.availability.colRemaining')}</th>
-                <th className="px-4 py-2">{t('staff.availability.colRooms')}</th>
+                <TableHeaderCell>{t('staff.availability.colItem')}</TableHeaderCell>
+                <TableHeaderCell>{t('staff.availability.colTotal')}</TableHeaderCell>
+                <TableHeaderCell>{t('staff.availability.colRemaining')}</TableHeaderCell>
+                <TableHeaderCell>{t('staff.availability.colRooms')}</TableHeaderCell>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
+            </TableHead>
+            <TableBody>
               {items.map((it) => (
-                <tr key={it.requestTypeId}>
-                  <td className="px-4 py-2 font-medium text-foreground">
+                <TableRow key={it.requestTypeId}>
+                  <TableCell className="font-medium text-foreground">
                     <AutoText text={it.name} translations={it.name_i18n} />
                     {it.categoryName && (
                       <span className="ml-1.5 text-xs text-muted">
                         · <AutoText text={it.categoryName} translations={it.categoryName_i18n} />
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-2 tabular-nums text-muted">{it.totalQuantity}</td>
-                  <td className="px-4 py-2">
+                  </TableCell>
+                  <TableCell className="tabular-nums text-muted">{it.totalQuantity}</TableCell>
+                  <TableCell>
                     <Badge className={it.remaining === 0 ? 'bg-bad-bg text-bad-ink' : 'bg-ok-bg text-ok-ink'}>{it.remaining}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-muted">
+                  </TableCell>
+                  <TableCell className="text-muted">
                     {it.rooms.length === 0 ? '—' : it.rooms.map((r) => t('staff.newRequest.room') + ' ' + r).join(', ')}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableFrame>
       )}
     </div>
   )

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FieldGroup, Input, Label, Select } from '@/components/ui/field'
 import { FileInput } from '@/components/ui/file-input'
+import { Table, TableBody, TableCell, TableFrame, TableHead, TableHeaderCell, TableRow } from '@/components/ui/table'
 import { DatePicker, TimePicker } from '@homisuite/ui'
 import type { Room } from '@/lib/admin-api'
 import { createStay } from '@/lib/stays-api'
@@ -146,36 +147,36 @@ export function OperaImportPanel({ hotelId, rooms, onImported }: { hotelId: stri
 
           {drafts && drafts.length > 0 && (
             <div className="space-y-3">
-              <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-                <table className="w-full min-w-max text-sm">
-                  <thead className="bg-surface-2 text-left text-xs uppercase text-muted">
+              <TableFrame>
+                <Table>
+                  <TableHead>
                     <tr>
-                      <th className="px-3 py-2">
+                      <TableHeaderCell>
                         <Checkbox
                           checked={allSelected}
                           onCheckedChange={toggleAll}
                           disabled={eligibleDrafts.length === 0}
                           aria-label={t('staff.stays.importSelectAll')}
                         />
-                      </th>
-                      <th className="px-3 py-2">{t('staff.stays.room')}</th>
-                      <th className="px-3 py-2">{t('staff.stays.importGuestName')}</th>
-                      <th className="px-3 py-2">{t('staff.stays.checkIn')}</th>
-                      <th className="px-3 py-2">{t('staff.stays.checkOut')}</th>
+                      </TableHeaderCell>
+                      <TableHeaderCell>{t('staff.stays.room')}</TableHeaderCell>
+                      <TableHeaderCell>{t('staff.stays.importGuestName')}</TableHeaderCell>
+                      <TableHeaderCell>{t('staff.stays.checkIn')}</TableHeaderCell>
+                      <TableHeaderCell>{t('staff.stays.checkOut')}</TableHeaderCell>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
+                  </TableHead>
+                  <TableBody>
                     {drafts.map((draft) => (
-                      <tr key={draft.key} className={draft.include ? undefined : 'opacity-50'}>
-                        <td className="px-3 py-2">
+                      <TableRow key={draft.key} className={draft.include ? undefined : 'opacity-50'}>
+                        <TableCell>
                           <Checkbox
                             checked={draft.include}
                             disabled={!draft.roomId}
                             onCheckedChange={(checked) => updateDraft(draft.key, { include: checked })}
                             aria-label={t('staff.stays.importIncludeRow', { name: draft.guestName })}
                           />
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell>
                           <Select
                             value={draft.roomId}
                             onChange={(e) => updateDraft(draft.key, { roomId: e.target.value, include: Boolean(e.target.value) })}
@@ -188,27 +189,27 @@ export function OperaImportPanel({ hotelId, rooms, onImported }: { hotelId: stri
                               </option>
                             ))}
                           </Select>
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell>
                           <Input value={draft.guestName} onChange={(e) => updateDraft(draft.key, { guestName: e.target.value })} />
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex gap-1.5">
                             <DatePicker ariaLabel={t('staff.stays.checkIn')} value={splitLocalInputValue(draft.checkIn).date} onChange={(date) => updateDraft(draft.key, { checkIn: joinLocalInputValue(date, splitLocalInputValue(draft.checkIn).time) })} />
                             <TimePicker ariaLabel={`${t('staff.stays.checkIn')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(draft.checkIn).time} onChange={(time) => updateDraft(draft.key, { checkIn: joinLocalInputValue(splitLocalInputValue(draft.checkIn).date, time) })} />
                           </div>
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex gap-1.5">
                             <DatePicker ariaLabel={t('staff.stays.checkOut')} value={splitLocalInputValue(draft.checkOut).date} onChange={(date) => updateDraft(draft.key, { checkOut: joinLocalInputValue(date, splitLocalInputValue(draft.checkOut).time) })} />
                             <TimePicker ariaLabel={`${t('staff.stays.checkOut')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(draft.checkOut).time} onChange={(time) => updateDraft(draft.key, { checkOut: joinLocalInputValue(splitLocalInputValue(draft.checkOut).date, time) })} />
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+              </TableFrame>
               <div className="flex justify-end">
                 <Button type="button" disabled={submitting || includedCount === 0} onClick={onConfirm}>
                   {submitting ? t('staff.stays.importSubmitPending') : t('staff.stays.importSubmit', { count: includedCount })}
