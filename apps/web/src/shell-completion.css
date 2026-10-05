@@ -113,6 +113,13 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .module-access-subrow { padding-left: 16px; }
 .form-field { display: grid; gap: 6px; }
 .form-field > span { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+/* Required fields get a marker purely from the native `required` attribute
+   already on the input/select/textarea -- no per-field prop to remember to
+   set, so it can never drift out of sync with what's actually validated.
+   Housekeeping's own Label does the same thing explicitly (a `required`
+   prop rendering its own asterisk); this is the plain-CSS modules' and
+   Turni's equivalent. */
+.form-field > span:has(~ :required)::after { content: ' *'; color: var(--red-ink); }
 /* font-size overridden back up to 16px after `font: inherit` -- iOS Safari
    (including installed home-screen PWAs) force-zooms the page on focus for
    any editable text input under 16px, with no pinch gesture available to
