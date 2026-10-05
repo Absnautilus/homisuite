@@ -1,0 +1,60 @@
+/* Ported from Housekeeping's own components/ui/icon-button.tsx -- same
+   tone/filled/active/shape system, now the one implementation both the
+   Shell and Housekeeping render through. Each tone reads its ink/bg from
+   whichever name the host already uses for that semantic color (Housekeeping's
+   --ok-ink, --wait-ink, --bad-ink, --terracotta-ink), with a literal fallback
+   matching that same value so this still renders correctly without them. */
+.ui-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+  background: transparent;
+  color: var(--muted, #767aa0);
+  border-radius: 12px;
+  transition: color 150ms ease, background 150ms ease;
+}
+.ui-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.ui-icon-btn-md {
+  height: 44px;
+  width: 44px;
+}
+.ui-icon-btn-lg {
+  height: 56px;
+  width: 56px;
+}
+.ui-icon-btn.is-circle {
+  border-radius: 999px;
+}
+.ui-icon-btn-icon {
+  width: 17px;
+  height: 17px;
+}
+.ui-icon-btn-lg .ui-icon-btn-icon {
+  width: 19px;
+  height: 19px;
+}
+
+.ui-icon-btn.tone-neutral:hover:not(:disabled) { color: var(--accent, #9c4fc7); }
+.ui-icon-btn.tone-hintPositive:hover:not(:disabled),
+.ui-icon-btn.tone-ok:hover:not(:disabled) { color: var(--ok-ink, #1e7a46); }
+.ui-icon-btn.tone-hintCaution:hover:not(:disabled) { color: var(--terracotta-ink, #974c27); }
+.ui-icon-btn.tone-warning:hover:not(:disabled) { color: var(--wait-ink, #a16207); }
+.ui-icon-btn.tone-danger:hover:not(:disabled) { color: var(--bad-ink, #b23a3a); }
+
+.ui-icon-btn.is-active.tone-neutral { background: var(--accent-soft, #f4e8fa); color: var(--accent, #9c4fc7); }
+.ui-icon-btn.is-active.tone-hintPositive,
+.ui-icon-btn.is-active.tone-ok { background: var(--ok-bg, #dff6e8); color: var(--ok-ink, #1e7a46); }
+.ui-icon-btn.is-active.tone-hintCaution { background: var(--terracotta-bg, #fbe6d8); color: var(--terracotta-ink, #974c27); }
+.ui-icon-btn.is-active.tone-warning { background: var(--wait-bg, #fef9c3); color: var(--wait-ink, #a16207); }
+.ui-icon-btn.is-active.tone-danger { background: var(--bad-bg, #fde8e8); color: var(--bad-ink, #b23a3a); }
+.ui-icon-btn.is-active:hover:not(:disabled) { filter: brightness(0.95); }
+
+.ui-icon-btn.is-filled { background: var(--accent, #9c4fc7); color: var(--accent-ink, #fff); }
+.ui-icon-btn.is-filled:hover:not(:disabled) { filter: brightness(1.06); color: var(--accent-ink, #fff); }
+.ui-icon-btn.is-filled:active:not(:disabled) { filter: brightness(.92); }

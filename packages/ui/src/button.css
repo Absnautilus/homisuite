@@ -1,14 +1,16 @@
 /* Mirrors apps/web's existing `.btn`/`.btn-primary`/`.btn-secondary`/
    `.btn-danger` pixel-for-pixel (so adopting <Button> is a no-visual-diff
    swap for existing call sites), plus the disabled and focus-visible states
-   none of those hand-written classes had. Colors come from each consumer's
-   own theme tokens, never hardcoded here, same convention as Toggle/Tabs. */
+   none of those hand-written classes had, `ghost` (Housekeeping's borderless
+   variant) and a `sm` size. Colors come from each consumer's own theme
+   tokens, with literal fallbacks so this still renders correctly in a host
+   that doesn't define them, same convention as Modal. */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   border: none;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-sm, 8px);
   padding: 0 15px;
   min-height: 44px;
   font-size: 12.5px;
@@ -16,37 +18,59 @@
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
-  transition: filter var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
+  transition: filter var(--motion-fast, 120ms) var(--motion-ease, ease), background var(--motion-fast, 120ms) var(--motion-ease, ease), opacity var(--motion-fast, 120ms) var(--motion-ease, ease);
 }
 .btn:focus-visible {
   outline: none;
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--focus-ring, 0 0 0 3px rgba(156, 79, 199, .18));
 }
 .btn:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.45;
   filter: none;
 }
+.btn-size-sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 11.5px;
+}
 .btn-primary {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--accent, #9c4fc7);
+  color: var(--accent-ink, #fff);
 }
 .btn-primary:hover:not(:disabled) {
   filter: brightness(1.07);
 }
+.btn-primary:active:not(:disabled) {
+  filter: brightness(.92);
+}
 .btn-secondary {
-  background: var(--surface);
-  color: var(--ink-2);
-  border: 1px solid var(--line-strong);
+  background: var(--surface, #fff);
+  color: var(--ink-2, #4a4d68);
+  border: 1px solid var(--line-strong, #d3d6ec);
 }
 .btn-secondary:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: var(--surface-2, #f4f5fc);
+}
+.btn-secondary:active:not(:disabled) {
+  background: var(--line, #e3e5f3);
 }
 .btn-danger {
-  color: var(--red-ink);
-  background: var(--red-bg);
-  border: 1px solid rgba(178, 58, 58, 0.16);
+  color: var(--red-ink, #b23a3a);
+  background: var(--red-bg, #fde8e8);
+  border: 1px solid color-mix(in srgb, var(--red-ink, #b23a3a) 25%, transparent);
 }
 .btn-danger:hover:not(:disabled) {
   filter: brightness(0.96);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2, #4a4d68);
+  border: 1px solid transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-2, #f4f5fc);
+}
+.btn-ghost:active:not(:disabled) {
+  background: var(--line, #e3e5f3);
 }

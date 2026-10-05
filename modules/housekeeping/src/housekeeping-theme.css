@@ -87,6 +87,18 @@
   --terracotta-ink: #974c27;
   --terracotta-line: #efc3a4;
 
+  /* Aliases for @homisuite/ui's Button/IconButton/Modal/DatePicker/
+     TimePicker, which read these names -- not previously defined here.
+     Same values the shell already uses, just under the names those shared
+     components expect. */
+  --ink-2: var(--foreground);
+  --red-ink: var(--bad-ink);
+  --red-bg: var(--bad-bg);
+  --r-sm: 12px;
+  --motion-fast: 120ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
+
   color: var(--foreground);
   font-family: var(--font-sans);
 }
