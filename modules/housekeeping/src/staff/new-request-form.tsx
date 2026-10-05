@@ -4,6 +4,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Label, Select, Textarea } from '@/components/ui/field'
 import { AutoText } from '@/components/auto-text'
+import { ItemCombobox } from '@/components/item-combobox'
 import { listMenu, listRooms, type Room } from '@/lib/admin-api'
 import { createStaffRequest } from '@/lib/staff-api'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -114,13 +115,14 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
               <Label htmlFor="sr-type" required>
                 {t('staff.newRequest.what')}
               </Label>
-              <Select id="sr-type" required value={typeId} onChange={(e) => setTypeId(e.target.value)}>
-                {typesForCategory.map((rt) => (
-                  <option key={rt.id} value={rt.id}>
-                    <AutoText text={rt.name} translations={rt.name_i18n} />
-                  </option>
-                ))}
-              </Select>
+              <ItemCombobox
+                id="sr-type"
+                items={typesForCategory}
+                value={typeId}
+                onChange={setTypeId}
+                required
+                placeholder={t('staff.newRequest.whatPlaceholder')}
+              />
             </FieldGroup>
           </div>
           {selectedType?.allows_quantity && (
