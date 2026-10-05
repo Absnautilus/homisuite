@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Download, GripVertical, Plus } from 'lucide-react'
-import { Button, DatePicker, Modal } from '@homisuite/ui'
+import { Button, DatePicker, Modal, Toggle } from '@homisuite/ui'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
 import { ASSIGNMENT_ROLES, DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, type RoleCodes, initRestRotationPairsPerCycle, initRoleCodes, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
@@ -340,7 +340,7 @@ export function RulesPanel({ unit, onSaveRules }: {
       </section>
       <section className="shift-panel">
         <div className="shift-panel-title"><div><h2>Regole assolute</h2><p>Vincoli rigidi e indipendenti tra loro, configurati soltanto per l’unità {unit.name}.</p></div></div>
-        <div className="shift-rule-switches">{DEFAULT_HARD_RULES.map((rule) => <div key={rule.key}><span><strong>{rule.text.split(':')[0]}</strong>{`:${rule.text.split(':').slice(1).join(':')}`}</span><button type="button" role="switch" aria-checked={hardEnabled[rule.key] ?? true} className={hardEnabled[rule.key] ? 'is-on' : ''} disabled={!onSaveRules} onClick={() => toggleHard(rule.key)}><i /></button></div>)}
+        <div className="shift-rule-switches">{DEFAULT_HARD_RULES.map((rule) => <div key={rule.key}><span><strong>{rule.text.split(':')[0]}</strong>{`:${rule.text.split(':').slice(1).join(':')}`}</span><Toggle checked={hardEnabled[rule.key] ?? true} onCheckedChange={() => toggleHard(rule.key)} disabled={!onSaveRules} aria-label={rule.text.split(':')[0]} /></div>)}
           <div>
             <span><strong>Rotazione riposi</strong>: dopo quante coppie di riposo consecutive il turno successivo diventa un giorno singolo e la rotazione slitta di un giorno.</span>
             <input type="number" min={1} max={9} value={pairsPerCycle} disabled={!onSaveRules} onChange={(event) => updatePairsPerCycle(Number(event.target.value))} className="shift-pairs-per-cycle-input" aria-label="Coppie di riposo per ciclo" />
@@ -374,7 +374,7 @@ export function RulesPanel({ unit, onSaveRules }: {
             {onSaveRules ? <span className="shift-priority-controls">
               <button type="button" aria-label={`Sposta su ${rule.text.split(':')[0]}`} onClick={() => moveSoft(key, -1)} disabled={index === 0}>↑</button>
               <button type="button" aria-label={`Sposta giù ${rule.text.split(':')[0]}`} onClick={() => moveSoft(key, 1)} disabled={index === softOrder.length - 1}>↓</button>
-              <button type="button" role="switch" aria-checked={softEnabled[key] ?? true} className={softEnabled[key] ? 'is-on' : ''} onClick={() => toggleSoft(key)}><i /></button>
+              <Toggle checked={softEnabled[key] ?? true} onCheckedChange={() => toggleSoft(key)} aria-label={rule.text.split(':')[0]} />
             </span> : null}
           </li>
         })}</ol>
