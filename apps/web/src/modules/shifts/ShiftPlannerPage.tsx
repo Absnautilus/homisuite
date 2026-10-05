@@ -38,6 +38,17 @@ export function ShiftPlannerPage() {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [requestRevision, setRequestRevision] = useState(0)
 
+  // Flips to true only across the render where `month` itself just changed
+  // (the calendar's prev/next-month buttons), then is consumed back to false
+  // by the load effect below -- every other trigger of that effect (mount,
+  // switching property, a request-decision revision bump) leaves it false.
+  const prevMonthRef = useRef(month)
+  const monthChangedRef = useRef(false)
+  useEffect(() => {
+    monthChangedRef.current = prevMonthRef.current !== month
+    prevMonthRef.current = month
+  }, [month])
+
   // Monotonic token guarding every refresh (the initial load and any silent
   // post-mutation refresh below): a refresh only commits state if it's still
   // the most recent one in flight, so a slow stale call can't clobber a
@@ -94,7 +105,15 @@ export function ShiftPlannerPage() {
   }, [entitled, propertyId, propertyName, runtime, month])
 
   useEffect(() => {
-    void refreshLiveData()
+    // A plain month-navigation refresh stays silent: the calendar, toolbar
+    // and tabs are already on screen showing last month's shifts, and there
+    // is no reason to tear the whole page down to a loading skeleton just
+    // to swap in a different month's data (it used to, and switching months
+    // felt sluggish as a result -- every other trigger here already refreshes
+    // silently after the fact).
+    const silent = monthChangedRef.current
+    monthChangedRef.current = false
+    void refreshLiveData({ silent })
     // requestRevision is a manual bump (e.g. after a request decision); it
     // isn't a dependency of refreshLiveData itself, so it's listed here too.
   }, [refreshLiveData, requestRevision])
