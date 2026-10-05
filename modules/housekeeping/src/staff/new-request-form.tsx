@@ -3,7 +3,6 @@ import { Minus, Plus } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Label, Select, Textarea } from '@/components/ui/field'
-import { AutoText } from '@/components/auto-text'
 import { ItemCombobox } from '@/components/item-combobox'
 import { listMenu, listRooms, type Room } from '@/lib/admin-api'
 import { createStaffRequest } from '@/lib/staff-api'
@@ -18,7 +17,6 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
   const [categories, setCategories] = useState<RequestCategoryAdmin[]>([])
   const [types, setTypes] = useState<RequestTypeAdmin[]>([])
   const [roomId, setRoomId] = useState('')
-  const [categoryId, setCategoryId] = useState('')
   const [typeId, setTypeId] = useState('')
   const [note, setNote] = useState('')
   const [quantity, setQuantity] = useState(1)
@@ -31,21 +29,12 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
       const activeRooms = roomList.filter((r) => r.active)
       setRooms(activeRooms)
       setRoomId((c) => c || (activeRooms[0]?.id ?? ''))
-      const activeCategories = menu.categories.filter((c) => c.active)
-      setCategories(activeCategories)
-      setCategoryId((c) => c || (activeCategories[0]?.id ?? ''))
+      setCategories(menu.categories.filter((c) => c.active))
       setTypes(menu.types.filter((t) => t.active))
     })
   }, [open, hotelId])
 
-  const typesForCategory = types.filter((t) => t.category_id === categoryId)
   const selectedType = useMemo(() => types.find((t) => t.id === typeId) ?? null, [types, typeId])
-
-  useEffect(() => {
-    setTypeId(typesForCategory[0]?.id ?? '')
-    setQuantity(1)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId])
 
   useEffect(() => {
     setQuantity(1)
@@ -86,7 +75,7 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
       </CardHeader>
       <CardBody>
         <form onSubmit={onSubmit}>
-          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-[140px_1fr]">
             <FieldGroup>
               <Label htmlFor="sr-room" required>
                 {t('staff.newRequest.room')}
@@ -100,24 +89,13 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
               </Select>
             </FieldGroup>
             <FieldGroup>
-              <Label htmlFor="sr-category" required>
-                {t('staff.newRequest.category')}
-              </Label>
-              <Select id="sr-category" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    <AutoText text={c.name} translations={c.name_i18n} />
-                  </option>
-                ))}
-              </Select>
-            </FieldGroup>
-            <FieldGroup>
               <Label htmlFor="sr-type" required>
                 {t('staff.newRequest.what')}
               </Label>
               <ItemCombobox
                 id="sr-type"
-                items={typesForCategory}
+                items={types}
+                categories={categories}
                 value={typeId}
                 onChange={setTypeId}
                 required

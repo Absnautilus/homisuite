@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
 import { getHkPortalTarget } from '@/lib/portal-target'
 import { useLocale } from '@/lib/i18n/locale-context'
-import type { RequestTypeAdmin } from '@/lib/admin-api'
+import type { RequestCategoryAdmin, RequestTypeAdmin } from '@/lib/admin-api'
 
 const controlClass = 'w-full min-h-11 rounded-sm border-[1.5px] border-line-strong bg-surface px-3 text-base text-foreground outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-3 focus:ring-accent-soft disabled:bg-surface-2 disabled:opacity-45'
 
@@ -34,16 +34,22 @@ function itemName(item: RequestTypeAdmin, locale: string): string {
   return item.name_i18n?.[locale] || item.name
 }
 
-// A text field with suggestions instead of a long <select> to scroll --
-// requested after a hotel reported the item list growing past what's
-// comfortable to browse as a dropdown, especially on a phone. Still works
-// as a plain browsable list: focusing it with nothing typed shows every
-// item in `items` (already scoped to the selected category by the
-// caller), and typing narrows that same list by name instead of replacing
-// it with a different interaction.
+function categoryName(category: RequestCategoryAdmin, locale: string): string {
+  return category.name_i18n?.[locale] || category.name
+}
+
+// A text field with suggestions instead of two cascading <select>s
+// (category, then item) to scroll through -- requested after a hotel
+// reported the item list growing past what's comfortable to browse,
+// especially on a phone. Every active item across every category is a
+// candidate, sorted alphabetically by name with its category shown as a
+// secondary line so it's still clear what it belongs to; focusing the
+// field with nothing typed shows that full alphabetical list (still fully
+// browsable, nothing lost), and typing narrows it by name.
 export function ItemCombobox({
   id,
   items,
+  categories,
   value,
   onChange,
   placeholder,
@@ -52,6 +58,7 @@ export function ItemCombobox({
 }: {
   id?: string
   items: RequestTypeAdmin[]
+  categories: RequestCategoryAdmin[]
   value: string
   onChange: (itemId: string) => void
   placeholder?: string
@@ -69,9 +76,18 @@ export function ItemCombobox({
   const panelRef = useRef<HTMLUListElement>(null)
   const blurTimeout = useRef<number | undefined>(undefined)
 
+  const categoryById = new Map(categories.map((category) => [category.id, category]))
+  function categoryLabelFor(item: RequestTypeAdmin): string {
+    const category = categoryById.get(item.category_id)
+    return category ? categoryName(category, locale) : ''
+  }
+
   const selected = items.find((item) => item.id === value) ?? null
   const term = query.trim().toLowerCase()
-  const matches = term ? items.filter((item) => itemName(item, locale).toLowerCase().includes(term)) : items
+  const sorted = [...items].sort((a, b) => itemName(a, locale).localeCompare(itemName(b, locale), locale))
+  const matches = term
+    ? sorted.filter((item) => itemName(item, locale).toLowerCase().includes(term) || categoryLabelFor(item).toLowerCase().includes(term))
+    : sorted
   const displayValue = editing ? query : selected ? itemName(selected, locale) : ''
 
   useEffect(() => {
@@ -197,11 +213,12 @@ export function ItemCombobox({
                   pick(item)
                 }}
                 className={cn(
-                  'cursor-pointer rounded-[6px] px-3 py-2 text-sm',
+                  'flex cursor-pointer items-baseline justify-between gap-3 rounded-[6px] px-3 py-2 text-sm',
                   index === highlighted ? 'bg-accent-soft font-medium text-accent' : 'text-foreground hover:bg-surface-2',
                 )}
               >
-                {itemName(item, locale)}
+                <span>{itemName(item, locale)}</span>
+                <span className={cn('shrink-0 text-xs', index === highlighted ? 'text-accent' : 'text-muted')}>{categoryLabelFor(item)}</span>
               </li>
             ))
           )}
