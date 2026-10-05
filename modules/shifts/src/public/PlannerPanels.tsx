@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Download, GripVertical, Plus } from 'lucide-react'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
 import { ASSIGNMENT_ROLES, DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, type RoleCodes, initRestRotationPairsPerCycle, initRoleCodes, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
@@ -118,7 +118,7 @@ export function EmployeesPanel({ property, availableTeamMembers = [], onReorderM
         <div><h2>Dipendenti</h2><p>La lista arriva da Team. Qui assegni soltanto unità e parametri di pianificazione. Trascina per riordinare all'interno della stessa unità.</p></div>
         <span className="shift-panel-title-actions">
           <span className="shift-status-chip">{roster.length} persone</span>
-          {onAddStaffMember ? <button type="button" className="shift-original-primary shift-codes-add" disabled={availableTeamMembers.length === 0} title={availableTeamMembers.length === 0 ? 'Tutti i membri attivi di Team sono già presenti in Turni' : undefined} onClick={(event) => { addTriggerRef.current = event.currentTarget; setAddOpen(true) }}><Plus size={14} />Aggiungi da Team</button> : null}
+          {onAddStaffMember ? <Button variant="primary" className="shift-codes-add" disabled={availableTeamMembers.length === 0} title={availableTeamMembers.length === 0 ? 'Tutti i membri attivi di Team sono già presenti in Turni' : undefined} onClick={(event) => { addTriggerRef.current = event.currentTarget; setAddOpen(true) }}><Plus size={14} />Aggiungi da Team</Button> : null}
         </span>
       </div>
       {reorderError ? <div className="shift-empty" role="alert">Impossibile salvare il nuovo ordine. Riprova.</div> : null}
@@ -200,8 +200,8 @@ function AddStaffMemberForm({ availableTeamMembers, units, originRef, onAdd, onC
       onClose={onClose}
       dismissible={!saving}
       footer={<>
-        <button type="button" className="shift-code-form-cancel" disabled={saving} onClick={onClose}>Annulla</button>
-        <button type="submit" form="shift-add-staff-form" className="shift-original-primary" disabled={saving || !profileId || !planningUnitId}>{saving ? 'Aggiunta…' : 'Aggiungi'}</button>
+        <Button variant="secondary" disabled={saving} onClick={onClose}>Annulla</Button>
+        <Button variant="primary" type="submit" form="shift-add-staff-form" disabled={saving || !profileId || !planningUnitId}>{saving ? 'Aggiunta…' : 'Aggiungi'}</Button>
       </>}
     >
       <form className="shift-code-form" id="shift-add-staff-form" onSubmit={submit}>
@@ -381,7 +381,7 @@ export function RulesPanel({ unit, onSaveRules }: {
         })}</ol>
       </section>
       {onSaveRules ? <div className="shift-coverage-save">
-        <button type="button" className="shift-original-primary" disabled={saveState === 'saving'} onClick={() => void saveRules()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva regole'}</button>
+        <Button variant="primary" disabled={saveState === 'saving'} onClick={() => void saveRules()}>{saveState === 'saving' ? 'Salvataggio…' : 'Salva regole'}</Button>
         {saveState === 'saved' ? <span role="status">Regole salvate.</span> : null}
         {saveState === 'error' ? <span role="alert">Impossibile salvare. Riprova.</span> : null}
       </div> : null}
@@ -401,7 +401,7 @@ export function RequestInboxPanel({ items, people, currentStaffProfileId, canMan
     try { await onDecision(item, approve) } catch { setError(true) } finally { setBusy(null) }
   }
   if (!items.length) return null
-  return <section className="shift-original-panel"><h2>Richieste da gestire</h2><div className="shift-request-inbox">{items.map((item) => <div className="shift-request-card" key={item.kind + item.id}><div><strong>{item.label}</strong><span>{name(item.staffProfileId)}{item.date ? ` · ${item.date}` : ''}</span>{item.note ? <small>{item.note}</small> : null}</div>{actionable(item) ? <div className="shift-request-actions"><button type="button" disabled={busy === item.id} onClick={() => void decide(item, false)}>Rifiuta</button><button className="shift-original-primary" type="button" disabled={busy === item.id} onClick={() => void decide(item, true)}>{busy === item.id ? 'Aggiornamento…' : (item.kind === 'swaps' && item.status === 'pending' ? 'Accetta' : 'Approva')}</button></div> : <span className="shift-status-pill">{item.status === 'accepted' ? 'In attesa del responsabile' : item.status}</span>}</div>)}</div>{error ? <div className="shift-inline-warning" role="alert">Impossibile aggiornare la richiesta.</div> : null}</section>
+  return <section className="shift-original-panel"><h2>Richieste da gestire</h2><div className="shift-request-inbox">{items.map((item) => <div className="shift-request-card" key={item.kind + item.id}><div><strong>{item.label}</strong><span>{name(item.staffProfileId)}{item.date ? ` · ${item.date}` : ''}</span>{item.note ? <small>{item.note}</small> : null}</div>{actionable(item) ? <div className="shift-request-actions"><button type="button" disabled={busy === item.id} onClick={() => void decide(item, false)}>Rifiuta</button><Button variant="primary" disabled={busy === item.id} onClick={() => void decide(item, true)}>{busy === item.id ? 'Aggiornamento…' : (item.kind === 'swaps' && item.status === 'pending' ? 'Accetta' : 'Approva')}</Button></div> : <span className="shift-status-pill">{item.status === 'accepted' ? 'In attesa del responsabile' : item.status}</span>}</div>)}</div>{error ? <div className="shift-inline-warning" role="alert">Impossibile aggiornare la richiesta.</div> : null}</section>
 }
 
 export interface ShiftRequestSubmit { kind: 'absences' | 'preassignments' | 'swaps'; date: string; absenceKind?: string; shiftCodeId?: string; targetStaffProfileId?: string; requestedShiftId?: string; offeredShiftId?: string; note?: string }
@@ -440,7 +440,7 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
       <div className="shift-swap-list">{candidates.map(({ person, code }) => <button type="button" className="shift-swap-person" aria-pressed={swapTarget === person.id} key={person.id} onClick={() => setSwapTarget(person.id)}>
         <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>{code || '—'}</span>
       </button>)}</div>
-      <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="shift-original-primary" type="button" disabled={!ownShiftId || !selected?.shiftId || !onSubmitRequest || submitState === 'saving'} onClick={() => { if (ownShiftId && selected?.shiftId) void submit({ kind: 'swaps', date, targetStaffProfileId: selected.person.id, requestedShiftId: ownShiftId, offeredShiftId: selected.shiftId, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button></div>
+      <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input value={note} onChange={(event) => setNote(event.target.value)} /></label><Button variant="primary" disabled={!ownShiftId || !selected?.shiftId || !onSubmitRequest || submitState === 'saving'} onClick={() => { if (ownShiftId && selected?.shiftId) void submit({ kind: 'swaps', date, targetStaffProfileId: selected.person.id, requestedShiftId: ownShiftId, offeredShiftId: selected.shiftId, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</Button></div>
       {!ownShiftId ? <div className="shift-inline-warning">Non è possibile scambiare un turno che non esiste ancora.</div> : null}
     </section>
   }
@@ -453,7 +453,7 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
       <label><span>Tipo</span><ShiftSelect ariaLabel="Tipo richiesta" value={absenceType} onChange={setAbsenceType} options={[{ value: "Ferie", label: "Ferie" }, { value: "Permesso", label: "Permesso" }, { value: "R.O.L.", label: "R.O.L." }, { value: "Malattia", label: "Malattia" }]} /></label>
       <label><span>Turno interessato</span><ShiftSelect ariaLabel="Turno interessato" value={affectedShift} onChange={setAffectedShift} options={[{ value: "Giornata intera", label: "Giornata intera" }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
     </div>
-    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="shift-original-primary" type="button" disabled={!onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => void submit({ kind: 'absences', date, absenceKind: absenceType === 'Ferie' ? 'leave' : absenceType === 'Malattia' ? 'illness' : absenceType === 'Permesso' || absenceType === 'R.O.L.' ? 'permission' : 'other', note })}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button></div>
+    <div className="shift-note-submit"><label><span>Nota (facoltativa)</span><input placeholder="es. visita medica" value={note} onChange={(event) => setNote(event.target.value)} /></label><Button variant="primary" disabled={!onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => void submit({ kind: 'absences', date, absenceKind: absenceType === 'Ferie' ? 'leave' : absenceType === 'Malattia' ? 'illness' : absenceType === 'Permesso' || absenceType === 'R.O.L.' ? 'permission' : 'other', note })}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</Button></div>
     <p className="shift-form-help">Se il permesso copre solo una parte del turno, indica ore e orario a quale turno si riferisce; altrimenti lascia “Giornata intera”.</p>
     <h3 className="shift-original-subtitle">Le mie richieste</h3>
     <p className="shift-empty-copy">Nessuna richiesta.</p>
@@ -469,7 +469,7 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
       <label><span>Giorno</span><ShiftDatePicker ariaLabel="Giorno pre-assegnazione" value={date} onChange={setDate} /></label>
       <label><span>Turno</span><ShiftSelect ariaLabel="Turno pre-assegnazione" value={preCode} onChange={setPreCode} options={[{ value: "", label: "Seleziona..." }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
       <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" value={note} onChange={(event) => setNote(event.target.value)} /></label>
-      <button className="shift-original-primary" type="button" disabled={!preCode || !onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => { const code = unit.codes.find((item) => item.code === preCode); if (code) void submit({ kind: 'preassignments', date, shiftCodeId: code.id, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</button>
+      <Button variant="primary" disabled={!preCode || !onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => { const code = unit.codes.find((item) => item.code === preCode); if (code) void submit({ kind: 'preassignments', date, shiftCodeId: code.id, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</Button>
     </div>
     <p className="shift-form-help">Puoi scegliere solo tra i turni ammessi per il tuo ruolo. La richiesta resta in sospeso finché l'admin non la conferma; una volta accettata, il turno si blocca automaticamente.</p>
     <h3 className="shift-original-subtitle">Le mie richieste</h3>
@@ -522,11 +522,11 @@ export function PersonalPanel({ unit, initialPreferences, onSavePreferences }: {
       const selected = (dayPreferences[day.key] ?? []).includes(code)
       return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day.key, code)}>{code}</button>
     })}</span></div>)}</div>
-    <button className="shift-original-primary" type="button" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
+    <Button variant="primary" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
       if (!onSavePreferences) return
       setSaveState('saving')
       void onSavePreferences({ preferredShiftCodes: order, weekdayShiftPreferences: dayPreferences }).then(() => setSaveState('saved')).catch(() => setSaveState('error'))
-    }}>{saveState === 'saving' ? 'Salvataggio…' : saveState === 'saved' ? 'Salvate' : 'Salva preferenze'}</button>
+    }}>{saveState === 'saving' ? 'Salvataggio…' : saveState === 'saved' ? 'Salvate' : 'Salva preferenze'}</Button>
   </section>
 }
 

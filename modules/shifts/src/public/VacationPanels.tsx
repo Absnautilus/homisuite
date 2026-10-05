@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Button } from '@homisuite/ui'
 import { Check, X } from 'lucide-react'
 import type { ShiftPreviewProperty, ShiftPerson } from '../preview/fixtures'
 import {
@@ -152,7 +153,7 @@ function MyVacationPanel({ property, periods, settings, currentStaffProfileId, o
           <span className="shift-vacation-card-label">Periodo {index + 1}</span>
           <span className="shift-vacation-card-dates">{period ? `${fmtLong(period.start)} – ${fmtLong(period.end)}` : 'Da pianificare'}</span>
           {period ? <span className={`shift-vacation-pill is-${status}`}>{STATUS_LABEL[status]}</span> : null}
-          {status === 'missing' && onRequestPeriod ? <button type="button" className="shift-code-form-cancel" onClick={() => openFor(index)}>Richiedi questo periodo</button> : null}
+          {status === 'missing' && onRequestPeriod ? <Button variant="secondary" onClick={() => openFor(index)}>Richiedi questo periodo</Button> : null}
         </div>
       })}
     </div>
@@ -160,12 +161,12 @@ function MyVacationPanel({ property, periods, settings, currentStaffProfileId, o
     {panelOpenFor != null ? <div className="shift-vacation-request-panel">
       <div className="shift-panel-title">
         <div><h2>Richiedi un periodo</h2><p>Scegli le date: controlliamo durata e sovrapposizioni prima di inviare la richiesta al responsabile.</p></div>
-        <button type="button" className="shift-code-form-cancel" onClick={() => setPanelOpenFor(null)}>Chiudi</button>
+        <Button variant="secondary" onClick={() => setPanelOpenFor(null)}>Chiudi</Button>
       </div>
       <div className="shift-vacation-request-form">
         <label className="shift-field"><span>Dal</span><ShiftDatePicker value={start} onChange={setStart} ariaLabel="Data di inizio periodo" /></label>
         <label className="shift-field"><span>Al</span><ShiftDatePicker value={end} onChange={setEnd} ariaLabel="Data di fine periodo" /></label>
-        <button type="button" className="shift-original-primary" disabled={saving} onClick={() => void submit()}>{saving ? 'Invio…' : 'Controlla e invia'}</button>
+        <Button variant="primary" disabled={saving} onClick={() => void submit()}>{saving ? 'Invio…' : 'Controlla e invia'}</Button>
       </div>
       <p className="shift-form-help">Il periodo deve durare tra {settings.minDays} e {settings.maxDays} giorni (impostato dal responsabile).</p>
       {result ? <div className={`shift-vacation-result is-${result.kind}`} role={result.kind === 'conflict' ? 'alert' : 'status'}>{result.message}</div> : null}
@@ -221,7 +222,7 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
       <label className="shift-field"><span>Periodi per dipendente all'anno</span><input type="number" min={1} max={6} value={form.periodsPerYear} onChange={(event) => setForm({ ...form, periodsPerYear: Number(event.target.value) })} /></label>
       <label className="shift-field"><span>Durata minima (giorni)</span><input type="number" min={1} value={form.minDays} onChange={(event) => setForm({ ...form, minDays: Number(event.target.value) })} /></label>
       <label className="shift-field"><span>Durata massima (giorni)</span><input type="number" min={form.minDays} value={form.maxDays} onChange={(event) => setForm({ ...form, maxDays: Number(event.target.value) })} /></label>
-      <button type="button" className="shift-original-primary" disabled={savingSettings} onClick={() => void saveSettings()}>{savingSettings ? 'Salvataggio…' : 'Salva impostazioni'}</button>
+      <Button variant="primary" disabled={savingSettings} onClick={() => void saveSettings()}>{savingSettings ? 'Salvataggio…' : 'Salva impostazioni'}</Button>
     </div>
   </div>
 }

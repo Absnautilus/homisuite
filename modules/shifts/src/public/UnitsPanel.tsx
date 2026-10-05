@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent, type RefObject } from 'react'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 import { Archive, Pencil, Plus, RotateCcw } from 'lucide-react'
 import type { ShiftJobTitle, ShiftPlanningUnit } from '../preview/fixtures'
 
@@ -68,7 +68,7 @@ export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit, o
     <section className="shift-panel shift-units-panel">
       <div className="shift-panel-title">
         <div><h2>Unità</h2><p>Le unità di pianificazione della struttura (Reception, Booking, Housekeeping…) e le mansioni che vi rientrano automaticamente.</p></div>
-        {onSaveUnit ? <button type="button" className="shift-original-primary shift-codes-add" onClick={(event) => openEditor(event, 'new')}><Plus size={14} />Nuova unità</button> : null}
+        {onSaveUnit ? <Button variant="primary" className="shift-codes-add" onClick={(event) => openEditor(event, 'new')}><Plus size={14} />Nuova unità</Button> : null}
       </div>
       <div className="shift-table-scroll" tabIndex={0} aria-label="Unità di pianificazione">
         <table className="shift-codes-table">
@@ -113,7 +113,7 @@ export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit, o
         originRef={triggerRef}
         title={result?.kind === 'error' ? 'Errore' : 'Fatto'}
         onClose={() => setResult(null)}
-        footer={<button type="button" className="shift-original-primary" onClick={() => setResult(null)}>Chiudi</button>}
+        footer={<Button variant="primary" onClick={() => setResult(null)}>Chiudi</Button>}
       >
         <p role={result?.kind === 'error' ? 'alert' : 'status'}>{result?.message}</p>
       </Modal>
@@ -160,8 +160,8 @@ function UnitForm({ jobTitleRoster, initial, originRef, onSave, onClose }: {
       onClose={onClose}
       dismissible={!saving}
       footer={<>
-        <button type="button" className="shift-code-form-cancel" disabled={saving} onClick={onClose}>Annulla</button>
-        <button type="submit" form="shift-unit-form" className="shift-original-primary" disabled={saving || !name.trim()}>{saving ? 'Salvataggio…' : 'Salva'}</button>
+        <Button variant="secondary" disabled={saving} onClick={onClose}>Annulla</Button>
+        <Button variant="primary" type="submit" form="shift-unit-form" disabled={saving || !name.trim()}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
       </>}
     >
       <form className="shift-code-form shift-unit-form" id="shift-unit-form" onSubmit={submit}>
