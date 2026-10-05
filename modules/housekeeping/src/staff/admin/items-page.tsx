@@ -617,7 +617,7 @@ function NewCategoryForm({ jobTitles, onCreated }: { jobTitles: JobTitleOption[]
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {jobTitles.map((jt) => (
-            <label key={jt.id} className={cn('flex cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1.5 text-xs font-semibold transition-colors', jobTitleIds.includes(jt.id) ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:border-accent-soft-line')}>
+            <label key={jt.id} className={cn('flex cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1.5 text-xs transition-colors', jobTitleIds.includes(jt.id) ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:border-accent-soft-line')}>
               <input type="checkbox" className="sr-only" checked={jobTitleIds.includes(jt.id)} onChange={() => toggleJobTitle(jt.id)} />
               {jt.name}
             </label>
