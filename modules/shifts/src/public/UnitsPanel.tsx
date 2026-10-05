@@ -166,7 +166,7 @@ function UnitForm({ jobTitleRoster, initial, originRef, onSave, onClose }: {
     >
       <form className="shift-code-form shift-unit-form" id="shift-unit-form" onSubmit={submit}>
         <label className="shift-unit-name-field">
-          Nome unità
+          <span>Nome unità</span>
           <input value={name} maxLength={80} required disabled={saving} onChange={(event) => setName(event.target.value)} placeholder="es. Booking" />
         </label>
         <div className="shift-unit-job-titles">

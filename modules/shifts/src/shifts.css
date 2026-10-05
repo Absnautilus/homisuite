@@ -36,6 +36,13 @@
 .shift-property-field { min-width: 255px; }
 .shift-field { display: grid; gap: 7px; }
 .shift-field > span:first-child { color: var(--shift-muted); font-size: 12px; font-weight: 750; text-transform: uppercase; }
+/* Required fields get a marker purely from the native `required` attribute
+   already on the input -- no per-field prop to remember to set, so it can
+   never drift out of sync with what's actually validated. Same approach as
+   apps/web's .form-field; Housekeeping's Label does the equivalent with an
+   explicit `required` prop instead, since it has no native <label><span>
+   convention to hook a CSS selector onto. */
+.shift-root label > span:has(~ :required)::after { content: ' *'; color: #b23a3a; }
 .shift-scenario-select { position: relative; }
 .shift-scenario-trigger { align-items: center; background: white; border: 1px solid var(--shift-line); border-radius: 12px; color: var(--shift-ink); cursor: pointer; display: flex; gap: 12px; justify-content: space-between; min-height: 46px; padding: 0 13px 0 15px; text-align: left; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; width: 100%; }
 .shift-scenario-trigger:hover { background: #fcfbfe; border-color: #d8c4e7; }
@@ -176,8 +183,8 @@
    700-weight label) instead of the flat, heavier-set pills used before. */
 .shift-calendar-actions > button { background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 40px; padding: 0 13px; }
 .shift-calendar-actions > button.is-primary { background: var(--shift-accent); border-color: var(--shift-accent); color: white; margin-left: auto; }
-.shift-calendar-actions > button.is-danger { border-color: #e4b5ae; color: #c0392b; }
-.shift-calendar-actions > button.is-danger:hover:not(:disabled) { background: #fdecea; }
+.shift-calendar-actions > button.is-danger { border-color: #f3b9b9; color: #b23a3a; }
+.shift-calendar-actions > button.is-danger:hover:not(:disabled) { background: #fde8e8; }
 .shift-calendar-actions > button:disabled { cursor: not-allowed; opacity: .58; }
 /* The view toggle reads as a segmented control -- a neutral track with a
    sliding white pill -- so it's never mistaken for one of the command
@@ -258,7 +265,7 @@
 .shift-codes-actions { display: flex; gap: 4px; }
 .shift-code-action { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--shift-muted); cursor: pointer; display: inline-flex; height: 28px; justify-content: center; width: 28px; }
 .shift-code-action:hover { background: var(--shift-soft); color: var(--shift-accent); }
-.shift-code-action.is-danger:hover { background: #fdecea; color: #c0392b; }
+.shift-code-action.is-danger:hover { background: #fde8e8; color: #b23a3a; }
 /* Icon-only buttons (Modifica/Archivia) fit the fixed 28px square above;
    Ripristina also carries a text label, so it needs room to grow instead
    of squeezing the icon+label into that same square box. */
@@ -286,7 +293,7 @@
 .shift-code-textcolor-options { display: flex; gap: 8px; }
 .shift-code-textcolor-option { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; height: 40px; padding: 0 14px; text-transform: none; }
 .shift-code-textcolor-option.is-selected { background: var(--shift-accent); border-color: var(--shift-accent); color: white; }
-.shift-code-form-error { color: #c0392b; font-size: 12px; margin: 0; }
+.shift-code-form-error { color: #b23a3a; font-size: 12px; margin: 0; }
 .shift-code-form-cancel { background: transparent; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 42px; padding: 0 16px; }
 
 .shift-unit-name-field { color: var(--shift-muted); display: grid; font-size: 12.5px; font-weight: 700; gap: 6px; max-width: 320px; text-transform: uppercase; }
@@ -313,7 +320,7 @@
 .shift-coverage-add > button:disabled { cursor: not-allowed; opacity: .5; }
 .shift-coverage-save { align-items: center; display: flex; gap: 10px; margin-top: 16px; }
 .shift-coverage-save [role="status"] { color: var(--shift-accent); font-size: 12px; font-weight: 700; }
-.shift-coverage-save [role="alert"] { color: #c0392b; font-size: 12px; font-weight: 700; }
+.shift-coverage-save [role="alert"] { color: #b23a3a; font-size: 12px; font-weight: 700; }
 .shift-rule-switches > div { align-items: center; border-top: 1px solid var(--shift-line); display: flex; gap: 20px; justify-content: space-between; min-height: 58px; padding: 9px 0; }
 .shift-rule-switches > div:first-child { border-top: 0; }
 .shift-rule-switches > div > span { color: var(--shift-muted); font-size: 13px; }

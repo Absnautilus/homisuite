@@ -182,13 +182,13 @@ function CodeForm({ unit, initial, originRef, onSave, onClose }: {
     >
       <form className="shift-code-form" id="shift-code-form" onSubmit={submit}>
         <div className="shift-code-form-grid">
-          <label>Sigla<input value={code} maxLength={12} required disabled={saving} onChange={(event) => setCode(event.target.value)} placeholder="es. C1" /></label>
-          <label>Nome<input value={label} maxLength={80} required disabled={saving} onChange={(event) => setLabel(event.target.value)} placeholder="es. Chiusura 1" /></label>
-          <label>Tipo<ShiftSelect ariaLabel="Tipo di codice turno" value={kind} disabled={saving} onChange={(value) => setKind(value as ShiftCodeSave['kind'])} options={KIND_OPTIONS} /></label>
+          <label><span>Sigla</span><input value={code} maxLength={12} required disabled={saving} onChange={(event) => setCode(event.target.value)} placeholder="es. C1" /></label>
+          <label><span>Nome</span><input value={label} maxLength={80} required disabled={saving} onChange={(event) => setLabel(event.target.value)} placeholder="es. Chiusura 1" /></label>
+          <label><span>Tipo</span><ShiftSelect ariaLabel="Tipo di codice turno" value={kind} disabled={saving} onChange={(value) => setKind(value as ShiftCodeSave['kind'])} options={KIND_OPTIONS} /></label>
           {isWork ? (
             <>
-              <label>Inizio<input type="time" value={startsAt} required disabled={saving} onChange={(event) => setStartsAt(event.target.value)} /></label>
-              <label>Fine<input type="time" value={endsAt} required disabled={saving} onChange={(event) => setEndsAt(event.target.value)} /></label>
+              <label><span>Inizio</span><input type="time" value={startsAt} required disabled={saving} onChange={(event) => setStartsAt(event.target.value)} /></label>
+              <label><span>Fine</span><input type="time" value={endsAt} required disabled={saving} onChange={(event) => setEndsAt(event.target.value)} /></label>
             </>
           ) : null}
           <label className="shift-code-color-field">
