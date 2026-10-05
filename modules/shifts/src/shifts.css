@@ -171,7 +171,6 @@
 .shift-calendar-view-row { flex-wrap: wrap; justify-content: flex-start; }
 .shift-period-control > button { align-items: center; background: var(--shift-soft); border: 0; border-radius: 999px; cursor: pointer; display: inline-flex; height: 34px; justify-content: center; width: 34px; }
 .shift-period-control strong { min-width: 120px; }
-.shift-status-chip.is-draft { background: #fff0ce; color: #916215; }
 .shift-calendar-actions { flex-wrap: wrap; }
 /* Buttons mirror the suite's own .btn/.btn-secondary (8px radius, bordered,
    700-weight label) instead of the flat, heavier-set pills used before. */
