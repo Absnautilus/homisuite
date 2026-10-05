@@ -86,7 +86,22 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void load()
-    const { data } = supabase.auth.onAuthStateChange(() => void load())
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // Supabase silently rotates the access token on a timer, and also the
+      // moment the tab regains focus/visibility after being hidden -- firing
+      // TOKEN_REFRESHED, not a real sign-in/out. Running the full `load()`
+      // for it (which starts by setting status back to 'loading') made
+      // ShellLayout swap the whole routed page out for its skeleton on every
+      // such refresh, unmounting it and discarding anything typed or
+      // assigned there but not yet saved, just from switching tabs/apps and
+      // coming back. Nothing profile/property/membership-related actually
+      // changes on a token refresh, so just keep the renewed session.
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(nextSession)
+        return
+      }
+      void load()
+    })
     return () => data.subscription.unsubscribe()
   }, [load])
 
