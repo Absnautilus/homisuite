@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { AutoText } from '@/components/auto-text'
+import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { Table, TableBody, TableCell, TableFrame, TableHead, TableHeaderCell, TableRow } from '@/components/ui/table'
 import { fetchItemAvailability, type ItemAvailability } from '@/lib/admin-api'
 import { getErrorMessage } from '@/lib/errors'
@@ -29,7 +30,7 @@ export function AvailabilityPage({ hotelId }: { hotelId: string }) {
       ) : items === null ? (
         <p role="status" className="text-sm text-muted">{t('staff.availability.loading')}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted">{t('staff.availability.empty')}</p>
+        <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.availability.emptyTitle')} description={t('staff.availability.emptyDesc')} />
       ) : (
         <TableFrame>
           <Table aria-label={t('staff.availability.title')}>
