@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 
 export interface ConfirmOptions {
   title: string
@@ -34,12 +34,12 @@ export function useConfirm(): [ReactNode, (options: ConfirmOptions) => Promise<b
       onClose={() => settle(false)}
       footer={
         <>
-          <button className="btn btn-secondary" type="button" onClick={() => settle(false)}>
+          <Button variant="secondary" onClick={() => settle(false)}>
             Annulla
-          </button>
-          <button className="btn btn-danger" type="button" onClick={() => settle(true)}>
+          </Button>
+          <Button variant="danger" onClick={() => settle(true)}>
             {pending?.confirmLabel ?? 'Elimina'}
-          </button>
+          </Button>
         </>
       }
     />

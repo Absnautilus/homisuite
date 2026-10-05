@@ -1,5 +1,7 @@
 export { Toggle } from './toggle'
 export type { ToggleProps } from './toggle'
+export { Button } from './button'
+export type { ButtonProps, ButtonVariant } from './button'
 export { Tabs } from './tabs'
 export type { TabItem, TabsProps } from './tabs'
 export { useDropdownTransition, dropdownTransitionClassName } from './dropdown-transition'

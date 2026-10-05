@@ -1,0 +1,52 @@
+/* Mirrors apps/web's existing `.btn`/`.btn-primary`/`.btn-secondary`/
+   `.btn-danger` pixel-for-pixel (so adopting <Button> is a no-visual-diff
+   swap for existing call sites), plus the disabled and focus-visible states
+   none of those hand-written classes had. Colors come from each consumer's
+   own theme tokens, never hardcoded here, same convention as Toggle/Tabs. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 0 15px;
+  min-height: 44px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: filter var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: none;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.btn-danger {
+  color: var(--red-ink);
+  background: var(--red-bg);
+  border: 1px solid rgba(178, 58, 58, 0.16);
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.96);
+}

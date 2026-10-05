@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Button } from '@homisuite/ui'
 import { core } from '../core/client'
 import { GUEST_APP_URL } from '../core/guestAppUrl'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
@@ -47,12 +48,12 @@ export function GuestLinkRow() {
       </span>
       <div className="guest-link-box">
         <input readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
-        <button className="btn btn-secondary" type="button" onClick={onCopy}>
+        <Button variant="secondary" onClick={onCopy}>
           {copied ? 'Copiato!' : 'Copia'}
-        </button>
-        <button className="btn btn-primary" type="button" onClick={() => setQrOpen(true)}>
+        </Button>
+        <Button variant="primary" onClick={() => setQrOpen(true)}>
           Genera QR
-        </button>
+        </Button>
       </div>
       <GuestQrModal open={qrOpen} onClose={() => setQrOpen(false)} hotelName={runtime.property?.name ?? 'Struttura'} link={link} />
     </div>

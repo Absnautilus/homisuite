@@ -1,4 +1,5 @@
 import { CircleAlert, Inbox, Lock, type LucideIcon } from 'lucide-react'
+import { Button } from '@homisuite/ui'
 
 export type PageStateKind = 'loading' | 'empty' | 'error' | 'unavailable'
 
@@ -83,9 +84,9 @@ export function PageState({
       <p className="page-state-title">{title}</p>
       {description ? <p className="page-state-description">{description}</p> : null}
       {action ? (
-        <button type="button" className="btn btn-secondary page-state-action" onClick={action.onClick}>
+        <Button variant="secondary" className="page-state-action" onClick={action.onClick}>
           {action.label}
-        </button>
+        </Button>
       ) : null}
     </div>
   )

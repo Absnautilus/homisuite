@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 
 type GuestQrModalProps = {
   open: boolean
@@ -56,8 +56,8 @@ export function GuestQrModal({ open, onClose, hotelName, link }: GuestQrModalPro
       description="QR per l'accesso ospiti"
       onClose={onClose}
       footer={<>
-        <button className="btn btn-secondary" type="button" onClick={onDownload} disabled={!qrDataUrl}>Scarica PNG</button>
-        <button className="btn btn-primary" type="button" onClick={onPrint} disabled={!qrDataUrl}>Stampa</button>
+        <Button variant="secondary" onClick={onDownload} disabled={!qrDataUrl}>Scarica PNG</Button>
+        <Button variant="primary" onClick={onPrint} disabled={!qrDataUrl}>Stampa</Button>
       </>}
     >
       <div className="guest-qr-preview">
