@@ -1,5 +1,6 @@
 import { Children, isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { getHkPortalTarget } from '@/lib/portal-target'
 
@@ -133,7 +134,7 @@ export function Select({ children, value, onChange, disabled, required, classNam
         className={cn(controlClass, 'flex h-11 cursor-pointer items-center justify-between gap-2 text-left disabled:cursor-not-allowed', className)}
       >
         <span className={cn('truncate', placeholder && 'text-muted')}>{selected?.label ?? ' '}</span>
-        <ChevronDownIcon className={cn('h-4 w-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} />
       </button>
       {open && panelPosition && createPortal(
         <ul
@@ -178,6 +179,5 @@ export function Select({ children, value, onChange, disabled, required, classNam
     </div>
   )
 }
-function ChevronDownIcon(props: { className?: string }) { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}><path d="m6 9 6 6 6-6" /></svg> }
 export function FieldError({ children }: { children?: string }) { if (!children) return null; return <p className="mt-1 text-xs font-semibold text-bad-ink">{children}</p> }
 export function FieldGroup({ children, className }: { children: ReactNode; className?: string }) { return <div className={cn('mb-4', className)}>{children}</div> }

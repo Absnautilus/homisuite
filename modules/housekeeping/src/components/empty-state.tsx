@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, SVGProps } from 'react'
 import { cn } from '@/lib/cn'
 
 export function EmptyState({ icon, title, description, action, className }: { icon: ReactNode; title: string; description?: string; action?: ReactNode; className?: string }) {
@@ -12,18 +12,18 @@ export function EmptyState({ icon, title, description, action, className }: { ic
   )
 }
 
-export function IconInboxEmpty(props: { className?: string }) {
+export function IconInboxEmpty(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M3 12h4l2 3h6l2-3h4" />
       <path d="M5.5 5h13L21 12v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6L5.5 5Z" />
     </svg>
   )
 }
 
-export function IconBedEmpty(props: { className?: string }) {
+export function IconBedEmpty(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M3 18v-7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7M3 18v2M21 18v2M3 14h18M7 11V9a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2" />
     </svg>
   )

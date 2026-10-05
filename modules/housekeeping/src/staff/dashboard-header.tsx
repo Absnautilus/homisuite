@@ -1,9 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
-import type { SVGProps } from 'react'
+import type { ComponentType, SVGProps } from 'react'
+import { LogOut, Settings } from 'lucide-react'
 import { LogoMark } from '@/components/logo'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
+import { IconBedEmpty, IconInboxEmpty } from '@/components/empty-state'
 import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { cn } from '@/lib/cn'
 import { signOut } from '@/lib/staff-api'
@@ -40,9 +42,9 @@ export function DashboardHeader({ profile, basePath = '/staff' }: DashboardHeade
         </Link>
         <div className="mx-1 hidden h-5 w-px shrink-0 bg-white/15 sm:block" />
         <nav className="flex shrink-0 items-center gap-0.5">
-          <NavLink to={requestPath} label={t('staff.nav.requests')} icon={IconInbox} active={location.pathname === requestPath || location.pathname === `${requestPath}/`} />
-          {staysAllowed && <NavLink to={staysPath} label={t('staff.nav.stays')} icon={IconBed} active={location.pathname.startsWith(staysPath)} />}
-          {manageAllowed && <NavLink to={adminPath} label={t('staff.nav.admin')} icon={IconSettings} active={location.pathname.startsWith(adminPath)} />}
+          <NavLink to={requestPath} label={t('staff.nav.requests')} icon={IconInboxEmpty} active={location.pathname === requestPath || location.pathname === `${requestPath}/`} />
+          {staysAllowed && <NavLink to={staysPath} label={t('staff.nav.stays')} icon={IconBedEmpty} active={location.pathname.startsWith(staysPath)} />}
+          {manageAllowed && <NavLink to={adminPath} label={t('staff.nav.admin')} icon={Settings} active={location.pathname.startsWith(adminPath)} />}
         </nav>
         <div className="flex-1" />
         <OnDutyToggle profile={profile} dark />
@@ -54,17 +56,12 @@ export function DashboardHeader({ profile, basePath = '/staff' }: DashboardHeade
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[0.625rem] font-bold text-accent">{initials}</span>
           <div className="leading-tight"><p className="text-[0.5625rem] font-bold tracking-wide text-white/50 uppercase">{roleLabel}</p><p className="truncate text-xs font-semibold">{profile.name}</p></div>
         </div>
-        <button type="button" onClick={() => void signOut()} title={t('staff.nav.logout')} aria-label={t('staff.nav.logout')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><IconExit className="h-4 w-4" /></button>
+        <button type="button" onClick={() => void signOut()} title={t('staff.nav.logout')} aria-label={t('staff.nav.logout')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><LogOut className="h-4 w-4" /></button>
       </div>
     </div>
   )
 }
 
-function NavLink({ to, label, icon: Icon, active }: { to: string; label: string; icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element; active: boolean }) {
+function NavLink({ to, label, icon: Icon, active }: { to: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>>; active: boolean }) {
   return <Link to={to} title={label} className={cn('flex min-h-11 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold transition-colors sm:px-3.5 sm:text-sm', active ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white')}><Icon className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">{label}</span></Link>
 }
-
-function IconInbox(props: SVGProps<SVGSVGElement>) { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12h4l2 3h6l2-3h4" /><path d="M5.5 5h13L21 12v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6L5.5 5Z" /></svg> }
-function IconBed(props: SVGProps<SVGSVGElement>) { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 18v-7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7M3 18v2M21 18v2M3 14h18M7 11V9a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2" /></svg> }
-function IconSettings(props: SVGProps<SVGSVGElement>) { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" /></svg> }
-function IconExit(props: SVGProps<SVGSVGElement>) { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg> }
