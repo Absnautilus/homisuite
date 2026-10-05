@@ -276,23 +276,23 @@
    this form only lays out its own fields. */
 .shift-code-form { display: grid; gap: 14px; }
 .shift-code-form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-.shift-code-form-grid label { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
+.shift-code-form-grid label { color: var(--shift-muted); display: grid; font-size: 12.5px; font-weight: 700; gap: 6px; text-transform: uppercase; }
 .shift-code-form-grid input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
 .shift-code-color-field { min-width: 0; }
 .shift-code-color-row { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
 .shift-code-color-row input[type="color"] { border: 1px solid var(--shift-line-strong); border-radius: 8px; flex-shrink: 0; height: 38px; padding: 3px; width: 44px; }
 .shift-code-color-row input[type="text"] { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 38px; padding: 0 10px; text-transform: uppercase; min-width: 0; flex: 1 1 84px; }
 .shift-code-color-row .shift-code-badge-preview { flex-shrink: 0; }
-.shift-code-textcolor-field { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
+.shift-code-textcolor-field { color: var(--shift-muted); display: grid; font-size: 12.5px; font-weight: 700; gap: 6px; text-transform: uppercase; }
 .shift-code-textcolor-options { display: flex; gap: 8px; }
 .shift-code-textcolor-option { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; height: 40px; padding: 0 14px; text-transform: none; }
 .shift-code-textcolor-option.is-selected { background: var(--shift-accent); border-color: var(--shift-accent); color: white; }
 .shift-code-form-error { color: #c0392b; font-size: 12px; margin: 0; }
 .shift-code-form-cancel { background: transparent; border: 1px solid var(--shift-line-strong); border-radius: 10px; color: var(--shift-ink); cursor: pointer; font-size: 12px; font-weight: 700; min-height: 42px; padding: 0 16px; }
 
-.shift-unit-name-field { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; max-width: 320px; text-transform: uppercase; }
+.shift-unit-name-field { color: var(--shift-muted); display: grid; font-size: 12.5px; font-weight: 700; gap: 6px; max-width: 320px; text-transform: uppercase; }
 .shift-unit-name-field input { background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 40px; padding: 0 11px; font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--shift-ink); }
-.shift-unit-job-titles-label { color: var(--shift-muted); display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
+.shift-unit-job-titles-label { color: var(--shift-muted); display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; }
 .shift-unit-job-titles-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 .shift-unit-job-title-option { align-items: center; background: white; border: 1px solid var(--shift-line-strong); border-radius: 8px; display: flex; font-size: 13px; font-weight: 500; gap: 8px; min-width: 0; padding: 8px 10px; text-transform: none; }
 .shift-unit-job-title-option input[type="checkbox"] { accent-color: var(--shift-accent); height: 16px; width: 16px; }
@@ -301,13 +301,13 @@
 .shift-rules-layout .shift-panel:first-child { border-radius: 0 0 18px 18px; border-top: 0; }
 .shift-coverage-editor { display: flex; flex-wrap: wrap; gap: 12px; }
 .shift-coverage-editor article { align-items: center; background: #eff0fb; border-radius: 14px; display: grid; gap: 10px; justify-items: center; min-width: 118px; padding: 14px; position: relative; }
-.shift-coverage-editor article > strong { background: var(--shift-accent); border-radius: 6px; color: white; font-size: 11px; padding: 4px 7px; }
+.shift-coverage-editor article > strong { background: var(--shift-accent); border-radius: 6px; color: white; font-size: 12px; padding: 4px 7px; }
 .shift-coverage-editor article span { align-items: center; display: flex; gap: 13px; }
 .shift-coverage-editor button { background: transparent; border: 0; cursor: pointer; font-size: 18px; height: 28px; width: 28px; }
 .shift-coverage-remove { color: var(--shift-muted); font-size: 12px !important; height: 20px !important; position: absolute; right: 4px; top: 4px; width: 20px !important; }
 .shift-coverage-remove:hover { color: var(--shift-accent); }
 .shift-coverage-add { align-items: flex-end; border-top: 1px solid var(--shift-line); display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; padding-top: 16px; }
-.shift-coverage-add label { color: var(--shift-muted); display: grid; font-size: 11px; font-weight: 700; gap: 6px; text-transform: uppercase; }
+.shift-coverage-add label { color: var(--shift-muted); display: grid; font-size: 12.5px; font-weight: 700; gap: 6px; text-transform: uppercase; }
 .shift-coverage-add .shift-custom-select { min-width: 200px; }
 .shift-coverage-add input { border: 1px solid var(--shift-line-strong); border-radius: 8px; height: 36px; padding: 0 10px; width: 70px; }
 .shift-coverage-add > button { background: var(--shift-soft); border: 0; border-radius: 8px; color: var(--shift-ink); cursor: pointer; font-weight: 700; height: 36px; padding: 0 14px; }
@@ -329,7 +329,7 @@
 .shift-priority-list { list-style: none; margin: 0; padding: 0; }
 .shift-priority-list li { align-items: center; border-top: 1px solid var(--shift-line); color: var(--shift-muted); display: flex; gap: 12px; min-height: 48px; padding: 6px 0; }
 .shift-priority-list li:first-child { border-top: 0; }
-.shift-priority-list li > span:first-child { align-items: center; background: #f0e8f7; border-radius: 999px; color: #704192; display: inline-flex; flex: 0 0 27px; font-size: 11px; font-weight: 800; height: 27px; justify-content: center; }
+.shift-priority-list li > span:first-child { align-items: center; background: #f0e8f7; border-radius: 999px; color: #704192; display: inline-flex; flex: 0 0 27px; font-size: 12px; font-weight: 800; height: 27px; justify-content: center; }
 .shift-priority-list li b { color: var(--shift-ink); flex: 1; font-weight: 500; }
 .shift-priority-controls { align-items: center; display: flex; flex: 0 0 auto; gap: 6px; }
 .shift-priority-controls button { background: var(--shift-soft); border: 0; border-radius: 6px; color: var(--shift-ink); cursor: pointer; height: 24px; width: 24px; }
@@ -362,13 +362,13 @@
 .shift-export-button { align-items: center; background: #f0edf8; border: 0; border-radius: 11px; color: var(--shift-ink); cursor: pointer; display: inline-flex; font-size: 12px; font-weight: 750; gap: 7px; justify-self: end; min-height: 42px; padding: 0 14px; }
 .shift-my-calendar-scroll { overflow-x: auto; padding: 0 22px; }
 .shift-my-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(106px, 1fr)); min-width: 780px; }
-.shift-my-weekday { color: var(--shift-muted); font-size: 11px; font-weight: 800; padding: 8px 7px; text-align: center; text-transform: uppercase; }
+.shift-my-weekday { color: var(--shift-muted); font-size: 12px; font-weight: 800; padding: 8px 7px; text-align: center; text-transform: uppercase; }
 .shift-my-day { background: #f4f4fa; border: 3px solid white; border-radius: 13px; min-height: 92px; padding: 8px; }
-.shift-my-day > span { color: var(--shift-muted); font-size: 11px; }
+.shift-my-day > span { color: var(--shift-muted); font-size: 12px; }
 .shift-my-day.is-outside { background: transparent; opacity: .35; }
 .shift-my-day.is-today { box-shadow: inset 0 0 0 1.5px var(--shift-ink); }
 .shift-my-day > strong { border-radius: 8px; display: grid; font-size: 12px; gap: 1px; margin-top: 8px; padding: 6px 7px; }
-.shift-my-day > strong small { font-size: 9px; font-weight: 600; opacity: .9; }
+.shift-my-day > strong small { font-size: 10px; font-weight: 600; opacity: .9; }
 
 @media (max-width: 760px) {
   .shift-property-field { min-width: 0; }
@@ -401,10 +401,10 @@
      week strip than as a desktop table you drag sideways through. */
   .shift-my-calendar-scroll { overflow-x: visible; padding: 0 12px; }
   .shift-my-calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 0; gap: 3px; }
-  .shift-my-weekday { padding: 4px 1px; font-size: 9px; }
+  .shift-my-weekday { padding: 4px 1px; font-size: 10px; }
   .shift-my-day { border-width: 2px; min-height: 52px; padding: 4px; }
-  .shift-my-day > span { font-size: 9px; }
-  .shift-my-day > strong { font-size: 9px; margin-top: 4px; padding: 3px 4px; }
+  .shift-my-day > span { font-size: 10px; }
+  .shift-my-day > strong { font-size: 10px; margin-top: 4px; padding: 3px 4px; }
   .shift-my-day > strong small { display: none; }
 }
 
@@ -415,7 +415,7 @@
   .shift-legend { padding-inline: 16px; }
   .shift-my-calendar-scroll { padding: 0 8px; }
   .shift-my-day { min-height: 44px; padding: 3px; }
-  .shift-my-day > strong { font-size: 8px; padding: 2px 3px; }
+  .shift-my-day > strong { font-size: 9px; padding: 2px 3px; }
 }
 
 
@@ -436,7 +436,7 @@
 }
 .shift-calendar-help {
   color: var(--shift-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.25;
   margin: 0 2px 14px;
   max-width: none;
@@ -449,7 +449,7 @@
 .shift-unit-selector button {
   min-height: 30px;
   padding: 0 11px;
-  font-size: 11px;
+  font-size: 12px;
 }
 /* .shift-panel keeps its base rounded/bordered card look (matching every
    other module's panels); only .shift-schedule-card stays flat/borderless
@@ -481,18 +481,18 @@
 .shift-grid thead th {
   background: #eceeff;
   color: #7780a3;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
   height: 34px;
   text-transform: none;
 }
 .shift-grid thead th strong {
   color: #11152d;
-  font-size: 10px;
+  font-size: 11px;
   margin: 0 0 1px;
 }
 .shift-grid thead th span {
-  font-size: 8px;
+  font-size: 9px;
   text-transform: capitalize;
 }
 .shift-grid thead th.is-weekend { background: #e8eaf9; }
@@ -502,7 +502,7 @@
 }
 .shift-grid thead .shift-person-column {
   color: #737b9d;
-  font-size: 10px;
+  font-size: 11px;
   text-align: left;
 }
 .shift-grid tbody .shift-person-column {
@@ -511,18 +511,18 @@
 }
 .shift-avatar {
   flex-basis: 24px;
-  font-size: 9px;
+  font-size: 10px;
   height: 24px;
   width: 24px;
 }
 .shift-person-copy strong {
   color: #12142b;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.05;
 }
 .shift-person-copy small {
   color: #727a9d;
-  font-size: 8px;
+  font-size: 10.5px;
   line-height: 1;
   margin-top: 3px;
   text-transform: uppercase;
@@ -537,21 +537,21 @@
   min-width: 24px;
   padding: 0;
 }
-.shift-cell strong { font-size: 9px; }
+.shift-cell strong { font-size: 10px; }
 .shift-legend {
   gap: 8px 15px;
   padding: 15px 1px 0;
 }
 .shift-legend span {
   color: #7b82a4;
-  font-size: 9px;
+  font-size: 11px;
   gap: 5px;
 }
 .shift-legend i { display: none; }
 .shift-legend strong {
   border-radius: 4px;
   color: white;
-  font-size: 9px;
+  font-size: 9.5px;
   line-height: 18px;
   min-width: 22px;
   padding: 0 5px;
@@ -585,7 +585,7 @@
 .shift-form-label,
 .shift-original-subtitle {
   color: #8188a7;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -593,7 +593,7 @@
 .shift-section-label { margin-top: 20px; }
 .shift-form-help {
   color: #7f86a5;
-  font-size: 10px;
+  font-size: 12px;
   margin: 4px 0 10px;
 }
 .shift-original-panel input,
@@ -634,7 +634,7 @@
 }
 .shift-swap-date-row span {
   color: #697190;
-  font-size: 10px;
+  font-size: 12px;
 }
 .shift-swap-date-row small { color: #8990ad; }
 .shift-swap-list {
@@ -649,7 +649,7 @@
   border-radius: 12px;
   color: #7d8298;
   display: grid;
-  font-size: 10px;
+  font-size: 12.5px;
   gap: 10px;
   grid-template-columns: auto minmax(170px,1fr) 80px 100px 70px;
   min-height: 44px;
@@ -658,13 +658,13 @@
 }
 .shift-swap-person strong {
   color: #777c8f;
-  font-size: 11px;
+  font-size: 13px;
 }
 .shift-swap-person > span:not(.shift-avatar) { text-align: right; }
 .shift-inline-warning {
   color: #9a4f18;
   display: inline-block;
-  font-size: 10px;
+  font-size: 12px;
   margin: 14px 0 4px;
 }
 .shift-original-subtitle { margin: 18px 0 12px; }
@@ -684,7 +684,7 @@
 .shift-inline-form label > span,
 .shift-note-submit label > span {
   color: #8188a7;
-  font-size: 9px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -703,7 +703,7 @@
 .shift-note-submit input { width: 100%; }
 .shift-balance-table {
   border-bottom: 1px solid #dfe3f1;
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 8px;
 }
 .shift-balance-table > div {
@@ -744,16 +744,16 @@
 }
 .shift-preference-order > div > span {
   color: #69718b;
-  font-size: 9px;
+  font-size: 10px;
 }
 .shift-preference-order strong {
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 19px;
   text-align: center;
 }
 .shift-preference-order b {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 .shift-preference-order button {
@@ -779,7 +779,7 @@
 }
 .shift-weekday-preferences > div > strong {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   margin-bottom: 8px;
   text-transform: uppercase;
 }
@@ -794,7 +794,7 @@
   border-radius: 7px;
   color: #8188a7;
   cursor: pointer;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   min-height: 23px;
   min-width: 30px;
@@ -832,7 +832,7 @@
   border-radius: 4px;
   color: var(--shift-text);
   display: inline-flex;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   height: 18px;
   justify-content: center;
@@ -876,7 +876,7 @@
   align-items: center;
   border-radius: 4px;
   display: inline-flex;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   height: 19px;
   justify-content: center;
@@ -904,7 +904,7 @@
 }
 .shift-custom-select-menu button {
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12.5px;
   min-height: 34px;
   padding: 0 8px;
 }
@@ -915,7 +915,7 @@
 .shift-custom-select-trigger {
   border-color: var(--shift-line-strong);
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   min-height: 36px;
 }
 .shift-custom-select-trigger:hover {
@@ -938,7 +938,7 @@
   height: 35px;
 }
 .shift-grid thead th strong {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
 }
 .shift-grid thead th span {
@@ -949,11 +949,11 @@
   min-height: 42px;
 }
 .shift-person-copy strong {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 .shift-person-copy small {
-  font-size: 8px;
+  font-size: 10.5px;
 }
 .shift-legend {
   align-items: center;
@@ -962,13 +962,13 @@
 }
 .shift-legend strong {
   border-radius: 4px;
-  font-size: 8.5px;
+  font-size: 9.5px;
   line-height: 18px;
   min-width: 21px;
   padding-inline: 5px;
 }
 .shift-legend span {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 760px) {
@@ -1106,7 +1106,7 @@
 .shift-vacation-tabbar { display: inline-flex; gap: 3px; background: var(--shift-soft); border: 1px solid var(--shift-line); border-radius: 12px; padding: 3px; width: fit-content; }
 .shift-vacation-tabbar button { font: inherit; font-size: 13px; font-weight: 700; color: var(--shift-muted); background: transparent; border: 0; border-radius: 9px; padding: 9px 16px; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
 .shift-vacation-tabbar button[aria-selected="true"] { background: var(--shift-panel); color: var(--shift-ink); box-shadow: 0 1px 2px rgba(22,24,43,0.08); }
-.shift-vacation-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #a16207; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 2px; }
+.shift-vacation-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #a16207; color: #fff; font-size: 10.5px; font-weight: 800; vertical-align: 2px; }
 .shift-vacation-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--shift-muted); font-weight: 600; }
 .shift-vacation-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .shift-vacation-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -1124,17 +1124,17 @@
 .shift-vacation-person { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .shift-vacation-person-copy { min-width: 0; }
 .shift-vacation-person-copy strong { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.shift-vacation-person-copy small { color: var(--shift-muted); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+.shift-vacation-person-copy small { color: var(--shift-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
 .shift-vacation-person-groups { display: grid; gap: 8px; }
 .shift-vacation-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.shift-vacation-group-label { flex: 0 0 auto; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--shift-muted); min-width: 118px; }
+.shift-vacation-group-label { flex: 0 0 auto; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--shift-muted); min-width: 118px; }
 .shift-vacation-group-pills { display: flex; flex-wrap: wrap; gap: 6px; }
-.shift-vacation-pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 400; white-space: nowrap; }
+.shift-vacation-pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 5px 10px; font-size: 12.5px; font-weight: 400; white-space: nowrap; }
 .shift-vacation-pill.is-taken { background: var(--shift-soft); color: var(--shift-muted); }
 .shift-vacation-pill.is-confirmed { background: #e1f3ea; color: #1f8f5f; }
 .shift-vacation-pill.is-pending { background: #fef9c3; color: #a16207; }
 .shift-vacation-pill.is-missing { background: var(--shift-accent-soft); color: var(--shift-accent); }
-.shift-vacation-person-remaining { font-size: 11.5px; font-weight: 500; color: var(--shift-accent); border-top: 1px solid var(--shift-line); padding-top: 10px; }
+.shift-vacation-person-remaining { font-size: 12.5px; font-weight: 500; color: var(--shift-accent); border-top: 1px solid var(--shift-line); padding-top: 10px; }
 .shift-vacation-person-remaining .is-complete { color: #1f8f5f; }
 @media (max-width: 560px) {
   .shift-vacation-group { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -1147,7 +1147,7 @@
 .shift-vacation-card { border: 1px solid var(--shift-line); border-radius: 13px; padding: 14px; display: grid; gap: 8px; align-content: start; background: var(--shift-panel); transition: transform 160ms ease, box-shadow 160ms ease; }
 .shift-vacation-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(22,24,43,0.08); }
 .shift-vacation-card.is-missing { border-style: dashed; border-color: var(--shift-accent); background: var(--shift-accent-soft); }
-.shift-vacation-card-label { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--shift-muted); }
+.shift-vacation-card-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--shift-muted); }
 .shift-vacation-card-dates { font-size: 1.05rem; font-weight: 600; }
 .shift-vacation-card.is-missing .shift-vacation-card-dates { color: var(--shift-accent); font-size: .95rem; }
 .shift-vacation-request-panel { border: 1px solid var(--shift-line); border-radius: 13px; padding: 16px; background: var(--shift-panel); display: grid; gap: 10px; animation: shift-vacation-fade-rise 220ms cubic-bezier(.22,1,.36,1); }
