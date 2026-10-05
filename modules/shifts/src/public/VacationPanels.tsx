@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Button } from '@homisuite/ui'
+import { Button, DatePicker } from '@homisuite/ui'
 import { Check, X } from 'lucide-react'
 import type { ShiftPreviewProperty, ShiftPerson } from '../preview/fixtures'
 import {
   countVacationDays, findVacationOverlap, validateVacationRequest, displayVacationStatus,
   type VacationPeriod, type VacationSettings, type VacationDisplayStatus,
 } from '../domain/vacationPeriods'
-import { ShiftDatePicker } from './ShiftDatePicker'
 
 const STATUS_LABEL: Record<VacationDisplayStatus, string> = { taken: 'Presa', confirmed: 'Confermata', pending: 'In attesa', missing: 'Da pianificare' }
 const MONTH_LONG = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
@@ -164,8 +163,8 @@ function MyVacationPanel({ property, periods, settings, currentStaffProfileId, o
         <Button variant="secondary" onClick={() => setPanelOpenFor(null)}>Chiudi</Button>
       </div>
       <div className="shift-vacation-request-form">
-        <label className="shift-field"><span>Dal</span><ShiftDatePicker value={start} onChange={setStart} ariaLabel="Data di inizio periodo" /></label>
-        <label className="shift-field"><span>Al</span><ShiftDatePicker value={end} onChange={setEnd} ariaLabel="Data di fine periodo" /></label>
+        <label className="shift-field"><span>Dal</span><DatePicker value={start} onChange={setStart} ariaLabel="Data di inizio periodo" /></label>
+        <label className="shift-field"><span>Al</span><DatePicker value={end} onChange={setEnd} ariaLabel="Data di fine periodo" /></label>
         <Button variant="primary" disabled={saving} onClick={() => void submit()}>{saving ? 'Invio…' : 'Controlla e invia'}</Button>
       </div>
       <p className="shift-form-help">Il periodo deve durare tra {settings.minDays} e {settings.maxDays} giorni (impostato dal responsabile).</p>

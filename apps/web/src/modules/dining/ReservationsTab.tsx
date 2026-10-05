@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Button, Modal } from '@homisuite/ui'
+import { Button, DatePicker, Modal, TimePicker } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
@@ -126,17 +126,25 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [restaurantId, setRestaurantId] = useState('')
+  const [reservationDate, setReservationDate] = useState('')
+  const [reservationTime, setReservationTime] = useState('')
 
   useEffect(() => {
     if (open) {
       setSaving(false)
       setError(null)
       setRestaurantId(restaurants[0]?.id ?? '')
+      setReservationDate('')
+      setReservationTime('')
     }
   }, [open, restaurants])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!reservationDate || !reservationTime) {
+      setError('Indica data e ora della prenotazione.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -146,8 +154,8 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
         room_number: String(form.get('room_number') || '') || null,
         guest_name: String(form.get('guest_name')),
         party_size: Number(form.get('party_size')),
-        reservation_date: String(form.get('reservation_date')),
-        reservation_time: String(form.get('reservation_time')),
+        reservation_date: reservationDate,
+        reservation_time: reservationTime,
         booking_reference: String(form.get('booking_reference') || '') || null,
         special_requests: String(form.get('special_requests') || '') || null,
         staff_notes: String(form.get('staff_notes') || '') || null,
@@ -182,8 +190,8 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
         </label>
         <label className="form-field"><span>Nome ospite</span><input name="guest_name" required minLength={1} maxLength={120} /></label>
         <label className="form-field"><span>Camera</span><input name="room_number" maxLength={20} /></label>
-        <label className="form-field"><span>Data</span><input name="reservation_date" type="date" required /></label>
-        <label className="form-field"><span>Ora</span><input name="reservation_time" type="time" required /></label>
+        <label className="form-field"><span>Data</span><DatePicker value={reservationDate} onChange={setReservationDate} ariaLabel="Data prenotazione" /></label>
+        <label className="form-field"><span>Ora</span><TimePicker value={reservationTime} onChange={setReservationTime} ariaLabel="Ora prenotazione" /></label>
         <label className="form-field"><span>Numero persone</span><input name="party_size" type="number" min={1} max={50} required defaultValue={2} /></label>
         <label className="form-field"><span>N. prenotazione</span><input name="booking_reference" maxLength={40} /></label>
         <label className="form-field"><span>Richieste particolari</span><textarea name="special_requests" rows={2} maxLength={500} spellCheck={false} /></label>

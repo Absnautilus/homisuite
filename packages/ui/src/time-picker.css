@@ -1,0 +1,61 @@
+.ui-time-picker { position: relative; width: max-content; }
+.ui-time-trigger {
+  align-items: center;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line-strong, #d3d6ec);
+  border-radius: var(--r-sm, 8px);
+  color: var(--ink, #16182b);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 13px;
+  gap: 18px;
+  justify-content: space-between;
+  min-height: 42px;
+  min-width: 110px;
+  padding: 0 11px;
+  transition: border-color var(--motion-fast, 120ms) var(--motion-ease, ease), box-shadow var(--motion-fast, 120ms) var(--motion-ease, ease);
+}
+.ui-time-trigger:disabled { cursor: not-allowed; opacity: 0.55; }
+.ui-time-trigger:hover:not(:disabled) { border-color: var(--accent, #9c4fc7); }
+.ui-time-picker.is-open .ui-time-trigger { border-color: var(--accent, #9c4fc7); box-shadow: var(--focus-ring, 0 0 0 3px rgba(156,79,199,.18)); }
+.ui-time-trigger svg { color: var(--muted, #767aa0); flex: 0 0 auto; }
+.ui-time-placeholder { color: var(--muted, #767aa0); }
+
+.ui-time-popover {
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e3e5f3);
+  border-radius: var(--r-sm, 8px);
+  box-shadow: var(--shadow-lg, 0 16px 40px rgba(22, 24, 43, 0.18));
+  left: 0;
+  padding: 6px;
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 1200;
+}
+.ui-time-columns { display: flex; gap: 4px; }
+.ui-time-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  scroll-behavior: auto;
+  scrollbar-width: thin;
+  width: 48px;
+}
+.ui-time-column button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink, #16182b);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  height: 30px;
+  width: 100%;
+}
+.ui-time-column button:hover { background: var(--accent-soft, #f4e8fa); }
+.ui-time-column button.is-active { background: var(--accent, #9c4fc7); color: var(--accent-ink, #fff); font-weight: 800; }

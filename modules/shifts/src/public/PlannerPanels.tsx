@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Download, GripVertical, Plus } from 'lucide-react'
-import { Button, Modal } from '@homisuite/ui'
+import { Button, DatePicker, Modal } from '@homisuite/ui'
 import type { ShiftPlanningUnit, ShiftPreviewProperty } from '../preview/fixtures'
 import { downloadShiftCalendar, generateShiftCalendarIcs, type ShiftCalendarEvent } from '../domain/icsExport'
 import { ASSIGNMENT_ROLES, DEFAULT_HARD_RULES, DEFAULT_SOFT_RULES, type RoleCodes, initRestRotationPairsPerCycle, initRoleCodes, initRuleEnabled, initRuleOrder } from '../domain/defaultRules'
 import { ShiftSelect } from './ShiftSelect'
-import { ShiftDatePicker } from './ShiftDatePicker'
 
 export interface ShiftRuleSetSave {
   planningUnitId: string
@@ -435,7 +434,7 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
       <h2>Richiedi cambio turno</h2>
       <p>Scegli un giorno e un collega. Il cambio viene rivalidato sui turni reali al momento della risposta; i turni bloccati non sono scambiabili.</p>
       <div className="shift-form-label">Giorno</div>
-      <div className="shift-swap-date-row"><ShiftDatePicker ariaLabel="Giorno del cambio turno" value={date} onChange={(value) => { setDate(value); setSwapTarget('') }} /><span>{ownCode ? `Il tuo turno: ${ownCode}` : 'Non hai un turno assegnato in questa data'}</span></div>
+      <div className="shift-swap-date-row"><DatePicker ariaLabel="Giorno del cambio turno" value={date} onChange={(value) => { setDate(value); setSwapTarget('') }} /><span>{ownCode ? `Il tuo turno: ${ownCode}` : 'Non hai un turno assegnato in questa data'}</span></div>
       <div className="shift-form-label shift-section-label">Con chi vuoi scambiare</div>
       <div className="shift-swap-list">{candidates.map(({ person, code }) => <button type="button" className="shift-swap-person" aria-pressed={swapTarget === person.id} key={person.id} onClick={() => setSwapTarget(person.id)}>
         <span className="shift-avatar">{person.initials}</span><strong>{person.name}</strong><span>{code || '—'}</span>
@@ -449,7 +448,7 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
     <h2>Ferie e permessi</h2>
     <p>Richiedi ferie o un permesso su un giorno specifico, anche di un mese diverso da quello visualizzato nel calendario. Resta soggetto a conferma dell'admin (Direttore o FOM).</p>
     <div className="shift-inline-form shift-absence-form">
-      <label><span>Giorno</span><ShiftDatePicker ariaLabel="Giorno ferie o permesso" value={date} onChange={setDate} /></label>
+      <label><span>Giorno</span><DatePicker ariaLabel="Giorno ferie o permesso" value={date} onChange={setDate} /></label>
       <label><span>Tipo</span><ShiftSelect ariaLabel="Tipo richiesta" value={absenceType} onChange={setAbsenceType} options={[{ value: "Ferie", label: "Ferie" }, { value: "Permesso", label: "Permesso" }, { value: "R.O.L.", label: "R.O.L." }, { value: "Malattia", label: "Malattia" }]} /></label>
       <label><span>Turno interessato</span><ShiftSelect ariaLabel="Turno interessato" value={affectedShift} onChange={setAffectedShift} options={[{ value: "Giornata intera", label: "Giornata intera" }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
     </div>
@@ -466,7 +465,7 @@ export function RequestsPanel({ kind, unit, currentStaffProfileId, onSubmitReque
     <h2>Pre-assegnazione turni</h2>
     <p>Proponi di esserti assegnato un turno specifico (o un giorno libero) in un giorno specifico, anche di un mese diverso da quello visualizzato nel calendario. Resta soggetto a conferma dell'admin (Direttore o FOM); una volta accettata, il turno viene bloccato automaticamente.</p>
     <div className="shift-inline-form shift-preassignment-form">
-      <label><span>Giorno</span><ShiftDatePicker ariaLabel="Giorno pre-assegnazione" value={date} onChange={setDate} /></label>
+      <label><span>Giorno</span><DatePicker ariaLabel="Giorno pre-assegnazione" value={date} onChange={setDate} /></label>
       <label><span>Turno</span><ShiftSelect ariaLabel="Turno pre-assegnazione" value={preCode} onChange={setPreCode} options={[{ value: "", label: "Seleziona..." }, ...unit.codes.map((code) => ({ value: code.code, label: `${code.code} · ${code.label}`, shortLabel: code.code, color: code.color, textColor: code.textColor }))]} /></label>
       <label className="shift-grow"><span>Nota (facoltativa)</span><input placeholder="es. preferirei chiudere quel giorno" value={note} onChange={(event) => setNote(event.target.value)} /></label>
       <Button variant="primary" disabled={!preCode || !onSubmitRequest || !currentStaffProfileId || submitState === 'saving'} onClick={() => { const code = unit.codes.find((item) => item.code === preCode); if (code) void submit({ kind: 'preassignments', date, shiftCodeId: code.id, note }) }}>{submitState === 'saving' ? 'Invio…' : 'Invia richiesta'}</Button>
