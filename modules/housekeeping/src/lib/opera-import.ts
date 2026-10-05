@@ -90,7 +90,7 @@ export function parseOperaArrivals(text: string): OperaImportResult {
 // Opera dates are DD/MM/YY. Combined with a time-of-day (hotel's standard
 // check-in/out time, editable per row in the import preview before
 // confirming) into the same "local wall-clock string" (YYYY-MM-DDTHH:mm)
-// DateTimePicker already uses elsewhere in this app, so imported rows are
+// DatePicker/TimePicker already use elsewhere in this app, so imported rows are
 // editable in the preview exactly like a manually-entered stay.
 export function operaDateToLocalValue(ddmmyy: string, timeOfDay: string): string {
   const [day, month, yearShort] = ddmmyy.split('/')

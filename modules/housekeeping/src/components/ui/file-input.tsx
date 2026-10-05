@@ -4,7 +4,7 @@ import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
 
 // The suite had no file-input treatment yet -- every other control here
-// (Input, Select, DateTimePicker, Button) is custom-styled, but a bare
+// (Input, Select, DatePicker/TimePicker, Button) is custom-styled, but a bare
 // <input type="file"> still rendered the OS-native "Choose file" button,
 // the same class of inconsistency Select existed to fix for dropdowns.
 // The native input can't be restyled directly (the button chrome is

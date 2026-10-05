@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FieldGroup, Input, Label, Select } from '@/components/ui/field'
 import { FileInput } from '@/components/ui/file-input'
-import { DateTimePicker } from '@/components/ui/date-time-picker'
+import { DatePicker, TimePicker } from '@homisuite/ui'
 import type { Room } from '@/lib/admin-api'
 import { createStay } from '@/lib/stays-api'
 import { operaDateToLocalValue, parseOperaArrivals } from '@/lib/opera-import'
@@ -12,6 +12,16 @@ import { useLocale } from '@/lib/i18n/locale-context'
 
 const DEFAULT_CHECK_IN_TIME = '15:00'
 const DEFAULT_CHECK_OUT_TIME = '11:00'
+
+// Same "local wall-clock string" (YYYY-MM-DDTHH:mm) split/join as
+// stays-page.tsx -- DatePicker/TimePicker each own one half of it.
+function splitLocalInputValue(value: string): { date: string; time: string } {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value)
+  return match ? { date: match[1]!, time: match[2]! } : { date: '', time: '' }
+}
+function joinLocalInputValue(date: string, time: string): string {
+  return date ? `${date}T${time || '00:00'}` : ''
+}
 
 interface DraftRow {
   key: string
@@ -183,10 +193,16 @@ export function OperaImportPanel({ hotelId, rooms, onImported }: { hotelId: stri
                           <Input value={draft.guestName} onChange={(e) => updateDraft(draft.key, { guestName: e.target.value })} />
                         </td>
                         <td className="px-3 py-2">
-                          <DateTimePicker value={draft.checkIn} onChange={(value) => updateDraft(draft.key, { checkIn: value })} />
+                          <div className="flex gap-1.5">
+                            <DatePicker ariaLabel={t('staff.stays.checkIn')} value={splitLocalInputValue(draft.checkIn).date} onChange={(date) => updateDraft(draft.key, { checkIn: joinLocalInputValue(date, splitLocalInputValue(draft.checkIn).time) })} />
+                            <TimePicker ariaLabel={`${t('staff.stays.checkIn')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(draft.checkIn).time} onChange={(time) => updateDraft(draft.key, { checkIn: joinLocalInputValue(splitLocalInputValue(draft.checkIn).date, time) })} />
+                          </div>
                         </td>
                         <td className="px-3 py-2">
-                          <DateTimePicker value={draft.checkOut} onChange={(value) => updateDraft(draft.key, { checkOut: value })} />
+                          <div className="flex gap-1.5">
+                            <DatePicker ariaLabel={t('staff.stays.checkOut')} value={splitLocalInputValue(draft.checkOut).date} onChange={(date) => updateDraft(draft.key, { checkOut: joinLocalInputValue(date, splitLocalInputValue(draft.checkOut).time) })} />
+                            <TimePicker ariaLabel={`${t('staff.stays.checkOut')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(draft.checkOut).time} onChange={(time) => updateDraft(draft.key, { checkOut: joinLocalInputValue(splitLocalInputValue(draft.checkOut).date, time) })} />
+                          </div>
                         </td>
                       </tr>
                     ))}

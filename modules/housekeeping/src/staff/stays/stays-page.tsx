@@ -8,7 +8,7 @@ import { EmptyState, IconBedEmpty } from '@/components/empty-state'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { FieldError, FieldGroup, Input, Label, Select } from '@/components/ui/field'
-import { DateTimePicker } from '@/components/ui/date-time-picker'
+import { DatePicker, TimePicker } from '@homisuite/ui'
 import { listRooms, type Room } from '@/lib/admin-api'
 import { cancelStay, checkOutStayNow, createStay, fetchRequestsForStay, listStays, updateCheckout, updateStay, type Stay, type StayRequest } from '@/lib/stays-api'
 import { OperaImportPanel } from '@/staff/stays/opera-import-panel'
@@ -25,6 +25,19 @@ function toLocalInputValue(iso: string): string {
   const d = new Date(iso)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// DatePicker/TimePicker (the one calendar/clock widget shared by every
+// module) each own one half of this "local wall-clock string"
+// (YYYY-MM-DDTHH:mm) -- same shape the rest of this file already builds
+// and reads via toLocalInputValue/new Date(...), so splitting it here
+// doesn't touch anything downstream.
+function splitLocalInputValue(value: string): { date: string; time: string } {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value)
+  return match ? { date: match[1]!, time: match[2]! } : { date: '', time: '' }
+}
+function joinLocalInputValue(date: string, time: string): string {
+  return date ? `${date}T${time || '00:00'}` : ''
 }
 
 // Combines "days from now" with an "HH:mm" hotel-configured default into a
@@ -168,13 +181,19 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
               <Label htmlFor="checkIn" required>
                 {t('staff.stays.checkIn')}
               </Label>
-              <DateTimePicker id="checkIn" required value={checkIn} onChange={setCheckIn} />
+              <div className="flex gap-2">
+                <DatePicker id="checkIn" ariaLabel={t('staff.stays.checkIn')} value={splitLocalInputValue(checkIn).date} onChange={(date) => setCheckIn(joinLocalInputValue(date, splitLocalInputValue(checkIn).time))} />
+                <TimePicker ariaLabel={`${t('staff.stays.checkIn')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(checkIn).time} onChange={(time) => setCheckIn(joinLocalInputValue(splitLocalInputValue(checkIn).date, time))} />
+              </div>
             </FieldGroup>
             <FieldGroup>
               <Label htmlFor="checkOut" required>
                 {t('staff.stays.checkOut')}
               </Label>
-              <DateTimePicker id="checkOut" required value={checkOut} onChange={setCheckOut} />
+              <div className="flex gap-2">
+                <DatePicker id="checkOut" ariaLabel={t('staff.stays.checkOut')} value={splitLocalInputValue(checkOut).date} onChange={(date) => setCheckOut(joinLocalInputValue(date, splitLocalInputValue(checkOut).time))} />
+                <TimePicker ariaLabel={`${t('staff.stays.checkOut')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(checkOut).time} onChange={(time) => setCheckOut(joinLocalInputValue(splitLocalInputValue(checkOut).date, time))} />
+              </div>
             </FieldGroup>
           </div>
           <FieldError>{error ?? undefined}</FieldError>
@@ -304,13 +323,19 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
                 <Label htmlFor={`edit-checkin-${stay.id}`} required>
                   {t('staff.stays.checkIn')}
                 </Label>
-                <DateTimePicker id={`edit-checkin-${stay.id}`} required value={detailsCheckIn} onChange={setDetailsCheckIn} />
+                <div className="flex gap-2">
+                  <DatePicker id={`edit-checkin-${stay.id}`} ariaLabel={t('staff.stays.checkIn')} value={splitLocalInputValue(detailsCheckIn).date} onChange={(date) => setDetailsCheckIn(joinLocalInputValue(date, splitLocalInputValue(detailsCheckIn).time))} />
+                  <TimePicker ariaLabel={`${t('staff.stays.checkIn')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(detailsCheckIn).time} onChange={(time) => setDetailsCheckIn(joinLocalInputValue(splitLocalInputValue(detailsCheckIn).date, time))} />
+                </div>
               </FieldGroup>
               <FieldGroup className="mb-0">
                 <Label htmlFor={`edit-checkout-${stay.id}`} required>
                   {t('staff.stays.checkOut')}
                 </Label>
-                <DateTimePicker id={`edit-checkout-${stay.id}`} required value={detailsCheckOut} onChange={setDetailsCheckOut} />
+                <div className="flex gap-2">
+                  <DatePicker id={`edit-checkout-${stay.id}`} ariaLabel={t('staff.stays.checkOut')} value={splitLocalInputValue(detailsCheckOut).date} onChange={(date) => setDetailsCheckOut(joinLocalInputValue(date, splitLocalInputValue(detailsCheckOut).time))} />
+                  <TimePicker ariaLabel={`${t('staff.stays.checkOut')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(detailsCheckOut).time} onChange={(time) => setDetailsCheckOut(joinLocalInputValue(splitLocalInputValue(detailsCheckOut).date, time))} />
+                </div>
               </FieldGroup>
               <div className="flex items-center gap-2 sm:col-span-2">
                 <Button
@@ -337,7 +362,8 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
             </div>
           ) : editingCheckout ? (
             <div className="flex items-center gap-2">
-              <DateTimePicker value={checkOut} onChange={setCheckOut} />
+              <DatePicker ariaLabel={t('staff.stays.checkOut')} value={splitLocalInputValue(checkOut).date} onChange={(date) => setCheckOut(joinLocalInputValue(date, splitLocalInputValue(checkOut).time))} />
+              <TimePicker ariaLabel={`${t('staff.stays.checkOut')} — ${t('datePicker.hour')}`} value={splitLocalInputValue(checkOut).time} onChange={(time) => setCheckOut(joinLocalInputValue(splitLocalInputValue(checkOut).date, time))} />
               <Button
                 size="sm"
                 disabled={pending}
