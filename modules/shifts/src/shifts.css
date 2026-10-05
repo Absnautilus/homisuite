@@ -1,6 +1,6 @@
 .shift-root {
   --shift-ink: #16182b;
-  --shift-muted: #767aa0;
+  --shift-muted: #61658c;
   --shift-line: #e3e5f3;
   --shift-line-strong: #d3d6ec;
   --shift-panel: #fff;
@@ -10,7 +10,7 @@
   --shift-focus-ring: 0 0 0 3px var(--shift-accent-soft), 0 0 0 1.5px var(--shift-accent);
   color: var(--shift-ink);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   min-width: 0;
 }
 

@@ -6,7 +6,7 @@
   --surface-2: #f4f5fc;
   --ink: #16182b;
   --ink-2: #4a4d68;
-  --muted: #767aa0;
+  --muted: #61658c;
   --line: #e3e5f3;
   --line-strong: #d3d6ec;
   --f-head: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -108,7 +108,7 @@ html { font-family: var(--f-body); scrollbar-width: thin; scrollbar-color: var(-
 *::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
 *::-webkit-scrollbar-thumb:hover { opacity: 0.85; }
 *::-webkit-scrollbar-button { display: none; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 h1, h2, h3, h4 { margin: 0; font-family: var(--f-head); }
 button, a, select, input { font: inherit; }
 button, select, input { color: inherit; }
@@ -201,7 +201,7 @@ a { color: inherit; text-decoration: none; }
 .login-copy h1 { font-size: 1.7rem; letter-spacing: -0.03em; }
 .login-copy > p:last-child { margin: 8px 0 0; color: var(--muted); line-height: 1.5; font-size: 13px; }
 .login-form { display: grid; gap: 15px; }
-.login-form label { display: grid; gap: 6px; color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.login-form label { display: grid; gap: 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 /* font-size stays at 16px, not the app's usual 14-14.5px body copy -- iOS
    Safari (including installed home-screen PWAs, where there's no pinch
    gesture to zoom back out afterward) force-zooms the page on focus for any
@@ -234,28 +234,28 @@ a { color: inherit; text-decoration: none; }
    state is still there for discoverability, just not a permanent outline. */
 .property-switcher { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--r-sm); background: transparent; color: var(--navbar-text); cursor: pointer; text-align: left; font: inherit; }
 .property-switcher:hover { background: var(--navbar-surface-hover); }
-.property-switcher .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; flex-shrink: 0; color: #fff; }
+.property-switcher .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; color: #fff; }
 .property-switcher .mk-logo { object-fit: cover; background: var(--navbar-surface-solid); }
 /* The property's own name is the one thing here that must never be cut
    short -- it wraps instead of ellipsizing. The role/staff line under it
    stays single-line (secondary information, and typically much shorter). */
 .property-switcher span { min-width: 0; display: grid; gap: 1px; flex: 1; align-self: center; }
 .property-switcher strong { display: block; font-size: 12.5px; font-weight: 700; white-space: normal; line-height: 1.25; overflow-wrap: break-word; }
-.property-switcher small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--navbar-icon); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.property-switcher small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--navbar-icon); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
 .property-switcher svg { color: var(--navbar-icon); flex-shrink: 0; transition: transform var(--motion-fast) var(--motion-ease); }
 .property-switcher svg.rotate { transform: rotate(180deg); }
 
 .switch-panel { position: absolute; z-index: var(--z-dropdown, 100); top: calc(100% + 6px); left: 0; right: 0; background: var(--navbar-surface-solid); border: 1px solid var(--navbar-border); border-radius: var(--r-md); box-shadow: var(--shadow-lg); overflow: hidden; }
-.switch-panel-hd { padding: 10px 13px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--navbar-text-muted); border-bottom: 1px solid var(--navbar-border); }
+.switch-panel-hd { padding: 10px 13px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--navbar-text-muted); border-bottom: 1px solid var(--navbar-border); }
 .switch-panel-row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 13px; border: 0; background: transparent; cursor: pointer; text-align: left; font: inherit; color: var(--navbar-text); }
 .switch-panel-row:hover { background: var(--navbar-surface-solid-hover); }
 .switch-panel-row.current { background: color-mix(in srgb, var(--accent) 22%, transparent); }
-.switch-panel-row .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+.switch-panel-row .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
 .switch-panel-row .n { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .switch-panel-row .check { color: var(--accent); flex-shrink: 0; }
 
 .sidebar-nav { display: grid; gap: 2px; }
-.nav-section-label { margin: 16px 10px 7px; color: var(--navbar-icon); font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.nav-section-label { margin: 16px 10px 7px; color: var(--navbar-icon); font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
 /* A visible seam between "Moduli" and "Piattaforma" -- two different kinds
    of destination (what the property does vs. how it's run), not just two
    labels in the same list. */
@@ -303,7 +303,7 @@ a { color: inherit; text-decoration: none; }
 .page-stack { display: grid; gap: 22px; }
 .page-stack > * { min-width: 0; }
 .section-heading.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-.eyebrow { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { margin: 0; color: var(--accent); font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 2px; font-size: clamp(1.8rem, 3vw, 2.35rem); letter-spacing: -0.04em; }
 .section-heading { padding: 18px 20px 14px; }

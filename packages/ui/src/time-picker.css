@@ -19,8 +19,8 @@
 .ui-time-trigger:disabled { cursor: not-allowed; opacity: 0.55; }
 .ui-time-trigger:hover:not(:disabled) { border-color: var(--accent, #9c4fc7); }
 .ui-time-picker.is-open .ui-time-trigger { border-color: var(--accent, #9c4fc7); box-shadow: var(--focus-ring, 0 0 0 3px rgba(156,79,199,.18)); }
-.ui-time-trigger svg { color: var(--muted, #767aa0); flex: 0 0 auto; }
-.ui-time-placeholder { color: var(--muted, #767aa0); }
+.ui-time-trigger svg { color: var(--muted, #61658c); flex: 0 0 auto; }
+.ui-time-placeholder { color: var(--muted, #61658c); }
 
 .ui-time-popover {
   background: var(--surface, #fff);

@@ -45,7 +45,7 @@ body.ui-modal-open { overflow: hidden; }
   border-bottom: 1px solid var(--line, #e3e5f3);
 }
 .ui-modal-header h2 { margin: 0; font-size: 1.05rem; color: var(--ink, #16182b); }
-.ui-modal-header p { margin: 4px 0 0; color: var(--muted, #767aa0); font-size: 12.5px; }
+.ui-modal-header p { margin: 4px 0 0; color: var(--muted, #61658c); font-size: 12.5px; }
 .ui-modal-icon-button {
   display: inline-flex;
   align-items: center;
@@ -56,7 +56,7 @@ body.ui-modal-open { overflow: hidden; }
   border: 0;
   border-radius: var(--r-sm, 10px);
   background: transparent;
-  color: var(--muted, #767aa0);
+  color: var(--muted, #61658c);
   cursor: pointer;
 }
 .ui-modal-icon-button:hover { background: var(--surface-2, #f6f6fb); }
