@@ -46,6 +46,31 @@ function loadStoredPendingChanges(propertyId: string | undefined): ShiftAssignme
     return []
   }
 }
+// Restoring `pendingChanges` alone isn't enough -- the grid itself renders
+// from `draftProperties`, which came fresh from the server and never had
+// these not-yet-saved edits in the first place. Without re-painting them
+// back on, a restored tab would keep the edit queued for "Salva turni" (the
+// button would correctly be enabled) while the grid cell the user actually
+// looks at stayed empty, looking exactly like the edit was lost.
+function applyPendingChanges(properties: ShiftPreviewProperty[], changes: ShiftAssignmentEdit[]): ShiftPreviewProperty[] {
+  if (changes.length === 0) return properties
+  return properties.map((property) => ({
+    ...property,
+    units: property.units.map((unit) => {
+      const unitChanges = changes.filter((change) => change.planningUnitId === unit.id)
+      if (unitChanges.length === 0) return unit
+      const assignments = { ...unit.assignments }
+      for (const change of unitChanges) {
+        const dateIndex = unit.assignmentDates?.indexOf(change.shiftDate) ?? -1
+        if (dateIndex < 0) continue
+        const next = [...(assignments[change.staffProfileId] ?? [])]
+        next[dateIndex] = change.code
+        assignments[change.staffProfileId] = next
+      }
+      return { ...unit, assignments }
+    }),
+  }))
+}
 function initialsOf(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
 }
@@ -79,7 +104,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [navGroup, setNavGroup] = useState<NavGroup>('operativo')
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const [readOnlyDemo, setReadOnlyDemo] = useState(false)
-  const [draftProperties, setDraftProperties] = useState(previewProperties)
+  const [draftProperties, setDraftProperties] = useState(() => applyPendingChanges(previewProperties, preview ? [] : loadStoredPendingChanges(initialPropertyId)))
   const [draftAvailableTeamMembers, setDraftAvailableTeamMembers] = useState(availableTeamMembers)
   const [pendingChanges, setPendingChanges] = useState<ShiftAssignmentEdit[]>(() => preview ? [] : loadStoredPendingChanges(initialPropertyId))
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -97,13 +122,17 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [tabTransitionActive, setTabTransitionActive] = useState(false)
   const didMountPendingChangesRef = useRef(false)
   useEffect(() => {
-    setDraftProperties(previewProperties)
-    // Skip the very first run: pendingChanges may have just been restored
-    // from sessionStorage above, and this effect also fires on that initial
-    // mount (previewProperties is "new" the first time too) -- wiping it
-    // right back out would defeat the restore. Every later run is a real
-    // data reload (e.g. switching property), where resetting is correct.
-    if (didMountPendingChangesRef.current) setPendingChanges([])
+    // Skip the very first run entirely: pendingChanges (and draftProperties,
+    // via its initializer above) may have just been restored from
+    // sessionStorage, and this effect also fires on that initial mount
+    // (previewProperties is "new" the first time too) -- resetting either
+    // one right back out would defeat the restore. Every later run is a
+    // real data reload (e.g. switching property), where resetting both is
+    // correct.
+    if (didMountPendingChangesRef.current) {
+      setDraftProperties(previewProperties)
+      setPendingChanges([])
+    }
     didMountPendingChangesRef.current = true
     setSaveState('idle')
   }, [previewProperties])
