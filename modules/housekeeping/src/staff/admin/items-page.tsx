@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Card, CardBody, CardHeader } from '@/components/ui/card'
+import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
-import { Languages, Pencil, Trash2 } from 'lucide-react'
+import { ChevronRight, Languages, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { FieldError, FieldGroup, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { Switch, SwitchControl } from '@/components/ui/switch'
+import { Tabs } from '@homisuite/ui'
 import { AutoText } from '@/components/auto-text'
 import { CategoryIcon } from '@/components/category-icon'
 import { IconPicker } from '@/components/icon-picker'
@@ -39,6 +40,7 @@ import { cn } from '@/lib/cn'
 
 const TRANSLATABLE_LOCALES = LOCALES.filter((l) => l.code !== 'it')
 const IT_LOCALE = LOCALES.find((l) => l.code === 'it')!
+const JOB_TITLE_CHIPS_SHOWN = 2
 
 export function ItemsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
@@ -50,6 +52,12 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
   const [confirmDialog, confirm] = useConfirm()
   const [removedCategoryIds, setRemovedCategoryIds] = useState<Set<string>>(new Set())
   const [removedTypeIds, setRemovedTypeIds] = useState<Set<string>>(new Set())
+  // Collapsed by default -- with many categories, a flat always-expanded
+  // table-of-tables (the previous layout) was the thing that read as
+  // overwhelming. Opening one category at a time keeps the list scannable.
+  const [openCategoryIds, setOpenCategoryIds] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState('')
+  const [addState, setAddState] = useState<{ open: boolean; type: 'category' | 'item'; presetCategoryId?: string }>({ open: false, type: 'category' })
 
   async function reload() {
     const [menu, jobTitleOptions] = await Promise.all([listMenu(hotelId), listPropertyJobTitles(hotelId)])
@@ -62,6 +70,33 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
     reload().catch(() => setError(t('staff.items.loadError')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId])
+
+  function toggleCategoryOpen(id: string) {
+    setOpenCategoryIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function openAddCategory() {
+    setAddState({ open: true, type: 'category' })
+  }
+  function openAddItem(presetCategoryId?: string) {
+    setAddState({ open: true, type: 'item', presetCategoryId })
+  }
+  function closeAdd() {
+    setAddState((current) => ({ ...current, open: false }))
+  }
+  async function onCategoryCreated() {
+    await reload()
+    closeAdd()
+  }
+  async function onItemCreated() {
+    await reload()
+    closeAdd()
+  }
 
   async function onToggleCategory(category: RequestCategoryAdmin) {
     if (category.active) {
@@ -161,22 +196,110 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
   const visibleCategories = categories.filter((c) => !removedCategoryIds.has(c.id))
   const visibleTypes = types.filter((rt) => !removedTypeIds.has(rt.id))
 
+  const searchTerm = search.trim().toLowerCase()
+  const isSearching = searchTerm.length > 0
+  const sections = visibleCategories
+    .map((category) => {
+      const items = visibleTypes.filter((rt) => rt.category_id === category.id)
+      const categoryMatches = isSearching && category.name.toLowerCase().includes(searchTerm)
+      const shownItems = !isSearching || categoryMatches
+        ? items
+        : items.filter((item) => item.name.toLowerCase().includes(searchTerm) || Boolean(item.description?.toLowerCase().includes(searchTerm)))
+      return { category, allItems: items, shownItems, visible: !isSearching || categoryMatches || shownItems.length > 0 }
+    })
+    .filter((section) => section.visible)
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {confirmDialog}
-      <div className="admin-panel-title"><h2>{t('staff.items.title')}</h2><p>{t('staff.items.subtitle')}</p></div>
-      {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
-      <NewCategoryForm jobTitles={jobTitles} onCreated={reload} />
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-        <table aria-label={t('staff.items.title')} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colIcon')}</th><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colJobTitles')}</th><th className="w-px px-4 py-2 text-right"><span className="sr-only">{t('staff.items.colDelete')}</span></th></tr></thead><tbody className="divide-y divide-line">{visibleCategories.map((category) => <CategoryRow key={category.id} category={category} jobTitles={jobTitles} onToggle={() => onToggleCategory(category)} onRemove={() => onRemoveCategory(category)} onSaved={reload} />)}</tbody></table>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="admin-panel-title"><h2>{t('staff.items.title')}</h2><p>{t('staff.items.subtitle')}</p></div>
+        <Button onClick={openAddCategory}><Plus size={16} />{t('staff.items.addNew')}</Button>
       </div>
-      <NewItemForm categories={activeCategories} onCreated={reload} />
-      <div className="space-y-6">{visibleCategories.map((category) => { const items = visibleTypes.filter((rt) => rt.category_id === category.id); if (items.length === 0) return null; const headingId = `category-${category.id}`; return <div key={category.id}><h2 id={headingId} className="mb-2 text-sm font-semibold text-muted"><AutoText text={category.name} translations={category.name_i18n} /></h2><div className="overflow-x-auto rounded-lg border border-line bg-surface"><table aria-labelledby={headingId} className="w-full min-w-max text-sm"><thead className="bg-surface-2 text-left text-xs uppercase text-muted"><tr><th className="px-4 py-2">{t('staff.items.colName')}</th><th className="px-4 py-2">{t('staff.items.colDescription')}</th><th className="px-4 py-2">{t('staff.items.colQuantity')}</th><th className="w-px px-4 py-2 text-right"><span className="sr-only">{t('staff.items.colDelete')}</span></th></tr></thead><tbody className="divide-y divide-line">{items.map((item) => <ItemRow key={item.id} item={item} categories={visibleCategories} onToggle={() => onToggleItem(item)} onRemove={() => onRemoveItem(item)} onSaved={reload} />)}</tbody></table></div></div> })}</div>
+      {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
+
+      <Input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('staff.items.searchPlaceholder')} aria-label={t('staff.items.searchPlaceholder')} />
+
+      {addState.open && (
+        <Card>
+          <CardBody className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <Tabs
+                items={[
+                  { value: 'category', label: t('staff.items.addCategoryTitle') },
+                  { value: 'item', label: t('staff.items.addTitle') },
+                ]}
+                value={addState.type}
+                onValueChange={(value) => setAddState((current) => ({ ...current, type: value as 'category' | 'item' }))}
+                variant="surface"
+              />
+              <IconButton tone="neutral" icon={X} label={t('staff.items.iconCancel')} onClick={closeAdd} />
+            </div>
+            {addState.type === 'category' ? (
+              <NewCategoryForm jobTitles={jobTitles} onCreated={onCategoryCreated} />
+            ) : (
+              <NewItemForm categories={activeCategories} initialCategoryId={addState.presetCategoryId} onCreated={onItemCreated} />
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      <div className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+        {sections.map(({ category, shownItems }) => (
+          <CategoryAccordionRow
+            key={category.id}
+            category={category}
+            items={shownItems}
+            itemCount={shownItems.length}
+            jobTitles={jobTitles}
+            categories={visibleCategories}
+            isOpen={isSearching || openCategoryIds.has(category.id)}
+            onToggleOpen={() => toggleCategoryOpen(category.id)}
+            onToggle={() => onToggleCategory(category)}
+            onRemove={() => onRemoveCategory(category)}
+            onSaved={reload}
+            onToggleItem={onToggleItem}
+            onRemoveItem={onRemoveItem}
+            onAddItem={() => openAddItem(category.id)}
+          />
+        ))}
+        {sections.length === 0 && isSearching && (
+          <p className="p-4 text-sm text-muted">{t('staff.items.searchEmpty')}</p>
+        )}
+      </div>
     </div>
   )
 }
 
-function CategoryRow({ category, jobTitles, onToggle, onRemove, onSaved }: { category: RequestCategoryAdmin; jobTitles: JobTitleOption[]; onToggle: () => void; onRemove: () => void; onSaved: () => Promise<void> }) {
+function CategoryAccordionRow({
+  category,
+  items,
+  itemCount,
+  jobTitles,
+  categories,
+  isOpen,
+  onToggleOpen,
+  onToggle,
+  onRemove,
+  onSaved,
+  onToggleItem,
+  onRemoveItem,
+  onAddItem,
+}: {
+  category: RequestCategoryAdmin
+  items: RequestTypeAdmin[]
+  itemCount: number
+  jobTitles: JobTitleOption[]
+  categories: RequestCategoryAdmin[]
+  isOpen: boolean
+  onToggleOpen: () => void
+  onToggle: () => void
+  onRemove: () => void
+  onSaved: () => Promise<void>
+  onToggleItem: (item: RequestTypeAdmin) => void
+  onRemoveItem: (item: RequestTypeAdmin) => void
+  onAddItem: () => void
+}) {
   const { t } = useLocale()
   const [translationsOpen, setTranslationsOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -198,82 +321,71 @@ function CategoryRow({ category, jobTitles, onToggle, onRemove, onSaved }: { cat
   const jobTitleNames = category.job_title_ids
     .map((id) => jobTitles.find((jt) => jt.id === id)?.name)
     .filter((name): name is string => Boolean(name))
+  const shownJobTitleNames = jobTitleNames.slice(0, JOB_TITLE_CHIPS_SHOWN)
+  const extraJobTitleCount = jobTitleNames.length - shownJobTitleNames.length
 
   return (
-    <>
-      <tr>
-        <td className="px-4 py-2">
-          <button ref={iconTriggerRef} type="button" title={t('staff.items.iconChange')} onClick={() => setPickerOpen((v) => !v)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-line bg-surface-2 text-muted transition-colors hover:border-accent-soft-line hover:bg-accent-soft hover:text-accent">
-            <CategoryIcon icon={category.icon} className="h-[17px] w-[17px]" />
+    <div className={cn(!category.active && 'opacity-60')}>
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <button type="button" onClick={onToggleOpen} aria-label={t('staff.items.toggleCategory')} aria-expanded={isOpen} className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted hover:bg-surface-2">
+          <ChevronRight size={16} className={cn('transition-transform', isOpen && 'rotate-90')} />
+        </button>
+        <button ref={iconTriggerRef} type="button" title={t('staff.items.iconChange')} onClick={() => setPickerOpen((v) => !v)} className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-line bg-surface-2 text-muted transition-colors hover:border-accent-soft-line hover:bg-accent-soft hover:text-accent">
+          <CategoryIcon icon={category.icon} className="h-[15px] w-[15px]" />
+        </button>
+        {pickerOpen && <IconPicker anchorRef={iconTriggerRef} value={category.icon} onSave={onIconSave} onClose={() => setPickerOpen(false)} />}
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          <button type="button" onClick={onToggleOpen} className="max-w-full cursor-pointer truncate text-left text-sm font-medium text-foreground">
+            <AutoText text={category.name} translations={category.name_i18n} />
           </button>
-          {pickerOpen && <IconPicker anchorRef={iconTriggerRef} value={category.icon} onSave={onIconSave} onClose={() => setPickerOpen(false)} />}
-        </td>
-        <td className="px-4 py-2 font-medium text-foreground"><AutoText text={category.name} translations={category.name_i18n} /></td>
-        <td className="px-4 py-2">
-          <button ref={mansioniTriggerRef} type="button" onClick={() => setMansioniOpen((v) => !v)} className="flex max-w-[220px] flex-wrap items-center gap-1 text-left">
-            {jobTitleNames.length > 0
-              ? jobTitleNames.map((name) => <span key={name} className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-muted">{name}</span>)
-              : <span className="text-xs text-muted underline decoration-dotted">{t('staff.items.categoryJobTitlesNone')}</span>}
+          <button ref={mansioniTriggerRef} type="button" onClick={() => setMansioniOpen((v) => !v)} className="flex flex-wrap items-center gap-1 text-left">
+            {shownJobTitleNames.length > 0
+              ? shownJobTitleNames.map((name) => <span key={name} className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-muted">{name}</span>)
+              : <span className="text-[11px] text-muted underline decoration-dotted">{t('staff.items.categoryJobTitlesNone')}</span>}
+            {extraJobTitleCount > 0 && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-muted">+{extraJobTitleCount}</span>}
           </button>
           {mansioniOpen && <MansioniPicker anchorRef={mansioniTriggerRef} jobTitles={jobTitles} value={category.job_title_ids} onSave={onMansioniSave} onClose={() => setMansioniOpen(false)} />}
-        </td>
-        <td className="px-4 py-2 text-right whitespace-nowrap">
-          <div className="flex items-center justify-end gap-1">
-            <span className="flex w-11 justify-center">
-              <SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
-            </span>
-            <span className="flex w-11 justify-center">
-              <IconButton
-                tone="neutral"
-                icon={Pencil}
-                label={t('staff.row.edit')}
-                onClick={() => {
-                  setTranslationsOpen(false)
-                  setEditOpen((v) => !v)
-                }}
-              />
-            </span>
-            <span className="flex w-11 justify-center">
-              <IconButton
-                tone="neutral"
-                icon={Languages}
-                label={t('staff.items.translations')}
-                onClick={() => {
-                  setEditOpen(false)
-                  setTranslationsOpen((v) => !v)
-                }}
-              />
-            </span>
-            <span className="flex w-11 justify-center">
-              <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
-            </span>
-          </div>
-        </td>
-      </tr>
+        </div>
+        <span className="hidden shrink-0 text-xs text-muted sm:block">{t('staff.items.itemCount', { count: itemCount })}</span>
+        <SwitchControl checked={category.active} onCheckedChange={onToggle} aria-label={category.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
+        <div className="flex shrink-0 items-center gap-0.5">
+          <IconButton tone="neutral" icon={Pencil} label={t('staff.row.edit')} onClick={() => { setTranslationsOpen(false); setEditOpen((v) => !v) }} />
+          <IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => { setEditOpen(false); setTranslationsOpen((v) => !v) }} />
+          <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+        </div>
+      </div>
+
       {editOpen && (
-        <tr>
-          <td colSpan={4} className="bg-surface-2 px-4 py-3">
-            <CategoryEditForm category={category} onCancel={() => setEditOpen(false)} onSaved={onSaved} />
-          </td>
-        </tr>
+        <div className="bg-surface-2 px-4 py-3">
+          <CategoryEditForm category={category} onCancel={() => setEditOpen(false)} onSaved={onSaved} />
+        </div>
       )}
       {translationsOpen && (
-        <tr>
-          <td colSpan={4} className="bg-surface-2 px-4 py-3">
-            <NameTranslationsForm
-              baseName={category.name}
-              initial={category.name_i18n}
-              onSave={async (name_i18n) => { await updateRequestCategoryTranslations(category.id, name_i18n); await onSaved() }}
-              onSaveBaseName={async (name) => { await updateRequestCategoryName(category.id, name); await onSaved() }}
-            />
-          </td>
-        </tr>
+        <div className="bg-surface-2 px-4 py-3">
+          <NameTranslationsForm
+            baseName={category.name}
+            initial={category.name_i18n}
+            onSave={async (name_i18n) => { await updateRequestCategoryTranslations(category.id, name_i18n); await onSaved() }}
+            onSaveBaseName={async (name) => { await updateRequestCategoryName(category.id, name); await onSaved() }}
+          />
+        </div>
       )}
-    </>
+
+      {isOpen && (
+        <div className="flex flex-col gap-0.5 bg-surface-2/60 py-1 pl-[72px] pr-4">
+          {items.map((item) => (
+            <ItemAccordionRow key={item.id} item={item} categories={categories} onToggle={() => onToggleItem(item)} onRemove={() => onRemoveItem(item)} onSaved={onSaved} />
+          ))}
+          <button type="button" onClick={onAddItem} className="cursor-pointer py-2 text-left text-xs font-medium text-accent hover:text-accent/80">
+            + {t('staff.items.addTitle')}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
-function ItemRow({
+function ItemAccordionRow({
   item,
   categories,
   onToggle,
@@ -291,76 +403,48 @@ function ItemRow({
   const [editOpen, setEditOpen] = useState(false)
 
   return (
-    <>
-      <tr>
-        <td className="px-4 py-2 font-medium text-foreground"><AutoText text={item.name} translations={item.name_i18n} /></td>
-        <td className="px-4 py-2 text-muted">{item.description ? <AutoText text={item.description} translations={item.description_i18n} /> : '—'}</td>
-        <td className="px-4 py-2 tabular-nums text-muted">{item.available_quantity ?? '—'}</td>
-        <td className="px-4 py-2 text-right whitespace-nowrap">
-          <div className="flex items-center justify-end gap-1">
-            <span className="flex w-10 justify-center">
-              <SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
-            </span>
-            <span className="flex w-10 justify-center">
-              <IconButton
-                tone="neutral"
-                icon={Pencil}
-                label={t('staff.row.edit')}
-                onClick={() => {
-                  setTranslationsOpen(false)
-                  setEditOpen((v) => !v)
-                }}
-              />
-            </span>
-            <span className="flex w-10 justify-center">
-              <IconButton
-                tone="neutral"
-                icon={Languages}
-                label={t('staff.items.translations')}
-                onClick={() => {
-                  setEditOpen(false)
-                  setTranslationsOpen((v) => !v)
-                }}
-              />
-            </span>
-            <span className="flex w-10 justify-center">
-              <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
-            </span>
-          </div>
-        </td>
-      </tr>
+    <div className={cn('rounded-md', !item.active && 'opacity-60')}>
+      <div className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-surface">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-medium text-foreground"><AutoText text={item.name} translations={item.name_i18n} /></div>
+          {item.description && <div className="truncate text-xs text-muted"><AutoText text={item.description} translations={item.description_i18n} /></div>}
+        </div>
+        {item.available_quantity != null && (
+          <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted">{t('staff.items.colQuantity')}: {item.available_quantity}</span>
+        )}
+        <SwitchControl checked={item.active} onCheckedChange={onToggle} aria-label={item.active ? t('staff.items.deactivate') : t('staff.items.reactivate')} />
+        <div className="flex shrink-0 items-center gap-0.5">
+          <IconButton tone="neutral" icon={Pencil} label={t('staff.row.edit')} onClick={() => { setTranslationsOpen(false); setEditOpen((v) => !v) }} />
+          <IconButton tone="neutral" icon={Languages} label={t('staff.items.translations')} onClick={() => { setEditOpen(false); setTranslationsOpen((v) => !v) }} />
+          <IconButton tone="danger" icon={Trash2} label={t('staff.items.remove')} onClick={onRemove} />
+        </div>
+      </div>
       {editOpen && (
-        <tr>
-          <td colSpan={4} className="bg-surface-2 px-4 py-3">
-            <ItemEditForm item={item} categories={categories} onCancel={() => setEditOpen(false)} onSaved={onSaved} />
-          </td>
-        </tr>
+        <div className="rounded-md bg-surface px-3 py-3">
+          <ItemEditForm item={item} categories={categories} onCancel={() => setEditOpen(false)} onSaved={onSaved} />
+        </div>
       )}
       {translationsOpen && (
-        <tr>
-          <td colSpan={4} className="bg-surface-2 px-4 py-3">
-            <div className="space-y-4">
-              <NameTranslationsForm
-                label={t('staff.items.name')}
-                baseName={item.name}
-                initial={item.name_i18n}
-                onSave={async (name_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n, description_i18n: item.description_i18n }); await onSaved() }}
-                onSaveBaseName={async (name) => { await updateRequestTypeName(item.id, name); await onSaved() }}
-              />
-              {item.description && (
-                <NameTranslationsForm
-                  label={t('staff.items.description')}
-                  baseName={item.description}
-                  initial={item.description_i18n}
-                  onSave={async (description_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n: item.name_i18n, description_i18n }); await onSaved() }}
-                  onSaveBaseName={async (description) => { await updateRequestTypeDescription(item.id, description); await onSaved() }}
-                />
-              )}
-            </div>
-          </td>
-        </tr>
+        <div className="space-y-4 rounded-md bg-surface px-3 py-3">
+          <NameTranslationsForm
+            label={t('staff.items.name')}
+            baseName={item.name}
+            initial={item.name_i18n}
+            onSave={async (name_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n, description_i18n: item.description_i18n }); await onSaved() }}
+            onSaveBaseName={async (name) => { await updateRequestTypeName(item.id, name); await onSaved() }}
+          />
+          {item.description && (
+            <NameTranslationsForm
+              label={t('staff.items.description')}
+              baseName={item.description}
+              initial={item.description_i18n}
+              onSave={async (description_i18n) => { await updateRequestTypeTranslations(item.id, { name_i18n: item.name_i18n, description_i18n }); await onSaved() }}
+              onSaveBaseName={async (description) => { await updateRequestTypeDescription(item.id, description); await onSaved() }}
+            />
+          )}
+        </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -524,7 +608,7 @@ function NewCategoryForm({ jobTitles, onCreated }: { jobTitles: JobTitleOption[]
       await onCreated()
     } catch { setError(t('staff.items.addCategoryError')) } finally { setPending(false) }
   }
-  return <Card><CardHeader><h2 className="text-sm font-semibold text-foreground">{t('staff.items.addCategoryTitle')}</h2></CardHeader><CardBody><form onSubmit={onSubmit} className="space-y-4">
+  return <form onSubmit={onSubmit} className="space-y-4">
     <FieldGroup className="mb-0"><Label htmlFor="categoryName" required>{t('staff.items.categoryName')}</Label><Input id="categoryName" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('staff.items.categoryNamePlaceholder')} /></FieldGroup>
     <FieldGroup className="mb-0">
       <Label>{t('staff.items.categoryJobTitles')}</Label>
@@ -543,12 +627,19 @@ function NewCategoryForm({ jobTitles, onCreated }: { jobTitles: JobTitleOption[]
     </FieldGroup>
     <FieldError>{error ?? undefined}</FieldError>
     <div className="flex justify-end border-t border-line pt-4"><Button type="submit" disabled={pending}>{pending ? t('staff.items.addCategorySubmitPending') : t('staff.items.addCategorySubmit')}</Button></div>
-  </form></CardBody></Card>
+  </form>
 }
 
-function NewItemForm({ categories, onCreated }: { categories: RequestCategoryAdmin[]; onCreated: () => Promise<void> }) {
-  const { t } = useLocale(); const [categoryId, setCategoryId] = useState(''); const [name, setName] = useState(''); const [description, setDescription] = useState(''); const [allowsQuantity, setAllowsQuantity] = useState(false); const [availableQuantity, setAvailableQuantity] = useState(''); const [pending, setPending] = useState(false); const [error, setError] = useState<string | null>(null)
-  useEffect(() => { setCategoryId((current) => (current && categories.some((c) => c.id === current) ? current : (categories[0]?.id ?? ''))) }, [categories])
+function NewItemForm({ categories, initialCategoryId, onCreated }: { categories: RequestCategoryAdmin[]; initialCategoryId?: string; onCreated: () => Promise<void> }) {
+  const { t } = useLocale(); const [categoryId, setCategoryId] = useState(initialCategoryId ?? ''); const [name, setName] = useState(''); const [description, setDescription] = useState(''); const [allowsQuantity, setAllowsQuantity] = useState(false); const [availableQuantity, setAvailableQuantity] = useState(''); const [pending, setPending] = useState(false); const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    setCategoryId((current) => {
+      if (current && categories.some((c) => c.id === current)) return current
+      if (initialCategoryId && categories.some((c) => c.id === initialCategoryId)) return initialCategoryId
+      return categories[0]?.id ?? ''
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories])
   async function onSubmit(e: React.FormEvent) { e.preventDefault(); setPending(true); setError(null); try { await createRequestType({ categoryId, name: name.trim(), description: description.trim() || null, allowsQuantity, availableQuantity: availableQuantity.trim() ? Number(availableQuantity) : null }); setName(''); setDescription(''); setAllowsQuantity(false); setAvailableQuantity(''); await onCreated() } catch { setError(t('staff.items.addError')) } finally { setPending(false) } }
-  return <Card><CardHeader><h2 className="text-sm font-semibold text-foreground">{t('staff.items.addTitle')}</h2></CardHeader><CardBody><form onSubmit={onSubmit} className="space-y-4"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><FieldGroup className="mb-0"><Label htmlFor="category" required>{t('staff.items.category')}</Label><Select id="category" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>{categories.map((c) => <option key={c.id} value={c.id}><AutoText text={c.name} translations={c.name_i18n} /></option>)}</Select></FieldGroup><FieldGroup className="mb-0"><Label htmlFor="itemName" required>{t('staff.items.name')}</Label><Input id="itemName" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('staff.items.namePlaceholder')} /></FieldGroup></div><FieldGroup className="mb-0"><Label htmlFor="description">{t('staff.items.description')}</Label><Textarea id="description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></FieldGroup><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><FieldGroup className="mb-0"><Label htmlFor="availableQuantity">{t('staff.items.availableQuantity')}</Label><Input id="availableQuantity" type="number" min={0} value={availableQuantity} onChange={(e) => setAvailableQuantity(e.target.value)} placeholder={t('staff.items.availableQuantityPlaceholder')} /></FieldGroup><Switch id="allowsQuantity" checked={allowsQuantity} onCheckedChange={setAllowsQuantity} label={t('staff.items.allowsQuantity')} className="self-end" /></div><FieldError>{error ?? undefined}</FieldError><div className="flex justify-end border-t border-line pt-4"><Button type="submit" disabled={pending || !categoryId}>{pending ? t('staff.items.submitPending') : t('staff.items.submit')}</Button></div></form></CardBody></Card>
+  return <form onSubmit={onSubmit} className="space-y-4"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><FieldGroup className="mb-0"><Label htmlFor="category" required>{t('staff.items.category')}</Label><Select id="category" required value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>{categories.map((c) => <option key={c.id} value={c.id}><AutoText text={c.name} translations={c.name_i18n} /></option>)}</Select></FieldGroup><FieldGroup className="mb-0"><Label htmlFor="itemName" required>{t('staff.items.name')}</Label><Input id="itemName" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('staff.items.namePlaceholder')} /></FieldGroup></div><FieldGroup className="mb-0"><Label htmlFor="description">{t('staff.items.description')}</Label><Textarea id="description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></FieldGroup><div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><FieldGroup className="mb-0"><Label htmlFor="availableQuantity">{t('staff.items.availableQuantity')}</Label><Input id="availableQuantity" type="number" min={0} value={availableQuantity} onChange={(e) => setAvailableQuantity(e.target.value)} placeholder={t('staff.items.availableQuantityPlaceholder')} /></FieldGroup><Switch id="allowsQuantity" checked={allowsQuantity} onCheckedChange={setAllowsQuantity} label={t('staff.items.allowsQuantity')} className="self-end" /></div><FieldError>{error ?? undefined}</FieldError><div className="flex justify-end border-t border-line pt-4"><Button type="submit" disabled={pending || !categoryId}>{pending ? t('staff.items.submitPending') : t('staff.items.submit')}</Button></div></form>
 }
