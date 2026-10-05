@@ -28,6 +28,24 @@ type CalendarView = 'month' | 'week'
 type NavGroup = 'operativo' | 'impostazioni'
 
 const DEFAULT_CAPABILITIES: ShiftPlannerCapabilities = { view: true, manage: true, manageRequests: true }
+const PENDING_CHANGES_STORAGE_PREFIX = 'homisuite.shiftPendingChanges.'
+
+// A real browser tab discard-and-reload (Chrome freeing memory from a
+// backgrounded tab, not anything our own code triggers or can prevent)
+// restarts the whole app from scratch, including this component -- so any
+// shift edits made but not yet saved via "Salva turni" would otherwise be
+// silently gone. sessionStorage survives that kind of reload (cleared only
+// when the tab/window itself closes), so a discarded-and-reloaded tab comes
+// back with the same unsaved edits still in place.
+function loadStoredPendingChanges(propertyId: string | undefined): ShiftAssignmentEdit[] {
+  if (!propertyId || typeof window === 'undefined') return []
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_CHANGES_STORAGE_PREFIX + propertyId)
+    return raw ? (JSON.parse(raw) as ShiftAssignmentEdit[]) : []
+  } catch {
+    return []
+  }
+}
 function initialsOf(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
 }
@@ -63,7 +81,7 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [readOnlyDemo, setReadOnlyDemo] = useState(false)
   const [draftProperties, setDraftProperties] = useState(previewProperties)
   const [draftAvailableTeamMembers, setDraftAvailableTeamMembers] = useState(availableTeamMembers)
-  const [pendingChanges, setPendingChanges] = useState<ShiftAssignmentEdit[]>([])
+  const [pendingChanges, setPendingChanges] = useState<ShiftAssignmentEdit[]>(() => preview ? [] : loadStoredPendingChanges(initialPropertyId))
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [restDaysState, setRestDaysState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [futureRestDaysState, setFutureRestDaysState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -77,7 +95,29 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const [inferRotationIssues, setInferRotationIssues] = useState<string[]>([])
   const [tabDirection, setTabDirection] = useState<1 | -1>(1)
   const [tabTransitionActive, setTabTransitionActive] = useState(false)
-  useEffect(() => { setDraftProperties(previewProperties); setPendingChanges([]); setSaveState('idle') }, [previewProperties])
+  const didMountPendingChangesRef = useRef(false)
+  useEffect(() => {
+    setDraftProperties(previewProperties)
+    // Skip the very first run: pendingChanges may have just been restored
+    // from sessionStorage above, and this effect also fires on that initial
+    // mount (previewProperties is "new" the first time too) -- wiping it
+    // right back out would defeat the restore. Every later run is a real
+    // data reload (e.g. switching property), where resetting is correct.
+    if (didMountPendingChangesRef.current) setPendingChanges([])
+    didMountPendingChangesRef.current = true
+    setSaveState('idle')
+  }, [previewProperties])
+  useEffect(() => {
+    if (preview || !initialPropertyId || typeof window === 'undefined') return
+    try {
+      const key = PENDING_CHANGES_STORAGE_PREFIX + initialPropertyId
+      if (pendingChanges.length > 0) window.sessionStorage.setItem(key, JSON.stringify(pendingChanges))
+      else window.sessionStorage.removeItem(key)
+    } catch {
+      // sessionStorage unavailable (private browsing, full quota) -- edits
+      // just won't survive a tab reload, same as before this existed.
+    }
+  }, [pendingChanges, preview, initialPropertyId])
   useEffect(() => { setDraftAvailableTeamMembers(availableTeamMembers) }, [availableTeamMembers])
   const property = useMemo(() => draftProperties.find((candidate) => candidate.id === propertyId) ?? draftProperties[0], [draftProperties, propertyId])
   const activeUnits = property?.units.filter((candidate) => candidate.status !== 'inactive') ?? []

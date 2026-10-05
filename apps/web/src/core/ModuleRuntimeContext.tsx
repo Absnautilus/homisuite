@@ -86,7 +86,7 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void load()
-    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
       // Supabase silently rotates the access token on a timer, and also the
       // moment the tab regains focus/visibility after being hidden -- firing
       // TOKEN_REFRESHED, not a real sign-in/out. Running the full `load()`
@@ -94,12 +94,19 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
       // ShellLayout swap the whole routed page out for its skeleton on every
       // such refresh, unmounting it and discarding anything typed or
       // assigned there but not yet saved, just from switching tabs/apps and
-      // coming back. Nothing profile/property/membership-related actually
-      // changes on a token refresh, so just keep the renewed session.
-      if (event === 'TOKEN_REFRESHED') {
-        setSession(nextSession)
-        return
-      }
+      // coming back. Nothing in the UI reads the session for anything that
+      // actually changes on a token refresh (just .user.email, same before
+      // and after) -- `supabase` already holds the renewed token internally
+      // for every API call it makes, regardless of what's in this context --
+      // so this ignores the event entirely rather than calling setSession.
+      // Still updating `session` here was its own, quieter version of the
+      // same bug: a new session object changes `runtime`'s identity, and
+      // every page whose data-fetch effect depends on `runtime` (to call
+      // `runtime.hasPermission`) re-ran its full fetch and flashed back to
+      // its own loading state on every single token refresh -- including
+      // Turni, wiping any shift edits not yet saved, without the Shell
+      // skeleton ever showing to make it obvious.
+      if (event === 'TOKEN_REFRESHED') return
       void load()
     })
     return () => data.subscription.unsubscribe()
