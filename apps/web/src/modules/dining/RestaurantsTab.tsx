@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 import { Clock, Globe, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
@@ -163,8 +163,8 @@ function RestaurantModal({ restaurant, categories, hotelId, onClose, onSaved }: 
       dismissible={false}
       footer={(
         <>
-          <button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button>
-          <button className="btn btn-primary" type="submit" form="restaurant-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
+          <Button variant="secondary" onClick={onClose}>Annulla</Button>
+          <Button variant="primary" type="submit" form="restaurant-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
         </>
       )}
     >
@@ -251,7 +251,7 @@ function HoursModal({ restaurant, onClose }: { restaurant: Restaurant | null; on
         </Select>
         <input type="time" value={opensAt} onChange={(event) => setOpensAt(event.target.value)} required />
         <input type="time" value={closesAt} onChange={(event) => setClosesAt(event.target.value)} required />
-        <button className="btn btn-secondary" type="submit"><Plus size={14} /> Aggiungi</button>
+        <Button variant="secondary" type="submit"><Plus size={14} /> Aggiungi</Button>
       </form>
     </Modal>
   )

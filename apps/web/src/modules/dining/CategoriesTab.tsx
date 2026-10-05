@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 import { Pencil, Plus, UtensilsCrossed } from 'lucide-react'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
@@ -108,9 +108,9 @@ function CategoryModal({ category, hotelId, onClose, onSaved, onDelete }: {
       dismissible={false}
       footer={(
         <>
-          {existing ? <button className="btn btn-danger push-left" type="button" onClick={() => void onDelete(existing)} disabled={saving}>Elimina</button> : null}
-          <button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button>
-          <button className="btn btn-primary" type="submit" form="category-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
+          {existing ? <Button variant="danger" className="push-left" onClick={() => void onDelete(existing)} disabled={saving}>Elimina</Button> : null}
+          <Button variant="secondary" onClick={onClose}>Annulla</Button>
+          <Button variant="primary" type="submit" form="category-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
         </>
       )}
     >

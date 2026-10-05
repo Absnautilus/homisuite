@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import type { CoreRole, JobTitle, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
-import { Modal, PageHeader, Tabs } from '@homisuite/ui'
+import { Button, Modal, PageHeader, Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { PageState } from '../components/PageState'
 import { PasswordField } from '../components/PasswordField'
@@ -296,7 +296,7 @@ function CreateProfileModal({ open, propertyId, roles, jobTitles, onClose, onCre
   }
 
   if (created) {
-    return <Modal open={open} title="Profilo creato" description="Comunica queste credenziali alla persona: non verranno mostrate di nuovo." onClose={onClose} footer={<button className="btn btn-primary" type="button" onClick={onClose}>Chiudi</button>}>
+    return <Modal open={open} title="Profilo creato" description="Comunica queste credenziali alla persona: non verranno mostrate di nuovo." onClose={onClose} footer={<Button variant="primary" onClick={onClose}>Chiudi</Button>}>
       <div className="modal-form">
         <Field label="Identificativo di accesso"><input readOnly value={created.username} onFocus={(event) => event.currentTarget.select()} /></Field>
         <Field label="Password"><input readOnly value={created.password} onFocus={(event) => event.currentTarget.select()} /></Field>
@@ -304,7 +304,7 @@ function CreateProfileModal({ open, propertyId, roles, jobTitles, onClose, onCre
     </Modal>
   }
 
-  return <Modal open={open} title="Crea profilo" description="Crea un unico account Homisuite e collegalo alla struttura." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="create-profile-form" disabled={saving || roles.length === 0}>{saving ? 'Creazione…' : mode === 'email' ? 'Invia invito' : 'Crea profilo'}</button></>}>
+  return <Modal open={open} title="Crea profilo" description="Crea un unico account Homisuite e collegalo alla struttura." onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="create-profile-form" disabled={saving || roles.length === 0}>{saving ? 'Creazione…' : mode === 'email' ? 'Invia invito' : 'Crea profilo'}</Button></>}>
     <div style={{ marginBottom: 4 }}>
       <Tabs
         aria-label="Modalità di creazione"
@@ -352,11 +352,11 @@ function ResetPasswordModal({ member, onClose }: { member: TeamMember | null; on
     } catch (cause) { setError(readableError(cause)); setSaving(false) }
   }
   if (done) {
-    return <Modal open={Boolean(member)} title="Pin reimpostato" description="Comunica la nuova password alla persona: non verrà mostrata di nuovo." onClose={onClose} footer={<button className="btn btn-primary" type="button" onClick={onClose}>Chiudi</button>}>
+    return <Modal open={Boolean(member)} title="Pin reimpostato" description="Comunica la nuova password alla persona: non verrà mostrata di nuovo." onClose={onClose} footer={<Button variant="primary" onClick={onClose}>Chiudi</Button>}>
       <div className="modal-form"><Field label="Nuova password"><input readOnly value={done} onFocus={(event) => event.currentTarget.select()} /></Field></div>
     </Modal>
   }
-  return <Modal open={Boolean(member)} title={member ? `Reimposta pin di ${member.profile.fullName}` : 'Reimposta pin'} description="Imposta una nuova password per l'accesso via credenziali." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="reset-password-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Reimposta'}</button></>}>
+  return <Modal open={Boolean(member)} title={member ? `Reimposta pin di ${member.profile.fullName}` : 'Reimposta pin'} description="Imposta una nuova password per l'accesso via credenziali." onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="reset-password-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Reimposta'}</Button></>}>
     {member ? <form className="modal-form" id="reset-password-form" onSubmit={submit}>
       <Field label="Nuova password"><PasswordField name="password" required minLength={8} maxLength={72} autoComplete="new-password" /></Field>
       <Field label="Conferma nuova password"><PasswordField name="passwordConfirm" required minLength={8} maxLength={72} autoComplete="new-password" /></Field>
@@ -464,7 +464,7 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
     }
   }
 
-  return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="button" onClick={onClose} disabled={saving || savingVisibility}>{saving || savingVisibility ? 'Salvataggio…' : 'Salva'}</button></>}>
+  return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" onClick={onClose} disabled={saving || savingVisibility}>{saving || savingVisibility ? 'Salvataggio…' : 'Salva'}</Button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
       <>
         {enabledModules.map((module) => module.slug === 'guest_requests' ? (
@@ -520,7 +520,7 @@ function EditMemberModal({ member, roles, jobTitles, currentProfileId, propertyI
       await onSaved()
     } catch (cause) { setError(readableError(cause)); setSaving(false) }
   }
-  return <Modal open={Boolean(member)} title={member ? `Modifica ${member.profile.fullName}` : 'Modifica persona'} description={orgWide ? 'L’accesso organizzazione si modifica a livello organizzazione; qui puoi assegnare la mansione locale.' : undefined} onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="edit-member-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
+  return <Modal open={Boolean(member)} title={member ? `Modifica ${member.profile.fullName}` : 'Modifica persona'} description={orgWide ? 'L’accesso organizzazione si modifica a livello organizzazione; qui puoi assegnare la mansione locale.' : undefined} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="edit-member-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>
     {member ? <form className="modal-form" id="edit-member-form" onSubmit={submit}>
       <Field label="Accesso Homisuite" htmlFor="edit-role"><Select id="edit-role" name="role" value={roleId} onChange={setRoleId} disabled={orgWide || isSelf}><option value={member.role.id}>{roleLabel(member.role.slug, member.role.displayName)}</option>{roles.filter((role) => role.id !== member.role.id).map((role) => <option key={role.id} value={role.id}>{roleLabel(role.slug, role.displayName)}</option>)}</Select></Field>
       <Field label="Mansione" htmlFor="edit-job"><Select id="edit-job" name="job" value={jobId} onChange={setJobId}><option value="">Da assegnare</option>{jobTitles.map((job) => <option key={job.id} value={job.id}>{job.name}</option>)}</Select></Field>
@@ -551,7 +551,7 @@ function JobModal({ job, propertyId, onClose, onSaved }: { job: JobTitle | 'new'
     try { await core.updateJobTitle(existing.id, { active: false }); await onSaved() }
     catch (cause) { setError(readableError(cause)); setSaving(false) }
   }
-  return <Modal open={Boolean(job)} title={existing ? 'Modifica mansione' : 'Nuova mansione'} description="La mansione descrive il lavoro, non modifica i permessi Homisuite." onClose={onClose} footer={<>{existing ? <button className="btn btn-danger push-left" type="button" onClick={() => void deactivate()} disabled={saving}>Disattiva</button> : null}<button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="job-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
+  return <Modal open={Boolean(job)} title={existing ? 'Modifica mansione' : 'Nuova mansione'} description="La mansione descrive il lavoro, non modifica i permessi Homisuite." onClose={onClose} footer={<>{existing ? <Button variant="danger" className="push-left" onClick={() => void deactivate()} disabled={saving}>Disattiva</Button> : null}<Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="job-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>
     <form className="modal-form" id="job-form" onSubmit={submit}><Field label="Nome mansione"><input name="name" required minLength={1} maxLength={80} defaultValue={existing?.name ?? ''} /></Field>{error ? <p className="form-error" role="alert">{error}</p> : null}</form>
   </Modal>
 }

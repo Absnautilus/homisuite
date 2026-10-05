@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { Modal, PageHeader } from '@homisuite/ui'
+import { Button, Modal, PageHeader } from '@homisuite/ui'
 import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
@@ -279,16 +279,16 @@ function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
   const wifiPasswordDefault = typeof runtime.property?.settings.wifiPassword === 'string' ? runtime.property.settings.wifiPassword : ''
   const breakfastHoursDefault = typeof runtime.property?.settings.breakfastHours === 'string' ? runtime.property.settings.breakfastHours : ''
   const barHoursDefault = typeof runtime.property?.settings.barHours === 'string' ? runtime.property.settings.barHours : ''
-  return <Modal open={open} title="Informazioni struttura" description="Dati condivisi da tutti i moduli Homisuite." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="property-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
+  return <Modal open={open} title="Informazioni struttura" description="Dati condivisi da tutti i moduli Homisuite." onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="property-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>
     <form className="modal-form" id="property-form" onSubmit={submit}>
       <div className="form-field">
         <span>Logo struttura</span>
         <div className="logo-picker">
           {logoUrl ? <img src={logoUrl} alt="" className="logo-picker-preview" /> : <div className="logo-picker-placeholder" aria-hidden="true" />}
           <div className="logo-picker-actions">
-            <button className="btn btn-secondary" type="button" onClick={() => logoInputRef.current?.click()} disabled={logoBusy}>
+            <Button variant="secondary" onClick={() => logoInputRef.current?.click()} disabled={logoBusy}>
               {logoBusy ? 'Attendere…' : logoUrl ? 'Cambia logo' : 'Carica logo'}
-            </button>
+            </Button>
             {logoUrl ? <button className="link-button" type="button" onClick={onLogoRemove} disabled={logoBusy}>Rimuovi</button> : null}
             <input ref={logoInputRef} type="file" accept="image/png" hidden onChange={onLogoChange} />
           </div>
@@ -330,7 +330,7 @@ function ProfileModal({ open, onClose, onSaved }: { open: boolean; onClose: () =
       await onSaved()
     } catch { setError('Non è stato possibile aggiornare il profilo.'); setSaving(false) }
   }
-  return <Modal open={open} title="Profilo" description="Questi dati sono visibili agli altri membri del team." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="profile-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button></>}>
+  return <Modal open={open} title="Profilo" description="Questi dati sono visibili agli altri membri del team." onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="profile-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>
     <form className="modal-form" id="profile-form" onSubmit={submit}>
       <label className="form-field"><span>Nome e cognome</span><input name="name" required minLength={2} maxLength={120} defaultValue={runtime.profile?.fullName} autoComplete="name" /></label>
       <label className="form-field"><span>Email account</span><input value={runtime.session?.user.email ?? ''} readOnly /></label>
@@ -369,11 +369,11 @@ function SecurityModal({ open, onClose }: { open: boolean; onClose: () => void }
   }
 
   if (done) {
-    return <Modal open={open} title="Password aggiornata" description="Usa la nuova password dal prossimo accesso." onClose={onClose} footer={<button className="btn btn-primary" type="button" onClick={onClose}>Chiudi</button>}>
+    return <Modal open={open} title="Password aggiornata" description="Usa la nuova password dal prossimo accesso." onClose={onClose} footer={<Button variant="primary" onClick={onClose}>Chiudi</Button>}>
       <p>La password del tuo account è stata cambiata.</p>
     </Modal>
   }
-  return <Modal open={open} title="Cambia password" description="Serve la password attuale per confermare l'identità." onClose={onClose} footer={<><button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button><button className="btn btn-primary" type="submit" form="security-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Aggiorna'}</button></>}>
+  return <Modal open={open} title="Cambia password" description="Serve la password attuale per confermare l'identità." onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="security-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Aggiorna'}</Button></>}>
     <form className="modal-form" id="security-form" onSubmit={submit}>
       <label className="form-field"><span>Password attuale</span><PasswordField name="current" required autoComplete="current-password" /></label>
       <label className="form-field"><span>Nuova password</span><PasswordField name="next" required minLength={8} maxLength={72} autoComplete="new-password" /></label>

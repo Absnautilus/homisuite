@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Modal } from '@homisuite/ui'
+import { Button, Modal } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
@@ -169,8 +169,8 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
       dismissible={false}
       footer={(
         <>
-          <button className="btn btn-secondary" type="button" onClick={onClose}>Annulla</button>
-          <button className="btn btn-primary" type="submit" form="reservation-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
+          <Button variant="secondary" onClick={onClose}>Annulla</Button>
+          <Button variant="primary" type="submit" form="reservation-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
         </>
       )}
     >
