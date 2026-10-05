@@ -90,7 +90,7 @@ export function UnitsPanel({ units, jobTitleRoster, onSaveUnit, onArchiveUnit, o
                       <button type="button" className="shift-code-action is-danger" aria-label={`Archivia ${unit.name}`} disabled={archivingId === unit.id} onClick={(event) => void handleArchive(event, unit)}><Archive size={14} /></button>
                     ) : null}
                     {onRestoreUnit && unit.status === 'inactive' ? (
-                      <button type="button" className="shift-code-action" aria-label={`Ripristina ${unit.name}`} disabled={restoringId === unit.id} onClick={(event) => void handleRestore(event, unit)}><RotateCcw size={14} /> <span>Ripristina</span></button>
+                      <button type="button" className="shift-code-action has-label" aria-label={`Ripristina ${unit.name}`} disabled={restoringId === unit.id} onClick={(event) => void handleRestore(event, unit)}><RotateCcw size={14} /> <span>Ripristina</span></button>
                     ) : null}
                   </td>
                 ) : null}

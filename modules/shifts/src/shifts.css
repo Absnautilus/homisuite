@@ -260,6 +260,10 @@
 .shift-code-action { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--shift-muted); cursor: pointer; display: inline-flex; height: 28px; justify-content: center; width: 28px; }
 .shift-code-action:hover { background: var(--shift-soft); color: var(--shift-accent); }
 .shift-code-action.is-danger:hover { background: #fdecea; color: #c0392b; }
+/* Icon-only buttons (Modifica/Archivia) fit the fixed 28px square above;
+   Ripristina also carries a text label, so it needs room to grow instead
+   of squeezing the icon+label into that same square box. */
+.shift-code-action.has-label { width: auto; gap: 6px; padding: 0 10px; }
 .shift-code-badge-preview { border-radius: 6px; display: inline-flex; font-size: 11px; font-weight: 800; height: 24px; align-items: center; justify-content: center; min-width: 36px; padding: 0 8px; }
 
 .shift-role-codes-table { border-collapse: collapse; min-width: 560px; width: 100%; }
