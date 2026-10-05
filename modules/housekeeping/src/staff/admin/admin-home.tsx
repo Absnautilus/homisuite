@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Archive, BedDouble, ChartNoAxesColumnIncreasing, ClipboardList, Plug, UsersRound } from 'lucide-react'
-import { PageHeader, SlidePanel, Tabs } from '@homisuite/ui'
+import { PageHeader, Tabs } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { useHotelName } from '@/lib/hotel-branding-context'
 import { RoomsPage } from '@/staff/admin/rooms-page'
@@ -34,10 +34,9 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
   const hotelName = useHotelName()
   const location = useLocation()
   const operationalHotelId = hotelId ?? profile.hotel_id
-  // One ordered, left-to-right list drives the nav (primary/secondary
-  // split below), which pane is active, and SlidePanel's slide direction
-  // (a tab later in this array slides in from the right, earlier from the
-  // left) -- all three read the same match()/order so they can't disagree.
+  // One list drives both the nav (primary/secondary split below) and
+  // which pane is visible -- the nav and the content can't disagree since
+  // both read the same match().
   const tabs = [
     {
       to: basePath,
@@ -89,9 +88,17 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
           aria-label={t('staff.nav.admin')}
         />
       ) : null}
-      <SlidePanel activeKey={activeTab?.to ?? location.pathname} order={tabs.map((tab) => tab.to)}>
-        {activeTab?.element ?? null}
-      </SlidePanel>
+      {/* Every pane stays mounted and only toggles `hidden` -- the same
+          pattern Turni's own tab switcher uses (ShiftPlannerModule.tsx) --
+          instead of a route-driven single `element` that unmounted and
+          remounted whichever page wasn't active. Each admin page fetches
+          its own data independently on mount with no cache, so leaving
+          the previous page (and its already-loaded data) in the DOM
+          rather than destroying it is what makes switching back to it
+          instant instead of flashing through a loading state again. */}
+      {tabs.map((tab) => (
+        <div key={tab.to} hidden={tab.to !== (activeTab?.to ?? basePath)}>{tab.element}</div>
+      ))}
     </div>
   )
 }
