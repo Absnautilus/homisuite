@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Boxes, Sparkles, type LucideIcon } from 'lucide-react'
+import { Boxes, Sparkles, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { PublicHeader } from '@/components/public-header'
 import { SectionCard } from '@/components/section-card'
 import { brandColorStyle } from '@/lib/brand-color'
@@ -21,11 +21,14 @@ import { LoginScreen } from '@/guest/login-screen'
 import { RequestFlow } from '@/guest/request-flow'
 import { StatusList } from '@/guest/status-list'
 import { BrandedInfoBand, ContactsCard } from '@/guest/greeting'
+import { DiningFlow } from '@/guest/dining-flow'
 
 type Tab = 'new' | 'status'
 
 // Every guest-facing module needs a directory label/icon here --
-// 'guest_requests' (Housekeeping) is the only one that exists today.
+// 'guest_requests' (Housekeeping) was the only one that existed until
+// 'dining' (Ristorazione, see 20260918100000_dining_module -- it was
+// already registered guest_facing=true, just never surfaced here).
 // modules.display_name is a Core-level, English, admin-facing label (e.g.
 // "Guest Requests"), not meant for the guest UI, hence this lookup instead
 // of using it directly.
@@ -33,12 +36,15 @@ const CURRENT_YEAR = String(new Date().getFullYear())
 
 const MODULE_LABELS: Partial<Record<string, TranslationKey>> = {
   guest_requests: 'directory.housekeeping',
+  dining: 'directory.dining',
 }
 const MODULE_DESCRIPTIONS: Partial<Record<string, TranslationKey>> = {
   guest_requests: 'directory.housekeepingDescription',
+  dining: 'directory.diningDescription',
 }
 const MODULE_ICONS: Partial<Record<string, LucideIcon>> = {
   guest_requests: Sparkles,
+  dining: UtensilsCrossed,
 }
 
 export function GuestApp() {
@@ -203,6 +209,11 @@ export function GuestApp() {
               ) : (
                 <StatusList token={token} refreshKey={refreshKey} onSessionExpired={onSessionExpired} />
               )}
+            </>
+          ) : selectedModuleSlug === 'dining' ? (
+            <>
+              <ModuleHeading slug="dining" />
+              <DiningFlow token={token} onSessionExpired={onSessionExpired} />
             </>
           ) : availableModules === null ? (
             <div className="flex justify-center py-4">

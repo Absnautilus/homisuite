@@ -9,7 +9,7 @@ import {
   getStoredHotelName,
   setResolvedHotel,
 } from '@/lib/env'
-import type { GuestRequest, RequestCategory, RequestType } from '@/lib/types'
+import type { DiningCategory, DiningHour, DiningRestaurant, GuestRequest, RequestCategory, RequestType } from '@/lib/types'
 
 export function isInvalidSessionError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('invalid_session')
@@ -77,6 +77,56 @@ export async function fetchMenu(): Promise<{ categories: RequestCategory[]; type
   const typesRes = await supabase.from('request_types').select('*').in('category_id', categoryIds).order('sort_order')
   if (typesRes.error) throw typesRes.error
   return { categories, types: typesRes.data ?? [] }
+}
+
+// Dining's own public-read tables (restaurants_public_read/
+// dining_categories_public_read/restaurant_hours_public_read, see
+// 20260918100000_dining_module + 20261006100000_dining_concierge_workflow)
+// are already gated the same way request_categories/request_types are --
+// `active` plus hotel_has_module(), enforced server-side by RLS, not by
+// this filter. No guest session/token needed, same as fetchMenu: this is
+// public reference data (today's hours, is there a recommended spot
+// nearby), not anything guest-specific.
+export async function fetchDiningCatalog(): Promise<{ categories: DiningCategory[]; restaurants: DiningRestaurant[] }> {
+  const hotelId = getHotelId()
+  const categoriesRes = await supabase.from('dining_categories').select('*').eq('hotel_id', hotelId).order('sort_order')
+  if (categoriesRes.error) throw categoriesRes.error
+  const categories = (categoriesRes.data ?? []) as DiningCategory[]
+
+  const restaurantsRes = await supabase.from('restaurants').select('*').eq('hotel_id', hotelId).order('sort_order')
+  if (restaurantsRes.error) throw restaurantsRes.error
+  const restaurants = (restaurantsRes.data ?? []) as DiningRestaurant[]
+
+  return { categories, restaurants }
+}
+
+export async function fetchDiningHours(restaurantId: string): Promise<DiningHour[]> {
+  const { data, error } = await supabase.from('restaurant_hours').select('*').eq('restaurant_id', restaurantId).order('day_of_week').order('opens_at')
+  if (error) throw error
+  return (data ?? []) as DiningHour[]
+}
+
+// create_dining_reservation_request (20261006110000_dining_guest_reservation_rpc)
+// mirrors createGuestRequest's own shape exactly: same token, same
+// 'invalid_session' contract, same SECURITY DEFINER RPC as the only way an
+// anon guest ever touches restaurant_reservation_requests.
+export async function createDiningReservationRequest(
+  token: string,
+  restaurantId: string,
+  reservationDate: string,
+  reservationTime: string,
+  partySize: number,
+  specialRequests: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('create_dining_reservation_request', {
+    p_token: token,
+    p_restaurant_id: restaurantId,
+    p_reservation_date: reservationDate,
+    p_reservation_time: reservationTime,
+    p_party_size: partySize,
+    p_special_requests: specialRequests,
+  })
+  if (error) throw error
 }
 
 export async function createGuestRequest(

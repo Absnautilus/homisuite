@@ -32,6 +32,44 @@ export interface RequestType {
   sort_order: number
 }
 
+export interface DiningCategory {
+  id: string
+  name: string
+  icon: string | null
+  sort_order: number
+}
+
+export interface DiningRestaurant {
+  id: string
+  category_id: string
+  name: string
+  description: string | null
+  is_external: boolean
+  maps_url: string | null
+  website_url: string | null
+  phone: string | null
+  address: string | null
+  // The curated/guest-facing columns from the Phase 1 schema PR
+  // (20261006100000_dining_concierge_workflow) -- optional because this
+  // type also describes rows read from production before that migration is
+  // applied there, where Postgrest simply omits columns it doesn't have.
+  cuisine?: string | null
+  price_tier?: 1 | 2 | 3 | 4 | null
+  walk_minutes?: number | null
+  short_description?: string | null
+  guest_tags?: string[]
+  is_recommended?: boolean
+  concierge_description?: string | null
+}
+
+export interface DiningHour {
+  id: string
+  restaurant_id: string
+  day_of_week: number
+  opens_at: string
+  closes_at: string
+}
+
 export interface GuestRequest {
   id: string
   hotel_id: string
