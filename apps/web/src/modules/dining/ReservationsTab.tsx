@@ -3,24 +3,27 @@ import { Button, DatePicker, Modal, TimePicker } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
-import { createReservation, listReservations, listRestaurants, updateReservation, type CreateReservationInput } from './api'
-import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS } from './types'
+import { createReservation, listReservations, listRestaurants, type CreateReservationInput } from './api'
+import type { ReservationRequest, Restaurant } from './types'
 import { readableDiningError } from './readableDiningError'
+import { OggiPanel } from './OggiPanel'
+import { TuttePanel } from './TuttePanel'
+import { BookingDetailSlideOver } from './BookingDetailSlideOver'
 
 interface ReservationsTabProps {
   hotelId: string
   staffProfileId: string | null
+  canManage: boolean
+  view: 'oggi' | 'tutte'
 }
 
-export function ReservationsTab({ hotelId, staffProfileId }: ReservationsTabProps) {
+export function ReservationsTab({ hotelId, staffProfileId, canManage, view }: ReservationsTabProps) {
   const [reservations, setReservations] = useState<ReservationRequest[]>([])
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
-
-  const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -40,68 +43,21 @@ export function ReservationsTab({ hotelId, staffProfileId }: ReservationsTabProp
 
   useEffect(() => { void load() }, [load])
 
-  async function onStatusChange(reservation: ReservationRequest, status: ConfirmationStatus) {
-    setReservations((current) => current.map((r) => (r.id === reservation.id ? { ...r, confirmation_status: status } : r)))
-    try {
-      await updateReservation(supabase, reservation.id, { confirmation_status: status })
-    } catch (cause) {
-      setError(readableDiningError(cause))
-      await load()
-    }
-  }
+  const selectedReservation = reservations.find((r) => r.id === detailId) ?? null
 
   return (
-    <section className="shell-card">
-      <div className="section-heading split">
+    <>
+      <div className="section-heading split" style={{ marginBottom: 14 }}>
         <div><h2>Prenotazioni</h2><p>Tutte le richieste di prenotazione, comprese quelle inserite manualmente.</p></div>
-        {restaurants.length > 0 ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
+        {canManage && restaurants.length > 0 ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
       </div>
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
       {!loading && restaurants.length === 0 ? (
         <p className="muted dining-empty-hint">Crea prima un ristorante nella scheda "Ristoranti".</p>
+      ) : view === 'oggi' ? (
+        <OggiPanel reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} />
       ) : (
-      <div className="dining-reservations-table" role="table" aria-label="Prenotazioni">
-        <div className="dining-reservations-row dining-reservations-head" role="row">
-          <span role="columnheader">Data</span>
-          <span role="columnheader">N. prenotazione</span>
-          <span role="columnheader">Camera</span>
-          <span role="columnheader">Nome</span>
-          <span role="columnheader">Ora</span>
-          <span role="columnheader">Ristorante</span>
-          <span role="columnheader">Pax</span>
-          <span role="columnheader">Conferma</span>
-          <span role="columnheader">Richieste</span>
-          <span role="columnheader">Note</span>
-        </div>
-        {reservations.map((reservation) => (
-          <div
-            className={`dining-reservations-row${reservation.confirmation_status === 'cancelled' ? ' cancelled' : ''}`}
-            role="row"
-            key={reservation.id}
-          >
-            <span role="cell">{reservation.reservation_date}</span>
-            <span role="cell">{reservation.booking_reference ?? '—'}</span>
-            <span role="cell">{reservation.room_number ?? '—'}</span>
-            <span role="cell">{reservation.guest_name}</span>
-            <span role="cell">{reservation.reservation_time.slice(0, 5)}</span>
-            <span role="cell">{restaurantName(reservation.restaurant_id)}</span>
-            <span role="cell">{reservation.party_size}</span>
-            <span role="cell">
-              <Select
-                id={`status-${reservation.id}`}
-                name="status"
-                value={reservation.confirmation_status}
-                onChange={(value) => void onStatusChange(reservation, value as ConfirmationStatus)}
-              >
-                {Object.entries(CONFIRMATION_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </Select>
-            </span>
-            <span role="cell">{reservation.special_requests ?? '—'}</span>
-            <span role="cell">{reservation.staff_notes ?? '—'}</span>
-          </div>
-        ))}
-        {!loading && reservations.length === 0 ? <div className="dining-reservations-empty muted">Nessuna prenotazione registrata.</div> : null}
-      </div>
+        <TuttePanel reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} />
       )}
       <CreateReservationModal
         open={createOpen}
@@ -111,7 +67,14 @@ export function ReservationsTab({ hotelId, staffProfileId }: ReservationsTabProp
         onClose={() => setCreateOpen(false)}
         onSaved={async () => { setCreateOpen(false); await load() }}
       />
-    </section>
+      <BookingDetailSlideOver
+        reservation={selectedReservation}
+        restaurants={restaurants}
+        canManage={canManage}
+        onClose={() => setDetailId(null)}
+        onChanged={load}
+      />
+    </>
   )
 }
 
@@ -159,6 +122,10 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
         booking_reference: String(form.get('booking_reference') || '') || null,
         special_requests: String(form.get('special_requests') || '') || null,
         staff_notes: String(form.get('staff_notes') || '') || null,
+        // Manual staff entry starts life as "Da prenotare" -- it's already
+        // known and doesn't need picking up the way a guest-submitted
+        // request does (that path will default to 'new' once it exists).
+        confirmation_status: 'scheduled',
       }
       await createReservation(supabase, hotelId, staffProfileId, input)
       await onSaved()
