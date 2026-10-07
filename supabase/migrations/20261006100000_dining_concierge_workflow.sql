@@ -14,6 +14,24 @@
 -- this redesign's new "da gestire" and "alternative" affordances: those need
 -- new anon-facing SECURITY DEFINER RPCs mirroring create_guest_request(),
 -- real work of its own, not bundled into a schema change.
+--
+-- HUMAN DECISION ON RECORD — public-read catalog boundary: restaurants,
+-- dining_categories, restaurant_hours and the new dining_guest_tags below
+-- are anon-readable across EVERY hotel that has Dining enabled, not scoped
+-- to the anon caller's own hotel — inherited unchanged from
+-- 20260918100000_dining_module's own documented choice (058's own test:
+-- "reading the directory is NOT hotel-isolated ... same trust boundary as
+-- request_categories/request_types"). This migration deliberately keeps
+-- that boundary rather than silently narrowing it, since narrowing it is a
+-- product decision (does the guest app ever need to browse another
+-- property's menu, e.g. a chain's sister hotel nearby?) this migration has
+-- no basis to make unilaterally. Nothing sensitive rides along with it:
+-- restaurant_operational_profiles (commission/contact data),
+-- restaurant_reservation_alternatives, restaurant_reservation_requests and
+-- restaurant_reservation_feedback all carry no anon grant at all, in this
+-- migration or before it. Flagged again in this change's own PR description
+-- as a decision for a human to confirm or override, not treated as settled
+-- by this migration's silence.
 
 begin;
 
@@ -160,6 +178,46 @@ alter table restaurant_reservation_requests
   add column assigned_to uuid references staff_profiles(id);
 
 -- ---------------------------------------------------------------------------
+-- Tenant-safety hardening for restaurant_reservation_requests, added now
+-- rather than left to RLS alone: the admin-write policy checks hotel_id
+-- against the caller's own hotel, but nothing before this stopped hotel_id
+-- from being paired with a restaurant_id/stay_id/assigned_to that actually
+-- belongs to a DIFFERENT hotel — the plain single-column FKs on those
+-- columns only prove the referenced row exists somewhere, not that it's in
+-- the right tenant. A composite FK against (hotel_id, id) closes that at
+-- the schema level, independent of any policy ever being misconfigured.
+--
+-- unique(hotel_id, id) is the standard trick to FK against a tenant-scoped
+-- row: id alone is already globally unique (it's the primary key), so this
+-- adds nothing new to enforce and can never fail against existing data —
+-- safe to add to tables that may already carry rows.
+-- Preflight, run read-only against the real Homisuite project before this
+-- migration was finalized: restaurant_reservation_requests carries exactly
+-- 1 row today, with 0 restaurant_id/stay_id hotel mismatches -- these
+-- constraints are safe to apply against current production data as-is, no
+-- cleanup migration needed first.
+--
+-- stay_id/assigned_to stay nullable; Postgres' default MATCH SIMPLE means a
+-- NULL in either column trivially satisfies its composite FK (a manually
+-- entered reservation with no linked stay, or a request nobody picked up
+-- yet, isn't a cross-tenant risk by definition).
+-- ---------------------------------------------------------------------------
+alter table restaurants add constraint restaurants_hotel_id_id_key unique (hotel_id, id);
+alter table restaurant_reservation_requests add constraint restaurant_reservation_requests_hotel_id_id_key unique (hotel_id, id);
+alter table stays add constraint stays_hotel_id_id_key unique (hotel_id, id);
+alter table staff_profiles add constraint staff_profiles_hotel_id_id_key unique (hotel_id, id);
+
+alter table restaurant_reservation_requests
+  add constraint restaurant_reservation_requests_restaurant_same_hotel_fkey
+  foreign key (hotel_id, restaurant_id) references restaurants(hotel_id, id);
+alter table restaurant_reservation_requests
+  add constraint restaurant_reservation_requests_stay_same_hotel_fkey
+  foreign key (hotel_id, stay_id) references stays(hotel_id, id);
+alter table restaurant_reservation_requests
+  add constraint restaurant_reservation_requests_assigned_to_same_hotel_fkey
+  foreign key (hotel_id, assigned_to) references staff_profiles(hotel_id, id);
+
+-- ---------------------------------------------------------------------------
 -- restaurant_reservation_alternatives — the "Alternative autorizzate" list:
 -- restaurants the guest pre-approved as an acceptable fallback if their
 -- first choice can't seat them, in the guest's own ranked order. A junction
@@ -167,43 +225,61 @@ alter table restaurant_reservation_requests
 -- is a real FK to `restaurants` — referential integrity on something staff
 -- will actually click through to from the detail panel — and so one
 -- alternative can be dropped or reordered without rewriting an array.
+--
+-- hotel_id is denormalized here (not just reachable via reservation_id)
+-- specifically so it can be the left half of a composite FK against
+-- restaurants(hotel_id, id) — the structural guarantee that an alternative
+-- can never point at a restaurant from a different hotel than its own
+-- reservation, enforced at the constraint level rather than only by RLS.
+-- It's stamped server-side by the trigger below from the reservation's own
+-- hotel_id, never trusted from the caller (same posture as
+-- guest_requests.room_number being trigger-stamped rather than
+-- caller-supplied).
 -- ---------------------------------------------------------------------------
 create table restaurant_reservation_alternatives (
   id uuid primary key default gen_random_uuid(),
+  hotel_id uuid not null references hotels(id),
   reservation_id uuid not null references restaurant_reservation_requests(id) on delete cascade,
   restaurant_id uuid not null references restaurants(id),
   rank smallint not null check (rank > 0),
   created_at timestamptz not null default now(),
   unique (reservation_id, restaurant_id),
-  unique (reservation_id, rank)
+  unique (reservation_id, rank),
+  foreign key (hotel_id, reservation_id) references restaurant_reservation_requests(hotel_id, id),
+  foreign key (hotel_id, restaurant_id) references restaurants(hotel_id, id)
 );
 
 create index restaurant_reservation_alternatives_reservation_idx
   on restaurant_reservation_alternatives(reservation_id);
 
+create function stamp_dining_alternative_hotel() returns trigger
+language plpgsql as $$
+begin
+  select hotel_id into strict new.hotel_id
+  from restaurant_reservation_requests where id = new.reservation_id;
+  return new;
+exception
+  when no_data_found then
+    raise exception 'reservation_not_found' using errcode = '22023';
+end;
+$$;
+
+create trigger restaurant_reservation_alternatives_stamp_hotel
+  before insert or update on restaurant_reservation_alternatives
+  for each row execute function stamp_dining_alternative_hotel();
+
 alter table restaurant_reservation_alternatives enable row level security;
 
--- Same visibility as the reservation it belongs to: whoever can see/manage
--- the booking dashboard can see and edit its authorized alternatives.
+-- hotel_id is now a trustworthy column on this table itself (stamped by the
+-- trigger above, not caller-supplied), so the policy can check it directly
+-- instead of joining out to restaurant_reservation_requests — same gate
+-- (the right Dining hotel plus front-desk duty) as before, just simpler.
 create policy restaurant_reservation_alternatives_concierge on restaurant_reservation_alternatives for all to authenticated
-  using (
-    exists (
-      select 1 from restaurant_reservation_requests rr
-      where rr.id = reservation_id
-        and rr.hotel_id = current_staff_hotel_for_module('dining')
-        and current_staff_manages_front_desk()
-    )
-  )
-  with check (
-    exists (
-      select 1 from restaurant_reservation_requests rr
-      where rr.id = reservation_id
-        and rr.hotel_id = current_staff_hotel_for_module('dining')
-        and current_staff_manages_front_desk()
-    )
-  );
+  using (hotel_id = current_staff_hotel_for_module('dining') and current_staff_manages_front_desk())
+  with check (hotel_id = current_staff_hotel_for_module('dining') and current_staff_manages_front_desk());
 
 grant select, insert, update, delete on restaurant_reservation_alternatives to authenticated;
+-- deliberately no grant to anon — same sensitivity as the reservation itself.
 
 -- ---------------------------------------------------------------------------
 -- dining_guest_tags — the admin-curated vocabulary Impostazioni manages
