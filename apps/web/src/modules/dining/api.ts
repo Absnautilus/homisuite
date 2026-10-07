@@ -105,7 +105,12 @@ export async function listReservations(client: SupabaseClient, hotelId: string):
     .order('reservation_date', { ascending: false })
     .order('reservation_time', { ascending: false })
   if (error) throw error
-  return data as ReservationRequest[]
+  // guest_preference_tags is a column this module's own migration adds --
+  // on a database where that migration hasn't been applied yet, the key is
+  // simply absent from the row, and every renderer that calls .length/.map
+  // on it (OggiPanel, TuttePanel, BookingDetailSlideOver) would crash the
+  // whole page instead of just rendering an empty tag list.
+  return (data as ReservationRequest[]).map((row) => ({ ...row, guest_preference_tags: row.guest_preference_tags ?? [] }))
 }
 
 export interface CreateReservationInput {
