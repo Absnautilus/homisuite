@@ -15,9 +15,10 @@ interface ReservationsTabProps {
   staffProfileId: string | null
   canManage: boolean
   view: 'oggi' | 'tutte'
+  timezone: string
 }
 
-export function ReservationsTab({ hotelId, staffProfileId, canManage, view }: ReservationsTabProps) {
+export function ReservationsTab({ hotelId, staffProfileId, canManage, view, timezone }: ReservationsTabProps) {
   const [reservations, setReservations] = useState<ReservationRequest[]>([])
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +56,7 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view }: Re
       {!loading && restaurants.length === 0 ? (
         <p className="muted dining-empty-hint">Crea prima un ristorante nella scheda "Ristoranti".</p>
       ) : view === 'oggi' ? (
-        <OggiPanel reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} />
+        <OggiPanel reservations={reservations} restaurants={restaurants} timezone={timezone} onOpenDetail={setDetailId} />
       ) : (
         <TuttePanel reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} />
       )}

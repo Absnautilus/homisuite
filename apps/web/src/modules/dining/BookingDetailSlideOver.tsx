@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@homisuite/ui'
 import { Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
@@ -31,16 +31,24 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
 
   const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
 
+  // Same stale-response guard as RestaurantManagementSlideOver: a slow
+  // fetch for a reservation the staff member already closed (opened
+  // another one right after) must never land on top of the newer panel.
+  const loadId = useRef(0)
+
   const load = useCallback(async () => {
     if (!reservation) return
+    const thisLoad = ++loadId.current
     try {
       const [nextAlternatives, nextActivity] = await Promise.all([
         listAlternatives(supabase, reservation.id),
         listChangeLogForEntity(supabase, reservation.id),
       ])
+      if (thisLoad !== loadId.current) return
       setAlternativesState(nextAlternatives)
       setActivity(nextActivity)
     } catch (cause) {
+      if (thisLoad !== loadId.current) return
       setError(readableDiningError(cause))
     }
   }, [reservation])

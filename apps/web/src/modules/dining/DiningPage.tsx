@@ -12,6 +12,7 @@ interface DiningPageProps {
   hotelName: string
   canManage: boolean
   staffProfileId: string | null
+  timezone: string
 }
 
 const TABS = [
@@ -27,7 +28,7 @@ const RESERVATION_SUBTABS = [
   { value: 'tutte', label: 'Tutte' },
 ]
 
-export function DiningPage({ hotelId, hotelName, canManage, staffProfileId }: DiningPageProps) {
+export function DiningPage({ hotelId, hotelName, canManage, staffProfileId, timezone }: DiningPageProps) {
   const [tab, setTab] = useState('prenotazioni')
   const [reservationsView, setReservationsView] = useState<'oggi' | 'tutte'>('oggi')
 
@@ -52,7 +53,7 @@ export function DiningPage({ hotelId, hotelName, canManage, staffProfileId }: Di
           whatever the person had open or typed there, e.g. the "Aggiungi
           prenotazione" modal closing and losing its draft when they
           switched to another tab to check something. */}
-      <div hidden={tab !== 'prenotazioni'}><ReservationsTab hotelId={hotelId} staffProfileId={staffProfileId} canManage={canManage} view={reservationsView} /></div>
+      <div hidden={tab !== 'prenotazioni'}><ReservationsTab hotelId={hotelId} staffProfileId={staffProfileId} canManage={canManage} view={reservationsView} timezone={timezone} /></div>
       <div hidden={tab !== 'ristoranti'}><RestaurantsTab hotelId={hotelId} canManage={canManage} /></div>
       <div hidden={tab !== 'categorie'}><CategoriesTab hotelId={hotelId} canManage={canManage} /></div>
       <div hidden={tab !== 'registro'}><ChangeLogTab hotelId={hotelId} /></div>

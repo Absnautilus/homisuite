@@ -2,15 +2,17 @@ import { useMemo, useState } from 'react'
 import { AlertTriangle, Clock3, Inbox } from 'lucide-react'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS } from './types'
+import { todayIso } from './todayIso'
 
 interface OggiPanelProps {
   reservations: ReservationRequest[]
   restaurants: Restaurant[]
+  timezone: string
   onOpenDetail: (reservationId: string) => void
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
+function formatQueueDate(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
 }
 
 // Variant C from the approved prototype: the "Da gestire" queue grouped by
@@ -27,10 +29,10 @@ const QUEUE_GROUPS: { key: ConfirmationStatus[]; label: string; tone: 'urgent' |
 
 const KIND_BY_TONE: Record<'urgent' | 'waiting' | 'new', string> = { urgent: 'unavailable', waiting: 'waiting', new: 'new' }
 
-export function OggiPanel({ reservations, restaurants, onOpenDetail }: OggiPanelProps) {
+export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }: OggiPanelProps) {
   const [statusFilter, setStatusFilter] = useState<ConfirmationStatus | 'tutte'>('tutte')
   const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
-  const today = todayIso()
+  const today = todayIso(timezone)
 
   const queueGroups = useMemo(
     () => QUEUE_GROUPS.map((group) => ({
@@ -90,7 +92,10 @@ export function OggiPanel({ reservations, restaurants, onOpenDetail }: OggiPanel
                   >
                     <div className="dining-q-main">
                       <strong>{restaurantName(reservation.restaurant_id)}</strong>
-                      <span className="q-time">{reservation.reservation_time.slice(0, 5)} · {reservation.party_size} pax</span>
+                      <span className="q-time">
+                        {reservation.reservation_date !== today ? `${formatQueueDate(reservation.reservation_date)} · ` : ''}
+                        {reservation.reservation_time.slice(0, 5)} · {reservation.party_size} pax
+                      </span>
                     </div>
                     <div className="dining-q-sub">
                       {reservation.room_number ? `Camera ${reservation.room_number}` : 'Ospite esterno'} · {reservation.guest_name}

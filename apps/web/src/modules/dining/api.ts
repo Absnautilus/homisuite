@@ -7,6 +7,21 @@ import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, Rese
 // apps/web, so it just queries its own tables directly through the raw
 // client, the same escape hatch CoreClient.raw exists for.
 
+// A Supabase .update()/.delete() with no matching row (RLS silently
+// filtered it out, or the id is simply wrong) returns `error: null` and an
+// empty result -- NOT an error. Every mutation below that doesn't already
+// read back a row via a transactional RPC routes through this instead of a
+// bare `if (error) throw error`, so a 0-row write surfaces as a real,
+// catchable error instead of a silent no-op the UI reports as "Salvato".
+async function mutateOneOrThrow(client: SupabaseClient, table: string, idColumn: string, idValue: string, op: 'update' | 'delete', changes: Record<string, unknown> = {}): Promise<void> {
+  const query = op === 'update' ? client.from(table).update(changes).eq(idColumn, idValue) : client.from(table).delete().eq(idColumn, idValue)
+  const { data, error } = await query.select(idColumn)
+  if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error(`${op} on ${table} affected no rows -- not found, or not permitted`)
+  }
+}
+
 export async function listCategories(client: SupabaseClient, hotelId: string): Promise<DiningCategory[]> {
   const { data, error } = await client
     .from('dining_categories')
@@ -23,13 +38,11 @@ export async function createCategory(client: SupabaseClient, hotelId: string, na
 }
 
 export async function updateCategory(client: SupabaseClient, id: string, changes: Partial<Pick<DiningCategory, 'name' | 'active' | 'sort_order'>>): Promise<void> {
-  const { error } = await client.from('dining_categories').update(changes).eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'dining_categories', 'id', id, 'update', changes)
 }
 
 export async function deleteCategory(client: SupabaseClient, id: string): Promise<void> {
-  const { error } = await client.from('dining_categories').delete().eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'dining_categories', 'id', id, 'delete')
 }
 
 export async function listRestaurants(client: SupabaseClient, hotelId: string): Promise<Restaurant[]> {
@@ -55,13 +68,11 @@ export async function createRestaurant(client: SupabaseClient, hotelId: string, 
 }
 
 export async function updateRestaurant(client: SupabaseClient, id: string, changes: Partial<RestaurantInput & { active: boolean; sort_order: number }>): Promise<void> {
-  const { error } = await client.from('restaurants').update(changes).eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'restaurants', 'id', id, 'update', changes)
 }
 
 export async function deleteRestaurant(client: SupabaseClient, id: string): Promise<void> {
-  const { error } = await client.from('restaurants').delete().eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'restaurants', 'id', id, 'delete')
 }
 
 export async function listHours(client: SupabaseClient, restaurantId: string): Promise<RestaurantHour[]> {
@@ -83,8 +94,7 @@ export async function addHour(client: SupabaseClient, restaurantId: string, dayO
 }
 
 export async function deleteHour(client: SupabaseClient, id: string): Promise<void> {
-  const { error } = await client.from('restaurant_hours').delete().eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'restaurant_hours', 'id', id, 'delete')
 }
 
 export async function listReservations(client: SupabaseClient, hotelId: string): Promise<ReservationRequest[]> {
@@ -132,13 +142,11 @@ export async function updateReservation(
   id: string,
   changes: Partial<CreateReservationInput & { confirmation_status: ConfirmationStatus; confirmation_note: string | null; assigned_to: string | null }>,
 ): Promise<void> {
-  const { error } = await client.from('restaurant_reservation_requests').update(changes).eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'restaurant_reservation_requests', 'id', id, 'update', changes)
 }
 
 export async function deleteReservation(client: SupabaseClient, id: string): Promise<void> {
-  const { error } = await client.from('restaurant_reservation_requests').delete().eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'restaurant_reservation_requests', 'id', id, 'delete')
 }
 
 export async function getOperationalProfile(client: SupabaseClient, restaurantId: string): Promise<RestaurantOperationalProfile | null> {
@@ -158,9 +166,75 @@ export type OperationalProfileInput = Omit<RestaurantOperationalProfile, 'restau
 // management panel's Operativo tab never needs to know whether a row
 // already exists.
 export async function saveOperationalProfile(client: SupabaseClient, restaurantId: string, input: OperationalProfileInput): Promise<void> {
-  const { error } = await client
+  const { data, error } = await client
     .from('restaurant_operational_profiles')
     .upsert({ ...input, restaurant_id: restaurantId }, { onConflict: 'restaurant_id' })
+    .select('restaurant_id')
+  if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error('operational profile upsert affected no rows -- not found, or not permitted')
+  }
+}
+
+// save_restaurant_management: RestaurantManagementSlideOver's "Salva
+// modifiche" writes `restaurants` and `restaurant_operational_profiles`
+// behind one button, which used to be two separate client calls -- a
+// failure on the second silently left the restaurant's public fields saved
+// but its operational profile not, with nothing telling the user which
+// half actually persisted. This RPC does both in one transaction: either
+// the whole form saves, or none of it does.
+export interface RestaurantManagementInput {
+  name: string
+  cuisine: string | null
+  price_tier: Restaurant['price_tier']
+  walk_minutes: number | null
+  address: string | null
+  website_url: string | null
+  maps_url: string | null
+  short_description: string | null
+  guest_tags: string[]
+  is_recommended: boolean
+  sort_order: number
+  concierge_description: string | null
+  ideal_for: string | null
+  guest_profile: string | null
+  active: boolean
+}
+
+export async function saveRestaurantManagement(
+  client: SupabaseClient,
+  restaurantId: string,
+  restaurant: RestaurantManagementInput,
+  operational: OperationalProfileInput,
+): Promise<void> {
+  const { error } = await client.rpc('save_restaurant_management', {
+    p_restaurant_id: restaurantId,
+    p_name: restaurant.name,
+    p_cuisine: restaurant.cuisine,
+    p_price_tier: restaurant.price_tier,
+    p_walk_minutes: restaurant.walk_minutes,
+    p_address: restaurant.address,
+    p_website_url: restaurant.website_url,
+    p_maps_url: restaurant.maps_url,
+    p_short_description: restaurant.short_description,
+    p_guest_tags: restaurant.guest_tags,
+    p_is_recommended: restaurant.is_recommended,
+    p_sort_order: restaurant.sort_order,
+    p_concierge_description: restaurant.concierge_description,
+    p_ideal_for: restaurant.ideal_for,
+    p_guest_profile: restaurant.guest_profile,
+    p_active: restaurant.active,
+    p_contact_phone: operational.contact_phone,
+    p_contact_email: operational.contact_email,
+    p_contact_whatsapp: operational.contact_whatsapp,
+    p_preferred_contact_method: operational.preferred_contact_method,
+    p_contact_person: operational.contact_person,
+    p_commercial_agreement: operational.commercial_agreement,
+    p_commission_rate: operational.commission_rate,
+    p_booking_notes: operational.booking_notes,
+    p_difficult_times: operational.difficult_times,
+    p_last_verified_on: operational.last_verified_on,
+  })
   if (error) throw error
 }
 
@@ -174,17 +248,21 @@ export async function listAlternatives(client: SupabaseClient, reservationId: st
   return data as ReservationAlternative[]
 }
 
-// Replaces the whole ranked list in one go (delete + re-insert) rather than
-// diffing -- the detail panel always edits the full ordered list at once
-// (drag-reorder / add / remove), never a single row in isolation.
+// Replaces the whole ranked list in one go -- the detail panel always edits
+// the full ordered list at once (add/remove), never a single row in
+// isolation -- via set_restaurant_reservation_alternatives, a single
+// transactional RPC rather than a client-side delete-then-insert pair: a
+// failure between those two steps used to leave a reservation with NO
+// authorized alternatives at all, which is worse than the bad input that
+// caused the failure. The RPC also re-validates server-side that every
+// restaurant belongs to the reservation's own hotel, so a cross-hotel id
+// never reaches the table at all.
 export async function setAlternatives(client: SupabaseClient, reservationId: string, restaurantIds: string[]): Promise<void> {
-  const { error: deleteError } = await client.from('restaurant_reservation_alternatives').delete().eq('reservation_id', reservationId)
-  if (deleteError) throw deleteError
-  if (restaurantIds.length === 0) return
-  const { error: insertError } = await client
-    .from('restaurant_reservation_alternatives')
-    .insert(restaurantIds.map((restaurant_id, index) => ({ reservation_id: reservationId, restaurant_id, rank: index + 1 })))
-  if (insertError) throw insertError
+  const { error } = await client.rpc('set_restaurant_reservation_alternatives', {
+    p_reservation_id: reservationId,
+    p_restaurant_ids: restaurantIds,
+  })
+  if (error) throw error
 }
 
 export async function listGuestTags(client: SupabaseClient, hotelId: string): Promise<GuestTag[]> {
@@ -203,13 +281,11 @@ export async function createGuestTag(client: SupabaseClient, hotelId: string, la
 }
 
 export async function updateGuestTag(client: SupabaseClient, id: string, changes: Partial<Pick<GuestTag, 'label' | 'active' | 'sort_order'>>): Promise<void> {
-  const { error } = await client.from('dining_guest_tags').update(changes).eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'dining_guest_tags', 'id', id, 'update', changes)
 }
 
 export async function deleteGuestTag(client: SupabaseClient, id: string): Promise<void> {
-  const { error } = await client.from('dining_guest_tags').delete().eq('id', id)
-  if (error) throw error
+  await mutateOneOrThrow(client, 'dining_guest_tags', 'id', id, 'delete')
 }
 
 export interface RestaurantStats {

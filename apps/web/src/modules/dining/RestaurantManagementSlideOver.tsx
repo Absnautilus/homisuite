@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { supabase } from '../../core/client'
-import { getOperationalProfile, getRestaurantStats, saveOperationalProfile, updateRestaurant, type RestaurantStats } from './api'
+import { getOperationalProfile, getRestaurantStats, saveRestaurantManagement, type RestaurantStats } from './api'
 import type { CommercialAgreement, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile } from './types'
 import { COMMERCIAL_AGREEMENT_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -42,8 +42,15 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
   const [opsForm, setOpsForm] = useState<RestaurantOperationalProfile>(EMPTY_PROFILE)
   const [stats, setStats] = useState<RestaurantStats | null>(null)
 
+  // Guards against a slow fetch for a restaurant the staff member already
+  // navigated away from (opened B right after A) landing after B's own
+  // panel has already rendered -- without this, A's stale response would
+  // silently overwrite B's freshly-loaded form.
+  const loadId = useRef(0)
+
   const load = useCallback(async () => {
     if (!restaurant) return
+    const thisLoad = ++loadId.current
     setError(null)
     setTab('public')
     setPublicForm(restaurant)
@@ -53,9 +60,11 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
         getOperationalProfile(supabase, restaurant.id),
         getRestaurantStats(supabase, restaurant.id),
       ])
+      if (thisLoad !== loadId.current) return
       setOpsForm(profile ?? { ...EMPTY_PROFILE, restaurant_id: restaurant.id })
       setStats(nextStats)
     } catch (cause) {
+      if (thisLoad !== loadId.current) return
       setError(readableDiningError(cause))
     }
   }, [restaurant])
@@ -67,8 +76,24 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     setSaving(true)
     setError(null)
     try {
-      await updateRestaurant(supabase, restaurant.id, { ...publicForm, ...curatedForm })
-      await saveOperationalProfile(supabase, restaurant.id, opsForm)
+      const merged = { ...restaurant, ...publicForm, ...curatedForm }
+      await saveRestaurantManagement(supabase, restaurant.id, {
+        name: merged.name,
+        cuisine: merged.cuisine,
+        price_tier: merged.price_tier,
+        walk_minutes: merged.walk_minutes,
+        address: merged.address,
+        website_url: merged.website_url,
+        maps_url: merged.maps_url,
+        short_description: merged.short_description,
+        guest_tags: merged.guest_tags,
+        is_recommended: merged.is_recommended,
+        sort_order: merged.sort_order,
+        concierge_description: merged.concierge_description,
+        ideal_for: merged.ideal_for,
+        guest_profile: merged.guest_profile,
+        active: merged.active,
+      }, opsForm)
       await onSaved()
     } catch (cause) {
       setError(readableDiningError(cause))
