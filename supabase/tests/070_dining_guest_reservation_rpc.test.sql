@@ -6,7 +6,7 @@
 -- guest_stay_from_token() rather than having its own auth.
 begin;
 create extension if not exists pgtap;
-select plan(12);
+select plan(22);
 
 insert into hotels (id, name, timezone, active) values
   ('00000070-0000-0000-0000-00000000ff01', 'Hotel Settanta', 'Europe/Rome', true),
@@ -34,7 +34,11 @@ insert into stays (id, hotel_id, room_id, guest_last_name, check_in_at, check_ou
 insert into guest_requests_guest_sessions (stay_id, token_hash, expires_at) values
   ('00000070-0000-0000-0000-0000000a0c01', encode(digest('token-ana-valid', 'sha256'), 'hex'), now() + interval '1 day'),
   ('00000070-0000-0000-0000-0000000a0c02', encode(digest('token-rossi-no-dining', 'sha256'), 'hex'), now() + interval '1 day'),
-  ('00000070-0000-0000-0000-0000000a0c03', encode(digest('token-bianchi-checked-out', 'sha256'), 'hex'), now() + interval '1 day');
+  ('00000070-0000-0000-0000-0000000a0c03', encode(digest('token-bianchi-checked-out', 'sha256'), 'hex'), now() + interval '1 day'),
+  -- same (still-active) stay as token-ana-valid, but this particular
+  -- token's own session already expired -- distinct from the
+  -- checked-out-stay case above, which fails on the stay itself.
+  ('00000070-0000-0000-0000-0000000a0c01', encode(digest('token-ana-expired', 'sha256'), 'hex'), now() - interval '1 hour');
 
 insert into dining_categories (id, hotel_id, name) values
   ('00000070-0000-0000-0000-000000000c01', '00000070-0000-0000-0000-00000000ff01', 'Fine dining'),
@@ -82,6 +86,15 @@ select throws_ok(
   'a checked-out stay''s token is rejected the same as an unknown one'
 );
 
+-- ### an expired session token is rejected even though the stay itself
+--     is still active -- the session's own expires_at is a separate gate ###
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-expired', '00000070-0000-0000-0000-0000000da001', current_date + 1, '20:00', 2, null) $$,
+  '28000',
+  null,
+  'an expired session token is rejected as invalid_session'
+);
+
 -- ### hotel without the dining module enabled -- blocked even with an
 --     otherwise-perfectly-valid session ###
 select throws_ok(
@@ -114,6 +127,40 @@ select throws_ok(
   null,
   'party_size must be at least 1'
 );
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, '20:00', null, null) $$,
+  '22023',
+  null,
+  'party_size cannot be null'
+);
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, '20:00', 21, null) $$,
+  '22023',
+  null,
+  'party_size over the upper bound (20) is rejected'
+);
+
+-- ### null date/time ###
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', null, '20:00', 2, null) $$,
+  '22023',
+  null,
+  'reservation_date cannot be null'
+);
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, null, 2, null) $$,
+  '22023',
+  null,
+  'reservation_time cannot be null'
+);
+
+-- ### special_requests over the 500-char limit ###
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, '20:00', 2, repeat('x', 501)) $$,
+  '22023',
+  null,
+  'special_requests over 500 characters is rejected'
+);
 
 -- ### a reservation in the past is rejected ###
 select throws_ok(
@@ -123,12 +170,47 @@ select throws_ok(
   'a reservation_date in the past is rejected'
 );
 
+-- ### a reservation date after the guest's own checkout is rejected --
+--     stay 0c01 checks out in 2 days, so +10 is unambiguously past it ###
+select throws_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 10, '20:00', 2, null) $$,
+  '22023',
+  null,
+  'a reservation_date after the stay''s own check_out_at is rejected'
+);
+
+-- ### duplicate submission (double-tap / retried request) is idempotent:
+--     the same stay/restaurant/date/time returns the existing row instead
+--     of inserting a second one ###
+select lives_ok(
+  $$ select create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, '21:30', 4, 'prima chiamata') $$,
+  'first submission for this date/time succeeds'
+);
+-- Both calls below only ever hit the idempotency short-circuit (the row
+-- already exists from the lives_ok call above), so comparing their two
+-- returned ids needs no table-read privilege of its own -- anon only ever
+-- sees what the RPC itself returns, never restaurant_reservation_requests
+-- directly.
+select is(
+  (select id from create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, '21:30', 4, 'seconda chiamata (stesso tavolo/orario)')),
+  (select id from create_dining_reservation_request('token-ana-valid', '00000070-0000-0000-0000-0000000da001', current_date + 1, '21:30', 4, 'terza chiamata (stesso tavolo/orario)')),
+  'two more resubmissions of the identical stay/restaurant/date/time both return the same existing row'
+);
 reset role;
+select is(
+  (select count(*)::int from restaurant_reservation_requests
+   where stay_id = '00000070-0000-0000-0000-0000000a0c01' and reservation_time = '21:30'),
+  1,
+  'the duplicate submission did not create a second row'
+);
 
 -- ### the RPC touched last_seen_at on the guest session, same courtesy
---     create_guest_request pays its own sessions ###
+--     create_guest_request pays its own sessions -- scoped to the specific
+--     token actually used (token-ana-valid), since this stay now also
+--     carries the separate, still-untouched token-ana-expired session ###
 select isnt(
-  (select last_seen_at from guest_requests_guest_sessions where stay_id = '00000070-0000-0000-0000-0000000a0c01'),
+  (select last_seen_at from guest_requests_guest_sessions
+   where token_hash = encode(digest('token-ana-valid', 'sha256'), 'hex')),
   null,
   'the guest session''s last_seen_at was updated on a successful submission'
 );

@@ -49,16 +49,54 @@ begin
     raise exception 'restaurant_not_found' using errcode = '22023';
   end if;
 
-  if p_party_size is null or p_party_size < 1 then
+  if p_reservation_date is null then
+    raise exception 'invalid_reservation_date' using errcode = '22023';
+  end if;
+
+  if p_reservation_time is null then
+    raise exception 'invalid_reservation_time' using errcode = '22023';
+  end if;
+
+  if p_party_size is null or p_party_size < 1 or p_party_size > 20 then
     raise exception 'invalid_party_size' using errcode = '22023';
+  end if;
+
+  if p_special_requests is not null and char_length(p_special_requests) > 500 then
+    raise exception 'special_requests_too_long' using errcode = '22023';
   end if;
 
   if p_reservation_date < current_date then
     raise exception 'reservation_in_past' using errcode = '22023';
   end if;
 
+  -- A guest has no reason to book dining after they've already checked
+  -- out, and the stay's own check_out_at is a real, data-driven bound
+  -- (not an arbitrary constant) -- it also doubles as the "too far in the
+  -- future" cap the review asked for, since no stay runs for years.
+  if p_reservation_date > v_stay.check_out_at::date then
+    raise exception 'reservation_after_checkout' using errcode = '22023';
+  end if;
+
   update guest_requests_guest_sessions set last_seen_at = now()
     where token_hash = encode(digest(p_token, 'sha256'), 'hex');
+
+  -- Idempotency: a double-tap or a retried request after a dropped
+  -- response for the exact same table/date/time returns the request
+  -- already on file instead of creating a near-duplicate -- no new
+  -- dedup infrastructure, just a lookup against the table this function
+  -- already writes to.
+  select * into v_request
+    from restaurant_reservation_requests
+    where stay_id = v_stay.id
+      and restaurant_id = p_restaurant_id
+      and reservation_date = p_reservation_date
+      and reservation_time = p_reservation_time
+      and confirmation_status <> 'cancelled'
+    order by created_at desc
+    limit 1;
+  if v_request.id is not null then
+    return v_request;
+  end if;
 
   select r.room_number into v_room_number from rooms r where r.id = v_stay.room_id;
 

@@ -9,8 +9,15 @@ import { createDiningReservationRequest, fetchDiningCatalog, fetchDiningHours, i
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { DiningCategory, DiningHour, DiningRestaurant } from '@/lib/types'
 
-const DAY_LABELS_IT = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
 const PRICE_TIER = ['€', '€€', '€€€', '€€€€']
+
+// day_of_week is 0=Sunday..6=Saturday (Postgres extract(dow)); 2024-01-07
+// was itself a Sunday, so offsetting from it lines up every index with the
+// matching weekday without hardcoding any language's names.
+function weekdayLabel(locale: string, dayOfWeek: number): string {
+  const date = new Date(Date.UTC(2024, 0, 7 + dayOfWeek))
+  return new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' }).format(date)
+}
 
 type Step =
   | { name: 'discover' }
@@ -101,7 +108,8 @@ function Discover({ categories, restaurants, onSelect }: {
 }
 
 function RestaurantRow({ restaurant, categoryName, onSelect }: { restaurant: DiningRestaurant; categoryName: string; onSelect: (r: DiningRestaurant) => void }) {
-  const meta = [categoryName, restaurant.cuisine, restaurant.price_tier ? PRICE_TIER[restaurant.price_tier - 1] : null, restaurant.walk_minutes ? `${restaurant.walk_minutes} min a piedi` : null]
+  const { t } = useLocale()
+  const meta = [categoryName, restaurant.cuisine, restaurant.price_tier ? PRICE_TIER[restaurant.price_tier - 1] : null, restaurant.walk_minutes ? t('dining.walkMinutes', { minutes: restaurant.walk_minutes }) : null]
     .filter(Boolean)
     .join(' · ')
   return (
@@ -128,7 +136,7 @@ function RestaurantDetail({ restaurant, category, onBack, onRequest }: {
   onBack: () => void
   onRequest: () => void
 }) {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const [hours, setHours] = useState<DiningHour[] | null>(null)
 
   useEffect(() => {
@@ -179,12 +187,12 @@ function RestaurantDetail({ restaurant, category, onBack, onRequest }: {
         <Card>
           <CardHeader className="flex items-center gap-2 py-3"><Clock size={15} className="text-muted" /><h3 className="text-xs font-bold uppercase tracking-wide text-muted">{t('dining.hours')}</h3></CardHeader>
           <CardBody className="space-y-1.5 py-3">
-            {DAY_LABELS_IT.map((label, day) => {
+            {Array.from({ length: 7 }, (_, day) => {
               const dayHours = hoursByDay.get(day)
               if (!dayHours) return null
               return (
                 <div key={day} className="flex justify-between text-sm">
-                  <span className="font-medium text-foreground">{label}</span>
+                  <span className="font-medium text-foreground capitalize">{weekdayLabel(locale, day)}</span>
                   <span className="text-muted">{dayHours.map((h) => `${h.opens_at.slice(0, 5)}–${h.closes_at.slice(0, 5)}`).join(', ')}</span>
                 </div>
               )
@@ -268,12 +276,12 @@ function RequestWizard({ restaurant, token, onBack, onSessionExpired, onSubmitte
           <div className="flex items-center gap-3">
             <Button type="button" variant="outline" size="sm" disabled={pax <= 1} onClick={() => setPax((p) => Math.max(1, p - 1))} aria-label={t('flow.quantityDecrease')}><Minus size={14} /></Button>
             <span className="w-8 text-center text-sm font-medium tabular-nums">{pax}</span>
-            <Button type="button" variant="outline" size="sm" onClick={() => setPax((p) => Math.min(12, p + 1))} aria-label={t('flow.quantityIncrease')}><Plus size={14} /></Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setPax((p) => Math.min(20, p + 1))} aria-label={t('flow.quantityIncrease')}><Plus size={14} /></Button>
           </div>
         </FieldGroup>
         <FieldGroup>
           <Label htmlFor="dining-note">{t('dining.preferences')}</Label>
-          <Textarea id="dining-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('dining.preferencesPlaceholder')} />
+          <Textarea id="dining-note" rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('dining.preferencesPlaceholder')} />
         </FieldGroup>
         <FieldError>{error ?? undefined}</FieldError>
         <Button type="button" disabled={!date || pending} className="mt-2 w-full" onClick={onConfirm}>{pending ? t('flow.sendPending') : t('dining.send')}</Button>
