@@ -76,6 +76,7 @@ export function DiningModuleGate() {
       hotelName={runtime.property?.name ?? 'Struttura'}
       canManage={Boolean(canManage)}
       staffProfileId={access.staffProfileId}
+      timezone={runtime.property?.timezone ?? 'UTC'}
     />
   )
 }

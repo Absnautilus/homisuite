@@ -21,6 +21,38 @@ export interface Restaurant {
   requires_online_booking: boolean
   active: boolean
   sort_order: number
+  cuisine: string | null
+  price_tier: 1 | 2 | 3 | 4 | null
+  walk_minutes: number | null
+  short_description: string | null
+  guest_tags: string[]
+  is_recommended: boolean
+  concierge_description: string | null
+  ideal_for: string | null
+  guest_profile: string | null
+}
+
+export type CommercialAgreement = 'partner_commission' | 'partner_no_commission' | 'none'
+export type PreferredContactMethod = 'phone' | 'whatsapp' | 'email'
+
+export interface RestaurantOperationalProfile {
+  restaurant_id: string
+  contact_phone: string | null
+  contact_email: string | null
+  contact_whatsapp: string | null
+  preferred_contact_method: PreferredContactMethod | null
+  contact_person: string | null
+  commercial_agreement: CommercialAgreement
+  commission_rate: number | null
+  booking_notes: string | null
+  difficult_times: string | null
+  last_verified_on: string | null
+}
+
+export const COMMERCIAL_AGREEMENT_LABELS: Record<CommercialAgreement, string> = {
+  partner_commission: 'Convenzionato con provvigione',
+  partner_no_commission: 'Convenzionato senza provvigione',
+  none: 'Nessun accordo',
 }
 
 export interface RestaurantHour {
@@ -31,7 +63,12 @@ export interface RestaurantHour {
   closes_at: string
 }
 
-export type ConfirmationStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+// 'pending'/'declined' are the legacy values -- kept valid by the schema for
+// rows already in that state, but new staff/guest flows use the more
+// specific values below instead (see 20261006100000_dining_concierge_workflow).
+export type ConfirmationStatus =
+  | 'new' | 'scheduled' | 'in_progress' | 'unavailable' | 'confirmed' | 'cancelled'
+  | 'pending' | 'declined'
 
 export interface ReservationRequest {
   id: string
@@ -50,14 +87,48 @@ export interface ReservationRequest {
   staff_notes: string | null
   source: 'staff' | 'guest'
   created_by: string | null
+  assigned_to: string | null
+  guest_preference_tags: string[]
   created_at: string
 }
 
 export const CONFIRMATION_STATUS_LABELS: Record<ConfirmationStatus, string> = {
-  pending: 'In attesa',
+  new: 'Nuova richiesta',
+  scheduled: 'Da prenotare',
+  in_progress: 'In attesa',
+  unavailable: 'Non disponibile',
   confirmed: 'Confermata',
-  declined: 'Rifiutata',
   cancelled: 'Annullata',
+  pending: 'In attesa',
+  declined: 'Rifiutata',
+}
+
+// The "Da gestire" queue only ever shows requests still open for action --
+// everything else (confermata/annullata/rifiutata/da prenotare) belongs in
+// "Tutte", not the urgent queue.
+export const QUEUE_STATUSES: ConfirmationStatus[] = ['new', 'pending', 'in_progress', 'unavailable']
+
+export interface ReservationAlternative {
+  id: string
+  reservation_id: string
+  restaurant_id: string
+  rank: number
+}
+
+export interface GuestTag {
+  id: string
+  hotel_id: string
+  label: string
+  active: boolean
+  sort_order: number
+}
+
+export interface ReservationFeedback {
+  id: string
+  reservation_id: string
+  rating: 1 | 2 | 3 | 4 | 5
+  comment: string | null
+  created_at: string
 }
 
 export const DAY_LABELS = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']

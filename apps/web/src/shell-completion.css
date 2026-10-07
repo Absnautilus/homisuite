@@ -246,3 +246,143 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .dining-change-log { border-top: 1px solid var(--line); overflow-x: auto; }
 .dining-change-log-row { display: grid; grid-template-columns: 150px 160px 1fr; gap: 14px; align-items: center; min-height: 48px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 12.5px; min-width: 560px; }
 .dining-change-log-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+
+/* ---------- slide-over (booking detail / restaurant management) ----------
+   Mirrors packages/ui's Modal chrome (same header/body/footer rhythm,
+   same close-button treatment) but right-anchored and non-blocking, per
+   SlideOver.tsx's own rationale. */
+.dining-slideover-scrim { position: fixed; inset: 0; z-index: 300; background: rgba(16, 15, 30, .4); backdrop-filter: blur(2px); }
+.dining-slideover-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 301; width: min(440px, 100%);
+  background: var(--surface); box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+  animation: dining-slideover-in 220ms cubic-bezier(.2, .8, .2, 1);
+}
+.dining-slideover-panel.is-wide { width: min(620px, 100%); }
+@keyframes dining-slideover-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .dining-slideover-panel { animation: none; } }
+.dining-slideover-head { padding: 18px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.dining-slideover-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.dining-slideover-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.dining-slideover-close { border: 0; background: var(--surface-2); color: var(--muted); width: 30px; height: 30px; border-radius: var(--r-sm); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
+.dining-slideover-close:hover { background: var(--line); color: var(--ink); }
+.dining-slideover-body { padding: 18px 20px; overflow-y: auto; flex: 1; display: grid; gap: 20px; align-content: start; }
+.dining-slideover-foot { padding: 14px 20px; border-top: 1px solid var(--line); background: var(--surface-2); display: flex; gap: 8px; flex-wrap: wrap; }
+.dining-slideover-foot .ui-button { flex: 1 1 auto; }
+
+.dining-dp-section h3 { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.dining-dp-kv { display: grid; gap: 4px; }
+.dining-dp-kv .k { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.dining-dp-kv .v { font-size: 14px; font-weight: 700; }
+.dining-tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.dining-tag-row span { background: var(--surface-2); border: 1px solid var(--line); font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: var(--r-sm); color: var(--ink-2); }
+.dining-alt-list { display: grid; gap: 6px; list-style: none; padding: 0; margin: 0; counter-reset: dining-alt; }
+.dining-alt-list li { counter-increment: dining-alt; display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; padding: 8px 10px; background: var(--surface-2); border-radius: var(--r-sm); }
+.dining-alt-list li::before { content: counter(dining-alt); width: 19px; height: 19px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0; }
+.dining-activity-list { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.dining-activity-list li { display: flex; gap: 10px; font-size: 12.5px; }
+.dining-activity-list time { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; flex-shrink: 0; width: 64px; }
+
+/* ---------- status pill (confirmation_status) ---------- */
+.dining-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.dining-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.dining-pill.status-new, .dining-pill.status-pending { color: var(--accent); background: var(--accent-soft); }
+.dining-pill.status-scheduled { color: var(--slate-ink); background: var(--slate-bg); }
+.dining-pill.status-in_progress { color: var(--amber-ink); background: var(--amber-bg); }
+.dining-pill.status-unavailable, .dining-pill.status-declined { color: var(--red-ink); background: var(--red-bg); }
+.dining-pill.status-confirmed { color: var(--green-ink); background: var(--green-bg); }
+.dining-pill.status-cancelled { color: var(--muted); background: var(--surface-2); }
+
+/* ---------- Oggi: ops summary + "Da gestire" queue ---------- */
+.dining-ops-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+.dining-ops-summary strong { color: var(--ink); font-weight: 800; }
+.dining-ops-summary .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--line-strong); }
+.dining-ops-summary .accent { color: var(--accent); }
+.dining-queue-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dining-queue-head h2 { font-size: 15px; font-weight: 800; margin: 0; }
+.dining-queue-head .count { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--accent); font-weight: 700; background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; }
+.dining-queue-group { margin-top: 16px; }
+.dining-queue-group:first-child { margin-top: 10px; }
+.dining-queue-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.dining-queue-group-head.urgent { color: var(--red-ink); }
+.dining-queue-group-head.waiting { color: var(--amber-ink); }
+.dining-queue-group-head.new { color: var(--accent); }
+.dining-queue-group-head .n { font-variant-numeric: tabular-nums; background: var(--surface-2); padding: 1px 7px; border-radius: 999px; color: var(--ink-2); font-weight: 700; }
+.dining-q-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 13px 14px; display: grid; gap: 7px; cursor: pointer; position: relative;
+  transition: border-color 150ms, box-shadow 150ms, transform 150ms;
+  border-left: 3px solid var(--line-strong);
+}
+.dining-q-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.dining-q-card[data-kind="new"] { border-left-color: var(--accent); }
+.dining-q-card[data-kind="waiting"] { border-left-color: var(--amber-ink); }
+.dining-q-card[data-kind="unavailable"] { border-left-color: var(--red-ink); }
+.dining-q-main { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.dining-q-main strong { font-size: 14.5px; font-weight: 800; }
+.dining-q-main .q-time { font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.dining-q-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
+.dining-q-extra { font-size: 11.5px; color: var(--ink-2); display: flex; align-items: center; gap: 5px; }
+.dining-q-btn {
+  margin-top: 2px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  border-radius: var(--r-sm); font-size: 12px; font-weight: 700; padding: 7px 10px; cursor: pointer; text-align: center;
+  transition: background 150ms;
+}
+.dining-q-btn:hover { background: var(--surface-2); }
+.dining-q-card[data-kind="new"] .dining-q-btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.dining-queue-empty { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
+
+/* ---------- Tutte: toolbar + dense grid (search/filter/sort) ---------- */
+.dining-grid-toolbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.dining-search-box { position: relative; flex: 1 1 200px; min-width: 160px; }
+.dining-search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.dining-search-box input { width: 100%; height: 36px; padding: 0 12px 0 32px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+.dining-search-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dining-grid-wrap { overflow-x: auto; }
+table.dining-dense { width: 100%; border-collapse: collapse; min-width: 760px; }
+table.dining-dense th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); padding: 9px 14px; white-space: nowrap; }
+table.dining-dense td { padding: 10px 14px; font-size: 13px; border-top: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+table.dining-dense tbody tr { cursor: pointer; transition: background 120ms; }
+table.dining-dense tbody tr:hover { background: var(--surface-2); }
+table.dining-dense th.sortable { cursor: pointer; user-select: none; }
+table.dining-dense th.sortable:hover { color: var(--ink); }
+table.dining-dense th.sortable .arrow { opacity: .4; margin-left: 3px; }
+table.dining-dense th.sortable.is-sorted .arrow { opacity: 1; color: var(--accent); }
+
+/* ---------- restaurant catalog: curated toggles ---------- */
+.dining-rest-row { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 14px; padding: 13px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+.dining-rest-row:first-child { border-top: 0; }
+.dining-rest-row:hover { background: var(--surface-2); }
+.dining-rest-thumb { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex-shrink: 0; }
+.dining-rest-main strong { display: block; font-size: 14px; font-weight: 800; }
+.dining-rest-main .meta { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.dining-rec-badge { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px; letter-spacing: .02em; border: 1px solid transparent; cursor: pointer; background: var(--surface-2); color: var(--muted); transition: background 150ms, color 150ms, border-color 150ms; }
+.dining-rec-badge.is-on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft-line); }
+.dining-vis-toggle { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+@media (max-width: 640px) {
+  .dining-rest-row { grid-template-columns: auto 1fr; }
+  .dining-rest-row .dining-rec-badge, .dining-rest-row .dining-vis-toggle { display: none; }
+}
+
+/* ---------- restaurant management: tabs + field grid ---------- */
+.dining-mgmt-tabs { display: flex; gap: 2px; padding: 0 20px; border-bottom: 1px solid var(--line); margin: 0 -20px; }
+.dining-mgmt-tabs button { border: 0; background: transparent; padding: 10px 4px; margin-right: 18px; font-size: 12.5px; font-weight: 700; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
+.dining-mgmt-tabs button.is-active { color: var(--accent); border-color: var(--accent); }
+.dining-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.dining-field-grid .span2 { grid-column: 1 / -1; }
+.dining-field-grid .form-field { gap: 5px; }
+.dining-visibility-note { display: flex; gap: 8px; align-items: flex-start; background: var(--accent-soft); border: 1px solid var(--accent-soft-line); border-radius: var(--r-sm); padding: 10px 12px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.dining-perf-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.dining-perf-stat { display: grid; gap: 2px; }
+.dining-perf-stat .n { font-size: 20px; font-weight: 800; }
+.dining-perf-stat .l { font-size: 11px; color: var(--muted); font-weight: 700; }
+
+/* ---------- Impostazioni: classification table + tag chips ---------- */
+.dining-class-table { border-top: 1px solid var(--line); overflow-x: auto; }
+.dining-class-row { display: grid; grid-template-columns: 1fr 90px 90px 90px; gap: 10px; align-items: center; min-height: 48px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 13px; min-width: 480px; }
+.dining-class-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.dining-tag-chip-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px; }
+.dining-tag-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.dining-tag-chip button { border: 0; background: var(--surface); color: var(--muted); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+.dining-tag-chip button:hover { background: var(--red-bg); color: var(--red-ink); }
+.dining-tag-add-form { display: flex; gap: 8px; padding: 0 20px 18px; }
+.dining-tag-add-form input { flex: 1 1 220px; min-height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
