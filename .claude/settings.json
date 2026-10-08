@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__github__pull_request_read",
+      "mcp__github__actions_get",
+      "mcp__github__actions_list",
+      "mcp__github__get_job_logs",
+      "Bash(npm run typecheck *)",
+      "Bash(git fetch origin *)",
+      "mcp__Supabase__query_logs",
+      "Bash(pg_lsclusters*)",
+      "Bash(npm test *)",
+      "Bash(npm run build *)",
+      "mcp__github__get_commit",
+      "mcp__Vercel__list_deployments",
+      "mcp__github__get_file_contents",
+      "mcp__github__list_pull_requests",
+      "mcp__Supabase__list_projects",
+      "mcp__Supabase__list_migrations",
+      "mcp__github__list_commits",
+      "mcp__Claude_Code_Remote__list_repos",
+      "mcp__Claude_Code_Remote__list_triggers",
+      "mcp__Vercel__list_projects",
+      "mcp__Supabase__list_tables",
+      "mcp__Supabase__list_extensions",
+      "mcp__Supabase__get_advisors",
+      "mcp__Supabase__get_project",
+      "mcp__Supabase__get_project_url",
+      "mcp__Supabase__list_branches",
+      "mcp__Supabase__search_docs"
+    ]
+  }
+}
