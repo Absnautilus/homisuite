@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Clock3, Inbox } from 'lucide-react'
+import { Button } from '@homisuite/ui'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS } from './types'
 import { todayIso } from './todayIso'
@@ -119,11 +120,11 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
           <div><h2>Programma di oggi</h2></div>
         </div>
         <div className="filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 20px 16px' }}>
-          <button className={`chip${statusFilter === 'tutte' ? ' is-active' : ''}`} type="button" onClick={() => setStatusFilter('tutte')}>Tutte</button>
+          <Button variant="chip" pressed={statusFilter === 'tutte'} onClick={() => setStatusFilter('tutte')}>Tutte</Button>
           {(['confirmed', 'in_progress', 'new', 'unavailable', 'cancelled'] as ConfirmationStatus[]).map((status) => (
-            <button key={status} className={`chip${statusFilter === status ? ' is-active' : ''}`} type="button" onClick={() => setStatusFilter(status)}>
+            <Button key={status} variant="chip" pressed={statusFilter === status} onClick={() => setStatusFilter(status)}>
               {CONFIRMATION_STATUS_LABELS[status]}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="dining-grid-wrap">

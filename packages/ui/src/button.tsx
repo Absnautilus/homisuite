@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import './button.css'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'chip'
 export type ButtonSize = 'sm' | 'md'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,6 +10,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   /** Disables the button and marks it busy -- callers still swap in their own "Salvataggio…" label. */
   loading?: boolean
+  /** variant="chip" only: this chip is the active filter. Drives aria-pressed and the selected styling. */
+  pressed?: boolean
 }
 
 // The looks every module hand-wrote on its own -- apps/web's `className="btn
@@ -20,7 +22,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // to `secondary`; callers were moved onto `secondary` directly rather than
 // carrying three redundant aliases forward.
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'secondary', size = 'md', loading = false, disabled, className, type = 'button', ...rest },
+  { variant = 'secondary', size = 'md', loading = false, pressed, disabled, className, type = 'button', ...rest },
   ref,
 ) {
   return (
@@ -28,6 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
       ref={ref}
       type={type}
+      aria-pressed={variant === 'chip' ? pressed ?? false : rest['aria-pressed']}
       className={['btn', `btn-${variant}`, size === 'sm' ? 'btn-size-sm' : null, className].filter(Boolean).join(' ')}
       disabled={disabled || loading}
       aria-busy={loading || undefined}

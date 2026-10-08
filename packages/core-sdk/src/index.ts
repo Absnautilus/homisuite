@@ -24,6 +24,7 @@ export type {
   ModuleStatus,
   ModuleEntitlement,
   ModuleDescriptor,
+  MemberPermissionStatus,
 } from './types/domain'
 
 export { GUEST_VERIFICATION_LEVEL } from './guestSession'

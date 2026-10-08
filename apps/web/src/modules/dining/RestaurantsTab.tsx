@@ -100,9 +100,9 @@ export function RestaurantsTab({ hotelId, canManage }: RestaurantsTabProps) {
       {!loading && categories.length === 0 ? <p className="muted dining-empty-hint">Crea prima una categoria nella scheda "Categorie".</p> : null}
       {categories.length > 0 ? (
         <div className="filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 20px 14px' }}>
-          <button className={`chip${filter === 'tutti' ? ' is-active' : ''}`} type="button" onClick={() => setFilter('tutti')}>Tutti</button>
-          <button className={`chip${filter === 'consigliati' ? ' is-active' : ''}`} type="button" onClick={() => setFilter('consigliati')}>Consigliati</button>
-          <button className={`chip${filter === 'visibili' ? ' is-active' : ''}`} type="button" onClick={() => setFilter('visibili')}>Visibili</button>
+          <Button variant="chip" pressed={filter === 'tutti'} onClick={() => setFilter('tutti')}>Tutti</Button>
+          <Button variant="chip" pressed={filter === 'consigliati'} onClick={() => setFilter('consigliati')}>Consigliati</Button>
+          <Button variant="chip" pressed={filter === 'visibili'} onClick={() => setFilter('visibili')}>Visibili</Button>
         </div>
       ) : null}
       <div>
