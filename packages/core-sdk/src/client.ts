@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, Membership, ModuleEntitlement, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
+import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
 import { getCurrentProfile, updateCurrentProfile } from './profile'
 import { deleteDevicePushSubscription, isDevicePushSubscribed, saveDevicePushSubscription, type DevicePushSubscriptionKeys } from './devicePush'
 import { getAccessibleProperties, getMembership, updateProperty } from './memberships'
@@ -8,7 +8,7 @@ import { hasPermission } from './permissions'
 import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
-import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, updateJobTitle, updateTeamMember } from './team'
+import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, updateJobTitle, updateTeamMember } from './team'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -34,6 +34,9 @@ export interface CoreClient {
   grantHousekeepingAccess: (input: GrantHousekeepingAccessInput) => Promise<void>
   revokeHousekeepingAccess: (input: RevokeHousekeepingAccessInput) => Promise<void>
   getHousekeepingAccessStatus: (membershipId: string) => Promise<boolean>
+  getMemberPermissionStatus: (membershipId: string, permissionSlug: string) => Promise<MemberPermissionStatus>
+  grantMemberPermission: (membershipId: string, permissionSlug: string) => Promise<void>
+  revokeMemberPermission: (membershipId: string, permissionSlug: string) => Promise<void>
   updateTeamMember: (input: UpdateTeamMemberInput) => Promise<void>
   archiveTeamMember: (input: ArchiveTeamMemberInput) => Promise<void>
   updateCurrentProfile: (changes: { fullName: string; avatarUrl?: string | null }) => Promise<Profile>
@@ -66,6 +69,9 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     grantHousekeepingAccess: (input) => grantHousekeepingAccess(raw, input),
     revokeHousekeepingAccess: (input) => revokeHousekeepingAccess(raw, input),
     getHousekeepingAccessStatus: (membershipId) => getHousekeepingAccessStatus(raw, membershipId),
+    getMemberPermissionStatus: (membershipId, permissionSlug) => getMemberPermissionStatus(raw, membershipId, permissionSlug),
+    grantMemberPermission: (membershipId, permissionSlug) => grantMemberPermission(raw, membershipId, permissionSlug),
+    revokeMemberPermission: (membershipId, permissionSlug) => revokeMemberPermission(raw, membershipId, permissionSlug),
     updateTeamMember: (input) => updateTeamMember(raw, input),
     archiveTeamMember: (input) => archiveTeamMember(raw, input),
     updateCurrentProfile: (changes) => updateCurrentProfile(raw, changes),

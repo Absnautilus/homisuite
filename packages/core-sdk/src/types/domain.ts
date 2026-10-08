@@ -111,6 +111,11 @@ export interface RevokeHousekeepingAccessInput {
   membershipId: string
 }
 
+export interface MemberPermissionStatus {
+  grantedByRole: boolean
+  grantedByOverride: boolean
+}
+
 export interface ArchiveTeamMemberInput {
   membershipId: string
 }

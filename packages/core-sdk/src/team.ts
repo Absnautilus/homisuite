@@ -13,6 +13,7 @@ import type {
   ArchiveTeamMemberInput,
   GrantHousekeepingAccessInput,
   RevokeHousekeepingAccessInput,
+  MemberPermissionStatus,
   ResetTeamMemberPasswordInput,
   TeamMember,
   UpdateTeamMemberInput,
@@ -195,6 +196,28 @@ export async function getHousekeepingAccessStatus(client: SupabaseClient<Databas
   const { data, error } = await client.rpc('guest_requests_staff_access_status', { p_membership_id: membershipId })
   if (error) throw error
   return data ?? false
+}
+
+// Generalizes the above for any module-scoped permission (dining.manage,
+// shifts.manage, ...) instead of Housekeeping's own legacy-table bridge --
+// see 20261008090000_member_permission_overrides.sql. grantedByRole true
+// means the member already holds it through their role: nothing to
+// revoke, the toggle should show on but disabled.
+export async function getMemberPermissionStatus(client: SupabaseClient<Database>, membershipId: string, permissionSlug: string): Promise<MemberPermissionStatus> {
+  const { data, error } = await client.rpc('member_permission_status', { p_membership_id: membershipId, p_permission_slug: permissionSlug })
+  if (error) throw error
+  const row = data?.[0]
+  return { grantedByRole: row?.granted_by_role ?? false, grantedByOverride: row?.granted_by_override ?? false }
+}
+
+export async function grantMemberPermission(client: SupabaseClient<Database>, membershipId: string, permissionSlug: string): Promise<void> {
+  const { error } = await client.rpc('grant_member_permission', { p_membership_id: membershipId, p_permission_slug: permissionSlug })
+  if (error) throw error
+}
+
+export async function revokeMemberPermission(client: SupabaseClient<Database>, membershipId: string, permissionSlug: string): Promise<void> {
+  const { error } = await client.rpc('revoke_member_permission', { p_membership_id: membershipId, p_permission_slug: permissionSlug })
+  if (error) throw error
 }
 
 // Archives a direct, property-scoped membership -- archive_team_member()

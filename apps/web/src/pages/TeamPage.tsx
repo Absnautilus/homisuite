@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import type { CoreRole, JobTitle, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
+import type { CoreRole, JobTitle, MemberPermissionStatus, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
 import { Button, Modal, PageHeader, Tabs } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { PageState } from '../components/PageState'
@@ -367,16 +367,26 @@ function ResetPasswordModal({ member, onClose }: { member: TeamMember | null; on
 
 // Display order/labels for whatever the property has enabled -- same slugs
 // and Italian names as Home's own module tiles (HomePage.tsx). Housekeeping
-// is the only module wired through a per-member compatibility grant (see
-// grant-housekeeping-access's own header); every other module's access is
-// governed entirely by the member's role permissions, so it's listed here
-// as informational rather than another fake toggle.
+// is wired through its own per-member compatibility grant (see
+// grant-housekeeping-access's own header). Dining and Turni are instead
+// governed by Core's role/permission system (dining.manage/shifts.manage),
+// generalized in 20261008090000_member_permission_overrides.sql so a
+// specific member can be granted the module's admin capability independent
+// of their role -- MODULE_PERMISSION_SLUG below is what makes that toggle
+// appear instead of the plain "Gestito dal ruolo" text. Transfer has no
+// .manage permission yet (no admin functionality of its own to toggle), so
+// it stays informational until that exists.
 const MODULE_CATALOG: { slug: string; title: string }[] = [
   { slug: 'guest_requests', title: 'Housekeeping' },
   { slug: 'dining', title: 'Ristorazione' },
   { slug: 'shifts', title: 'Turni' },
   { slug: 'transfers', title: 'Transfer' },
 ]
+
+const MODULE_PERMISSION_SLUG: Record<string, string> = {
+  dining: 'dining.manage',
+  shifts: 'shifts.manage',
+}
 
 function ModulesModal({ member, propertyId, entitlements, onClose }: { member: TeamMember | null; propertyId: string; entitlements: ModuleEntitlement[]; onClose: () => void }) {
   const enabledModules = MODULE_CATALOG.filter((module) => entitlements.some((item) => item.enabled && item.slug === module.slug))
@@ -387,6 +397,9 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
   const [saving, setSaving] = useState(false)
   const [savingVisibility, setSavingVisibility] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [permissionStatus, setPermissionStatus] = useState<Record<string, MemberPermissionStatus | null>>({})
+  const [permissionSaving, setPermissionSaving] = useState<Record<string, boolean>>({})
+  const modulesWithPermissionToggle = enabledModules.filter((module) => MODULE_PERMISSION_SLUG[module.slug])
 
   useEffect(() => {
     if (!member || !housekeepingEnabled) {
@@ -464,33 +477,92 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
     }
   }
 
+  const permissionModuleSlugs = modulesWithPermissionToggle.map((module) => module.slug).join(',')
+  useEffect(() => {
+    if (!member || !permissionModuleSlugs) {
+      setPermissionStatus({})
+      return
+    }
+    let cancelled = false
+    Promise.all(
+      permissionModuleSlugs.split(',').map((slug) =>
+        core.getMemberPermissionStatus(member.membership.id, MODULE_PERMISSION_SLUG[slug]).then((result) => [slug, result] as const),
+      ),
+    )
+      .then((entries) => { if (!cancelled) setPermissionStatus(Object.fromEntries(entries)) })
+      .catch((cause) => { if (!cancelled) setError(readableError(cause)) })
+    return () => { cancelled = true }
+  }, [member, permissionModuleSlugs])
+
+  async function onPermissionToggle(moduleSlug: string) {
+    if (!member) return
+    const permissionSlug = MODULE_PERMISSION_SLUG[moduleSlug]
+    const current = permissionStatus[moduleSlug]
+    if (!permissionSlug || !current || current.grantedByRole || permissionSaving[moduleSlug]) return
+    const nextOn = !current.grantedByOverride
+    setPermissionSaving((prev) => ({ ...prev, [moduleSlug]: true }))
+    setError(null)
+    setPermissionStatus((prev) => ({ ...prev, [moduleSlug]: { ...current, grantedByOverride: nextOn } }))
+    try {
+      if (nextOn) {
+        await core.grantMemberPermission(member.membership.id, permissionSlug)
+      } else {
+        await core.revokeMemberPermission(member.membership.id, permissionSlug)
+      }
+    } catch (cause) {
+      setPermissionStatus((prev) => ({ ...prev, [moduleSlug]: current }))
+      setError(readableError(cause))
+    } finally {
+      setPermissionSaving((prev) => ({ ...prev, [moduleSlug]: false }))
+    }
+  }
+
   return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" onClick={onClose} disabled={saving || savingVisibility}>{saving || savingVisibility ? 'Salvataggio…' : 'Salva'}</Button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
       <>
-        {enabledModules.map((module) => module.slug === 'guest_requests' ? (
-          <div key={module.slug}>
-            <div className="module-access-row">
-              <span>{module.title}</span>
-              <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label={`Accesso a ${module.title}`} />
-            </div>
-            {status && (
-              <div className="module-access-row module-access-subrow">
-                <span>Visualizza tutte le richieste</span>
-                <Switch
-                  checked={viewAllRequests}
-                  onChange={() => void onViewAllRequestsChange()}
-                  disabled={savingVisibility}
-                  aria-label="Visualizza tutte le richieste"
-                />
+        {enabledModules.map((module) => {
+          if (module.slug === 'guest_requests') {
+            return <div key={module.slug}>
+              <div className="module-access-row">
+                <span>{module.title}</span>
+                <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label={`Accesso a ${module.title}`} />
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="module-access-row" key={module.slug}>
+              {status && (
+                <div className="module-access-row module-access-subrow">
+                  <span>Visualizza tutte le richieste</span>
+                  <Switch
+                    checked={viewAllRequests}
+                    onChange={() => void onViewAllRequestsChange()}
+                    disabled={savingVisibility}
+                    aria-label="Visualizza tutte le richieste"
+                  />
+                </div>
+              )}
+            </div>
+          }
+          const permissionSlug = MODULE_PERMISSION_SLUG[module.slug]
+          if (permissionSlug) {
+            const permission = permissionStatus[module.slug]
+            const on = Boolean(permission?.grantedByRole || permission?.grantedByOverride)
+            const lockedByRole = Boolean(permission?.grantedByRole)
+            return <div className="module-access-row" key={module.slug}>
+              <span>{module.title}</span>
+              <span className="module-access-toggle">
+                {lockedByRole ? <small className="muted">Incluso nel ruolo</small> : null}
+                <Switch
+                  checked={on}
+                  onChange={() => void onPermissionToggle(module.slug)}
+                  disabled={!permission || lockedByRole || permissionSaving[module.slug]}
+                  aria-label={`Funzioni admin — ${module.title}`}
+                />
+              </span>
+            </div>
+          }
+          return <div className="module-access-row" key={module.slug}>
             <span>{module.title}</span>
             <small className="muted">Gestito dal ruolo</small>
           </div>
-        ))}
+        })}
         {enabledModules.length === 0 ? <p className="muted">Nessun modulo attivo per questa struttura.</p> : null}
       </>
     )}
