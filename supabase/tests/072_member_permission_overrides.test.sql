@@ -4,9 +4,15 @@
 -- Generic across any module-scoped permission -- exercised here against the
 -- real seeded 'dining.manage' and 'shifts.manage' slugs, since the whole
 -- point is that Dining/Turni need no changes of their own to honor it.
+--
+-- Also covers 20261011122857_restrict_member_permission_delegation's own
+-- intent (core.* and non-module slugs are not delegable) and its corrected
+-- form (org-wide memberships can still be delegated to -- the original
+-- hardening mistakenly required property_id to be set, which broke this
+-- exact org-wide case; tests 14-15 below are what caught that regression).
 begin;
 create extension if not exists pgtap;
-select plan(20);
+select plan(23);
 
 insert into organizations (id, name, slug) values
   ('00000072-0000-0000-0000-000000000001', 'Org Settantadue X', 'test-072-org-x'),
@@ -14,12 +20,17 @@ insert into organizations (id, name, slug) values
 
 insert into properties (id, organization_id, name, slug) values
   ('00000072-0000-0000-0000-000000000011', '00000072-0000-0000-0000-000000000001', 'Property X', 'test-072-x'),
-  ('00000072-0000-0000-0000-000000000012', '00000072-0000-0000-0000-000000000002', 'Property Y', 'test-072-y');
+  ('00000072-0000-0000-0000-000000000012', '00000072-0000-0000-0000-000000000002', 'Property Y', 'test-072-y'),
+  -- Second property under org Y -- org-wide overrides must take effect on
+  -- every property of the organization, not just the first one seeded.
+  ('00000072-0000-0000-0000-000000000013', '00000072-0000-0000-0000-000000000002', 'Property Z', 'test-072-z');
 
 insert into property_modules (property_id, module_id, enabled)
 select '00000072-0000-0000-0000-000000000011', id, true from modules where slug = 'dining';
 insert into property_modules (property_id, module_id, enabled)
 select '00000072-0000-0000-0000-000000000012', id, true from modules where slug = 'shifts';
+insert into property_modules (property_id, module_id, enabled)
+select '00000072-0000-0000-0000-000000000013', id, true from modules where slug = 'shifts';
 
 -- No seeded org-scoped role has zero permissions (organization_admin already
 -- holds core.staff.manage and the module .manage grants outright), so an
@@ -126,6 +137,18 @@ select throws_ok(
 );
 reset role;
 
+-- ### structural core.* permissions are never delegable, even to an admin
+--     who already holds core.staff.manage themselves ###
+set local role authenticated;
+set local request.jwt.claim.sub = '00000072-0000-0000-0000-000000000a01';
+select throws_ok(
+  $$ select grant_member_permission('00000072-0000-0000-0000-000000000102', 'core.staff.manage') $$,
+  '22023',
+  null,
+  'core.staff.manage cannot be delegated via an individual override'
+);
+reset role;
+
 -- ### a member with no core.staff.manage cannot grant to anyone -- security
 --     definer finds the membership regardless, so the explicit
 --     has_permission check is what actually denies it ###
@@ -191,6 +214,20 @@ select ok(
 );
 reset role;
 
+-- An org-wide override must take effect on every property of the
+-- organization, not just the first one -- this is what the hardening
+-- migration's property_membership_required check broke: it didn't just
+-- reject the grant, it also would have meant has_permission's own
+-- organization_id branch was never actually exercised across more than one
+-- property in this suite.
+set local role authenticated;
+set local request.jwt.claim.sub = '00000072-0000-0000-0000-000000000a04';
+select ok(
+  has_permission('00000072-0000-0000-0000-000000000013', 'shifts.manage'),
+  'member_b also has shifts.manage on property Z (same org, different property) via the org-wide override'
+);
+reset role;
+
 set local role authenticated;
 set local request.jwt.claim.sub = '00000072-0000-0000-0000-000000000a03';
 select lives_ok(
@@ -204,6 +241,10 @@ set local request.jwt.claim.sub = '00000072-0000-0000-0000-000000000a04';
 select ok(
   not has_permission('00000072-0000-0000-0000-000000000012', 'shifts.manage'),
   'member_b no longer has shifts.manage after the revoke'
+);
+select ok(
+  not has_permission('00000072-0000-0000-0000-000000000013', 'shifts.manage'),
+  'member_b no longer has shifts.manage on property Z either, after the revoke'
 );
 reset role;
 
