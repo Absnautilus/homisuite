@@ -8,7 +8,7 @@ import { hasPermission } from './permissions'
 import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
-import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, updateJobTitle, updateTeamMember } from './team'
+import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -37,6 +37,8 @@ export interface CoreClient {
   getMemberPermissionStatus: (membershipId: string, permissionSlug: string) => Promise<MemberPermissionStatus>
   grantMemberPermission: (membershipId: string, permissionSlug: string) => Promise<void>
   revokeMemberPermission: (membershipId: string, permissionSlug: string) => Promise<void>
+  getMemberModuleAccessStatus: (membershipId: string, moduleSlug: string) => Promise<boolean>
+  setMemberModuleAccess: (membershipId: string, moduleSlug: string, enabled: boolean) => Promise<void>
   updateTeamMember: (input: UpdateTeamMemberInput) => Promise<void>
   archiveTeamMember: (input: ArchiveTeamMemberInput) => Promise<void>
   updateCurrentProfile: (changes: { fullName: string; avatarUrl?: string | null }) => Promise<Profile>
@@ -72,6 +74,8 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     getMemberPermissionStatus: (membershipId, permissionSlug) => getMemberPermissionStatus(raw, membershipId, permissionSlug),
     grantMemberPermission: (membershipId, permissionSlug) => grantMemberPermission(raw, membershipId, permissionSlug),
     revokeMemberPermission: (membershipId, permissionSlug) => revokeMemberPermission(raw, membershipId, permissionSlug),
+    getMemberModuleAccessStatus: (membershipId, moduleSlug) => getMemberModuleAccessStatus(raw, membershipId, moduleSlug),
+    setMemberModuleAccess: (membershipId, moduleSlug, enabled) => setMemberModuleAccess(raw, membershipId, moduleSlug, enabled),
     updateTeamMember: (input) => updateTeamMember(raw, input),
     archiveTeamMember: (input) => archiveTeamMember(raw, input),
     updateCurrentProfile: (changes) => updateCurrentProfile(raw, changes),

@@ -366,16 +366,7 @@ function ResetPasswordModal({ member, onClose }: { member: TeamMember | null; on
 }
 
 // Display order/labels for whatever the property has enabled -- same slugs
-// and Italian names as Home's own module tiles (HomePage.tsx). Housekeeping
-// is wired through its own per-member compatibility grant (see
-// grant-housekeeping-access's own header). Dining and Turni are instead
-// governed by Core's role/permission system (dining.manage/shifts.manage),
-// generalized in 20261008090000_member_permission_overrides.sql so a
-// specific member can be granted the module's admin capability independent
-// of their role -- MODULE_PERMISSION_SLUG below is what makes that toggle
-// appear instead of the plain "Gestito dal ruolo" text. Transfer has no
-// .manage permission yet (no admin functionality of its own to toggle), so
-// it stays informational until that exists.
+// and Italian names as Home's own module tiles (HomePage.tsx).
 const MODULE_CATALOG: { slug: string; title: string }[] = [
   { slug: 'guest_requests', title: 'Housekeeping' },
   { slug: 'dining', title: 'Ristorazione' },
@@ -383,126 +374,139 @@ const MODULE_CATALOG: { slug: string; title: string }[] = [
   { slug: 'transfers', title: 'Transfer' },
 ]
 
-const MODULE_PERMISSION_SLUG: Record<string, string> = {
-  dining: 'dining.manage',
-  shifts: 'shifts.manage',
+// Every module-scoped permission a member can be individually granted,
+// independent of their role -- see 20261008090000_member_permission_overrides.sql
+// (dining.manage/shifts.manage) and 20261014090000_guest_requests_manage_and_view_all.sql
+// (the two Housekeeping slugs). A module with no entry here still gets the
+// "Accesso al modulo" toggle below, just no nested permission rows (e.g.
+// Transfer, which has no admin functionality of its own yet).
+const MODULE_PERMISSIONS: Record<string, { slug: string; label: string }[]> = {
+  guest_requests: [
+    { slug: 'guest_requests.view_all', label: 'Visualizza tutte le richieste' },
+    { slug: 'guest_requests.manage', label: 'Amministrazione' },
+  ],
+  dining: [{ slug: 'dining.manage', label: 'Amministrazione' }],
+  shifts: [{ slug: 'shifts.manage', label: 'Amministrazione' }],
 }
 
 function ModulesModal({ member, propertyId, entitlements, onClose }: { member: TeamMember | null; propertyId: string; entitlements: ModuleEntitlement[]; onClose: () => void }) {
   const enabledModules = MODULE_CATALOG.filter((module) => entitlements.some((item) => item.enabled && item.slug === module.slug))
   const housekeepingEnabled = enabledModules.some((module) => module.slug === 'guest_requests')
-  const [status, setStatus] = useState<boolean | null>(null)
-  const [viewAllRequests, setViewAllRequests] = useState(false)
+
+  // Housekeeping's own legacy per-member presence toggle (staff_profiles,
+  // bridged via grant-housekeeping-access) -- left completely untouched.
+  // It coexists with, and is independent of, the generic module-access
+  // toggle below: a member needs BOTH a 'reception'/'operatore' staff_profiles
+  // row here AND no explicit membership_module_access block to actually use
+  // Housekeeping. See the architecture note on membership_module_access for
+  // why this isn't unified into one control yet.
+  const [housekeepingStatus, setHousekeepingStatus] = useState<boolean | null>(null)
+  const [housekeepingSaving, setHousekeepingSaving] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [savingVisibility, setSavingVisibility] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [permissionStatus, setPermissionStatus] = useState<Record<string, MemberPermissionStatus | null>>({})
-  const [permissionSaving, setPermissionSaving] = useState<Record<string, boolean>>({})
-  const modulesWithPermissionToggle = enabledModules.filter((module) => MODULE_PERMISSION_SLUG[module.slug])
 
   useEffect(() => {
-    if (!member || !housekeepingEnabled) {
-      setStatus(null)
-      setViewAllRequests(false)
-      setError(null)
-      return
-    }
-    setViewAllRequests(member.housekeepingDepartment === 'reception')
+    if (!member || !housekeepingEnabled) { setHousekeepingStatus(null); setError(null); return }
     setLoading(true)
     setError(null)
     core.getHousekeepingAccessStatus(member.membership.id)
-      .then(setStatus)
+      .then(setHousekeepingStatus)
       .catch((cause) => setError(readableError(cause)))
       .finally(() => setLoading(false))
   }, [member, housekeepingEnabled])
 
-  async function onToggle() {
-    if (!member || status === null || saving) return
-    const next = !status
-    setSaving(true)
+  async function onHousekeepingToggle() {
+    if (!member || housekeepingStatus === null || housekeepingSaving) return
+    const next = !housekeepingStatus
+    setHousekeepingSaving(true)
     setError(null)
-    setStatus(next)
+    setHousekeepingStatus(next)
     try {
       if (next) {
         await core.grantHousekeepingAccess({ membershipId: member.membership.id })
-        // New Housekeeping grants start scoped to the member's mansione.
-        // Full queue visibility is a separate explicit choice below.
-        await core.updateTeamMember({
-          membershipId: member.membership.id,
-          profileId: member.profile.id,
-          propertyId,
-          housekeepingDepartment: null,
-        })
-        setViewAllRequests(false)
       } else {
         await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
-        await core.updateTeamMember({
-          membershipId: member.membership.id,
-          profileId: member.profile.id,
-          propertyId,
-          housekeepingDepartment: null,
-        })
-        setViewAllRequests(false)
       }
+      // New/revoked grants reset to mansione-scoped visibility; the separate
+      // "Visualizza tutte le richieste" permission below governs full-queue
+      // visibility from here on, independent of this reset.
+      await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: null })
     } catch (cause) {
-      setStatus(!next)
+      setHousekeepingStatus(!next)
       setError(readableError(cause))
     } finally {
-      setSaving(false)
+      setHousekeepingSaving(false)
     }
   }
 
-  async function onViewAllRequestsChange() {
-    if (!member || savingVisibility) return
-    const next = !viewAllRequests
-    setViewAllRequests(next)
-    setSavingVisibility(true)
-    setError(null)
-    try {
-      // 'reception' is retained only as an internal compatibility sentinel.
-      // The UI no longer exposes departments: request routing is based on
-      // mansioni, while this one override means "see the whole queue".
-      await core.updateTeamMember({
-        membershipId: member.membership.id,
-        profileId: member.profile.id,
-        propertyId,
-        housekeepingDepartment: next ? 'reception' : null,
-      })
-    } catch (cause) {
-      setViewAllRequests(!next)
-      setError(readableError(cause))
-    } finally {
-      setSavingVisibility(false)
-    }
-  }
+  // Generic per-member MODULE ACCESS -- distinct table/RPCs from the
+  // permission overrides below (CAN this member enter the module at all,
+  // vs WHICH EXTRA capabilities they have once in). Fetched for every
+  // enabled module uniformly; defaults to true (no row = allowed).
+  const [moduleAccessStatus, setModuleAccessStatus] = useState<Record<string, boolean | null>>({})
+  const [moduleAccessSaving, setModuleAccessSaving] = useState<Record<string, boolean>>({})
+  const enabledModuleSlugs = enabledModules.map((module) => module.slug).join(',')
 
-  const permissionModuleSlugs = modulesWithPermissionToggle.map((module) => module.slug).join(',')
   useEffect(() => {
-    if (!member || !permissionModuleSlugs) {
-      setPermissionStatus({})
-      return
-    }
+    if (!member || !enabledModuleSlugs) { setModuleAccessStatus({}); return }
     let cancelled = false
     Promise.all(
-      permissionModuleSlugs.split(',').map((slug) =>
-        core.getMemberPermissionStatus(member.membership.id, MODULE_PERMISSION_SLUG[slug]).then((result) => [slug, result] as const),
+      enabledModuleSlugs.split(',').map((slug) =>
+        core.getMemberModuleAccessStatus(member.membership.id, slug).then((result) => [slug, result] as const),
+      ),
+    )
+      .then((entries) => { if (!cancelled) setModuleAccessStatus(Object.fromEntries(entries)) })
+      .catch((cause) => { if (!cancelled) setError(readableError(cause)) })
+    return () => { cancelled = true }
+  }, [member, enabledModuleSlugs])
+
+  async function onModuleAccessToggle(moduleSlug: string) {
+    if (!member || moduleAccessSaving[moduleSlug]) return
+    const current = moduleAccessStatus[moduleSlug]
+    if (current === null || current === undefined) return
+    const next = !current
+    setModuleAccessSaving((prev) => ({ ...prev, [moduleSlug]: true }))
+    setError(null)
+    setModuleAccessStatus((prev) => ({ ...prev, [moduleSlug]: next }))
+    try {
+      await core.setMemberModuleAccess(member.membership.id, moduleSlug, next)
+    } catch (cause) {
+      setModuleAccessStatus((prev) => ({ ...prev, [moduleSlug]: current }))
+      setError(readableError(cause))
+    } finally {
+      setModuleAccessSaving((prev) => ({ ...prev, [moduleSlug]: false }))
+    }
+  }
+
+  // Per-permission overrides -- one entry per permission slug, not per
+  // module, since Housekeeping now carries two (view_all, manage). See
+  // 20261008090000_member_permission_overrides.sql /
+  // 20261014090000_guest_requests_manage_and_view_all.sql.
+  const [permissionStatus, setPermissionStatus] = useState<Record<string, MemberPermissionStatus | null>>({})
+  const [permissionSaving, setPermissionSaving] = useState<Record<string, boolean>>({})
+  const permissionSlugs = enabledModules.flatMap((module) => MODULE_PERMISSIONS[module.slug] ?? []).map((p) => p.slug).join(',')
+
+  useEffect(() => {
+    if (!member || !permissionSlugs) { setPermissionStatus({}); return }
+    let cancelled = false
+    Promise.all(
+      permissionSlugs.split(',').map((slug) =>
+        core.getMemberPermissionStatus(member.membership.id, slug).then((result) => [slug, result] as const),
       ),
     )
       .then((entries) => { if (!cancelled) setPermissionStatus(Object.fromEntries(entries)) })
       .catch((cause) => { if (!cancelled) setError(readableError(cause)) })
     return () => { cancelled = true }
-  }, [member, permissionModuleSlugs])
+  }, [member, permissionSlugs])
 
-  async function onPermissionToggle(moduleSlug: string) {
+  async function onPermissionToggle(permissionSlug: string) {
     if (!member) return
-    const permissionSlug = MODULE_PERMISSION_SLUG[moduleSlug]
-    const current = permissionStatus[moduleSlug]
-    if (!permissionSlug || !current || current.grantedByRole || permissionSaving[moduleSlug]) return
+    const current = permissionStatus[permissionSlug]
+    if (!current || current.grantedByRole || permissionSaving[permissionSlug]) return
     const nextOn = !current.grantedByOverride
-    setPermissionSaving((prev) => ({ ...prev, [moduleSlug]: true }))
+    setPermissionSaving((prev) => ({ ...prev, [permissionSlug]: true }))
     setError(null)
-    setPermissionStatus((prev) => ({ ...prev, [moduleSlug]: { ...current, grantedByOverride: nextOn } }))
+    setPermissionStatus((prev) => ({ ...prev, [permissionSlug]: { ...current, grantedByOverride: nextOn } }))
     try {
       if (nextOn) {
         await core.grantMemberPermission(member.membership.id, permissionSlug)
@@ -510,57 +514,73 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
         await core.revokeMemberPermission(member.membership.id, permissionSlug)
       }
     } catch (cause) {
-      setPermissionStatus((prev) => ({ ...prev, [moduleSlug]: current }))
+      setPermissionStatus((prev) => ({ ...prev, [permissionSlug]: current }))
       setError(readableError(cause))
     } finally {
-      setPermissionSaving((prev) => ({ ...prev, [moduleSlug]: false }))
+      setPermissionSaving((prev) => ({ ...prev, [permissionSlug]: false }))
     }
   }
 
-  return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" onClick={onClose} disabled={saving || savingVisibility}>{saving || savingVisibility ? 'Salvataggio…' : 'Salva'}</Button></>}>
+  const saving = housekeepingSaving || Object.values(moduleAccessSaving).some(Boolean) || Object.values(permissionSaving).some(Boolean)
+
+  return <Modal open={Boolean(member)} title="Moduli" description={member ? `Moduli a cui ${member.profile.fullName} ha accesso.` : undefined} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" onClick={onClose} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>
     {loading ? <p className="muted">Caricamento…</p> : (
       <>
         {enabledModules.map((module) => {
-          if (module.slug === 'guest_requests') {
-            return <div key={module.slug}>
-              <div className="module-access-row">
-                <span>{module.title}</span>
-                <Switch checked={Boolean(status)} onChange={() => void onToggle()} disabled={status === null} aria-label={`Accesso a ${module.title}`} />
-              </div>
-              {status && (
-                <div className="module-access-row module-access-subrow">
-                  <span>Visualizza tutte le richieste</span>
-                  <Switch
-                    checked={viewAllRequests}
-                    onChange={() => void onViewAllRequestsChange()}
-                    disabled={savingVisibility}
-                    aria-label="Visualizza tutte le richieste"
-                  />
-                </div>
-              )}
-            </div>
-          }
-          const permissionSlug = MODULE_PERMISSION_SLUG[module.slug]
-          if (permissionSlug) {
-            const permission = permissionStatus[module.slug]
-            const on = Boolean(permission?.grantedByRole || permission?.grantedByOverride)
-            const lockedByRole = Boolean(permission?.grantedByRole)
-            return <div className="module-access-row" key={module.slug}>
-              <span>{module.title}</span>
+          const moduleAccess = moduleAccessStatus[module.slug]
+          const isHousekeeping = module.slug === 'guest_requests'
+          // Permission rows read as disabled (preserved, not deleted, but
+          // currently ineffective) once EITHER access gate is off: the new
+          // generic one for every module, plus Housekeeping's own legacy
+          // one specifically.
+          const accessBlocked = moduleAccess === false || (isHousekeeping && housekeepingStatus === false)
+          const permissions = MODULE_PERMISSIONS[module.slug] ?? []
+          return <div className="module-access-group" key={module.slug}>
+            <div className="module-access-row">
+              <strong>{module.title}</strong>
               <span className="module-access-toggle">
-                {lockedByRole ? <small className="muted">Incluso nel ruolo</small> : null}
+                <small className="muted">Accesso al modulo</small>
                 <Switch
-                  checked={on}
-                  onChange={() => void onPermissionToggle(module.slug)}
-                  disabled={!permission || lockedByRole || permissionSaving[module.slug]}
-                  aria-label={`Funzioni admin — ${module.title}`}
+                  checked={moduleAccess !== false}
+                  onChange={() => void onModuleAccessToggle(module.slug)}
+                  disabled={moduleAccess === null || moduleAccess === undefined || moduleAccessSaving[module.slug]}
+                  aria-label={`Accesso al modulo — ${module.title}`}
                 />
               </span>
             </div>
-          }
-          return <div className="module-access-row" key={module.slug}>
-            <span>{module.title}</span>
-            <small className="muted">Gestito dal ruolo</small>
+            {isHousekeeping ? (
+              <div className="module-access-row module-access-subrow">
+                <span>Accesso Housekeeping</span>
+                <Switch
+                  checked={Boolean(housekeepingStatus)}
+                  onChange={() => void onHousekeepingToggle()}
+                  disabled={housekeepingStatus === null || housekeepingSaving}
+                  aria-label="Accesso Housekeeping"
+                />
+              </div>
+            ) : null}
+            {permissions.map(({ slug, label }) => {
+              const permission = permissionStatus[slug]
+              const on = Boolean(permission?.grantedByRole || permission?.grantedByOverride)
+              const lockedByRole = Boolean(permission?.grantedByRole)
+              return <div className="module-access-row module-access-subrow" key={slug}>
+                <span>{label}</span>
+                <span className="module-access-toggle">
+                  {lockedByRole ? <small className="muted">Incluso nel ruolo</small> : accessBlocked ? <small className="muted">Modulo disattivato</small> : null}
+                  <Switch
+                    checked={on}
+                    onChange={() => void onPermissionToggle(slug)}
+                    disabled={!permission || lockedByRole || accessBlocked || permissionSaving[slug]}
+                    aria-label={`${label} — ${module.title}`}
+                  />
+                </span>
+              </div>
+            })}
+            {permissions.length === 0 && !isHousekeeping ? (
+              <div className="module-access-row module-access-subrow">
+                <small className="muted">Nessuna funzione aggiuntiva per questo modulo.</small>
+              </div>
+            ) : null}
           </div>
         })}
         {enabledModules.length === 0 ? <p className="muted">Nessun modulo attivo per questa struttura.</p> : null}

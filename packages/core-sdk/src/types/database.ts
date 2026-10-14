@@ -567,6 +567,14 @@ export interface Database {
         Args: { p_membership_id: string; p_permission_slug: string }
         Returns: undefined
       }
+      member_module_access_status: {
+        Args: { p_membership_id: string; p_module_slug: string }
+        Returns: boolean
+      }
+      set_member_module_access: {
+        Args: { p_membership_id: string; p_module_slug: string; p_enabled: boolean }
+        Returns: undefined
+      }
       claim_device_push_subscription: {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string }
         Returns: undefined

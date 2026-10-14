@@ -109,6 +109,8 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .ui-modal-footer .btn { min-height: 32px; padding: 0 12px; font-size: 12px; }
 .btn-danger { color: var(--red-ink); background: var(--red-bg); border: 1px solid rgba(178,58,58,.16); }
 .modal-form { display: grid; gap: 15px; }
+.module-access-group { padding: 8px 0; border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); }
+.module-access-group:last-child { border-bottom: none; }
 .module-access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
 .module-access-subrow { padding-left: 16px; }
 .module-access-toggle { display: flex; align-items: center; gap: 8px; }

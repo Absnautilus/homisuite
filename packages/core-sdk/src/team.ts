@@ -220,6 +220,21 @@ export async function revokeMemberPermission(client: SupabaseClient<Database>, m
   if (error) throw error
 }
 
+// Per-member MODULE ACCESS -- a distinct question from the permission
+// overrides above (CAN this member enter the module at all, vs WHICH EXTRA
+// capabilities they have once in). See 20261013120000_membership_module_access.sql.
+// Absence of a row means access is allowed, so this defaults to true.
+export async function getMemberModuleAccessStatus(client: SupabaseClient<Database>, membershipId: string, moduleSlug: string): Promise<boolean> {
+  const { data, error } = await client.rpc('member_module_access_status', { p_membership_id: membershipId, p_module_slug: moduleSlug })
+  if (error) throw error
+  return data ?? true
+}
+
+export async function setMemberModuleAccess(client: SupabaseClient<Database>, membershipId: string, moduleSlug: string, enabled: boolean): Promise<void> {
+  const { error } = await client.rpc('set_member_module_access', { p_membership_id: membershipId, p_module_slug: moduleSlug, p_enabled: enabled })
+  if (error) throw error
+}
+
 // Archives a direct, property-scoped membership -- archive_team_member()
 // (see 20260910140000_archive_team_member.sql) rejects an org-wide one,
 // your own row, and any property you don't hold core.staff.manage on. The
