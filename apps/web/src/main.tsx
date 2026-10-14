@@ -6,6 +6,7 @@ import { ModuleRuntimeProvider } from './core/ModuleRuntimeContext'
 import './styles.css'
 import './shell-effects.css'
 import './shell-completion.css'
+import './platform/platform.css'
 
 document.documentElement.setAttribute('data-theme', 'light')
 

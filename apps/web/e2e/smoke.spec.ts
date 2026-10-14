@@ -132,3 +132,22 @@ test('unknown deep link still resolves through the authenticated shell', async (
   await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
   await expect(page).toHaveURL('http://127.0.0.1:5173/')
 })
+
+// A real client organization_admin -- not a Platform Admin -- must be
+// denied at /admin, and must never see the hotel shell's own "no
+// accessible property" state either (that gate is ModuleRuntimeContext's,
+// a completely different runtime from PlatformContext -- see
+// platform/PlatformContext.tsx). The full authorization matrix (suspended,
+// MFA-required, permission-gated RPCs) is covered server-side by
+// supabase/tests/075_platform_admin_identity.test.sql and
+// 076_platform_admin_readonly_apis.test.sql -- no fixture here holds an
+// actual platform_admins row (none is seeded by provision-fixtures.mjs),
+// so this test only proves the frontend gate itself wires up correctly,
+// not the authorization logic those pgTAP suites already cover in depth.
+test('an ordinary client organization_admin is denied access to the Platform Admin console', async ({ page }) => {
+  await login(page, ORG_ADMIN_EMAIL)
+  await page.goto('/admin')
+
+  await expect(page.getByText('Accesso non autorizzato.')).toBeVisible()
+  await expect(page.getByText('Organizzazioni')).toHaveCount(0)
+})

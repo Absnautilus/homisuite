@@ -168,3 +168,49 @@ export interface ModuleDescriptor {
   displayName: string
   requiredPermissions: string[]
 }
+
+// Platform Admin -- a global Homisuite-staff identity, structurally
+// separate from memberships/roles/permissions. See
+// docs/platform-admin-architecture.md. Never derived from, or compared
+// against, any tenant role.
+export interface PlatformAdminStatus {
+  isAdmin: boolean
+  status: 'active' | 'suspended' | null
+  mfaSatisfied: boolean
+  permissions: string[]
+}
+
+export interface PlatformOrganization {
+  id: string
+  name: string
+  slug: string
+  createdAt: string
+}
+
+export interface PlatformProperty {
+  id: string
+  organizationId: string
+  name: string
+  slug: string
+  status: string
+  timezone: string
+  createdAt: string
+}
+
+export interface PlatformPropertyModule {
+  moduleId: string
+  slug: ModuleSlug
+  displayName: string
+  enabled: boolean
+}
+
+export interface PlatformAuditLogEntry {
+  id: string
+  actorProfileId: string | null
+  actorFullName: string | null
+  action: string
+  targetType: string | null
+  targetId: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: string
+}

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
+import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOrganization, PlatformProperty, PlatformPropertyModule, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
 import { getCurrentProfile, updateCurrentProfile } from './profile'
 import { deleteDevicePushSubscription, isDevicePushSubscribed, saveDevicePushSubscription, type DevicePushSubscriptionKeys } from './devicePush'
 import { getAccessibleProperties, getMembership, updateProperty } from './memberships'
@@ -9,6 +9,7 @@ import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
+import { getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, logPlatformConsoleAccess } from './platformAdmin'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -46,6 +47,12 @@ export interface CoreClient {
   saveDevicePushSubscription: (keys: DevicePushSubscriptionKeys) => Promise<void>
   deleteDevicePushSubscription: (endpoint: string) => Promise<void>
   isDevicePushSubscribed: (endpoint: string) => Promise<boolean>
+  getPlatformAdminSelfStatus: () => Promise<PlatformAdminStatus>
+  logPlatformConsoleAccess: () => Promise<void>
+  getPlatformOrganizations: () => Promise<PlatformOrganization[]>
+  getPlatformProperties: (organizationId: string) => Promise<PlatformProperty[]>
+  getPlatformPropertyModules: (propertyId: string) => Promise<PlatformPropertyModule[]>
+  getPlatformAuditLog: (limit?: number, offset?: number) => Promise<PlatformAuditLogEntry[]>
 }
 
 export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): CoreClient {
@@ -83,5 +90,11 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     saveDevicePushSubscription: (keys) => saveDevicePushSubscription(raw, keys),
     deleteDevicePushSubscription: (endpoint) => deleteDevicePushSubscription(raw, endpoint),
     isDevicePushSubscribed: (endpoint) => isDevicePushSubscribed(raw, endpoint),
+    getPlatformAdminSelfStatus: () => getPlatformAdminSelfStatus(raw),
+    logPlatformConsoleAccess: () => logPlatformConsoleAccess(raw),
+    getPlatformOrganizations: () => getPlatformOrganizations(raw),
+    getPlatformProperties: (organizationId) => getPlatformProperties(raw, organizationId),
+    getPlatformPropertyModules: (propertyId) => getPlatformPropertyModules(raw, propertyId),
+    getPlatformAuditLog: (limit, offset) => getPlatformAuditLog(raw, limit, offset),
   }
 }
