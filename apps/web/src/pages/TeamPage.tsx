@@ -538,15 +538,12 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
           return <div className="module-access-group" key={module.slug}>
             <div className="module-access-row">
               <strong>{module.title}</strong>
-              <span className="module-access-toggle">
-                <small className="muted">Accesso al modulo</small>
-                <Switch
-                  checked={moduleAccess !== false}
-                  onChange={() => void onModuleAccessToggle(module.slug)}
-                  disabled={moduleAccess === null || moduleAccess === undefined || moduleAccessSaving[module.slug]}
-                  aria-label={`Accesso al modulo — ${module.title}`}
-                />
-              </span>
+              <Switch
+                checked={moduleAccess !== false}
+                onChange={() => void onModuleAccessToggle(module.slug)}
+                disabled={moduleAccess === null || moduleAccess === undefined}
+                aria-label={`Accesso al modulo — ${module.title}`}
+              />
             </div>
             {isHousekeeping ? (
               <div className="module-access-row module-access-subrow">
@@ -554,7 +551,7 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
                 <Switch
                   checked={Boolean(housekeepingStatus)}
                   onChange={() => void onHousekeepingToggle()}
-                  disabled={housekeepingStatus === null || housekeepingSaving}
+                  disabled={housekeepingStatus === null}
                   aria-label="Accesso Housekeeping"
                 />
               </div>
@@ -570,7 +567,7 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
                   <Switch
                     checked={on}
                     onChange={() => void onPermissionToggle(slug)}
-                    disabled={!permission || lockedByRole || accessBlocked || permissionSaving[slug]}
+                    disabled={!permission || lockedByRole || accessBlocked}
                     aria-label={`${label} — ${module.title}`}
                   />
                 </span>
