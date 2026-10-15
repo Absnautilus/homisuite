@@ -36,6 +36,10 @@
 .platform-badge.enabled, .platform-badge.active { background: var(--accent-soft); color: var(--accent); }
 .platform-badge.revoked { background: var(--red-bg); color: var(--red-ink); }
 
+.platform-section { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.platform-section h2 { font-size: 15px; margin: 0; }
+.platform-section .platform-page-head { margin-bottom: 4px; }
+
 /* Operational view (Fase C, PR C3) — deliberately a loud, unmissable band,
    never something that could be mistaken for the hotel shell's own chrome:
    this is the one place a Platform Admin sees a module's real operational

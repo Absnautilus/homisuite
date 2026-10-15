@@ -691,6 +691,31 @@ export interface Database {
           closed_by_full_name: string | null
         }[]
       }
+      platform_operational_action_allowed: {
+        Args: { p_property_id: string; p_permission_slug: string }
+        Returns: boolean
+      }
+      platform_list_property_team: {
+        Args: { p_property_id: string }
+        Returns: {
+          membership_id: string
+          profile_id: string
+          full_name: string | null
+          role_id: string
+          role_slug: string
+          role_display_name: string
+          status: string
+          username: string | null
+          job_title_id: string | null
+          job_title_name: string | null
+          employment_status: string
+          created_at: string
+        }[]
+      }
+      platform_insert_team_membership: {
+        Args: { p_property_id: string; p_profile_id: string; p_role_id: string; p_username: string; p_job_title_id?: string | null }
+        Returns: string
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
