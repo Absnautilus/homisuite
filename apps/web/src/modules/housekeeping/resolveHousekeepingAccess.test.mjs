@@ -29,4 +29,14 @@ describe('resolveHousekeepingAccess', () => {
     const result = resolveHousekeepingAccess({ entitled: true, legacyHotelId: 'hotel-1', hasCompatibleProfile: true })
     assert.deepEqual(result, { status: 'compatible', hotelId: 'hotel-1' })
   })
+
+  it('is compatible when operationalReadOnly bypasses the missing-profile dead end (Admin Master, Fase C)', () => {
+    const result = resolveHousekeepingAccess({ entitled: true, legacyHotelId: 'hotel-1', hasCompatibleProfile: false, operationalReadOnly: true })
+    assert.deepEqual(result, { status: 'compatible', hotelId: 'hotel-1' })
+  })
+
+  it('still no-profile without a bridged hotel even when operationalReadOnly is set', () => {
+    const result = resolveHousekeepingAccess({ entitled: true, legacyHotelId: null, hasCompatibleProfile: false, operationalReadOnly: true })
+    assert.deepEqual(result, { status: 'no-mapping' })
+  })
 })

@@ -1,4 +1,5 @@
 import { HousekeepingModule } from '@homisuite/housekeeping-module'
+import type { StaffProfile } from '@homisuite/housekeeping-module'
 import '@homisuite/housekeeping-module/style.css'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
@@ -60,6 +61,22 @@ export function HousekeepingModuleGate() {
   }
 
   const settings = runtime.property?.settings ?? {}
+  // Admin Master's read-only operational view (Fase C, C3c) never has, and
+  // must never be given, a real staff_profiles row -- this synthetic object
+  // is client-side only, scoped to this render, and never written back to
+  // the database. See HousekeepingModule's own readOnlyProfile doc comment.
+  const readOnlyProfile: StaffProfile | undefined = runtime.isPlatformOperationalView
+    ? {
+        id: 'platform-admin-operational-view',
+        hotel_id: access.hotelId,
+        auth_user_id: runtime.session?.user.id ?? 'platform-admin-operational-view',
+        name: 'Admin Master',
+        role: 'operatore',
+        department: null,
+        active: true,
+        on_duty: false,
+      }
+    : undefined
   return (
     <HousekeepingModule
       supabase={supabase}
@@ -76,6 +93,7 @@ export function HousekeepingModuleGate() {
         checkInTime: typeof settings.checkInTime === 'string' ? settings.checkInTime : null,
         checkOutTime: typeof settings.checkOutTime === 'string' ? settings.checkOutTime : null,
       }}
+      readOnlyProfile={readOnlyProfile}
     />
   )
 }

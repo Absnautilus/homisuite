@@ -19,9 +19,13 @@ interface StaffAppProps {
   capabilities?: HousekeepingCapabilities
   platformStaffManagement?: PlatformStaffManagementLink
   hotelSettings?: PlatformHotelSettings
+  // Shell-supplied identity for a viewer with no staff_profiles row of their
+  // own (Platform Admin's read-only operational view) -- see HousekeepingModule's
+  // own doc comment. Skips fetchMyProfile() entirely; never persisted.
+  readOnlyProfile?: StaffProfile
 }
 
-export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings }: StaffAppProps = {}) {
+export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile }: StaffAppProps = {}) {
   const { t } = useLocale()
   const embedded = mode === 'embedded'
   const [loading, setLoading] = useState(true)
@@ -37,6 +41,14 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
         if (!cancelled) setProfile(p)
       } finally {
         if (!cancelled) setLoading(false)
+      }
+    }
+
+    if (readOnlyProfile) {
+      setProfile(readOnlyProfile)
+      setLoading(false)
+      return () => {
+        cancelled = true
       }
     }
 
@@ -68,7 +80,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
       cancelled = true
       sub.subscription.unsubscribe()
     }
-  }, [embedded])
+  }, [embedded, readOnlyProfile])
 
   useEffect(() => {
     function onFirstPointer() {

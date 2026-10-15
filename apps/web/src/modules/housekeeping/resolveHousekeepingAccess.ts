@@ -16,9 +16,16 @@ export function resolveHousekeepingAccess(input: {
   entitled: boolean
   legacyHotelId: string | null
   hasCompatibleProfile: boolean
+  // Admin Master's operational view (Fase C): never has, and must never be
+  // given, a staff_profiles row -- her read access is already authorized
+  // server-side (platform_operational_read_allowed(), PR C2), entirely
+  // independent of this legacy per-hotel staff concept. Without this flag
+  // she would hit the same 'no-profile' dead end real, not-yet-onboarded
+  // tenant staff correctly hit -- a real state for them, a wrong one for her.
+  operationalReadOnly?: boolean
 }): HousekeepingAccessState {
   if (!input.entitled) return { status: 'not-entitled' }
   if (!input.legacyHotelId) return { status: 'no-mapping' }
-  if (!input.hasCompatibleProfile) return { status: 'no-profile' }
+  if (!input.hasCompatibleProfile && !input.operationalReadOnly) return { status: 'no-profile' }
   return { status: 'compatible', hotelId: input.legacyHotelId }
 }
