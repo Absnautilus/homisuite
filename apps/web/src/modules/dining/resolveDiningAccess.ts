@@ -9,15 +9,22 @@ export type DiningAccessState =
   | { status: 'not-entitled' }
   | { status: 'no-mapping' }
   | { status: 'no-profile' }
-  | { status: 'compatible'; hotelId: string; staffProfileId: string }
+  | { status: 'compatible'; hotelId: string; staffProfileId: string | null }
 
 export function resolveDiningAccess(input: {
   entitled: boolean
   legacyHotelId: string | null
   staffProfileId: string | null
+  // Admin Master's operational view (Fase C): never has, and must never be
+  // given, a staff_profiles row -- her read access is already authorized
+  // server-side (platform_operational_read_allowed(), PR C2), entirely
+  // independent of this legacy per-hotel staff concept. Without this flag
+  // she would hit the same 'no-profile' dead end real, not-yet-onboarded
+  // tenant staff correctly hit -- a real state for them, a wrong one for her.
+  operationalReadOnly?: boolean
 }): DiningAccessState {
   if (!input.entitled) return { status: 'not-entitled' }
   if (!input.legacyHotelId) return { status: 'no-mapping' }
-  if (!input.staffProfileId) return { status: 'no-profile' }
+  if (!input.staffProfileId && !input.operationalReadOnly) return { status: 'no-profile' }
   return { status: 'compatible', hotelId: input.legacyHotelId, staffProfileId: input.staffProfileId }
 }

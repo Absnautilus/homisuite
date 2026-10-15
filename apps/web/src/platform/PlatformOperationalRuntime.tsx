@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { PropsWithChildren } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import type { ModuleEntitlement, PlatformProperty, Profile, Property, PropertyStatus } from '@homisuite/core-sdk'
-import { core } from '../core/client'
+import { core, supabase } from '../core/client'
 import { ModuleRuntimeContext, type ModuleRuntimeValue } from '../core/ModuleRuntimeContext'
 
 // Feeds the real module screens (ShiftPlannerPage today -- Dining/
@@ -40,14 +41,22 @@ function toProperty(property: PlatformProperty): Property {
 export function PlatformOperationalRuntimeProvider({ property, children }: PropsWithChildren<{ property: PlatformProperty }>) {
   const [entitlements, setEntitlements] = useState<ModuleEntitlement[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
 
   const load = useCallback(() => {
     setReady(false)
-    Promise.all([core.getPlatformPropertyModules(property.id), core.getCurrentProfile()])
-      .then(([modules, nextProfile]) => {
+    Promise.all([core.getPlatformPropertyModules(property.id), core.getCurrentProfile(), supabase.auth.getSession()])
+      .then(([modules, nextProfile, { data }]) => {
         setEntitlements(modules.map(toModuleEntitlement))
         setProfile(nextProfile)
+        // Admin Master's own real auth session -- not null. A module gate
+        // that independently derives identity from auth.uid() (Dining's
+        // useDiningAccess, Housekeeping's fetchMyProfile) needs the real
+        // session to even ask the question; isPlatformOperationalView below
+        // is the signal that tells it to answer differently than it would
+        // for real tenant staff, not an absent session forcing it to stall.
+        setSession(data.session)
         setReady(true)
       })
       .catch(() => setReady(true))
@@ -60,7 +69,7 @@ export function PlatformOperationalRuntimeProvider({ property, children }: Props
   const value = useMemo<ModuleRuntimeValue>(() => ({
     status: ready ? 'ready' : 'loading',
     error: null,
-    session: null,
+    session,
     profile,
     properties: [toProperty(property)],
     property: toProperty(property),
@@ -71,8 +80,9 @@ export function PlatformOperationalRuntimeProvider({ property, children }: Props
     // closing this session and opening a new one from the console.
     selectProperty: () => {},
     hasPermission,
+    isPlatformOperationalView: true,
     refresh: async () => load(),
-  }), [ready, profile, property, entitlements, hasPermission, load])
+  }), [ready, session, profile, property, entitlements, hasPermission, load])
 
   return <ModuleRuntimeContext.Provider value={value}>{children}</ModuleRuntimeContext.Provider>
 }

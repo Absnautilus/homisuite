@@ -9,11 +9,12 @@ import { Switch } from '../../components/Switch'
 import { Field } from '../PlatformField'
 import { usePlatformContext } from '../PlatformContext'
 
-// Modules with a wired, read-only operational view (Fase C, PR C3). Dining
-// and Housekeeping both need one more module-specific frontend change
-// before they can join this list (see OperationalViewLayout's own
-// comments) -- Turni is the only one that works unmodified today.
-const OPERATIONAL_VIEW_ROUTES: Record<string, string> = { shifts: 'turni' }
+// Modules with a wired, read-only operational view (Fase C, PR C3/C3b).
+// Housekeeping still needs its own module-specific frontend change before
+// it can join this list (its StaffApp derives identity from its own
+// fetchMyProfile() query, not from a prop -- see the original module
+// audit).
+const OPERATIONAL_VIEW_ROUTES: Record<string, string> = { shifts: 'turni', dining: 'dining' }
 
 export function PropertyDetailPage() {
   const { organizationId, propertyId } = useParams<{ organizationId: string; propertyId: string }>()
