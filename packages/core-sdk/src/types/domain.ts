@@ -204,6 +204,20 @@ export interface PlatformPropertyModule {
   enabled: boolean
 }
 
+// A session is scoping/audit/safety on top of the admin's already-standing
+// read authorization -- never the authorization itself. See
+// docs/platform-admin-operational-context.md.
+export type PlatformOperationalSessionStatus = 'active' | 'closed' | 'expired' | 'revoked'
+
+export interface PlatformOperationalSession {
+  id: string
+  propertyId: string
+  status: PlatformOperationalSessionStatus
+  reason: string | null
+  openedAt: string
+  expiresAt: string
+}
+
 export interface PlatformAuditLogEntry {
   id: string
   actorProfileId: string | null

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState, type RefObject } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Pencil } from 'lucide-react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Eye, Pencil } from 'lucide-react'
 import { Button, Modal } from '@homisuite/ui'
 import type { PlatformProperty, PlatformPropertyModule } from '@homisuite/core-sdk'
 import { core } from '../../core/client'
@@ -9,16 +9,25 @@ import { Switch } from '../../components/Switch'
 import { Field } from '../PlatformField'
 import { usePlatformContext } from '../PlatformContext'
 
+// Modules with a wired, read-only operational view (Fase C, PR C3). Dining
+// and Housekeeping both need one more module-specific frontend change
+// before they can join this list (see OperationalViewLayout's own
+// comments) -- Turni is the only one that works unmodified today.
+const OPERATIONAL_VIEW_ROUTES: Record<string, string> = { shifts: 'turni' }
+
 export function PropertyDetailPage() {
   const { organizationId, propertyId } = useParams<{ organizationId: string; propertyId: string }>()
   const navigate = useNavigate()
-  const { selectedOrganization, selectProperty, hasPlatformPermission } = usePlatformContext()
+  const location = useLocation()
+  const { selectedOrganization, selectProperty, hasPlatformPermission, openOperationalSession } = usePlatformContext()
   const [properties, setProperties] = useState<PlatformProperty[] | null>(null)
   const [modules, setModules] = useState<PlatformPropertyModule[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
   const [editing, setEditing] = useState(false)
+  const [openingView, setOpeningView] = useState<string | null>(null)
   const editTriggerRef = useRef<HTMLButtonElement>(null)
+  const sessionEnded = Boolean((location.state as { operationalSessionEnded?: boolean } | null)?.operationalSessionEnded)
 
   useEffect(() => {
     if (!organizationId || !propertyId) return
@@ -48,9 +57,25 @@ export function PropertyDetailPage() {
     }
   }
 
+  async function openView(moduleSlug: string) {
+    if (!propertyId || !organizationId) return
+    const route = OPERATIONAL_VIEW_ROUTES[moduleSlug]
+    if (!route) return
+    setOpeningView(moduleSlug)
+    try {
+      await openOperationalSession(propertyId, 'Consultazione operativa dal pannello Admin Master')
+      navigate(`/admin/organizations/${organizationId}/properties/${propertyId}/view/${route}`)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Errore sconosciuto')
+    } finally {
+      setOpeningView(null)
+    }
+  }
+
   const property = properties?.find((item) => item.id === propertyId)
   const propertyName = property?.name
   const canManage = hasPlatformPermission('platform.properties.manage')
+  const canOpenOperationalView = hasPlatformPermission('platform.support.read')
 
   if (!organizationId || !propertyId) return null
 
@@ -73,13 +98,20 @@ export function PropertyDetailPage() {
           </Button>
         ) : null}
       </div>
+      {sessionEnded ? (
+        <PageState
+          kind="unavailable"
+          title="La sessione operativa precedente è terminata."
+          description="Apri di nuovo la vista operativa quando vuoi -- i tuoi privilegi restano invariati, è solo il contesto ad essere scaduto."
+        />
+      ) : null}
       {error ? <PageState kind="error" title="Operazione non riuscita." description={error} /> : null}
       {!error && !modules ? <PageState kind="loading" title="Caricamento…" /> : null}
       {modules && modules.length === 0 ? <PageState kind="empty" title="Nessun modulo registrato." /> : null}
       {modules && modules.length > 0 ? (
         <table className="platform-table">
           <thead>
-            <tr><th>Modulo</th><th>Stato</th></tr>
+            <tr><th>Modulo</th><th>Stato</th><th>Vista operativa</th></tr>
           </thead>
           <tbody>
             {modules.map((module) => (
@@ -94,6 +126,20 @@ export function PropertyDetailPage() {
                     />
                   ) : (
                     <span className={`platform-badge${module.enabled ? ' enabled' : ''}`}>{module.enabled ? 'Abilitato' : 'Disabilitato'}</span>
+                  )}
+                </td>
+                <td>
+                  {canOpenOperationalView && module.enabled && OPERATIONAL_VIEW_ROUTES[module.slug] ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={openingView === module.slug}
+                      onClick={() => void openView(module.slug)}
+                    >
+                      <Eye size={14} /> {openingView === module.slug ? 'Apertura…' : 'Apri'}
+                    </Button>
+                  ) : (
+                    <span className="muted">—</span>
                   )}
                 </td>
               </tr>

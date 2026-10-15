@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { PlatformAdminStatus, PlatformAuditLogEntry, PlatformOrganization, PlatformProperty, PlatformPropertyModule } from './types/domain'
+import type { PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOrganization, PlatformProperty, PlatformPropertyModule } from './types/domain'
 
 // Platform Admin is deliberately its own small module, not folded into
 // memberships.ts/permissions.ts -- it never touches a membership, a role,
@@ -102,4 +102,39 @@ export async function setPlatformPropertyModule(
     p_property_id: propertyId, p_module_slug: moduleSlug, p_enabled: enabled,
   })
   if (error) throw error
+}
+
+// Operational context (Fase C) -- opening/closing a session is never a
+// privilege request: the standing read right is permanent, a session only
+// scopes/audits which single property is "in view" right now. See
+// docs/platform-admin-operational-context.md.
+
+export async function openPlatformOperationalSession(
+  client: SupabaseClient<Database>, propertyId: string, reason?: string,
+): Promise<string> {
+  const { data, error } = await client.rpc('platform_open_operational_session', {
+    p_property_id: propertyId, p_reason: reason ?? null,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function closePlatformOperationalSession(client: SupabaseClient<Database>, sessionId: string): Promise<void> {
+  const { error } = await client.rpc('platform_close_operational_session', { p_session_id: sessionId })
+  if (error) throw error
+}
+
+export async function getMyPlatformOperationalSession(client: SupabaseClient<Database>): Promise<PlatformOperationalSession | null> {
+  const { data, error } = await client.rpc('platform_my_operational_session')
+  if (error) throw error
+  const row = data?.[0]
+  if (!row) return null
+  return {
+    id: row.id,
+    propertyId: row.property_id,
+    status: row.status as PlatformOperationalSession['status'],
+    reason: row.reason,
+    openedAt: row.opened_at,
+    expiresAt: row.expires_at,
+  }
 }

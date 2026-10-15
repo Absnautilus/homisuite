@@ -648,6 +648,29 @@ export interface Database {
         Args: { p_property_id: string; p_module_slug: string; p_enabled: boolean }
         Returns: undefined
       }
+      platform_open_operational_session: {
+        Args: { p_property_id: string; p_reason?: string | null }
+        Returns: string
+      }
+      platform_close_operational_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      platform_revoke_operational_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      platform_my_operational_session: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          property_id: string
+          status: string
+          reason: string | null
+          opened_at: string
+          expires_at: string
+        }[]
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

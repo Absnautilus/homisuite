@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import type { PlatformAdminStatus, PlatformOrganization, PlatformProperty } from '@homisuite/core-sdk'
+import type { PlatformAdminStatus, PlatformOperationalSession, PlatformOrganization, PlatformProperty } from '@homisuite/core-sdk'
 import { core, supabase } from '../core/client'
 
 // Deliberately a SEPARATE runtime from ModuleRuntimeContext -- no shared
@@ -22,6 +22,14 @@ interface PlatformContextValue {
   selectOrganization: (organization: PlatformOrganization | null) => void
   selectProperty: (property: PlatformProperty | null) => void
   hasPlatformPermission: (slug: string) => boolean
+  // The operational context (Fase C) -- scoping/audit/safety on top of the
+  // standing read right above, never the authorization itself. null means
+  // "no property currently in view", not "no access". See
+  // docs/platform-admin-operational-context.md.
+  operationalSession: PlatformOperationalSession | null
+  openOperationalSession: (propertyId: string, reason?: string) => Promise<void>
+  closeOperationalSession: () => Promise<void>
+  refreshOperationalSession: () => Promise<void>
   refresh: () => Promise<void>
 }
 
@@ -33,6 +41,7 @@ export function PlatformProvider({ children }: PropsWithChildren) {
   const [adminStatus, setAdminStatus] = useState<PlatformAdminStatus | null>(null)
   const [selectedOrganization, setSelectedOrganization] = useState<PlatformOrganization | null>(null)
   const [selectedProperty, setSelectedProperty] = useState<PlatformProperty | null>(null)
+  const [operationalSession, setOperationalSession] = useState<PlatformOperationalSession | null>(null)
   // Guards against logging a console-access event on every re-render /
   // refresh() call once already 'ready' this session -- one real access,
   // one real log entry, not one per poll.
@@ -74,12 +83,33 @@ export function PlatformProvider({ children }: PropsWithChildren) {
         // console -- the access itself already happened.
         void core.logPlatformConsoleAccess().catch(() => {})
       }
+      // Best-effort, same reasoning: an admin with no permission/MFA never
+      // reaches here at all (both are rechecked live by the RPC itself on
+      // every subsequent call regardless), so a failure to load today's
+      // session is never a reason to block the console from opening.
+      void core.getMyPlatformOperationalSession().then(setOperationalSession).catch(() => {})
       setStatus('ready')
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error('Unable to load the Platform Admin console'))
       setStatus('error')
     }
   }, [])
+
+  const refreshOperationalSession = useCallback(async () => {
+    const next = await core.getMyPlatformOperationalSession()
+    setOperationalSession(next)
+  }, [])
+
+  const openOperationalSession = useCallback(async (propertyId: string, reason?: string) => {
+    await core.openPlatformOperationalSession(propertyId, reason)
+    await refreshOperationalSession()
+  }, [refreshOperationalSession])
+
+  const closeOperationalSession = useCallback(async () => {
+    if (!operationalSession) return
+    await core.closePlatformOperationalSession(operationalSession.id)
+    setOperationalSession(null)
+  }, [operationalSession])
 
   useEffect(() => {
     void load()
@@ -117,8 +147,12 @@ export function PlatformProvider({ children }: PropsWithChildren) {
     selectOrganization,
     selectProperty,
     hasPlatformPermission,
+    operationalSession,
+    openOperationalSession,
+    closeOperationalSession,
+    refreshOperationalSession,
     refresh: load,
-  }), [status, error, adminStatus, selectedOrganization, selectedProperty, selectOrganization, selectProperty, hasPlatformPermission, load])
+  }), [status, error, adminStatus, selectedOrganization, selectedProperty, selectOrganization, selectProperty, hasPlatformPermission, operationalSession, openOperationalSession, closeOperationalSession, refreshOperationalSession, load])
 
   return <PlatformContext.Provider value={value}>{children}</PlatformContext.Provider>
 }
