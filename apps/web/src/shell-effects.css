@@ -29,8 +29,8 @@
   inset: 0 0 0 236px;
   pointer-events: none;
   background:
-    radial-gradient(980px 430px at 14% -8%, rgba(156, 79, 199, 0.13), transparent 64%),
-    radial-gradient(820px 380px at 98% 2%, rgba(42, 95, 204, 0.09), transparent 60%),
+    radial-gradient(980px 430px at 14% -8%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 64%),
+    radial-gradient(820px 380px at 98% 2%, color-mix(in srgb, var(--decorative-blue) 9%, transparent), transparent 60%),
     var(--bg);
 }
 
@@ -41,8 +41,8 @@
   inset: 0 0 0 236px;
   pointer-events: none;
   background:
-    radial-gradient(560px 340px at 72% 80%, rgba(156, 79, 199, 0.038), transparent 74%),
-    radial-gradient(520px 320px at 38% 60%, rgba(42, 95, 204, 0.032), transparent 76%);
+    radial-gradient(560px 340px at 72% 80%, color-mix(in srgb, var(--accent) 3.8%, transparent), transparent 74%),
+    radial-gradient(520px 320px at 38% 60%, color-mix(in srgb, var(--decorative-blue) 3.2%, transparent), transparent 76%);
 }
 
 .page-content {
@@ -59,7 +59,7 @@
 
 .module-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(156, 79, 199, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .nav-item,
@@ -91,8 +91,8 @@
 
   .shell-content::before {
     background:
-      radial-gradient(540px 300px at 10% 5%, rgba(156, 79, 199, 0.13), transparent 66%),
-      radial-gradient(500px 320px at 100% 18%, rgba(42, 95, 204, 0.075), transparent 66%),
+      radial-gradient(540px 300px at 10% 5%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 66%),
+      radial-gradient(500px 320px at 100% 18%, color-mix(in srgb, var(--decorative-blue) 7.5%, transparent), transparent 66%),
       var(--bg);
   }
 
@@ -103,9 +103,14 @@
     -webkit-backdrop-filter: blur(16px) saturate(145%);
   }
 
+  /* Was a hardcoded white glass panel (rgba(255,255,255,.76/.86)) that never
+     adapted to dark mode -- a light frosted bar over a dark app. Deriving it
+     from --surface keeps the exact same look in light mode (surface is
+     white there) and gives a proper dark glass panel in dark mode (surface
+     is the dark card color there). */
   .mobile-nav {
-    background: rgba(255, 255, 255, 0.76);
-    border-top-color: rgba(255, 255, 255, 0.86);
+    background: color-mix(in srgb, var(--surface) 76%, transparent);
+    border-top-color: color-mix(in srgb, var(--surface) 86%, transparent);
     backdrop-filter: blur(18px) saturate(170%);
     -webkit-backdrop-filter: blur(18px) saturate(170%);
   }
