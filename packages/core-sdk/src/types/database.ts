@@ -671,6 +671,26 @@ export interface Database {
           expires_at: string
         }[]
       }
+      platform_log_operational_view: {
+        Args: { p_session_id: string; p_module_slug: string }
+        Returns: undefined
+      }
+      platform_list_operational_sessions: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          id: string
+          platform_admin_id: string
+          admin_full_name: string | null
+          property_id: string
+          property_name: string | null
+          status: string
+          reason: string | null
+          opened_at: string
+          expires_at: string
+          closed_at: string | null
+          closed_by_full_name: string | null
+        }[]
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

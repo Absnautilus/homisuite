@@ -33,7 +33,8 @@
 .platform-mfa-form input { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: inherit; letter-spacing: .15em; font-size: 16px; text-align: center; }
 
 .platform-badge { display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--surface-2); color: var(--muted); }
-.platform-badge.enabled { background: var(--accent-soft); color: var(--accent); }
+.platform-badge.enabled, .platform-badge.active { background: var(--accent-soft); color: var(--accent); }
+.platform-badge.revoked { background: var(--red-bg); color: var(--red-ink); }
 
 /* Operational view (Fase C, PR C3) — deliberately a loud, unmissable band,
    never something that could be mistaken for the hotel shell's own chrome:

@@ -7,6 +7,10 @@ const ACTION_LABELS: Record<string, string> = {
   'platform.console_accessed': 'Accesso alla console',
   'platform.organization_viewed': 'Organizzazione consultata',
   'platform.property_viewed': 'Proprietà consultata',
+  'platform.operational_session_opened': 'Vista operativa aperta',
+  'platform.operational_session_closed': 'Vista operativa chiusa',
+  'platform.operational_session_revoked': 'Vista operativa revocata',
+  'platform.operational_view_accessed': 'Modulo operativo consultato',
 }
 
 export function AuditLogPage() {

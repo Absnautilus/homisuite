@@ -15,6 +15,7 @@ import { OrganizationsPage } from '../platform/pages/OrganizationsPage'
 import { OrganizationDetailPage } from '../platform/pages/OrganizationDetailPage'
 import { PropertyDetailPage } from '../platform/pages/PropertyDetailPage'
 import { AuditLogPage } from '../platform/pages/AuditLogPage'
+import { SessionHistoryPage } from '../platform/pages/SessionHistoryPage'
 
 const HousekeepingModuleGate = lazy(async () => {
   const module = await import('../modules/housekeeping/HousekeepingModuleGate')
@@ -60,6 +61,7 @@ export function App() {
           <Route path="housekeeping" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
         </Route>
         <Route path="audit" element={<AuditLogPage />} />
+        <Route path="sessions" element={<SessionHistoryPage />} />
       </Route>
       <Route element={<ShellLayout />}>
         <Route index element={<HomePage />} />
