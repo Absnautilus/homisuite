@@ -64,3 +64,42 @@ export async function getPlatformAuditLog(client: SupabaseClient<Database>, limi
     createdAt: row.created_at,
   }))
 }
+
+export async function createPlatformOrganization(client: SupabaseClient<Database>, name: string, slug: string): Promise<string> {
+  const { data, error } = await client.rpc('platform_create_organization', { p_name: name, p_slug: slug })
+  if (error) throw error
+  return data
+}
+
+export async function updatePlatformOrganization(client: SupabaseClient<Database>, organizationId: string, name: string): Promise<void> {
+  const { error } = await client.rpc('platform_update_organization', { p_organization_id: organizationId, p_name: name })
+  if (error) throw error
+}
+
+export async function createPlatformProperty(
+  client: SupabaseClient<Database>, organizationId: string, name: string, slug: string, timezone?: string,
+): Promise<string> {
+  const { data, error } = await client.rpc('platform_create_property', {
+    p_organization_id: organizationId, p_name: name, p_slug: slug, p_timezone: timezone,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function updatePlatformProperty(
+  client: SupabaseClient<Database>, propertyId: string, name: string, timezone: string, status: string,
+): Promise<void> {
+  const { error } = await client.rpc('platform_update_property', {
+    p_property_id: propertyId, p_name: name, p_timezone: timezone, p_status: status,
+  })
+  if (error) throw error
+}
+
+export async function setPlatformPropertyModule(
+  client: SupabaseClient<Database>, propertyId: string, moduleSlug: string, enabled: boolean,
+): Promise<void> {
+  const { error } = await client.rpc('platform_set_property_module', {
+    p_property_id: propertyId, p_module_slug: moduleSlug, p_enabled: enabled,
+  })
+  if (error) throw error
+}

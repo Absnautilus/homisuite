@@ -628,6 +628,26 @@ export interface Database {
           created_at: string
         }[]
       }
+      platform_create_organization: {
+        Args: { p_name: string; p_slug: string }
+        Returns: string
+      }
+      platform_update_organization: {
+        Args: { p_organization_id: string; p_name: string }
+        Returns: undefined
+      }
+      platform_create_property: {
+        Args: { p_organization_id: string; p_name: string; p_slug: string; p_timezone?: string }
+        Returns: string
+      }
+      platform_update_property: {
+        Args: { p_property_id: string; p_name: string; p_timezone: string; p_status: string }
+        Returns: undefined
+      }
+      platform_set_property_module: {
+        Args: { p_property_id: string; p_module_slug: string; p_enabled: boolean }
+        Returns: undefined
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

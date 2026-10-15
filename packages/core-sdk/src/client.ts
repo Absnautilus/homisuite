@@ -9,7 +9,7 @@ import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
-import { getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, logPlatformConsoleAccess } from './platformAdmin'
+import { createPlatformOrganization, createPlatformProperty, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, logPlatformConsoleAccess, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty } from './platformAdmin'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -53,6 +53,11 @@ export interface CoreClient {
   getPlatformProperties: (organizationId: string) => Promise<PlatformProperty[]>
   getPlatformPropertyModules: (propertyId: string) => Promise<PlatformPropertyModule[]>
   getPlatformAuditLog: (limit?: number, offset?: number) => Promise<PlatformAuditLogEntry[]>
+  createPlatformOrganization: (name: string, slug: string) => Promise<string>
+  updatePlatformOrganization: (organizationId: string, name: string) => Promise<void>
+  createPlatformProperty: (organizationId: string, name: string, slug: string, timezone?: string) => Promise<string>
+  updatePlatformProperty: (propertyId: string, name: string, timezone: string, status: string) => Promise<void>
+  setPlatformPropertyModule: (propertyId: string, moduleSlug: string, enabled: boolean) => Promise<void>
 }
 
 export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): CoreClient {
@@ -96,5 +101,10 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     getPlatformProperties: (organizationId) => getPlatformProperties(raw, organizationId),
     getPlatformPropertyModules: (propertyId) => getPlatformPropertyModules(raw, propertyId),
     getPlatformAuditLog: (limit, offset) => getPlatformAuditLog(raw, limit, offset),
+    createPlatformOrganization: (name, slug) => createPlatformOrganization(raw, name, slug),
+    updatePlatformOrganization: (organizationId, name) => updatePlatformOrganization(raw, organizationId, name),
+    createPlatformProperty: (organizationId, name, slug, timezone) => createPlatformProperty(raw, organizationId, name, slug, timezone),
+    updatePlatformProperty: (propertyId, name, timezone, status) => updatePlatformProperty(raw, propertyId, name, timezone, status),
+    setPlatformPropertyModule: (propertyId, moduleSlug, enabled) => setPlatformPropertyModule(raw, propertyId, moduleSlug, enabled),
   }
 }
