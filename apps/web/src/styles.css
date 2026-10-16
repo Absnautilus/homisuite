@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800;900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
+  color-scheme: light;
   --bg: #f1f0f8;
   --surface: #ffffff;
   --surface-2: #f4f5fc;
@@ -17,6 +18,19 @@
   --accent-ink: #ffffff;
   --accent-soft: #f4e8fa;
   --accent-soft-line: #e4c7f2;
+  /* --accent as foreground text/icon on --surface or --accent-soft reads at
+     ~4.1-4.4:1 in light mode -- under the 4.5:1 AA text minimum. --accent-text
+     is the same hue/saturation darkened to a safe reading weight; use it for
+     any TEXT or icon-with-meaning role, keep --accent itself for fills
+     (buttons, badges, active bars) where --accent-ink already provides
+     contrast. Equal to --accent in dark mode, where the lighter accent
+     already reads at 6+:1 on every surface. */
+  --accent-text: #8241a6;
+  --accent-light: #c77dee;
+  /* Decorative-only: the second hue in the shell's ambient background wash
+     (shell-effects.css), previously a hardcoded rgba() that never adapted to
+     dark mode. Not used for text or UI state anywhere. */
+  --decorative-blue: #2a5fcc;
 
   --navbar-bg: #16182b;
   --navbar-text: #ffffff;
@@ -62,6 +76,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
     --bg: #100f1e;
     --surface: #1c1b33;
     --surface-2: #221f3d;
@@ -74,6 +89,17 @@
     --accent-ink: #1b0c24;
     --accent-soft: #2c1e3b;
     --accent-soft-line: #4a3260;
+    --accent-text: #c77dee;
+    --accent-light: #e9c3fb;
+    --decorative-blue: #7291f3;
+    --amber-bg: #2d2b0e;
+    --amber-ink: #feb06b;
+    --red-bg: #560e0e;
+    --red-ink: #ecb3b3;
+    --green-bg: #212d26;
+    --green-ink: #3ddb82;
+    --slate-bg: #232844;
+    --slate-ink: #bfc0cd;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
@@ -82,6 +108,7 @@
   }
 }
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --bg: #100f1e;
   --surface: #1c1b33;
   --surface-2: #221f3d;
@@ -94,6 +121,17 @@
   --accent-ink: #1b0c24;
   --accent-soft: #2c1e3b;
   --accent-soft-line: #4a3260;
+  --accent-text: #c77dee;
+  --accent-light: #e9c3fb;
+  --decorative-blue: #7291f3;
+  --amber-bg: #2d2b0e;
+  --amber-ink: #feb06b;
+  --red-bg: #560e0e;
+  --red-ink: #ecb3b3;
+  --green-bg: #212d26;
+  --green-ink: #3ddb82;
+  --slate-bg: #232844;
+  --slate-ink: #bfc0cd;
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
@@ -149,7 +187,7 @@ a { color: inherit; text-decoration: none; }
 
 .page-state-bar-track { position: relative; width: 220px; max-width: 60%; height: 3px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .page-state.fullscreen .page-state-bar-track { position: fixed; inset: 0 0 auto 0; width: 100%; max-width: none; height: 3px; border-radius: 0; background: transparent; z-index: 500; }
-.page-state-bar { position: absolute; inset: 0; width: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-light, #c77dee), var(--accent)); animation: page-state-indeterminate 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.page-state-bar { position: absolute; inset: 0; width: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-light), var(--accent)); animation: page-state-indeterminate 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
 @keyframes page-state-indeterminate {
   0% { translate: -110% 0; scale: 0.4 1; }
   55% { translate: 40% 0; scale: 0.7 1; }
@@ -192,12 +230,12 @@ a { color: inherit; text-decoration: none; }
 .btn-secondary:hover { background: var(--surface-2); }
 
 /* auth card */
-.login-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(1100px 420px at 15% -10%, rgba(156, 79, 199, 0.12), transparent 55%), var(--bg); }
+.login-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(1100px 420px at 15% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%), var(--bg); }
 .login-card { width: min(100%, 380px); padding: 34px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-md); }
 .login-brand { margin-bottom: 30px; display: flex; align-items: center; gap: 9px; font-family: var(--f-head); font-size: 1.15rem; font-weight: 800; }
 .login-brand .mark { width: 28px; height: 28px; border-radius: 8px; display: block; flex-shrink: 0; }
 .login-copy { margin-bottom: 22px; }
-.login-copy .eyebrow { margin: 0 0 6px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.login-copy .eyebrow { margin: 0 0 6px; color: var(--accent-text); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .login-copy h1 { font-size: 1.7rem; letter-spacing: -0.03em; }
 .login-copy > p:last-child { margin: 8px 0 0; color: var(--muted); line-height: 1.5; font-size: 13px; }
 .login-form { display: grid; gap: 15px; }
@@ -234,7 +272,7 @@ a { color: inherit; text-decoration: none; }
    state is still there for discoverability, just not a permanent outline. */
 .property-switcher { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--r-sm); background: transparent; color: var(--navbar-text); cursor: pointer; text-align: left; font: inherit; }
 .property-switcher:hover { background: var(--navbar-surface-hover); }
-.property-switcher .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; color: #fff; }
+.property-switcher .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; color: var(--accent-ink); }
 .property-switcher .mk-logo { object-fit: cover; background: var(--navbar-surface-solid); }
 /* The property's own name is the one thing here that must never be cut
    short -- it wraps instead of ellipsizing. The role/staff line under it
@@ -250,7 +288,7 @@ a { color: inherit; text-decoration: none; }
 .switch-panel-row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 13px; border: 0; background: transparent; cursor: pointer; text-align: left; font: inherit; color: var(--navbar-text); }
 .switch-panel-row:hover { background: var(--navbar-surface-solid-hover); }
 .switch-panel-row.current { background: color-mix(in srgb, var(--accent) 22%, transparent); }
-.switch-panel-row .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.switch-panel-row .mk { width: 26px; height: 26px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
 .switch-panel-row .n { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .switch-panel-row .check { color: var(--accent); flex-shrink: 0; }
 
@@ -303,7 +341,7 @@ a { color: inherit; text-decoration: none; }
 .page-stack { display: grid; gap: 22px; }
 .page-stack > * { min-width: 0; }
 .section-heading.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-.eyebrow { margin: 0; color: var(--accent); font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { margin: 0; color: var(--accent-text); font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 2px; font-size: clamp(1.8rem, 3vw, 2.35rem); letter-spacing: -0.04em; }
 .section-heading { padding: 18px 20px 14px; }
@@ -318,20 +356,20 @@ h1 { margin-bottom: 2px; font-size: clamp(1.8rem, 3vw, 2.35rem); letter-spacing:
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  box-shadow: 0 1px 2px rgba(22, 24, 43, 0.04);
+  box-shadow: var(--shadow-sm);
   padding: 26px 28px 22px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   transition: box-shadow var(--motion-panel) var(--motion-ease), transform var(--motion-panel) var(--motion-ease), border-color var(--motion-panel) var(--motion-ease);
 }
-.module-card:hover, .module-card:focus-visible { border-color: var(--line-strong); box-shadow: 0 10px 26px -14px rgba(22, 24, 43, 0.22); }
+.module-card:hover, .module-card:focus-visible { border-color: var(--line-strong); box-shadow: var(--shadow-md); }
 /* Cards are real links (whole surface clickable) -- lift slightly on
    hover/focus so the affordance reads as "clickable card", not just
    "container with a link inside it somewhere". Kept to 1-2px: this is a
    hospitality back-office tool, not a marketing page. */
 a.module-card:hover, a.module-card:focus-visible { transform: translateY(-2px); }
-a.module-card:focus-visible { box-shadow: 0 10px 26px -14px rgba(22, 24, 43, 0.22), var(--focus-ring); }
+a.module-card:focus-visible { box-shadow: var(--shadow-md), var(--focus-ring); }
 /* The module's own icon again, large and barely-there, bleeding past the
    card edge -- purely decorative texture, never a second meaning to read,
    so it sits behind the real content and stays out of its way. */
@@ -339,14 +377,14 @@ a.module-card:focus-visible { box-shadow: 0 10px 26px -14px rgba(22, 24, 43, 0.2
 .module-card-top, .module-card-body, .module-card-footer { position: relative; z-index: 1; }
 .module-card-top { display: flex; align-items: center; gap: 11px; }
 .status-pill { margin-left: auto; border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); background: var(--surface); font-size: 11px; font-weight: 750; line-height: 1; }
-.status-pill-ok { border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); color: var(--accent); background: var(--accent-soft); }
-.module-icon { width: 48px; height: 48px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+.status-pill-ok { border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); color: var(--accent-text); background: var(--accent-soft); }
+.module-icon { width: 48px; height: 48px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent-text); flex-shrink: 0; }
 .module-card-body { flex: 1; }
 .module-card h2 { margin-bottom: 5px; font-size: 18px; font-weight: 800; letter-spacing: -0.015em; }
 .module-card p { margin-bottom: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 .module-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); }
-.module-card-open { color: var(--accent); font-size: 0.88rem; font-weight: 750; }
-.module-card-arrow { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; transition: transform var(--motion-fast) var(--motion-ease); }
+.module-card-open { color: var(--accent-text); font-size: 0.88rem; font-weight: 750; }
+.module-card-arrow { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); flex-shrink: 0; transition: transform var(--motion-fast) var(--motion-ease); }
 a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card-arrow { transform: translateX(2px); }
 /* Module lifecycle (Disponibile/Beta/Deprecato) is a different concept from
    the entitlement .status-pill above (Attivo/Non attivo) -- a plain small
@@ -354,7 +392,7 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
 .module-lifecycle { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
 .module-lifecycle.is-beta { color: var(--amber-ink); }
 .module-lifecycle.is-deprecated { color: var(--red-ink); }
-.attention-card { border: 1px solid var(--line); background: var(--surface); box-shadow: 0 1px 2px rgba(22, 24, 43, 0.04), 0 8px 20px -14px rgba(22, 24, 43, 0.16); min-height: 90px; padding: 20px 22px; display: flex; align-items: center; border-radius: var(--r-lg); }
+.attention-card { border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); min-height: 90px; padding: 20px 22px; display: flex; align-items: center; border-radius: var(--r-lg); }
 .attention-card h2 { margin-bottom: 5px; font-size: 15px; }
 .attention-card p { margin-bottom: 0; color: var(--muted); line-height: 1.5; font-size: 13px; }
 /* Deliberately quieter than .attention-card/.module-card: this is
@@ -399,7 +437,7 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
   .module-card-decor { width: 92px; height: 92px; opacity: 0.045; }
   .mobile-nav { position: fixed; z-index: 30; inset: auto 0 0 0; min-height: 64px; padding: 8px 8px max(8px, env(safe-area-inset-bottom)); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface); border-top: 1px solid var(--line); }
   .mobile-nav-item { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--muted); font-size: 0.67rem; font-weight: 650; }
-  .mobile-nav-item.active { color: var(--accent); }
+  .mobile-nav-item.active { color: var(--accent-text); }
   .drawer-scrim { display: block; position: fixed; inset: 0; z-index: 40; background: rgba(16, 15, 30, 0.4); opacity: 0; transition: opacity var(--motion-panel) var(--motion-ease); }
   .drawer-scrim.is-open { opacity: 1; }
   .drawer-panel { position: absolute; inset: 0 0 0 auto; width: min(84vw, 300px); height: 100%; padding: 16px 12px; background: var(--navbar-bg); color: var(--navbar-text); box-shadow: var(--shadow-lg); overflow-y: auto; display: flex; flex-direction: column; translate: 24px 0; opacity: 0; transition: translate var(--motion-panel) var(--motion-ease), opacity var(--motion-panel) var(--motion-ease); }

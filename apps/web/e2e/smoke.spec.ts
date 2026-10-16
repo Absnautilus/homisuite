@@ -94,26 +94,51 @@ test('organization admin can manage a Housekeeping request category and its item
   await page.goto('/housekeeping/admin/menu')
 
   await expect(page.getByRole('heading', { name: 'Menu richieste' })).toBeVisible()
+
+  // The add panel is closed by default (ItemsPage's addState.open starts
+  // false) -- "Nuovo" opens it, defaulting to the "category" tab, so no
+  // extra tab click is needed for category creation.
+  await page.getByRole('button', { name: 'Nuovo', exact: true }).click()
+  await expect(page.getByLabel('Nome categoria')).toBeVisible()
   await page.getByLabel('Nome categoria').fill(categoryName)
   await page.locator('label').filter({ hasText: 'E2E Reception' }).click()
   await expect(page.getByLabel('E2E Reception')).toBeChecked()
   await page.getByRole('button', { name: 'Aggiungi categoria', exact: true }).click()
 
-  const categories = page.getByRole('table', { name: 'Menu richieste' })
-  const categoryRow = categories.getByRole('row').filter({ hasText: categoryName })
+  // The menu is an accordion list now, not a <table> -- one collapsed row
+  // per category, filtered by its own visible text rather than a table role.
+  const categoryRow = page.locator('.divide-y.divide-line > div').filter({ hasText: categoryName })
   await expect(categoryRow).toContainText('E2E Reception')
 
-  await page.getByRole('button', { name: 'Categoria *', exact: true }).click()
-  await page.getByRole('option', { name: categoryName, exact: true }).click()
+  // Creating the category closes the add panel again (onCategoryCreated ->
+  // closeAdd()). Expanding the category's own row reveals its "+ Aggiungi
+  // elemento" shortcut, which opens the item form pre-set to this category
+  // -- exercising the same "item lands under the right category" behavior
+  // the old test checked by hand-picking a <select> option, just verified
+  // by reading the selection back instead of choosing it from a dropdown.
+  await categoryRow.getByRole('button', { name: 'Espandi o comprimi categoria', exact: true }).click()
+  await categoryRow.getByRole('button', { name: '+ Aggiungi elemento', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Categoria *', exact: true })).toHaveText(categoryName)
   await page.getByRole('textbox', { name: 'Nome *', exact: true }).fill(itemName)
-  await page.getByRole('button', { name: 'Aggiungi elemento' }).click()
+  // Without exact:true this also matches the inline "+ Aggiungi elemento"
+  // shortcut just clicked above -- Playwright's non-exact name matching is
+  // substring-based, and "Aggiungi elemento" is a substring of that.
+  await page.getByRole('button', { name: 'Aggiungi elemento', exact: true }).click()
   await expect(page.getByText(itemName, { exact: true })).toBeVisible()
 
-  await categoryRow.getByRole('button', { name: 'Rimuovi' }).click()
-  const confirmation = page.getByText('Rimuovere questa categoria?').locator('..')
+  // Once expanded, categoryRow also contains the new item's own "Rimuovi"
+  // button; the category's own sits in the header rendered before that
+  // conditional item list in the DOM, so .first() is deterministic here.
+  await categoryRow.getByRole('button', { name: 'Rimuovi' }).first().click()
+  // The confirm dialog is the shared @homisuite/ui Modal: a role="dialog"
+  // section whose aria-labelledby points at the title, with the footer
+  // (where the buttons live) as a sibling of the title, not a descendant of
+  // it -- the old .locator('..') one-level-up-from-the-title-text trick
+  // only reached the header, never the footer, hence the prior timeout.
+  const confirmation = page.getByRole('dialog', { name: 'Rimuovere questa categoria?' })
   await expect(confirmation).toBeVisible()
   await confirmation.getByRole('button', { name: 'Rimuovi', exact: true }).click()
-  await expect(categories.getByText(categoryName, { exact: true })).toHaveCount(0)
+  await expect(page.getByText(categoryName, { exact: true })).toHaveCount(0)
   await expect(page.getByText(itemName, { exact: true })).toHaveCount(0)
 })
 

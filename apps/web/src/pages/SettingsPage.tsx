@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Button, Modal, PageHeader } from '@homisuite/ui'
-import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, UserRound } from 'lucide-react'
+import { Bell, Building2, ChevronRight, Globe2, LockKeyhole, Puzzle, SunMoon, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
 import { GuestLinkRow } from '../components/GuestLinkRow'
 import { NotificationsToggle } from '../components/NotificationsToggle'
 import { PasswordField } from '../components/PasswordField'
 import { Select } from '../components/Select'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { core, supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
+import { readStoredThemePreference, subscribeThemeChange } from '../lib/theme'
+
+const THEME_LABELS = { light: 'Chiaro', dark: 'Scuro', system: 'Sistema' } as const
 
 export function SettingsPage() {
   const runtime = useModuleRuntime()
@@ -19,6 +23,7 @@ export function SettingsPage() {
   const propertyName = runtime.property?.name ?? 'Struttura'
   const profileName = runtime.profile?.fullName ?? 'Utente Homisuite'
   const [language, setLanguage] = useState(() => localStorage.getItem('homisuite.language') === 'en' ? 'en' : 'it')
+  const [theme, setTheme] = useState(readStoredThemePreference)
   const [propertyOpen, setPropertyOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
@@ -42,6 +47,8 @@ export function SettingsPage() {
     return () => window.removeEventListener('homisuite:language-change', syncLanguage)
   }, [])
 
+  useEffect(() => subscribeThemeChange(setTheme), [])
+
   return (
     <div className="page-stack settings-page">
       <PageHeader eyebrow="Homisuite" title="Impostazioni" description="Preferenze della struttura, del tuo account e dei moduli." />
@@ -64,6 +71,10 @@ export function SettingsPage() {
           <div className="settings-row settings-row-control">
             <span className="settings-row-main"><span className="settings-row-icon"><Globe2 size={17} /></span><span><strong>Lingua</strong><small>{language === 'en' ? 'English' : 'Italiano'}</small></span></span>
             <LanguageToggle />
+          </div>
+          <div className="settings-row settings-row-control">
+            <span className="settings-row-main"><span className="settings-row-icon"><SunMoon size={17} /></span><span><strong>Tema</strong><small>{THEME_LABELS[theme]}</small></span></span>
+            <ThemeToggle />
           </div>
           <div className="settings-row settings-row-control">
             <span className="settings-row-main"><span className="settings-row-icon"><Bell size={17} /></span><span><strong>Notifiche</strong><small>Avvisi push di Homisuite su questo dispositivo</small></span></span>
