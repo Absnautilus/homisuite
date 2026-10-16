@@ -138,6 +138,7 @@ export async function getMyPlatformOperationalSession(client: SupabaseClient<Dat
     expiresAt: row.expires_at,
     actingAsMembershipId: row.acting_as_membership_id,
     actingAsFullName: row.acting_as_full_name,
+    actingAsRoleDisplayName: row.acting_as_role_display_name,
   }
 }
 

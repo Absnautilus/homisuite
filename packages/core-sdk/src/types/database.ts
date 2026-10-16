@@ -671,6 +671,7 @@ export interface Database {
           expires_at: string
           acting_as_membership_id: string | null
           acting_as_full_name: string | null
+          acting_as_role_display_name: string | null
         }[]
       }
       platform_log_operational_view: {

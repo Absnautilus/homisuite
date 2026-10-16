@@ -101,7 +101,7 @@ export function OperationalViewLayout() {
         <span>
           <strong>ADMIN MASTER</strong> · {property.name} ·{' '}
           {operationalSession.actingAsMembershipId
-            ? `Visualizza come ${operationalSession.actingAsFullName ?? 'un membro del team'}`
+            ? `Stai visualizzando come ${operationalSession.actingAsFullName ?? 'un membro del team'}${operationalSession.actingAsRoleDisplayName ? ` · ${operationalSession.actingAsRoleDisplayName}` : ''}`
             : 'Sola lettura'}
         </span>
         <button type="button" onClick={() => void exitView()}>

@@ -34,6 +34,31 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   // resolving to "not a facchino yet" rather than skipping the hook.
   const housekeepingCapabilities = useHousekeepingCapabilities()
   const location = useLocation()
+  // Every shellNavigation path is absolute ('/housekeeping', '/turni', ...),
+  // correct for this shell's real, root-mounted usage. Nested under Admin
+  // Master's operational view (App.tsx mounts this same ShellLayout at
+  // .../view), an absolute `to` would navigate clear out of that route tree
+  // -- into the real top-level page, with the real ModuleRuntimeProvider's
+  // own (unrelated) property, losing the operational/impersonation context
+  // entirely. hidePlatformNav already marks exactly this nesting, so reusing
+  // it here (rather than a second prop) keeps the two facts -- "nested" and
+  // "resolve nav relatively" -- from ever disagreeing. Stripped to a
+  // route-relative segment, React Router resolves it against the nearest
+  // matched route in the tree instead of the raw URL, so it lands under
+  // .../view regardless of nesting depth.
+  const navPath = (path: string) => (hidePlatformNav ? (path === '/' ? '.' : path.slice(1)) : path)
+  // Same reasoning for "which module is active right now": under nesting,
+  // location.pathname carries the whole .../view/... prefix, which never
+  // equals or starts with a bare '/housekeeping' -- so this mirrors
+  // OperationalViewLayout's own moduleRoute derivation (the segment right
+  // after /view) to get an absolute-equivalent path to match against.
+  const effectivePathname = hidePlatformNav
+    ? (() => {
+        const viewIndex = location.pathname.indexOf('/view')
+        const after = viewIndex >= 0 ? location.pathname.slice(viewIndex + '/view'.length) : ''
+        return after === '' ? '/' : after
+      })()
+    : location.pathname
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { state: drawerState, mounted: drawerMounted } = useDropdownTransition(drawerOpen, 220)
   const drawerRef = useRef<HTMLDivElement>(null)
@@ -58,12 +83,12 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   // own panel instead. Always false, so every real staff member keeps
   // exactly this nav unchanged.
   const platform = hidePlatformNav ? [] : shellNavigation.filter((item) => item.kind === 'platform' && item.path !== '/')
-  const activeModule = modules.find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+  const activeModule = modules.find((item) => effectivePathname === item.path || effectivePathname.startsWith(`${item.path}/`))
   // A facchino (no manage, no queue-management capability) has nothing to do
   // with the sidebar, the Moduli/Piattaforma nav or the bottom nav's other
   // module icons -- Housekeeping is the only screen they ever see, so they
   // get a bare frame around it instead of the full shell chrome.
-  const isHousekeepingRoute = location.pathname === '/housekeeping' || location.pathname.startsWith('/housekeeping/')
+  const isHousekeepingRoute = effectivePathname === '/housekeeping' || effectivePathname.startsWith('/housekeeping/')
   const isFacchino = isHousekeepingRoute && housekeepingCapabilities !== null
     && !housekeepingCapabilities.manage && !housekeepingCapabilities.queueManage
 
@@ -158,19 +183,19 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   const navSections = (
     <>
       {home && (
-        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} to={home.path} end onClick={() => setDrawerOpen(false)}>
+        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} to={navPath(home.path)} end onClick={() => setDrawerOpen(false)}>
           <home.icon size={18} /><span>{home.label}</span>
         </NavLink>
       )}
       <div className="nav-section-label">Moduli</div>
       {modules.map((item) => (
-        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} key={item.path} to={item.path} onClick={() => setDrawerOpen(false)}>
+        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} key={item.path} to={navPath(item.path)} onClick={() => setDrawerOpen(false)}>
           <item.icon size={18} /><span>{item.label}</span>
         </NavLink>
       ))}
       {platform.length > 0 && <div className="nav-section-label platform">Piattaforma</div>}
       {platform.map((item) => (
-        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} key={item.path} to={item.path} onClick={() => setDrawerOpen(false)}>
+        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} key={item.path} to={navPath(item.path)} onClick={() => setDrawerOpen(false)}>
           <item.icon size={18} /><span>{item.label}</span>
         </NavLink>
       ))}
@@ -199,7 +224,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       <div className="shell-content">
         {activeModule ? (
           <header className="mobile-header mobile-header-module">
-            <Link to="/" aria-label="Torna alla Home" className="mobile-back"><ArrowLeft size={19} /><span>{activeModule.label}</span></Link>
+            <Link to={navPath('/')} aria-label="Torna alla Home" className="mobile-back"><ArrowLeft size={19} /><span>{activeModule.label}</span></Link>
             <MenuToggle open={drawerOpen} onToggle={() => setDrawerOpen((open) => !open)} />
           </header>
         ) : (
@@ -214,7 +239,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       {!activeModule && (
         <nav className="mobile-nav" aria-label="Navigazione mobile">
           {[shellNavigation[0], ...modules.slice(0, 3)].map((item) => (
-            <NavLink className={({ isActive }) => `mobile-nav-item${isActive ? ' active' : ''}`} key={item.path} to={item.path}>
+            <NavLink className={({ isActive }) => `mobile-nav-item${isActive ? ' active' : ''}`} key={item.path} to={navPath(item.path)}>
               <item.icon size={19} /><span>{item.label}</span>
             </NavLink>
           ))}

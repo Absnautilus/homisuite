@@ -223,6 +223,7 @@ export interface PlatformOperationalSession {
   // never indistinguishable from actingAsFullName's own action.
   actingAsMembershipId: string | null
   actingAsFullName: string | null
+  actingAsRoleDisplayName: string | null
 }
 
 export interface PlatformAuditLogEntry {
