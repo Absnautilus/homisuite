@@ -130,7 +130,12 @@ test('organization admin can manage a Housekeeping request category and its item
   // button; the category's own sits in the header rendered before that
   // conditional item list in the DOM, so .first() is deterministic here.
   await categoryRow.getByRole('button', { name: 'Rimuovi' }).first().click()
-  const confirmation = page.getByText('Rimuovere questa categoria?').locator('..')
+  // The confirm dialog is the shared @homisuite/ui Modal: a role="dialog"
+  // section whose aria-labelledby points at the title, with the footer
+  // (where the buttons live) as a sibling of the title, not a descendant of
+  // it -- the old .locator('..') one-level-up-from-the-title-text trick
+  // only reached the header, never the footer, hence the prior timeout.
+  const confirmation = page.getByRole('dialog', { name: 'Rimuovere questa categoria?' })
   await expect(confirmation).toBeVisible()
   await confirmation.getByRole('button', { name: 'Rimuovi', exact: true }).click()
   await expect(page.getByText(categoryName, { exact: true })).toHaveCount(0)
