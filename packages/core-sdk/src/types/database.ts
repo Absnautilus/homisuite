@@ -669,6 +669,8 @@ export interface Database {
           reason: string | null
           opened_at: string
           expires_at: string
+          acting_as_membership_id: string | null
+          acting_as_full_name: string | null
         }[]
       }
       platform_log_operational_view: {
@@ -715,6 +717,14 @@ export interface Database {
       platform_insert_team_membership: {
         Args: { p_property_id: string; p_profile_id: string; p_role_id: string; p_username: string; p_job_title_id?: string | null }
         Returns: string
+      }
+      platform_open_impersonation_session: {
+        Args: { p_property_id: string; p_acting_as_membership_id: string; p_reason?: string | null }
+        Returns: string
+      }
+      platform_impersonated_complete_guest_request: {
+        Args: { p_guest_request_id: string; p_acting_as_membership_id: string }
+        Returns: undefined
       }
     }
     Enums: Record<string, never>

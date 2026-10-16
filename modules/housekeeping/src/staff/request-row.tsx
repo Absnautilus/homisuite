@@ -27,6 +27,7 @@ export function RequestRow({
   onDragPointerDown,
   onDragPointerMove,
   onDragPointerUp,
+  onCompleteOverride,
 }: {
   request: QueuedRequest
   now: Date
@@ -41,6 +42,14 @@ export function RequestRow({
   onDragPointerDown?: (e: ReactPointerEvent<HTMLButtonElement>) => void
   onDragPointerMove?: (e: ReactPointerEvent<HTMLButtonElement>) => void
   onDragPointerUp?: (e: ReactPointerEvent<HTMLButtonElement>) => void
+  /**
+   * Shell-supplied replacement for completeRequest(id) -- used only by
+   * Admin Master's "visualizza come" impersonation view (Fase C follow-up,
+   * Part 2), whose own browser session can never satisfy guest_requests'
+   * ordinary RLS directly. Omit for every ordinary embedding; real staff
+   * always use the module's own completeRequest().
+   */
+  onCompleteOverride?: (requestId: string) => Promise<void>
 }) {
   const { t } = useLocale()
   const [pending, setPending] = useState(false)
@@ -322,7 +331,7 @@ export function RequestRow({
                   <IconButton tone="hintPositive" filled shape="circle" size="lg" icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(() => claimRequest(request.id, staffId))} />
                 )}
                 {request.status === 'in_progress' && (
-                  <IconButton tone="ok" filled shape="circle" size="lg" icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => completeRequest(request.id))} />
+                  <IconButton tone="ok" filled shape="circle" size="lg" icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => (onCompleteOverride ?? completeRequest)(request.id))} />
                 )}
               </div>
             )}

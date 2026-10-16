@@ -35,6 +35,7 @@ export function ReorderableColumn({
   canManageRequest,
   jobTitles,
   onReordered,
+  onCompleteOverride,
 }: {
   items: QueuedRequest[]
   now: Date
@@ -44,6 +45,7 @@ export function ReorderableColumn({
   canManageRequest: boolean
   jobTitles: QueueJobTitle[]
   onReordered: () => Promise<void>
+  onCompleteOverride?: (requestId: string) => Promise<void>
 }) {
   const [order, setOrder] = useState(items)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -211,6 +213,7 @@ export function ReorderableColumn({
               onDragPointerDown={canReorder ? (e) => onHandlePointerDown(e, request.id) : undefined}
               onDragPointerMove={canReorder ? onHandlePointerMove : undefined}
               onDragPointerUp={canReorder ? onHandlePointerUp : undefined}
+              onCompleteOverride={onCompleteOverride}
             />
           </div>
         )

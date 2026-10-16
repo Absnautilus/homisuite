@@ -28,6 +28,7 @@ interface PlatformContextValue {
   // docs/platform-admin-operational-context.md.
   operationalSession: PlatformOperationalSession | null
   openOperationalSession: (propertyId: string, reason?: string) => Promise<void>
+  openImpersonationSession: (propertyId: string, actingAsMembershipId: string, reason?: string) => Promise<void>
   closeOperationalSession: () => Promise<void>
   refreshOperationalSession: () => Promise<void>
   refresh: () => Promise<void>
@@ -105,6 +106,16 @@ export function PlatformProvider({ children }: PropsWithChildren) {
     await refreshOperationalSession()
   }, [refreshOperationalSession])
 
+  // "Visualizza come" (Fase C follow-up, Part 2) -- a strictly more
+  // sensitive action than a plain operational session (platform.
+  // impersonation.write, never platform.support.read alone). Reuses the
+  // same single-active-session table/invariant: opening one auto-closes
+  // any other session this admin holds, plain or impersonated.
+  const openImpersonationSession = useCallback(async (propertyId: string, actingAsMembershipId: string, reason?: string) => {
+    await core.openPlatformImpersonationSession(propertyId, actingAsMembershipId, reason)
+    await refreshOperationalSession()
+  }, [refreshOperationalSession])
+
   const closeOperationalSession = useCallback(async () => {
     if (!operationalSession) return
     await core.closePlatformOperationalSession(operationalSession.id)
@@ -149,10 +160,11 @@ export function PlatformProvider({ children }: PropsWithChildren) {
     hasPlatformPermission,
     operationalSession,
     openOperationalSession,
+    openImpersonationSession,
     closeOperationalSession,
     refreshOperationalSession,
     refresh: load,
-  }), [status, error, adminStatus, selectedOrganization, selectedProperty, selectOrganization, selectProperty, hasPlatformPermission, operationalSession, openOperationalSession, closeOperationalSession, refreshOperationalSession, load])
+  }), [status, error, adminStatus, selectedOrganization, selectedProperty, selectOrganization, selectProperty, hasPlatformPermission, operationalSession, openOperationalSession, openImpersonationSession, closeOperationalSession, refreshOperationalSession, load])
 
   return <PlatformContext.Provider value={value}>{children}</PlatformContext.Provider>
 }

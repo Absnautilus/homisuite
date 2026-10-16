@@ -92,13 +92,22 @@ export function OperationalViewLayout() {
   return (
     <div className="platform-operational-shell">
       <div className="platform-operational-banner">
-        <span><strong>ADMIN MASTER</strong> · {property.name} · Sola lettura</span>
+        <span>
+          <strong>ADMIN MASTER</strong> · {property.name} ·{' '}
+          {operationalSession.actingAsMembershipId
+            ? `Visualizza come ${operationalSession.actingAsFullName ?? 'un membro del team'}`
+            : 'Sola lettura'}
+        </span>
         <button type="button" onClick={() => void exitView()}>
           <LogOut size={14} /> Torna alla console
         </button>
       </div>
       <div className="platform-operational-content">
-        <PlatformOperationalRuntimeProvider property={property}>
+        <PlatformOperationalRuntimeProvider
+          property={property}
+          actingAsMembershipId={operationalSession.actingAsMembershipId}
+          actingAsFullName={operationalSession.actingAsFullName}
+        >
           <Outlet />
         </PlatformOperationalRuntimeProvider>
       </div>

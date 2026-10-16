@@ -1,7 +1,7 @@
 import { HousekeepingModule } from '@homisuite/housekeeping-module'
 import type { StaffProfile } from '@homisuite/housekeeping-module'
 import '@homisuite/housekeeping-module/style.css'
-import { supabase } from '../../core/client'
+import { core, supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { PageState } from '../../components/PageState'
 import { useHousekeepingAccess } from './useHousekeepingAccess'
@@ -61,21 +61,34 @@ export function HousekeepingModuleGate() {
   }
 
   const settings = runtime.property?.settings ?? {}
-  // Admin Master's read-only operational view (Fase C, C3c) never has, and
-  // must never be given, a real staff_profiles row -- this synthetic object
-  // is client-side only, scoped to this render, and never written back to
-  // the database. See HousekeepingModule's own readOnlyProfile doc comment.
+  const actingAsMembershipId = runtime.platformActingAsMembershipId
+  // Admin Master's operational view (Fase C, C3c) never has, and must never
+  // be given, a real staff_profiles row -- this synthetic object is
+  // client-side only, scoped to this render, and never written back to the
+  // database. See HousekeepingModule's own readOnlyProfile doc comment.
+  // When "viewing as" a specific team member (Part 2), her name replaces
+  // the generic "Admin Master" label -- the module renders as if logged in
+  // as that person, even though every write still goes out as Admin Master.
   const readOnlyProfile: StaffProfile | undefined = runtime.isPlatformOperationalView
     ? {
         id: 'platform-admin-operational-view',
         hotel_id: access.hotelId,
         auth_user_id: runtime.session?.user.id ?? 'platform-admin-operational-view',
-        name: 'Admin Master',
+        name: actingAsMembershipId ? (runtime.platformActingAsFullName ?? 'Membro del team') : 'Admin Master',
         role: 'operatore',
         department: null,
         active: true,
         on_duty: false,
       }
+    : undefined
+  // The one write wired so far (Fase C follow-up, Part 2): completing an
+  // in-progress guest request. Routed through the impersonated RPC instead
+  // of the module's own completeRequest(), which Admin Master's browser
+  // session could never satisfy via RLS directly -- see that RPC's own
+  // doc comment for the attribution contract (always Admin Master in
+  // platform_audit_log, never the viewed-as person).
+  const onCompleteOverride = actingAsMembershipId
+    ? (requestId: string) => core.completeGuestRequestAsPlatformImpersonation(requestId, actingAsMembershipId)
     : undefined
   return (
     <HousekeepingModule
@@ -94,6 +107,7 @@ export function HousekeepingModuleGate() {
         checkOutTime: typeof settings.checkOutTime === 'string' ? settings.checkOutTime : null,
       }}
       readOnlyProfile={readOnlyProfile}
+      onCompleteOverride={onCompleteOverride}
     />
   )
 }

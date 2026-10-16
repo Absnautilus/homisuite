@@ -216,6 +216,13 @@ export interface PlatformOperationalSession {
   reason: string | null
   openedAt: string
   expiresAt: string
+  // Set only for a "visualizza come" session (Fase C follow-up, Part 2) --
+  // null for a plain operational (read-only) session. Writes performed
+  // under such a session execute with THIS person's functional authority,
+  // but are always attributed to Admin Master herself in the audit log --
+  // never indistinguishable from actingAsFullName's own action.
+  actingAsMembershipId: string | null
+  actingAsFullName: string | null
 }
 
 export interface PlatformAuditLogEntry {
