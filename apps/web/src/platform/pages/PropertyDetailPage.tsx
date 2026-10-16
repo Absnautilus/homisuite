@@ -28,10 +28,11 @@ export function PropertyDetailPage() {
   const [confirmDialog, confirm] = useConfirm()
 
   // Per-property team management (Fase C, PR C5/C6) -- "crea nuovo utente (e
-  // vedi utenti)" plus full edit/archive/reset-password. Loading the panel
-  // opens an operational session the same way "Apri" already does -- a
-  // deliberate click, reused if one is already active for this property.
-  const [teamOpen, setTeamOpen] = useState(false)
+  // vedi utenti)" plus full edit/archive/reset-password. Loads automatically
+  // alongside Moduli, the same way an operational session opens the same
+  // way "Apri" already does, reused if one is already active for this
+  // property -- everything on this one page, no extra click (redesign
+  // feedback: "deve essere tutto in questa pagina").
   const [team, setTeam] = useState<PlatformTeamMember[] | null>(null)
   const [teamRoles, setTeamRoles] = useState<CoreRole[] | null>(null)
   const [teamJobTitles, setTeamJobTitles] = useState<JobTitle[] | null>(null)
@@ -53,6 +54,11 @@ export function PropertyDetailPage() {
   const [loadingViewAsCandidates, setLoadingViewAsCandidates] = useState(false)
   const [viewingAsMembershipId, setViewingAsMembershipId] = useState<string | null>(null)
   const viewAsTriggerRef = useRef<HTMLButtonElement>(null)
+
+  const canManage = hasPlatformPermission('platform.properties.manage')
+  const canOpenOperationalView = hasPlatformPermission('platform.support.read')
+  const canManageTeam = hasPlatformPermission('platform.team.manage')
+  const canImpersonate = hasPlatformPermission('platform.impersonation.write')
 
   useEffect(() => {
     if (!organizationId || !propertyId) return
@@ -136,9 +142,8 @@ export function PropertyDetailPage() {
     }
   }
 
-  async function openTeamPanel() {
+  async function loadTeam() {
     if (!propertyId) return
-    setTeamOpen(true)
     setLoadingTeam(true)
     setTeamError(null)
     try {
@@ -159,6 +164,15 @@ export function PropertyDetailPage() {
       setLoadingTeam(false)
     }
   }
+
+  // Loads as soon as the page can show it -- no separate "Gestisci team"
+  // click needed, per the redesign feedback that everything must live on
+  // this one page.
+  useEffect(() => {
+    if (!canManageTeam) return
+    void loadTeam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageTeam, propertyId])
 
   async function reloadTeam() {
     if (!propertyId) return
@@ -186,10 +200,6 @@ export function PropertyDetailPage() {
 
   const property = properties?.find((item) => item.id === propertyId)
   const propertyName = property?.name
-  const canManage = hasPlatformPermission('platform.properties.manage')
-  const canOpenOperationalView = hasPlatformPermission('platform.support.read')
-  const canManageTeam = hasPlatformPermission('platform.team.manage')
-  const canImpersonate = hasPlatformPermission('platform.impersonation.write')
 
   if (!organizationId || !propertyId) return null
 
@@ -207,11 +217,6 @@ export function PropertyDetailPage() {
           <p className="muted">Vista operativa, moduli e team di questa proprietà.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {canManageTeam && !teamOpen ? (
-            <Button variant="secondary" onClick={() => void openTeamPanel()}>
-              <UserPlus size={16} /> Gestisci team
-            </Button>
-          ) : null}
           {canManage && property ? (
             <Button ref={editTriggerRef} variant="secondary" onClick={() => setEditing(true)}>
               <Pencil size={16} /> Modifica
@@ -276,7 +281,7 @@ export function PropertyDetailPage() {
           </tbody>
         </table>
       ) : null}
-      {teamOpen ? (
+      {canManageTeam ? (
         <div className="platform-section">
           <div className="platform-page-head">
             <h2>Team</h2>
