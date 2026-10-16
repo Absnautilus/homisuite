@@ -9,8 +9,15 @@ function systemPrefersDark(): boolean {
 }
 
 export function readStoredThemePreference(): ThemePreference {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
+  } catch {
+    // Matches index.html's inline script: a browser/profile that throws on
+    // localStorage access (e.g. Safari with "Block all cookies") still gets
+    // a working, just non-persistent, theme instead of a thrown error.
+    return 'system'
+  }
 }
 
 export function resolveTheme(preference: ThemePreference): ResolvedTheme {
@@ -26,7 +33,12 @@ function applyResolvedTheme(resolved: ResolvedTheme) {
 }
 
 export function setThemePreference(preference: ThemePreference) {
-  localStorage.setItem(STORAGE_KEY, preference)
+  try {
+    localStorage.setItem(STORAGE_KEY, preference)
+  } catch {
+    // Same rationale as readStoredThemePreference(): the choice still
+    // applies for the rest of this session, it just won't persist.
+  }
   applyResolvedTheme(resolveTheme(preference))
   window.dispatchEvent(new CustomEvent<ThemePreference>(CHANGE_EVENT, { detail: preference }))
 }
