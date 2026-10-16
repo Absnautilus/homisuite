@@ -33,6 +33,9 @@ export type {
   PlatformOperationalSession,
   PlatformOperationalSessionStatus,
   PlatformOperationalSessionRecord,
+  PlatformTeamMember,
+  CreatePlatformTeamMemberInput,
+  CreatePlatformTeamMemberResult,
 } from './types/domain'
 
 export { GUEST_VERIFICATION_LEVEL } from './guestSession'

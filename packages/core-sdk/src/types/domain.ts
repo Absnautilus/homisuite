@@ -246,3 +246,41 @@ export interface PlatformOperationalSessionRecord {
   closedAt: string | null
   closedByFullName: string | null
 }
+
+// Platform Admin team management (Fase C, PR C5) -- the first write
+// capability past the original read-only boundary. Gated on
+// platform.team.manage + an active operational session, same four-fact
+// shape as every operational read, generalized by
+// platform_operational_action_allowed() to an arbitrary permission slug.
+export interface PlatformTeamMember {
+  membershipId: string
+  profileId: string
+  fullName: string | null
+  roleId: string
+  roleSlug: string
+  roleDisplayName: string
+  status: string
+  username: string | null
+  jobTitleId: string | null
+  jobTitleName: string | null
+  employmentStatus: EmploymentStatus
+  createdAt: string
+}
+
+// No email mode -- Admin Master's console always uses the
+// username+password path, same reasoning create-team-member-credentials
+// already gives for the ordinary Team page's "Credenziali" tab.
+export interface CreatePlatformTeamMemberInput {
+  propertyId: string
+  fullName: string
+  username: string
+  password: string
+  roleId: string
+  jobTitleId?: string | null
+}
+
+export interface CreatePlatformTeamMemberResult {
+  profileId: string
+  membershipId: string
+  loginIdentifier: string
+}

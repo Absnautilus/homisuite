@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule } from './types/domain'
+import type { CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformTeamMember } from './types/domain'
 
 // Platform Admin is deliberately its own small module, not folded into
 // memberships.ts/permissions.ts -- it never touches a membership, a role,
@@ -174,4 +174,57 @@ export async function getPlatformOperationalSessions(
 export async function revokePlatformOperationalSession(client: SupabaseClient<Database>, sessionId: string): Promise<void> {
   const { error } = await client.rpc('platform_revoke_operational_session', { p_session_id: sessionId })
   if (error) throw error
+}
+
+// Team management (Fase C, PR C5) -- the first write capability past the
+// original read-only boundary. Both RPCs are gated on
+// platform_operational_action_allowed(property_id, 'platform.team.manage'):
+// the standing permission plus an active, unexpired operational session on
+// that exact property, same shape as every operational read in this series.
+
+export async function getPlatformPropertyTeam(client: SupabaseClient<Database>, propertyId: string): Promise<PlatformTeamMember[]> {
+  const { data, error } = await client.rpc('platform_list_property_team', { p_property_id: propertyId })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    membershipId: row.membership_id,
+    profileId: row.profile_id,
+    fullName: row.full_name,
+    roleId: row.role_id,
+    roleSlug: row.role_slug,
+    roleDisplayName: row.role_display_name,
+    status: row.status,
+    username: row.username,
+    jobTitleId: row.job_title_id,
+    jobTitleName: row.job_title_name,
+    employmentStatus: row.employment_status as PlatformTeamMember['employmentStatus'],
+    createdAt: row.created_at,
+  }))
+}
+
+// Same "surface the Edge Function's own JSON error body, not the library's
+// generic message" need as createTeamMemberWithCredentials (team.ts) --
+// duplicated rather than imported, matching this file's own stated
+// boundary (platformAdmin.ts never reaches into the ordinary team/
+// membership modules, and vice versa).
+async function invokePlatformErrorMessage(error: unknown): Promise<Error> {
+  const context = (error as { context?: unknown } | null)?.context
+  if (context instanceof Response) {
+    try {
+      const body = await context.clone().json()
+      if (body && typeof (body as { error?: unknown }).error === 'string') {
+        return new Error((body as { error: string }).error)
+      }
+    } catch {
+      // response body wasn't JSON (or already consumed) -- fall through
+    }
+  }
+  return error instanceof Error ? error : new Error(String(error))
+}
+
+export async function createPlatformTeamMember(
+  client: SupabaseClient<Database>, input: CreatePlatformTeamMemberInput,
+): Promise<CreatePlatformTeamMemberResult> {
+  const { data, error } = await client.functions.invoke('platform-create-team-member', { body: input })
+  if (error) throw await invokePlatformErrorMessage(error)
+  return data as CreatePlatformTeamMemberResult
 }
