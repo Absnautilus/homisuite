@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Boxes, ScrollText, ShieldAlert } from 'lucide-react'
+import { Boxes, History, ScrollText, ShieldAlert } from 'lucide-react'
 import { PageState } from '../components/PageState'
 import { LoginScreen } from '../components/LoginScreen'
 import { usePlatformContext } from './PlatformContext'
@@ -68,6 +68,11 @@ export function PlatformLayout() {
         {runtime.hasPlatformPermission('platform.audit.read') ? (
           <NavLink className={({ isActive }) => `platform-nav-item${isActive ? ' active' : ''}`} to="/admin/audit">
             <ScrollText size={17} /><span>Registro attività</span>
+          </NavLink>
+        ) : null}
+        {runtime.hasPlatformPermission('platform.audit.read') ? (
+          <NavLink className={({ isActive }) => `platform-nav-item${isActive ? ' active' : ''}`} to="/admin/sessions">
+            <History size={17} /><span>Sessioni operative</span>
           </NavLink>
         ) : null}
       </aside>

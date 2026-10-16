@@ -32,6 +32,7 @@ export type {
   PlatformAuditLogEntry,
   PlatformOperationalSession,
   PlatformOperationalSessionStatus,
+  PlatformOperationalSessionRecord,
 } from './types/domain'
 
 export { GUEST_VERIFICATION_LEVEL } from './guestSession'

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import type { PlatformProperty } from '@homisuite/core-sdk'
 import { core } from '../core/client'
@@ -16,12 +16,18 @@ import { PlatformOperationalRuntimeProvider } from './PlatformOperationalRuntime
 export function OperationalViewLayout() {
   const { organizationId, propertyId } = useParams<{ organizationId: string; propertyId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { operationalSession, closeOperationalSession, refreshOperationalSession } = usePlatformContext()
   const [property, setProperty] = useState<PlatformProperty | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const expiryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const sessionMatches = operationalSession?.status === 'active' && operationalSession.propertyId === propertyId
+  // The last path segment under .../view/ (turni, dining, housekeeping) --
+  // good enough as an audit-trail module identifier without plumbing the
+  // module's own `slug` down to this layout, which sits above the route
+  // that actually resolves it.
+  const moduleRoute = location.pathname.split('/').filter(Boolean).pop() ?? null
 
   useEffect(() => {
     if (!organizationId || !propertyId || !sessionMatches) return
@@ -47,6 +53,21 @@ export function OperationalViewLayout() {
     expiryTimer.current = setTimeout(() => { void refreshOperationalSession() }, Math.max(msRemaining, 0))
     return () => clearTimeout(expiryTimer.current)
   }, [operationalSession, refreshOperationalSession])
+
+  // Logs one audit entry per module view actually entered under this
+  // session (Fase C, PR C4) -- distinct from, and in addition to, the
+  // session's own open/close/revoke entries, which only cover when "in
+  // view" changed, not which module data was actually consulted while it
+  // was. Fire-and-forget: a logging failure must never block rendering an
+  // already-authorized read (platform_operational_read_allowed() via C2's
+  // RLS already granted it independently), so errors are swallowed here,
+  // not surfaced to the admin.
+  useEffect(() => {
+    if (!sessionMatches || !operationalSession || !moduleRoute) return
+    void core.logPlatformOperationalView(operationalSession.id, moduleRoute).catch((cause) => {
+      console.error('platform_log_operational_view failed', cause)
+    })
+  }, [sessionMatches, operationalSession, moduleRoute])
 
   if (!organizationId || !propertyId) return null
 

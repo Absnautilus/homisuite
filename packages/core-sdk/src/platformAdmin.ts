@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOrganization, PlatformProperty, PlatformPropertyModule } from './types/domain'
+import type { PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule } from './types/domain'
 
 // Platform Admin is deliberately its own small module, not folded into
 // memberships.ts/permissions.ts -- it never touches a membership, a role,
@@ -137,4 +137,41 @@ export async function getMyPlatformOperationalSession(client: SupabaseClient<Dat
     openedAt: row.opened_at,
     expiresAt: row.expires_at,
   }
+}
+
+// Granular audit + session history (Fase C, PR C4) -- see
+// platform_log_operational_view's own doc comment for why this never
+// gates the read it accompanies: it only records that an already-
+// authorized view happened.
+
+export async function logPlatformOperationalView(
+  client: SupabaseClient<Database>, sessionId: string, moduleSlug: string,
+): Promise<void> {
+  const { error } = await client.rpc('platform_log_operational_view', { p_session_id: sessionId, p_module_slug: moduleSlug })
+  if (error) throw error
+}
+
+export async function getPlatformOperationalSessions(
+  client: SupabaseClient<Database>, limit = 50, offset = 0,
+): Promise<PlatformOperationalSessionRecord[]> {
+  const { data, error } = await client.rpc('platform_list_operational_sessions', { p_limit: limit, p_offset: offset })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    platformAdminId: row.platform_admin_id,
+    adminFullName: row.admin_full_name,
+    propertyId: row.property_id,
+    propertyName: row.property_name,
+    status: row.status as PlatformOperationalSessionStatus,
+    reason: row.reason,
+    openedAt: row.opened_at,
+    expiresAt: row.expires_at,
+    closedAt: row.closed_at,
+    closedByFullName: row.closed_by_full_name,
+  }))
+}
+
+export async function revokePlatformOperationalSession(client: SupabaseClient<Database>, sessionId: string): Promise<void> {
+  const { error } = await client.rpc('platform_revoke_operational_session', { p_session_id: sessionId })
+  if (error) throw error
 }

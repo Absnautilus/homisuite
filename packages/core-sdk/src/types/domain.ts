@@ -228,3 +228,21 @@ export interface PlatformAuditLogEntry {
   metadata: Record<string, unknown> | null
   createdAt: string
 }
+
+// The console's session-history view (Fase C, PR C4) -- across every
+// admin, not just the caller's own; see platform_list_operational_sessions's
+// own doc comment for why this is gated on platform.audit.read rather than
+// platform.support.read.
+export interface PlatformOperationalSessionRecord {
+  id: string
+  platformAdminId: string
+  adminFullName: string | null
+  propertyId: string
+  propertyName: string | null
+  status: PlatformOperationalSessionStatus
+  reason: string | null
+  openedAt: string
+  expiresAt: string
+  closedAt: string | null
+  closedByFullName: string | null
+}
