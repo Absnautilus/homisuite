@@ -1,0 +1,36 @@
+/* Platform Admin console — deliberately its own small stylesheet, not mixed
+   into shell-completion.css: this chrome never renders inside ShellLayout,
+   so it doesn't need to share that file's hotel-shell-specific rules. */
+
+.platform-shell { min-height: 100%; display: flex; }
+.platform-sidebar { width: 240px; flex: 0 0 auto; background: var(--surface); border-right: 1px solid var(--line); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.platform-sidebar-brand { display: flex; align-items: center; gap: 8px; padding: 8px 10px 16px; font-weight: 800; color: var(--ink); }
+.platform-sidebar-brand small { display: block; font-weight: 600; color: var(--muted); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; }
+.platform-nav-item { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13px; }
+.platform-nav-item.active, .platform-nav-item:hover { background: var(--accent-soft); color: var(--accent); }
+.platform-content { flex: 1 1 auto; padding: 24px 28px; max-width: 980px; }
+.platform-content h1 { margin: 0 0 4px; font-size: 20px; }
+.platform-breadcrumb { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+.platform-breadcrumb button { border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
+
+.platform-page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.platform-page-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.platform-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.platform-table th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.platform-table td { padding: 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.platform-table tr.clickable { cursor: pointer; }
+.platform-table tr.clickable:hover td { background: var(--surface-2); }
+
+.platform-mfa-gate { min-height: 100vh; display: grid; place-items: center; background: var(--surface-2); padding: 16px; }
+.platform-mfa-card { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-lg); }
+.platform-mfa-card h1 { font-size: 17px; margin: 0 0 8px; }
+.platform-mfa-enroll { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 16px 0; }
+.platform-mfa-enroll img { border: 1px solid var(--line); border-radius: var(--r-sm); }
+.platform-mfa-secret { font-size: 11px; color: var(--muted); word-break: break-all; text-align: center; }
+.platform-mfa-form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.platform-mfa-form label { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.platform-mfa-form input { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: inherit; letter-spacing: .15em; font-size: 16px; text-align: center; }
+
+.platform-badge { display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--surface-2); color: var(--muted); }
+.platform-badge.enabled { background: var(--accent-soft); color: var(--accent); }

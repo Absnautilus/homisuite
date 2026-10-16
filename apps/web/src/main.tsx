@@ -7,6 +7,7 @@ import { initTheme } from './lib/theme'
 import './styles.css'
 import './shell-effects.css'
 import './shell-completion.css'
+import './platform/platform.css'
 
 // The *initial* data-theme attribute is already set synchronously by the
 // inline script in index.html (before this module, or any CSS/paint, even

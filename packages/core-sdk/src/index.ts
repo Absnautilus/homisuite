@@ -25,6 +25,11 @@ export type {
   ModuleEntitlement,
   ModuleDescriptor,
   MemberPermissionStatus,
+  PlatformAdminStatus,
+  PlatformOrganization,
+  PlatformProperty,
+  PlatformPropertyModule,
+  PlatformAuditLogEntry,
 } from './types/domain'
 
 export { GUEST_VERIFICATION_LEVEL } from './guestSession'

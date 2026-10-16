@@ -579,6 +579,75 @@ export interface Database {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string }
         Returns: undefined
       }
+      is_platform_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      platform_has_permission: {
+        Args: { p_permission_slug: string }
+        Returns: boolean
+      }
+      platform_mfa_satisfied: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      platform_admin_self_status: {
+        Args: Record<string, never>
+        Returns: { is_admin: boolean; status: string | null; mfa_satisfied: boolean; permissions: string[] }[]
+      }
+      set_platform_admin_status: {
+        Args: { p_platform_admin_id: string; p_status: string }
+        Returns: undefined
+      }
+      platform_log_console_access: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
+      platform_list_organizations: {
+        Args: Record<string, never>
+        Returns: { id: string; name: string; slug: string; created_at: string }[]
+      }
+      platform_list_properties: {
+        Args: { p_organization_id: string }
+        Returns: { id: string; organization_id: string; name: string; slug: string; status: string; timezone: string; created_at: string }[]
+      }
+      platform_list_property_modules: {
+        Args: { p_property_id: string }
+        Returns: { module_id: string; slug: string; display_name: string; enabled: boolean }[]
+      }
+      platform_list_audit_log: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          id: string
+          actor_profile_id: string | null
+          actor_full_name: string | null
+          action: string
+          target_type: string | null
+          target_id: string | null
+          metadata: Json | null
+          created_at: string
+        }[]
+      }
+      platform_create_organization: {
+        Args: { p_name: string; p_slug: string }
+        Returns: string
+      }
+      platform_update_organization: {
+        Args: { p_organization_id: string; p_name: string }
+        Returns: undefined
+      }
+      platform_create_property: {
+        Args: { p_organization_id: string; p_name: string; p_slug: string; p_timezone?: string }
+        Returns: string
+      }
+      platform_update_property: {
+        Args: { p_property_id: string; p_name: string; p_timezone: string; p_status: string }
+        Returns: undefined
+      }
+      platform_set_property_module: {
+        Args: { p_property_id: string; p_module_slug: string; p_enabled: boolean }
+        Returns: undefined
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

@@ -8,6 +8,12 @@ import { ModulesPage } from '../pages/ModulesPage'
 import { TeamPage } from '../pages/TeamPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
+import { PlatformProvider } from '../platform/PlatformContext'
+import { PlatformLayout } from '../platform/PlatformLayout'
+import { OrganizationsPage } from '../platform/pages/OrganizationsPage'
+import { OrganizationDetailPage } from '../platform/pages/OrganizationDetailPage'
+import { PropertyDetailPage } from '../platform/pages/PropertyDetailPage'
+import { AuditLogPage } from '../platform/pages/AuditLogPage'
 
 const HousekeepingModuleGate = lazy(async () => {
   const module = await import('../modules/housekeeping/HousekeepingModuleGate')
@@ -31,6 +37,18 @@ export function App() {
           recovery session and must render before ModuleRuntimeContext's
           signed-in/profile/property checks ever get a say. */}
       <Route path="reimposta-password" element={<ResetPasswordPage />} />
+      {/* Platform Admin console -- also outside ShellLayout/ModuleRuntimeContext,
+          same reasoning: a Platform Admin with zero hotel memberships must
+          never hit ModuleRuntimeContext's "no-property" dead end just to
+          reach /admin. PlatformProvider is its own, separate runtime (see
+          PlatformContext.tsx) -- nothing here reads or writes the hotel
+          shell's active-property state. */}
+      <Route path="admin" element={<PlatformProvider><PlatformLayout /></PlatformProvider>}>
+        <Route index element={<OrganizationsPage />} />
+        <Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
+        <Route path="organizations/:organizationId/properties/:propertyId" element={<PropertyDetailPage />} />
+        <Route path="audit" element={<AuditLogPage />} />
+      </Route>
       <Route element={<ShellLayout />}>
         <Route index element={<HomePage />} />
         <Route path="housekeeping/*" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
