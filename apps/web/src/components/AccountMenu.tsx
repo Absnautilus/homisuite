@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { dropdownTransitionClassName, useDropdownTransition } from '@homisuite/ui'
-import { ChevronDown, Languages, LogOut, UserRound } from 'lucide-react'
+import { ChevronDown, Languages, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../core/client'
+import { readStoredThemePreference, resolveTheme, setThemePreference, subscribeThemeChange } from '../lib/theme'
 import { LanguageToggle } from './LanguageToggle'
 
 export function AccountMenu({ name }: { name: string }) {
@@ -10,6 +11,16 @@ export function AccountMenu({ name }: { name: string }) {
   const { state, mounted } = useDropdownTransition(open)
   const rootRef = useRef<HTMLDivElement>(null)
   const initials = name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase() || 'HF'
+  // Tracks the *resolved* light/dark theme, not the raw preference (which
+  // can be 'system') -- this is a binary quick-toggle, not the 3-way
+  // Light/Dark/System radiogroup that lives in Settings (ThemeToggle).
+  const [resolvedTheme, setResolvedTheme] = useState(() => resolveTheme(readStoredThemePreference()))
+
+  useEffect(() => subscribeThemeChange(() => setResolvedTheme(resolveTheme(readStoredThemePreference()))), [])
+
+  function toggleTheme() {
+    setThemePreference(resolvedTheme === 'dark' ? 'light' : 'dark')
+  }
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -53,6 +64,25 @@ export function AccountMenu({ name }: { name: string }) {
           </div>
         </div>
       )}
+      {/* Always visible, not tucked inside the popover above: the theme is
+          changed often enough during the day (natural light, evening use)
+          to deserve a direct, single-click affordance, the same reasoning
+          already applied to "Esci" below -- unlike Lingua, which stays in
+          the popover as a rarely-touched choice. The icon shown is the
+          *destination* theme, not the current one (Moon while light is
+          active means "switch to dark"), matching common dark-mode toggle
+          conventions. Full Light/Dark/System control stays in Settings'
+          ThemeToggle for anyone who wants that level of control. */}
+      <button
+        className="account-theme-toggle"
+        type="button"
+        aria-label={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+        title={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+        onClick={toggleTheme}
+      >
+        {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        <span>{resolvedTheme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}</span>
+      </button>
       {/* Always visible, not tucked inside the popover above: signing out is
           common enough on a shared front-desk device to deserve its own
           permanent affordance, not a click to reveal it first. */}

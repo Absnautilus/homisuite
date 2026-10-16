@@ -55,6 +55,12 @@ export function initTheme(): () => void {
   function onSystemChange() {
     if (readStoredThemePreference() === 'system') {
       applyResolvedTheme(resolveTheme('system'))
+      // Not a preference change -- the user is still on 'system' -- but
+      // anything displaying the *resolved* theme rather than the raw
+      // preference (e.g. a binary toggle icon, unlike ThemeToggle's 3-way
+      // radio which only ever highlights 'system' itself) needs to know the
+      // resolved value just changed too.
+      window.dispatchEvent(new CustomEvent<ThemePreference>(CHANGE_EVENT, { detail: 'system' }))
     }
   }
   media.addEventListener('change', onSystemChange)
