@@ -46,7 +46,12 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'guest_requests')
   const propertyId = runtime.property?.id ?? null
   const userId = runtime.session?.user.id ?? null
-  const cacheKey = entitled ? (propertyId && userId ? `${propertyId}:${userId}` : null) : 'not-entitled'
+  const operationalReadOnly = runtime.isPlatformOperationalView
+  const cacheKey = entitled
+    ? propertyId && (userId || operationalReadOnly)
+      ? `${propertyId}:${userId ?? 'operational'}`
+      : null
+    : 'not-entitled'
 
   const [state, setState] = useState<HousekeepingAccessState>(() => (cacheKey && resolvedAccessCache.get(cacheKey)) || { status: 'loading' })
 
@@ -63,7 +68,7 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
         cancelled = true
       }
     }
-    if (!propertyId || !userId) {
+    if (!propertyId || (!userId && !operationalReadOnly)) {
       setState({ status: 'loading' })
       return () => {
         cancelled = true
@@ -71,6 +76,7 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
     }
 
     setState({ status: 'loading' })
+    const resolvedCacheKey = `${propertyId}:${userId ?? 'operational'}`
 
     void core
       .getGuestRequestsLegacyHotelId(propertyId)
@@ -78,10 +84,20 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
         if (cancelled) return
         if (!hotelId) {
           const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: null, hasCompatibleProfile: false })
-          resolvedAccessCache.set(`${propertyId}:${userId}`, resolved)
+          resolvedAccessCache.set(resolvedCacheKey, resolved)
           setState(resolved)
           return
         }
+        if (operationalReadOnly) {
+          const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: false, operationalReadOnly: true })
+          resolvedAccessCache.set(resolvedCacheKey, resolved)
+          setState(resolved)
+          return
+        }
+        // Guaranteed non-null here: the top-level guard above only lets
+        // execution reach this point with userId === null when
+        // operationalReadOnly is true, which already returned above.
+        if (!userId) return
         const { data, error } = await supabase
           .from('staff_profiles')
           .select('id')
@@ -99,7 +115,7 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
           return
         }
         const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: Boolean(data) })
-        resolvedAccessCache.set(`${propertyId}:${userId}`, resolved)
+        resolvedAccessCache.set(resolvedCacheKey, resolved)
         setState(resolved)
       })
       .catch((cause: unknown) => {
@@ -111,7 +127,7 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
     return () => {
       cancelled = true
     }
-  }, [propertyId, entitled, userId, cacheKey])
+  }, [propertyId, entitled, userId, cacheKey, operationalReadOnly])
 
   return state
 }

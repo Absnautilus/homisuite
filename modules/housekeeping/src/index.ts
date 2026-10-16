@@ -5,3 +5,4 @@ export type {
   PlatformStaffManagementLink,
   PlatformHotelSettings,
 } from './public/HousekeepingModule'
+export type { StaffProfile } from './lib/staff-types'

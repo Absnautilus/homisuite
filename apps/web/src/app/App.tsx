@@ -57,6 +57,7 @@ export function App() {
         <Route path="organizations/:organizationId/properties/:propertyId/view" element={<OperationalViewLayout />}>
           <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
           <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
+          <Route path="housekeeping" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
         </Route>
         <Route path="audit" element={<AuditLogPage />} />
       </Route>

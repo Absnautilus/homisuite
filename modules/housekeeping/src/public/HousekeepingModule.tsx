@@ -4,6 +4,7 @@ import { UiScaleProvider } from '@/lib/ui-scale-context'
 import { HotelBrandingProvider } from '@/lib/hotel-branding-context'
 import { configureSupabaseClient } from '@/lib/supabase'
 import { StaffApp } from '@/staff/staff-app'
+import type { StaffProfile } from '@/lib/staff-types'
 import '../embedded.css'
 
 export interface HousekeepingCapabilities {
@@ -54,6 +55,15 @@ export interface HousekeepingModuleProps {
    * times used to prefill a new stay's dates. Omit in standalone mode.
    */
   hotelSettings?: PlatformHotelSettings
+  /**
+   * Shell-supplied synthetic identity for a viewer who is authorized to read
+   * this hotel's Housekeeping data (server-side RLS) but deliberately has no
+   * `staff_profiles` row of their own -- e.g. Platform Admin's read-only
+   * operational view. When supplied, StaffApp renders directly from this
+   * object instead of resolving `fetchMyProfile()`, and it is never written
+   * back to the database. Omit for every ordinary embedding.
+   */
+  readOnlyProfile?: StaffProfile
 }
 
 /**
@@ -71,6 +81,7 @@ export function HousekeepingModule({
   capabilities,
   platformStaffManagement,
   hotelSettings,
+  readOnlyProfile,
 }: HousekeepingModuleProps) {
   // This compatibility boundary must run before StaffApp effects or API calls
   // so integrated mode never creates Housekeeping's standalone Supabase client.
@@ -88,6 +99,7 @@ export function HousekeepingModule({
               capabilities={capabilities}
               platformStaffManagement={platformStaffManagement}
               hotelSettings={hotelSettings}
+              readOnlyProfile={readOnlyProfile}
             />
           </HotelBrandingProvider>
         </UiScaleProvider>
