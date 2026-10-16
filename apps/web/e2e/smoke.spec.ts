@@ -120,7 +120,10 @@ test('organization admin can manage a Housekeeping request category and its item
   await categoryRow.getByRole('button', { name: '+ Aggiungi elemento', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Categoria *', exact: true })).toHaveText(categoryName)
   await page.getByRole('textbox', { name: 'Nome *', exact: true }).fill(itemName)
-  await page.getByRole('button', { name: 'Aggiungi elemento' }).click()
+  // Without exact:true this also matches the inline "+ Aggiungi elemento"
+  // shortcut just clicked above -- Playwright's non-exact name matching is
+  // substring-based, and "Aggiungi elemento" is a substring of that.
+  await page.getByRole('button', { name: 'Aggiungi elemento', exact: true }).click()
   await expect(page.getByText(itemName, { exact: true })).toBeVisible()
 
   // Once expanded, categoryRow also contains the new item's own "Rimuovi"
