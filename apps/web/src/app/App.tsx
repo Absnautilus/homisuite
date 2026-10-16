@@ -56,6 +56,7 @@ export function App() {
             differs (PlatformOperationalRuntimeProvider). */}
         <Route path="organizations/:organizationId/properties/:propertyId/view" element={<OperationalViewLayout />}>
           <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
+          <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
         </Route>
         <Route path="audit" element={<AuditLogPage />} />
       </Route>

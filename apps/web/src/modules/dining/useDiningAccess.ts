@@ -29,6 +29,7 @@ export function useDiningAccess(): DiningAccessState {
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'dining')
   const propertyId = runtime.property?.id ?? null
   const userId = runtime.session?.user.id ?? null
+  const operationalReadOnly = runtime.isPlatformOperationalView
 
   useEffect(() => {
     let cancelled = false
@@ -39,7 +40,7 @@ export function useDiningAccess(): DiningAccessState {
         cancelled = true
       }
     }
-    if (!propertyId || !userId) {
+    if (!propertyId || (!userId && !operationalReadOnly)) {
       setState({ status: 'loading' })
       return () => {
         cancelled = true
@@ -56,6 +57,14 @@ export function useDiningAccess(): DiningAccessState {
           setState(resolveDiningAccess({ entitled: true, legacyHotelId: null, staffProfileId: null }))
           return
         }
+        if (operationalReadOnly) {
+          setState(resolveDiningAccess({ entitled: true, legacyHotelId: hotelId, staffProfileId: null, operationalReadOnly: true }))
+          return
+        }
+        // Guaranteed non-null here: the top-level guard above only lets
+        // execution reach this point with userId === null when
+        // operationalReadOnly is true, which already returned above.
+        if (!userId) return
         // Database is still a hand-maintained pre-Fase-2 type map: this
         // three-.eq() chain resolves `data`'s row type to `never` (a known
         // supabase-js generic-inference limitation, not a real absence of
@@ -90,7 +99,7 @@ export function useDiningAccess(): DiningAccessState {
     return () => {
       cancelled = true
     }
-  }, [propertyId, entitled, userId])
+  }, [propertyId, entitled, userId, operationalReadOnly])
 
   return state
 }

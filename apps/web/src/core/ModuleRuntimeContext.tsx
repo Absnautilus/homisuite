@@ -17,6 +17,13 @@ interface ModuleRuntimeValue {
   entitlements: ModuleEntitlement[]
   selectProperty: (propertyId: string) => void
   hasPermission: (permissionSlug: string) => Promise<boolean>
+  // true only under PlatformOperationalRuntimeProvider -- lets a module's
+  // own access gate (Dining's useDiningAccess, Housekeeping's StaffApp)
+  // distinguish "real tenant staff with no operational profile yet" (a
+  // real dead end) from "Admin Master's read-only operational view" (never
+  // has one, never should), without that gate needing to import anything
+  // Platform-Admin-specific itself. Always false for real hotel staff.
+  isPlatformOperationalView: boolean
   refresh: () => Promise<void>
 }
 
@@ -151,6 +158,7 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
     entitlements,
     selectProperty,
     hasPermission,
+    isPlatformOperationalView: false,
     refresh: load,
   }), [status, error, session, profile, properties, property, membership, entitlements, selectProperty, hasPermission, load])
 
