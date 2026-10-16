@@ -20,7 +20,12 @@ interface ModuleRuntimeValue {
   refresh: () => Promise<void>
 }
 
-const ModuleRuntimeContext = createContext<ModuleRuntimeValue | null>(null)
+// Exported (not just the hook) so the Platform Admin operational view can
+// supply an alternate value through this exact same context -- the real
+// module screens (ShiftPlannerPage today) then render unmodified under
+// either provider. See platform/PlatformOperationalRuntime.tsx.
+export const ModuleRuntimeContext = createContext<ModuleRuntimeValue | null>(null)
+export type { ModuleRuntimeValue }
 const PROPERTY_STORAGE_KEY = 'hotsflow.activePropertyId'
 
 export function ModuleRuntimeProvider({ children }: PropsWithChildren) {

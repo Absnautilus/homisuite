@@ -10,6 +10,7 @@ import { SettingsPage } from '../pages/SettingsPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { PlatformProvider } from '../platform/PlatformContext'
 import { PlatformLayout } from '../platform/PlatformLayout'
+import { OperationalViewLayout } from '../platform/OperationalViewLayout'
 import { OrganizationsPage } from '../platform/pages/OrganizationsPage'
 import { OrganizationDetailPage } from '../platform/pages/OrganizationDetailPage'
 import { PropertyDetailPage } from '../platform/pages/PropertyDetailPage'
@@ -47,6 +48,15 @@ export function App() {
         <Route index element={<OrganizationsPage />} />
         <Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
         <Route path="organizations/:organizationId/properties/:propertyId" element={<PropertyDetailPage />} />
+        {/* Operational view -- real module screens, read-only, under an
+            explicitly opened operational session (OperationalViewLayout
+            itself enforces this, redirecting back here otherwise). Reuses
+            the exact same lazy ShiftPlannerPage the hotel shell route
+            below renders for real staff -- only the data source feeding it
+            differs (PlatformOperationalRuntimeProvider). */}
+        <Route path="organizations/:organizationId/properties/:propertyId/view" element={<OperationalViewLayout />}>
+          <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
+        </Route>
         <Route path="audit" element={<AuditLogPage />} />
       </Route>
       <Route element={<ShellLayout />}>

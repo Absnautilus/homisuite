@@ -30,6 +30,8 @@ export type {
   PlatformProperty,
   PlatformPropertyModule,
   PlatformAuditLogEntry,
+  PlatformOperationalSession,
+  PlatformOperationalSessionStatus,
 } from './types/domain'
 
 export { GUEST_VERIFICATION_LEVEL } from './guestSession'

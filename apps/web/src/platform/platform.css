@@ -34,3 +34,20 @@
 
 .platform-badge { display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--surface-2); color: var(--muted); }
 .platform-badge.enabled { background: var(--accent-soft); color: var(--accent); }
+
+/* Operational view (Fase C, PR C3) — deliberately a loud, unmissable band,
+   never something that could be mistaken for the hotel shell's own chrome:
+   this is the one place a Platform Admin sees a module's real operational
+   data, and she must never lose track of that while scrolling the screen
+   below it. */
+.platform-operational-shell { min-height: 100%; display: flex; flex-direction: column; }
+.platform-operational-banner {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--amber-bg); color: var(--amber-ink);
+  border-bottom: 1px solid var(--line-strong); font-size: 13px; font-weight: 600;
+}
+.platform-operational-banner button {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid currentColor; background: transparent;
+  color: inherit; font: inherit; font-weight: 700; padding: 6px 12px; border-radius: var(--r-sm); cursor: pointer;
+}
+.platform-operational-content { flex: 1 1 auto; overflow: auto; }

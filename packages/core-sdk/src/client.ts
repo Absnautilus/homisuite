@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOrganization, PlatformProperty, PlatformPropertyModule, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
+import type { ArchiveTeamMemberInput, CoreRole, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOrganization, PlatformProperty, PlatformPropertyModule, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
 import { getCurrentProfile, updateCurrentProfile } from './profile'
 import { deleteDevicePushSubscription, isDevicePushSubscribed, saveDevicePushSubscription, type DevicePushSubscriptionKeys } from './devicePush'
 import { getAccessibleProperties, getMembership, updateProperty } from './memberships'
@@ -9,7 +9,7 @@ import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
-import { createPlatformOrganization, createPlatformProperty, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, logPlatformConsoleAccess, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty } from './platformAdmin'
+import { closePlatformOperationalSession, createPlatformOrganization, createPlatformProperty, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, logPlatformConsoleAccess, openPlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty } from './platformAdmin'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -58,6 +58,9 @@ export interface CoreClient {
   createPlatformProperty: (organizationId: string, name: string, slug: string, timezone?: string) => Promise<string>
   updatePlatformProperty: (propertyId: string, name: string, timezone: string, status: string) => Promise<void>
   setPlatformPropertyModule: (propertyId: string, moduleSlug: string, enabled: boolean) => Promise<void>
+  openPlatformOperationalSession: (propertyId: string, reason?: string) => Promise<string>
+  closePlatformOperationalSession: (sessionId: string) => Promise<void>
+  getMyPlatformOperationalSession: () => Promise<PlatformOperationalSession | null>
 }
 
 export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): CoreClient {
@@ -106,5 +109,8 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     createPlatformProperty: (organizationId, name, slug, timezone) => createPlatformProperty(raw, organizationId, name, slug, timezone),
     updatePlatformProperty: (propertyId, name, timezone, status) => updatePlatformProperty(raw, propertyId, name, timezone, status),
     setPlatformPropertyModule: (propertyId, moduleSlug, enabled) => setPlatformPropertyModule(raw, propertyId, moduleSlug, enabled),
+    openPlatformOperationalSession: (propertyId, reason) => openPlatformOperationalSession(raw, propertyId, reason),
+    closePlatformOperationalSession: (sessionId) => closePlatformOperationalSession(raw, sessionId),
+    getMyPlatformOperationalSession: () => getMyPlatformOperationalSession(raw),
   }
 }
