@@ -12,9 +12,15 @@ import { core, supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
-import { readStoredThemePreference, subscribeThemeChange } from '../lib/theme'
+import { readStoredThemePreference, resolveTheme, subscribeThemeChange } from '../lib/theme'
 
-const THEME_LABELS = { light: 'Chiaro', dark: 'Scuro', system: 'Sistema' } as const
+// ThemeToggle below is now a 2-way light/dark switch, not a 3-way
+// light/dark/system one -- this sublabel has to track the same *resolved*
+// value it does, or the two would read differently for the same state
+// (this label said "Sistema" while the toggle highlighted "Chiaro" or
+// "Scuro", whichever the OS resolved to -- the mismatch that prompted
+// simplifying ThemeToggle in the first place).
+const THEME_LABELS = { light: 'Chiaro', dark: 'Scuro' } as const
 
 export function SettingsPage() {
   const runtime = useModuleRuntime()
@@ -23,7 +29,7 @@ export function SettingsPage() {
   const propertyName = runtime.property?.name ?? 'Struttura'
   const profileName = runtime.profile?.fullName ?? 'Utente Homisuite'
   const [language, setLanguage] = useState(() => localStorage.getItem('homisuite.language') === 'en' ? 'en' : 'it')
-  const [theme, setTheme] = useState(readStoredThemePreference)
+  const [theme, setTheme] = useState(() => resolveTheme(readStoredThemePreference()))
   const [propertyOpen, setPropertyOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [securityOpen, setSecurityOpen] = useState(false)
@@ -47,7 +53,7 @@ export function SettingsPage() {
     return () => window.removeEventListener('homisuite:language-change', syncLanguage)
   }, [])
 
-  useEffect(() => subscribeThemeChange(setTheme), [])
+  useEffect(() => subscribeThemeChange(() => setTheme(resolveTheme(readStoredThemePreference()))), [])
 
   return (
     <div className="page-stack settings-page">
