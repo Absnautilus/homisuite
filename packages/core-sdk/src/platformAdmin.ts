@@ -136,6 +136,8 @@ export async function getMyPlatformOperationalSession(client: SupabaseClient<Dat
     reason: row.reason,
     openedAt: row.opened_at,
     expiresAt: row.expires_at,
+    actingAsMembershipId: row.acting_as_membership_id,
+    actingAsFullName: row.acting_as_full_name,
   }
 }
 
@@ -227,4 +229,33 @@ export async function createPlatformTeamMember(
   const { data, error } = await client.functions.invoke('platform-create-team-member', { body: input })
   if (error) throw await invokePlatformErrorMessage(error)
   return data as CreatePlatformTeamMemberResult
+}
+
+// "Visualizza come" with real writes (Fase C follow-up, Part 2). Opening
+// this session is a strictly more sensitive action than a plain
+// operational session -- platform.impersonation.write, never
+// platform.support.read alone -- and the acting-as person is fixed for the
+// session's whole lifetime, never swapped mid-session.
+
+export async function openPlatformImpersonationSession(
+  client: SupabaseClient<Database>, propertyId: string, actingAsMembershipId: string, reason?: string,
+): Promise<string> {
+  const { data, error } = await client.rpc('platform_open_impersonation_session', {
+    p_property_id: propertyId, p_acting_as_membership_id: actingAsMembershipId, p_reason: reason ?? null,
+  })
+  if (error) throw error
+  return data
+}
+
+// The one write this PR adds: Housekeeping's in_progress->completed
+// transition, executed with the acting-as person's functional authority but
+// always attributed to Admin Master herself in platform_audit_log -- see
+// platform_impersonated_complete_guest_request's own doc comment.
+export async function completeGuestRequestAsPlatformImpersonation(
+  client: SupabaseClient<Database>, guestRequestId: string, actingAsMembershipId: string,
+): Promise<void> {
+  const { error } = await client.rpc('platform_impersonated_complete_guest_request', {
+    p_guest_request_id: guestRequestId, p_acting_as_membership_id: actingAsMembershipId,
+  })
+  if (error) throw error
 }

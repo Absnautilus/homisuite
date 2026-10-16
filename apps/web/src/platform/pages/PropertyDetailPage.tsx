@@ -18,7 +18,7 @@ export function PropertyDetailPage() {
   const { organizationId, propertyId } = useParams<{ organizationId: string; propertyId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { selectedOrganization, selectProperty, hasPlatformPermission, operationalSession, openOperationalSession } = usePlatformContext()
+  const { selectedOrganization, selectProperty, hasPlatformPermission, operationalSession, openOperationalSession, openImpersonationSession } = usePlatformContext()
   const [properties, setProperties] = useState<PlatformProperty[] | null>(null)
   const [modules, setModules] = useState<PlatformPropertyModule[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +41,7 @@ export function PropertyDetailPage() {
   const [loadingTeam, setLoadingTeam] = useState(false)
   const [createMemberOpen, setCreateMemberOpen] = useState(false)
   const newMemberTriggerRef = useRef<HTMLButtonElement>(null)
+  const [viewingAs, setViewingAs] = useState<string | null>(null)
 
   useEffect(() => {
     if (!organizationId || !propertyId) return
@@ -85,6 +86,25 @@ export function PropertyDetailPage() {
     }
   }
 
+  // "Visualizza come" (Fase C follow-up, Part 2) -- opens an impersonation
+  // session scoped to this one team member and jumps straight into
+  // Housekeeping, the only module with a wired write so far. Writes made
+  // from there execute with this person's functional authority but are
+  // always attributed to Admin Master herself -- see
+  // platform_impersonated_complete_guest_request's own doc comment.
+  async function viewAs(membershipId: string) {
+    if (!propertyId || !organizationId) return
+    setViewingAs(membershipId)
+    try {
+      await openImpersonationSession(propertyId, membershipId, 'Visualizza come dal pannello Admin Master')
+      navigate(`/admin/organizations/${organizationId}/properties/${propertyId}/view/housekeeping`)
+    } catch (cause) {
+      setTeamError(cause instanceof Error ? cause.message : 'Errore sconosciuto')
+    } finally {
+      setViewingAs(null)
+    }
+  }
+
   async function openTeamPanel() {
     if (!propertyId) return
     setTeamOpen(true)
@@ -123,6 +143,11 @@ export function PropertyDetailPage() {
   const canManage = hasPlatformPermission('platform.properties.manage')
   const canOpenOperationalView = hasPlatformPermission('platform.support.read')
   const canManageTeam = hasPlatformPermission('platform.team.manage')
+  const canImpersonate = hasPlatformPermission('platform.impersonation.write')
+  // The only module with a wired impersonated write so far (Fase C
+  // follow-up, Part 2) -- "Visualizza come" is offered only where it can
+  // actually do something beyond the existing read-only mirror.
+  const housekeepingEnabled = modules?.some((module) => module.slug === 'guest_requests' && module.enabled) ?? false
 
   if (!organizationId || !propertyId) return null
 
@@ -215,7 +240,7 @@ export function PropertyDetailPage() {
           {team && team.length > 0 ? (
             <table className="platform-table">
               <thead>
-                <tr><th>Nome</th><th>Ruolo</th><th>Mansione</th><th>Stato</th></tr>
+                <tr><th>Nome</th><th>Ruolo</th><th>Mansione</th><th>Stato</th><th>Azioni</th></tr>
               </thead>
               <tbody>
                 {team.map((member) => (
@@ -224,6 +249,20 @@ export function PropertyDetailPage() {
                     <td>{member.roleDisplayName}</td>
                     <td>{member.jobTitleName ?? '—'}</td>
                     <td><span className={`platform-badge${member.status === 'active' ? ' enabled' : ''}`}>{member.status === 'active' ? 'Attivo' : member.status}</span></td>
+                    <td>
+                      {canImpersonate && housekeepingEnabled && member.status === 'active' ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={viewingAs === member.membershipId}
+                          onClick={() => void viewAs(member.membershipId)}
+                        >
+                          <Eye size={14} /> {viewingAs === member.membershipId ? 'Apertura…' : 'Visualizza come'}
+                        </Button>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

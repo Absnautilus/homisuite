@@ -23,9 +23,12 @@ interface StaffAppProps {
   // own (Platform Admin's read-only operational view) -- see HousekeepingModule's
   // own doc comment. Skips fetchMyProfile() entirely; never persisted.
   readOnlyProfile?: StaffProfile
+  // Shell-supplied replacement for the queue's own completeRequest(id) --
+  // see RequestRow's own doc comment. Omit for every ordinary embedding.
+  onCompleteOverride?: (requestId: string) => Promise<void>
 }
 
-export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile }: StaffAppProps = {}) {
+export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile, onCompleteOverride }: StaffAppProps = {}) {
   const { t } = useLocale()
   const embedded = mode === 'embedded'
   const [loading, setLoading] = useState(true)
@@ -141,7 +144,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   // switcher below their PageHeader -- standalone mode keeps its own
   // DashboardHeader (a full top bar, logo included) unchanged.
   const embeddedNav = embedded ? { basePath, staysAllowed, manageAllowed, minimal: isFacchino } : undefined
-  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} embeddedNav={embeddedNav} />} />
+  const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} embeddedNav={embeddedNav} onCompleteOverride={onCompleteOverride} />} />
   const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} />} /> : null
   const adminRoute = manageAllowed ? (
     <Route

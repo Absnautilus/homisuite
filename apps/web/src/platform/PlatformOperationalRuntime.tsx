@@ -38,7 +38,14 @@ function toProperty(property: PlatformProperty): Property {
   }
 }
 
-export function PlatformOperationalRuntimeProvider({ property, children }: PropsWithChildren<{ property: PlatformProperty }>) {
+export function PlatformOperationalRuntimeProvider({ property, actingAsMembershipId = null, actingAsFullName = null, children }: PropsWithChildren<{
+  property: PlatformProperty
+  // Set only when this operational view was opened as a "visualizza come"
+  // impersonation session (Fase C follow-up, Part 2) -- see
+  // ModuleRuntimeValue's own doc comment.
+  actingAsMembershipId?: string | null
+  actingAsFullName?: string | null
+}>) {
   const [entitlements, setEntitlements] = useState<ModuleEntitlement[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -81,8 +88,10 @@ export function PlatformOperationalRuntimeProvider({ property, children }: Props
     selectProperty: () => {},
     hasPermission,
     isPlatformOperationalView: true,
+    platformActingAsMembershipId: actingAsMembershipId,
+    platformActingAsFullName: actingAsFullName,
     refresh: async () => load(),
-  }), [ready, session, profile, property, entitlements, hasPermission, load])
+  }), [ready, session, profile, property, entitlements, hasPermission, load, actingAsMembershipId, actingAsFullName])
 
   return <ModuleRuntimeContext.Provider value={value}>{children}</ModuleRuntimeContext.Provider>
 }

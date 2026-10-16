@@ -9,7 +9,7 @@ import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
-import { closePlatformOperationalSession, createPlatformOrganization, createPlatformProperty, createPlatformTeamMember, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOperationalSessions, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, getPlatformPropertyTeam, logPlatformConsoleAccess, logPlatformOperationalView, openPlatformOperationalSession, revokePlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty } from './platformAdmin'
+import { closePlatformOperationalSession, completeGuestRequestAsPlatformImpersonation, createPlatformOrganization, createPlatformProperty, createPlatformTeamMember, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOperationalSessions, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, getPlatformPropertyTeam, logPlatformConsoleAccess, logPlatformOperationalView, openPlatformImpersonationSession, openPlatformOperationalSession, revokePlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty } from './platformAdmin'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -66,6 +66,8 @@ export interface CoreClient {
   revokePlatformOperationalSession: (sessionId: string) => Promise<void>
   getPlatformPropertyTeam: (propertyId: string) => Promise<PlatformTeamMember[]>
   createPlatformTeamMember: (input: CreatePlatformTeamMemberInput) => Promise<CreatePlatformTeamMemberResult>
+  openPlatformImpersonationSession: (propertyId: string, actingAsMembershipId: string, reason?: string) => Promise<string>
+  completeGuestRequestAsPlatformImpersonation: (guestRequestId: string, actingAsMembershipId: string) => Promise<void>
 }
 
 export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): CoreClient {
@@ -122,5 +124,9 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
     revokePlatformOperationalSession: (sessionId) => revokePlatformOperationalSession(raw, sessionId),
     getPlatformPropertyTeam: (propertyId) => getPlatformPropertyTeam(raw, propertyId),
     createPlatformTeamMember: (input) => createPlatformTeamMember(raw, input),
+    openPlatformImpersonationSession: (propertyId, actingAsMembershipId, reason) =>
+      openPlatformImpersonationSession(raw, propertyId, actingAsMembershipId, reason),
+    completeGuestRequestAsPlatformImpersonation: (guestRequestId, actingAsMembershipId) =>
+      completeGuestRequestAsPlatformImpersonation(raw, guestRequestId, actingAsMembershipId),
   }
 }

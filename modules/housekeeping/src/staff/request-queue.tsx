@@ -19,10 +19,11 @@ type Tab = 'new' | 'inProgress' | 'done'
 
 const DONE_PAGE_SIZE = 15
 
-export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
+export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteOverride }: {
   profile: StaffProfile
   canManageQueue: boolean
   embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean; minimal?: boolean }
+  onCompleteOverride?: (requestId: string) => Promise<void>
 }) {
   const { t } = useLocale()
   const hotelName = useHotelName()
@@ -183,6 +184,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
             canManageRequest={managesFrontDesk}
             jobTitles={jobTitles}
             onReordered={reload}
+            onCompleteOverride={onCompleteOverride}
           />
         )
       ) : tab === 'inProgress' ? (
@@ -203,6 +205,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav }: {
             canManageRequest={managesFrontDesk}
             jobTitles={jobTitles}
             onReordered={reload}
+            onCompleteOverride={onCompleteOverride}
           />
         )
       ) : done.length === 0 ? (

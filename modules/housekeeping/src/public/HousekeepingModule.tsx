@@ -64,6 +64,13 @@ export interface HousekeepingModuleProps {
    * back to the database. Omit for every ordinary embedding.
    */
   readOnlyProfile?: StaffProfile
+  /**
+   * Shell-supplied replacement for the queue's own completion write --
+   * used only by Admin Master's "visualizza come" impersonation view
+   * (Fase C follow-up, Part 2). Omit for every ordinary embedding; real
+   * staff always use the module's own write path.
+   */
+  onCompleteOverride?: (requestId: string) => Promise<void>
 }
 
 /**
@@ -82,6 +89,7 @@ export function HousekeepingModule({
   platformStaffManagement,
   hotelSettings,
   readOnlyProfile,
+  onCompleteOverride,
 }: HousekeepingModuleProps) {
   // This compatibility boundary must run before StaffApp effects or API calls
   // so integrated mode never creates Housekeeping's standalone Supabase client.
@@ -100,6 +108,7 @@ export function HousekeepingModule({
               platformStaffManagement={platformStaffManagement}
               hotelSettings={hotelSettings}
               readOnlyProfile={readOnlyProfile}
+              onCompleteOverride={onCompleteOverride}
             />
           </HotelBrandingProvider>
         </UiScaleProvider>

@@ -24,6 +24,14 @@ interface ModuleRuntimeValue {
   // has one, never should), without that gate needing to import anything
   // Platform-Admin-specific itself. Always false for real hotel staff.
   isPlatformOperationalView: boolean
+  // Set only under a "visualizza come" impersonation session (Fase C
+  // follow-up, Part 2) -- null for a plain, read-only operational view.
+  // Lets a module's write affordances (Housekeeping's "Completa" button
+  // today) know whose functional authority to exercise, and route the
+  // write through the impersonated RPC instead of erroring against RLS
+  // Admin Master could never satisfy directly. Always null for real staff.
+  platformActingAsMembershipId: string | null
+  platformActingAsFullName: string | null
   refresh: () => Promise<void>
 }
 
@@ -159,6 +167,8 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
     selectProperty,
     hasPermission,
     isPlatformOperationalView: false,
+    platformActingAsMembershipId: null,
+    platformActingAsFullName: null,
     refresh: load,
   }), [status, error, session, profile, properties, property, membership, entitlements, selectProperty, hasPermission, load])
 
