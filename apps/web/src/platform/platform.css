@@ -4,11 +4,15 @@
 
 .platform-shell { min-height: 100%; display: flex; }
 .platform-sidebar { width: 240px; flex: 0 0 auto; background: var(--surface); border-right: 1px solid var(--line); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
-.platform-sidebar-brand { display: flex; align-items: center; gap: 8px; padding: 8px 10px 16px; font-weight: 800; color: var(--ink); }
+.platform-sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 8px 10px 16px; font-weight: 800; color: var(--ink); }
+.platform-sidebar-mark { border-radius: 6px; flex: 0 0 auto; }
 .platform-sidebar-brand small { display: block; font-weight: 600; color: var(--muted); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; }
+.platform-sidebar-nav { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; }
+.platform-sidebar-logout { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border: 0; background: transparent; border-radius: var(--r-sm); color: var(--ink-2); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 8px; }
+.platform-sidebar-logout:hover { background: var(--surface-2); color: var(--ink); }
 .platform-nav-item { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13px; }
 .platform-nav-item.active, .platform-nav-item:hover { background: var(--accent-soft); color: var(--accent); }
-.platform-content { flex: 1 1 auto; padding: 24px 28px; max-width: 980px; }
+.platform-content { flex: 1 1 auto; padding: 24px 28px; }
 .platform-content h1 { margin: 0 0 4px; font-size: 20px; }
 .platform-breadcrumb { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
 .platform-breadcrumb button { border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
