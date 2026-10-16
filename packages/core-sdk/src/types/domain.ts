@@ -291,3 +291,21 @@ export interface CreatePlatformTeamMemberResult {
   membershipId: string
   loginIdentifier: string
 }
+
+// Edit/archive/reset-password parity with the ordinary Team page's own
+// updateTeamMember/archiveTeamMember/resetTeamMemberPassword (Fase C, PR
+// C6) -- each field independently optional, so the console only sends what
+// actually changed. No fullName here: the ordinary flow never lets an
+// admin edit it either, it belongs to the person's own profile.
+export interface UpdatePlatformTeamMemberInput {
+  membershipId: string
+  roleId?: string | null
+  jobTitleId?: string | null
+  employmentStatus?: EmploymentStatus | null
+  membershipStatus?: 'active' | 'suspended' | null
+}
+
+export interface ResetPlatformTeamMemberPasswordInput {
+  membershipId: string
+  newPassword: string
+}

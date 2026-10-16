@@ -45,7 +45,7 @@
    this is the one place a Platform Admin sees a module's real operational
    data, and she must never lose track of that while scrolling the screen
    below it. */
-.platform-operational-shell { min-height: 100%; display: flex; flex-direction: column; }
+.platform-operational-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .platform-operational-banner {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 20px; background: var(--amber-bg); color: var(--amber-ink);
@@ -56,3 +56,10 @@
   color: inherit; font: inherit; font-weight: 700; padding: 6px 12px; border-radius: var(--r-sm); cursor: pointer;
 }
 .platform-operational-content { flex: 1 1 auto; overflow: auto; }
+/* The real ShellLayout nests here (unified vista operativa, Fase C follow-
+   up) -- its own .app-shell otherwise forces a minimum of 100vh, which
+   would push this content taller than the banner's flex sibling and let
+   the banner scroll out of view. Filling the flex parent's height instead
+   keeps the banner permanently visible while the shell's own sidebar/
+   content scroll independently, exactly like the real hotel shell does. */
+.platform-operational-content .app-shell { min-height: 100%; }

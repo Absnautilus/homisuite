@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { ArchiveTeamMemberInput, CoreRole, CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformTeamMember, Profile, Property, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdateTeamMemberInput } from './types/domain'
+import type { ArchiveTeamMemberInput, CoreRole, CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, CreateTeamMemberWithCredentialsInput, CreateTeamMemberWithCredentialsResult, GrantHousekeepingAccessInput, InviteTeamMemberInput, JobTitle, MemberPermissionStatus, Membership, ModuleEntitlement, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformTeamMember, Profile, Property, ResetPlatformTeamMemberPasswordInput, ResetTeamMemberPasswordInput, RevokeHousekeepingAccessInput, TeamMember, UpdatePlatformTeamMemberInput, UpdateTeamMemberInput } from './types/domain'
 import { getCurrentProfile, updateCurrentProfile } from './profile'
 import { deleteDevicePushSubscription, isDevicePushSubscribed, saveDevicePushSubscription, type DevicePushSubscriptionKeys } from './devicePush'
 import { getAccessibleProperties, getMembership, updateProperty } from './memberships'
@@ -9,7 +9,7 @@ import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
-import { closePlatformOperationalSession, completeGuestRequestAsPlatformImpersonation, createPlatformOrganization, createPlatformProperty, createPlatformTeamMember, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOperationalSessions, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, getPlatformPropertyTeam, logPlatformConsoleAccess, logPlatformOperationalView, openPlatformImpersonationSession, openPlatformOperationalSession, revokePlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty } from './platformAdmin'
+import { archivePlatformTeamMember, closePlatformOperationalSession, completeGuestRequestAsPlatformImpersonation, createPlatformOrganization, createPlatformProperty, createPlatformTeamMember, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOperationalSessions, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, getPlatformPropertyTeam, logPlatformConsoleAccess, logPlatformOperationalView, openPlatformImpersonationSession, openPlatformOperationalSession, resetPlatformTeamMemberPassword, revokePlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty, updatePlatformTeamMember } from './platformAdmin'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -68,6 +68,9 @@ export interface CoreClient {
   createPlatformTeamMember: (input: CreatePlatformTeamMemberInput) => Promise<CreatePlatformTeamMemberResult>
   openPlatformImpersonationSession: (propertyId: string, actingAsMembershipId: string, reason?: string) => Promise<string>
   completeGuestRequestAsPlatformImpersonation: (guestRequestId: string, actingAsMembershipId: string) => Promise<void>
+  updatePlatformTeamMember: (input: UpdatePlatformTeamMemberInput) => Promise<void>
+  archivePlatformTeamMember: (membershipId: string) => Promise<void>
+  resetPlatformTeamMemberPassword: (input: ResetPlatformTeamMemberPasswordInput) => Promise<void>
 }
 
 export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): CoreClient {
@@ -128,5 +131,8 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
       openPlatformImpersonationSession(raw, propertyId, actingAsMembershipId, reason),
     completeGuestRequestAsPlatformImpersonation: (guestRequestId, actingAsMembershipId) =>
       completeGuestRequestAsPlatformImpersonation(raw, guestRequestId, actingAsMembershipId),
+    updatePlatformTeamMember: (input) => updatePlatformTeamMember(raw, input),
+    archivePlatformTeamMember: (membershipId) => archivePlatformTeamMember(raw, membershipId),
+    resetPlatformTeamMemberPassword: (input) => resetPlatformTeamMemberPassword(raw, input),
   }
 }
