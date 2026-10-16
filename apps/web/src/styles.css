@@ -23,8 +23,11 @@
      is the same hue/saturation darkened to a safe reading weight; use it for
      any TEXT or icon-with-meaning role, keep --accent itself for fills
      (buttons, badges, active bars) where --accent-ink already provides
-     contrast. Equal to --accent in dark mode, where the lighter accent
-     already reads at 6+:1 on every surface. */
+     contrast. In dark mode --accent-text is lightened a step past --accent
+     itself (see the dark-mode block below) for the same AAA reason: on
+     --accent-soft specifically (e.g. .select-option.highlighted), --accent's
+     own value only reads at 5.6:1 -- under the 7:1 AAA text minimum, though
+     still comfortably above the 4.5:1 AA one. */
   --accent-text: #8241a6;
   --accent-light: #c77dee;
   /* Decorative-only: the second hue in the shell's ambient background wash
@@ -89,7 +92,11 @@
     --accent-ink: #1b0c24;
     --accent-soft: #2c1e3b;
     --accent-soft-line: #4a3260;
-    --accent-text: #c77dee;
+    /* One step lighter than --accent (#c77dee) rather than equal to it: on
+       --accent-soft, #c77dee itself only read at 5.6:1 (fails the 7:1 AAA
+       text minimum, found auditing .select-option.highlighted). Still reads
+       at 7.6:1+ everywhere --accent-text was already used against --surface. */
+    --accent-text: #d398f2;
     --accent-light: #e9c3fb;
     --decorative-blue: #7291f3;
     --amber-bg: #2d2b0e;
@@ -121,7 +128,7 @@
   --accent-ink: #1b0c24;
   --accent-soft: #2c1e3b;
   --accent-soft-line: #4a3260;
-  --accent-text: #c77dee;
+  --accent-text: #d398f2;
   --accent-light: #e9c3fb;
   --decorative-blue: #7291f3;
   --amber-bg: #2d2b0e;
