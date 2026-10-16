@@ -36,6 +36,8 @@ export type {
   PlatformTeamMember,
   CreatePlatformTeamMemberInput,
   CreatePlatformTeamMemberResult,
+  UpdatePlatformTeamMemberInput,
+  ResetPlatformTeamMemberPasswordInput,
 } from './types/domain'
 
 export { GUEST_VERIFICATION_LEVEL } from './guestSession'

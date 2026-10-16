@@ -21,7 +21,7 @@ const moduleSlugByPath: Record<string, string> = {
   '/transfer': 'transfers',
 }
 
-export function ShellLayout() {
+export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boolean } = {}) {
   const runtime = useModuleRuntime()
   // Called unconditionally, ahead of the runtime.status early returns below,
   // to satisfy the rules of hooks -- its own loading/error states resolve to
@@ -51,7 +51,13 @@ export function ShellLayout() {
     return true
   })
   const home = shellNavigation.find((item) => item.path === '/')
-  const platform = shellNavigation.filter((item) => item.kind === 'platform' && item.path !== '/')
+  // Hidden only under Admin Master's operational view (Fase C follow-up):
+  // Team/Moduli/Impostazioni aren't wired to her authorization path (they
+  // depend on an ordinary membership's own RLS visibility, which she never
+  // has) -- team management for her lives in the Platform Admin console's
+  // own panel instead. Always false, so every real staff member keeps
+  // exactly this nav unchanged.
+  const platform = hidePlatformNav ? [] : shellNavigation.filter((item) => item.kind === 'platform' && item.path !== '/')
   const activeModule = modules.find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
   // A facchino (no manage, no queue-management capability) has nothing to do
   // with the sidebar, the Moduli/Piattaforma nav or the bottom nav's other
@@ -162,7 +168,7 @@ export function ShellLayout() {
           <item.icon size={18} /><span>{item.label}</span>
         </NavLink>
       ))}
-      <div className="nav-section-label platform">Piattaforma</div>
+      {platform.length > 0 && <div className="nav-section-label platform">Piattaforma</div>}
       {platform.map((item) => (
         <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} key={item.path} to={item.path} onClick={() => setDrawerOpen(false)}>
           <item.icon size={18} /><span>{item.label}</span>

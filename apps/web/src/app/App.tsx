@@ -49,16 +49,21 @@ export function App() {
         <Route index element={<OrganizationsPage />} />
         <Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
         <Route path="organizations/:organizationId/properties/:propertyId" element={<PropertyDetailPage />} />
-        {/* Operational view -- real module screens, read-only, under an
+        {/* Operational view -- the exact same shell real staff get
+            (ShellLayout, reused unmodified, Team/Moduli/Impostazioni
+            hidden), not a single isolated module page -- under an
             explicitly opened operational session (OperationalViewLayout
             itself enforces this, redirecting back here otherwise). Reuses
-            the exact same lazy ShiftPlannerPage the hotel shell route
-            below renders for real staff -- only the data source feeding it
-            differs (PlatformOperationalRuntimeProvider). */}
+            the exact same lazy ShiftPlannerPage/HomePage the hotel shell
+            route below renders for real staff -- only the data source
+            feeding them differs (PlatformOperationalRuntimeProvider). */}
         <Route path="organizations/:organizationId/properties/:propertyId/view" element={<OperationalViewLayout />}>
-          <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
-          <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
-          <Route path="housekeeping" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
+          <Route element={<ShellLayout hidePlatformNav />}>
+            <Route index element={<HomePage />} />
+            <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
+            <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
+            <Route path="housekeeping/*" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
+          </Route>
         </Route>
         <Route path="audit" element={<AuditLogPage />} />
         <Route path="sessions" element={<SessionHistoryPage />} />

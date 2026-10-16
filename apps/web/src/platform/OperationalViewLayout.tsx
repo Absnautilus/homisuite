@@ -23,11 +23,17 @@ export function OperationalViewLayout() {
   const expiryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const sessionMatches = operationalSession?.status === 'active' && operationalSession.propertyId === propertyId
-  // The last path segment under .../view/ (turni, dining, housekeeping) --
-  // good enough as an audit-trail module identifier without plumbing the
-  // module's own `slug` down to this layout, which sits above the route
-  // that actually resolves it.
-  const moduleRoute = location.pathname.split('/').filter(Boolean).pop() ?? null
+  // The first path segment under .../view/ (turni, dining, housekeeping --
+  // or none at all on the unified shell's own index/Home route, logged as
+  // 'home') -- good enough as an audit-trail module identifier without
+  // plumbing the module's own `slug` down to this layout, which sits above
+  // the route that actually resolves it. Taking the FIRST segment after
+  // /view (not the path's last segment) is what keeps this correct now
+  // that the shell nests real sub-routes (e.g. housekeeping/admin) under
+  // each module.
+  const viewIndex = location.pathname.indexOf('/view')
+  const afterView = viewIndex >= 0 ? location.pathname.slice(viewIndex + '/view'.length) : ''
+  const moduleRoute = afterView.split('/').filter(Boolean)[0] ?? 'home'
 
   useEffect(() => {
     if (!organizationId || !propertyId || !sessionMatches) return

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformTeamMember } from './types/domain'
+import type { CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformTeamMember, ResetPlatformTeamMemberPasswordInput, UpdatePlatformTeamMemberInput } from './types/domain'
 
 // Platform Admin is deliberately its own small module, not folded into
 // memberships.ts/permissions.ts -- it never touches a membership, a role,
@@ -258,4 +258,32 @@ export async function completeGuestRequestAsPlatformImpersonation(
     p_guest_request_id: guestRequestId, p_acting_as_membership_id: actingAsMembershipId,
   })
   if (error) throw error
+}
+
+// Team management edit/archive/reset-password (Fase C, PR C6) -- parity
+// with the ordinary Team page's own updateTeamMember/archiveTeamMember/
+// resetTeamMemberPassword, reached through platform_operational_action_
+// allowed(property_id, 'platform.team.manage') instead of core.staff.manage.
+
+export async function updatePlatformTeamMember(client: SupabaseClient<Database>, input: UpdatePlatformTeamMemberInput): Promise<void> {
+  const { error } = await client.rpc('platform_update_team_membership', {
+    p_membership_id: input.membershipId,
+    p_role_id: input.roleId ?? null,
+    p_job_title_id: input.jobTitleId ?? null,
+    p_employment_status: input.employmentStatus ?? null,
+    p_membership_status: input.membershipStatus ?? null,
+  })
+  if (error) throw error
+}
+
+export async function archivePlatformTeamMember(client: SupabaseClient<Database>, membershipId: string): Promise<void> {
+  const { error } = await client.rpc('platform_archive_team_member', { p_membership_id: membershipId })
+  if (error) throw error
+}
+
+export async function resetPlatformTeamMemberPassword(
+  client: SupabaseClient<Database>, input: ResetPlatformTeamMemberPasswordInput,
+): Promise<void> {
+  const { error } = await client.functions.invoke('platform-reset-team-member-password', { body: input })
+  if (error) throw await invokePlatformErrorMessage(error)
 }

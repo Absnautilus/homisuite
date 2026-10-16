@@ -726,6 +726,24 @@ export interface Database {
         Args: { p_guest_request_id: string; p_acting_as_membership_id: string }
         Returns: undefined
       }
+      platform_update_team_membership: {
+        Args: {
+          p_membership_id: string
+          p_role_id?: string | null
+          p_job_title_id?: string | null
+          p_employment_status?: string | null
+          p_membership_status?: string | null
+        }
+        Returns: undefined
+      }
+      platform_archive_team_member: {
+        Args: { p_membership_id: string }
+        Returns: undefined
+      }
+      platform_reset_team_member_password: {
+        Args: { p_membership_id: string }
+        Returns: string
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
