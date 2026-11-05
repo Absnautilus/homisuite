@@ -295,12 +295,17 @@ export function PropertyDetailPage() {
           {team && team.length > 0 ? (
             <table className="platform-table">
               <thead>
-                <tr><th>Nome</th><th>Ruolo</th><th>Mansione</th><th>Stato</th><th></th></tr>
+                <tr><th>Nome</th><th>Nome utente</th><th>Ruolo</th><th>Mansione</th><th>Stato</th><th></th></tr>
               </thead>
               <tbody>
                 {team.map((member) => (
                   <tr key={member.membershipId}>
                     <td>{member.fullName ?? '—'}</td>
+                    {/* null for a member invited by email (no credentials-
+                        based login, so there's no username to show or
+                        reset a password for -- see the KeyRound button's
+                        own member.username check two rows down). */}
+                    <td>{member.username ?? '—'}</td>
                     <td>{member.roleDisplayName}</td>
                     <td>{member.jobTitleName ?? '—'}</td>
                     <td><span className={`platform-badge${member.status === 'active' ? ' enabled' : ''}`}>{member.status === 'active' ? 'Attivo' : member.status}</span></td>
