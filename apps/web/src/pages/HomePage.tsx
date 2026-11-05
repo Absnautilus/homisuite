@@ -34,6 +34,21 @@ export function HomePage() {
     return true
   })
   const today = useMemo(() => formatTodayItalian(new Date()), [])
+  // moduleCatalog's paths are absolute ('/housekeeping', ...), correct for
+  // this page's real, root-mounted usage. Mounted under Admin Master's
+  // operational view instead (App.tsx renders this same HomePage at
+  // .../view, via ShellLayout's own index route), an absolute `to` would
+  // navigate clear out of that nested route tree -- into the real top-level
+  // /housekeeping, under the real ModuleRuntimeProvider's own (unrelated)
+  // identity, losing the operational/impersonation context entirely. This
+  // was the actual cause of "Visualizza come X lands me back on my own
+  // ordinary account": the admin selects someone, correctly lands on this
+  // page inside the operational view, then clicks a module card here and is
+  // bounced straight out of it. ShellLayout's own nav links already guard
+  // against exactly this (see its navPath/hidePlatformNav), this page's
+  // never did. runtime.isPlatformOperationalView is the same signal
+  // PlatformOperationalRuntimeProvider sets for exactly this purpose.
+  const navPath = (path: string) => (runtime.isPlatformOperationalView ? path.slice(1) : path)
 
   return (
     <div className="page-stack">
@@ -54,7 +69,7 @@ export function HomePage() {
             affordance instead of a card that half-invites a click anywhere
             but only reacts to one small line of text. */}
         {modules.map((module) => (
-          <Link className="module-card" to={module.path} key={module.title}>
+          <Link className="module-card" to={navPath(module.path)} key={module.title}>
             <module.icon className="module-card-decor" aria-hidden="true" />
             <div className="module-card-top">
               <div className="module-icon"><module.icon size={22} /></div>
