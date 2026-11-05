@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(6);
+select plan(7);
 
 insert into organizations (id, name, slug) values
   ('00000041-0000-0000-0000-000000000001', 'Resolve Org A', 'test-041-org-a'),
@@ -9,16 +9,25 @@ insert into properties (id, organization_id, name, slug) values
   ('00000041-0000-0000-0000-000000000011', '00000041-0000-0000-0000-000000000001', 'Resolve Property A', 'resolve-a'),
   ('00000041-0000-0000-0000-000000000012', '00000041-0000-0000-0000-000000000002', 'Resolve Property B', 'resolve-b');
 
-insert into auth.users (id) values
-  ('00000041-0000-0000-0000-000000000041'),
-  ('00000041-0000-0000-0000-000000000042'),
-  ('00000041-0000-0000-0000-000000000043'),
-  ('00000041-0000-0000-0000-000000000044');
+-- The function now reads the real auth.users.email instead of reconstructing
+-- a string from username/property-slug/org-slug (see this migration's own
+-- comment) -- so these fixtures carry the actual emails each creation path
+-- would have set, not a convention the function itself assumes. 000...045's
+-- email uses a suffix create-team-member-credentials would never produce --
+-- that's the point: platform-create-team-member's own, different
+-- '...platform-admin.hotsflow.internal' suffix must resolve correctly too.
+insert into auth.users (id, email) values
+  ('00000041-0000-0000-0000-000000000041', 'mario@resolve-a.test-041-org-a.staff.hotsflow.internal'),
+  ('00000041-0000-0000-0000-000000000042', 'giulia@resolve-b.test-041-org-b.staff.hotsflow.internal'),
+  ('00000041-0000-0000-0000-000000000043', 'mario@resolve-b.test-041-org-b.staff.hotsflow.internal'),
+  ('00000041-0000-0000-0000-000000000044', 'anna@resolve-a.test-041-org-a.staff.hotsflow.internal'),
+  ('00000041-0000-0000-0000-000000000045', 'chiara@resolve-a.test-041-org-a.platform-admin.hotsflow.internal');
 insert into profiles (id, full_name) values
   ('00000041-0000-0000-0000-000000000041', 'Resolve Staff One'),
   ('00000041-0000-0000-0000-000000000042', 'Resolve Staff Two'),
   ('00000041-0000-0000-0000-000000000043', 'Resolve Staff Three'),
-  ('00000041-0000-0000-0000-000000000044', 'Resolve Staff Four');
+  ('00000041-0000-0000-0000-000000000044', 'Resolve Staff Four'),
+  ('00000041-0000-0000-0000-000000000045', 'Resolve Staff Five (Platform Admin-created)');
 
 -- 'mario' exists at both properties (different, unrelated organizations) --
 -- exactly the collision the function must surface as two identifiers, not
@@ -36,6 +45,13 @@ from roles where slug = 'receptionist';
 -- the throttle doesn't lock out lookups it was never asked about.
 insert into memberships (profile_id, property_id, role_id, status, username)
 select '00000041-0000-0000-0000-000000000044', '00000041-0000-0000-0000-000000000011', id, 'active', 'anna'
+from roles where slug = 'receptionist';
+-- Simulates a member created via platform-create-team-member (Admin Master's
+-- own Team management), whose auth.users.email carries that function's own
+-- '...platform-admin.hotsflow.internal' suffix -- the exact case the
+-- previous string-reconstructing implementation got wrong.
+insert into memberships (profile_id, property_id, role_id, status, username)
+select '00000041-0000-0000-0000-000000000045', '00000041-0000-0000-0000-000000000011', id, 'active', 'chiara'
 from roles where slug = 'receptionist';
 
 set local role anon;
@@ -56,6 +72,12 @@ select results_eq(
   $$ select resolve_staff_login_identifier('does-not-exist', null) $$,
   $$ values (array[]::text[]) $$,
   'a username matching no membership resolves to an empty array, not an error'
+);
+
+select results_eq(
+  $$ select resolve_staff_login_identifier('chiara', null) $$,
+  $$ values (array['chiara@resolve-a.test-041-org-a.platform-admin.hotsflow.internal']) $$,
+  'a username created via platform-create-team-member resolves to its real, differently-suffixed auth.users email'
 );
 
 reset role;
