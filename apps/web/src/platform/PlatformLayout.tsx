@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { Boxes, History, LogOut, ScrollText, ShieldAlert } from 'lucide-react'
+import { Boxes, History, LogOut, Moon, ScrollText, ShieldAlert, Sun } from 'lucide-react'
 import { PageState } from '../components/PageState'
 import { LoginScreen } from '../components/LoginScreen'
 import { supabase } from '../core/client'
+import { readStoredThemePreference, resolveTheme, setThemePreference, subscribeThemeChange } from '../lib/theme'
 import { usePlatformContext } from './PlatformContext'
 import { PlatformMfaGate } from './PlatformMfaGate'
 
@@ -12,6 +14,16 @@ import { PlatformMfaGate } from './PlatformMfaGate'
 // Admin with zero memberships reaches exactly this chrome, nothing else.
 export function PlatformLayout() {
   const runtime = usePlatformContext()
+  // Platform Admin console is its own small chrome, deliberately independent
+  // of ShellLayout/AccountMenu (see this file's own top comment) -- so it
+  // never inherited the hotel shell's quick theme toggle, leaving an admin
+  // stuck on whatever theme the browser's OS preference happened to resolve
+  // to. Same resolved-theme-tracking pattern as AccountMenu's own toggle.
+  const [resolvedTheme, setResolvedTheme] = useState(() => resolveTheme(readStoredThemePreference()))
+  useEffect(() => subscribeThemeChange(() => setResolvedTheme(resolveTheme(readStoredThemePreference()))), [])
+  function toggleTheme() {
+    setThemePreference(resolvedTheme === 'dark' ? 'light' : 'dark')
+  }
 
   if (runtime.status === 'loading') {
     return <PageState kind="loading" title="Caricamento console Platform Admin…" variant="fullscreen" />
@@ -78,6 +90,16 @@ export function PlatformLayout() {
             </NavLink>
           ) : null}
         </nav>
+        <button
+          className="platform-sidebar-theme-toggle"
+          type="button"
+          aria-label={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+          title={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+          onClick={toggleTheme}
+        >
+          {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          <span>{resolvedTheme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}</span>
+        </button>
         <button className="platform-sidebar-logout" type="button" onClick={() => void supabase.auth.signOut()}>
           <LogOut size={16} /><span>Esci</span>
         </button>
