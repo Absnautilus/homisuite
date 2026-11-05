@@ -30,6 +30,21 @@ export type HousekeepingAccessState = { status: 'loading' } | { status: 'error';
 // already behave (see ModuleRuntimeContext).
 const resolvedAccessCache = new Map<string, ResolvedState>()
 
+// ShellLayout and HomePage both call this hook, and both can mount/update in
+// the SAME React commit (e.g. ShellLayout's runtime goes from 'loading' to
+// 'ready' and renders <Outlet/> -> HomePage for the first time in that same
+// pass). Before this map existed, each hook instance only checked
+// resolvedAccessCache (settled results) before firing its own network round
+// trip -- two instances resolving the same cacheKey for the first time at
+// once each kicked off their own independent request instead of sharing
+// one. That's wasteful on its own, but it also meant the two consumers
+// could end up on genuinely different states if one of the two redundant
+// calls failed (or simply settled later) while the other didn't -- exactly
+// the "Housekeeping shows on Home but not in the sidebar" bug this map
+// fixes: both instances now await the one in-flight promise for a given
+// cacheKey instead of racing two separate ones.
+const pendingAccessChecks = new Map<string, Promise<ResolvedState>>()
+
 function errorMessage(cause: unknown): string {
   if (cause && typeof cause === 'object') {
     const candidate = cause as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown }
@@ -38,6 +53,34 @@ function errorMessage(cause: unknown): string {
       .join(' · ')
   }
   return cause instanceof Error ? cause.message : String(cause)
+}
+
+// The actual legacy-hotel-mapping + staff_profiles round trip, extracted so
+// concurrent hook instances can await the exact same promise instead of
+// each starting their own. Deliberately does not cache (or even see) error
+// outcomes in resolvedAccessCache -- a failed check must stay retryable on
+// the next mount, same as before this function existed.
+function resolveAccessRemote(propertyId: string, userId: string | null, operationalReadOnly: boolean): Promise<ResolvedState> {
+  return core.getGuestRequestsLegacyHotelId(propertyId).then(async (hotelId) => {
+    if (!hotelId) {
+      return resolveHousekeepingAccess({ entitled: true, legacyHotelId: null, hasCompatibleProfile: false })
+    }
+    if (operationalReadOnly) {
+      return resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: false, operationalReadOnly: true })
+    }
+    // Guaranteed non-null here: the only caller of this function already
+    // requires userId whenever operationalReadOnly is false.
+    if (!userId) throw new Error('useHousekeepingAccess: missing userId for a non-operational check')
+    const { data, error } = await supabase
+      .from('staff_profiles')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .eq('hotel_id', hotelId)
+      .eq('active', true)
+      .maybeSingle()
+    if (error) throw error
+    return resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: Boolean(data) })
+  })
 }
 
 export function useHousekeepingAccess(): HousekeepingAccessState {
@@ -78,48 +121,30 @@ export function useHousekeepingAccess(): HousekeepingAccessState {
     setState({ status: 'loading' })
     const resolvedCacheKey = `${propertyId}:${userId ?? 'operational'}`
 
-    void core
-      .getGuestRequestsLegacyHotelId(propertyId)
-      .then(async (hotelId) => {
+    let request = pendingAccessChecks.get(resolvedCacheKey)
+    if (!request) {
+      request = resolveAccessRemote(propertyId, userId, operationalReadOnly)
+      pendingAccessChecks.set(resolvedCacheKey, request)
+      // Always clear the in-flight entry once it settles, success or
+      // failure, so the next mount (or a request for a different user/
+      // property sharing this key later) starts a fresh check rather than
+      // reusing a long-dead promise.
+      void request.finally(() => {
+        if (pendingAccessChecks.get(resolvedCacheKey) === request) pendingAccessChecks.delete(resolvedCacheKey)
+      })
+    }
+
+    request
+      .then((resolved) => {
         if (cancelled) return
-        if (!hotelId) {
-          const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: null, hasCompatibleProfile: false })
-          resolvedAccessCache.set(resolvedCacheKey, resolved)
-          setState(resolved)
-          return
-        }
-        if (operationalReadOnly) {
-          const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: false, operationalReadOnly: true })
-          resolvedAccessCache.set(resolvedCacheKey, resolved)
-          setState(resolved)
-          return
-        }
-        // Guaranteed non-null here: the top-level guard above only lets
-        // execution reach this point with userId === null when
-        // operationalReadOnly is true, which already returned above.
-        if (!userId) return
-        const { data, error } = await supabase
-          .from('staff_profiles')
-          .select('id')
-          .eq('auth_user_id', userId)
-          .eq('hotel_id', hotelId)
-          .eq('active', true)
-          .maybeSingle()
-        if (cancelled) return
-        if (error) {
-          // Logged, not shown -- HousekeepingModuleGate keeps the user-facing
-          // message generic (see PageState there) so a raw Postgres/PostgREST
-          // error never reaches the screen.
-          console.error('useHousekeepingAccess', errorMessage(error))
-          setState({ status: 'error', message: errorMessage(error) })
-          return
-        }
-        const resolved = resolveHousekeepingAccess({ entitled: true, legacyHotelId: hotelId, hasCompatibleProfile: Boolean(data) })
         resolvedAccessCache.set(resolvedCacheKey, resolved)
         setState(resolved)
       })
       .catch((cause: unknown) => {
         if (cancelled) return
+        // Logged, not shown -- HousekeepingModuleGate keeps the user-facing
+        // message generic (see PageState there) so a raw Postgres/PostgREST
+        // error never reaches the screen.
         console.error('useHousekeepingAccess', errorMessage(cause))
         setState({ status: 'error', message: errorMessage(cause) })
       })
