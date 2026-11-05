@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@homisuite/ui'
-import { Trash2 } from 'lucide-react'
+import { Star, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
-import { listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
-import type { ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationRequest, Restaurant } from './types'
+import { getFeedback, listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
+import type { ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
 import { SlideOver } from './SlideOver'
@@ -24,6 +24,7 @@ function formatDate(iso: string): string {
 export function BookingDetailSlideOver({ reservation, restaurants, canManage, onClose, onChanged }: BookingDetailSlideOverProps) {
   const [alternatives, setAlternativesState] = useState<ReservationAlternative[]>([])
   const [activity, setActivity] = useState<ChangeLogEntry[]>([])
+  const [feedback, setFeedback] = useState<ReservationFeedback | null>(null)
   const [note, setNote] = useState('')
   const [addAltId, setAddAltId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -40,13 +41,15 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     if (!reservation) return
     const thisLoad = ++loadId.current
     try {
-      const [nextAlternatives, nextActivity] = await Promise.all([
+      const [nextAlternatives, nextActivity, nextFeedback] = await Promise.all([
         listAlternatives(supabase, reservation.id),
         listChangeLogForEntity(supabase, reservation.id),
+        getFeedback(supabase, reservation.id),
       ])
       if (thisLoad !== loadId.current) return
       setAlternativesState(nextAlternatives)
       setActivity(nextActivity)
+      setFeedback(nextFeedback)
     } catch (cause) {
       if (thisLoad !== loadId.current) return
       setError(readableDiningError(cause))
@@ -159,6 +162,18 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
         <h3>Stato</h3>
         <span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span>
       </div>
+
+      {feedback ? (
+        <div className="dining-dp-section">
+          <h3>Feedback ospite</h3>
+          <div className="dining-feedback-stars" aria-label={`${feedback.rating} su 5`}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <Star key={n} size={15} className={n <= feedback.rating ? 'dining-feedback-star is-filled' : 'dining-feedback-star'} />
+            ))}
+          </div>
+          {feedback.comment ? <p style={{ margin: '8px 0 0', fontSize: 13 }}>{feedback.comment}</p> : null}
+        </div>
+      ) : null}
 
       {reservation.guest_preference_tags.length > 0 || reservation.special_requests ? (
         <div className="dining-dp-section">

@@ -9,7 +9,7 @@ import {
   getStoredHotelName,
   setResolvedHotel,
 } from '@/lib/env'
-import type { DiningCategory, DiningHour, DiningRestaurant, GuestRequest, RequestCategory, RequestType } from '@/lib/types'
+import type { DiningCategory, DiningHour, DiningReservation, DiningRestaurant, GuestRequest, RequestCategory, RequestType } from '@/lib/types'
 
 export function isInvalidSessionError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('invalid_session')
@@ -125,6 +125,37 @@ export async function createDiningReservationRequest(
     p_reservation_time: reservationTime,
     p_party_size: partySize,
     p_special_requests: specialRequests,
+  })
+  if (error) throw error
+}
+
+// list_my_dining_reservations (20261105200000_dining_reservation_feedback_rpcs)
+// mirrors listMyRequests' own shape exactly -- same token-based identity,
+// same table-returning RPC pattern. Each row already carries its own
+// feedback_rating/feedback_comment (null when none exists), so the guest
+// app never needs a separate feedback fetch.
+export async function listMyDiningReservations(token: string): Promise<DiningReservation[]> {
+  const { data, error } = await supabase.rpc('list_my_dining_reservations', { p_token: token })
+  if (error) throw error
+  return data ?? []
+}
+
+// create_dining_reservation_feedback (20261105200000_dining_reservation_feedback_rpcs):
+// the post-dinner star rating. An upsert server-side -- calling this again
+// for the same reservation revises the rating/comment already on file
+// rather than erroring, so the caller doesn't need to know in advance
+// whether this is a first submission or an edit.
+export async function createDiningReservationFeedback(
+  token: string,
+  reservationId: string,
+  rating: 1 | 2 | 3 | 4 | 5,
+  comment: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('create_dining_reservation_feedback', {
+    p_token: token,
+    p_reservation_id: reservationId,
+    p_rating: rating,
+    p_comment: comment,
   })
   if (error) throw error
 }

@@ -307,6 +307,11 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .dining-pill.status-confirmed { color: var(--green-ink); background: var(--green-bg); }
 .dining-pill.status-cancelled { color: var(--muted); background: var(--surface-2); }
 
+/* ---------- guest feedback (post-dinner star rating) ---------- */
+.dining-feedback-stars { display: flex; gap: 2px; }
+.dining-feedback-star { color: var(--line-strong); }
+.dining-feedback-star.is-filled { color: var(--amber-ink); fill: var(--amber-ink); }
+
 /* ---------- Oggi: ops summary + "Da gestire" queue ---------- */
 .dining-ops-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
 .dining-ops-summary strong { color: var(--ink); font-weight: 800; }

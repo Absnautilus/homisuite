@@ -22,8 +22,10 @@ import { RequestFlow } from '@/guest/request-flow'
 import { StatusList } from '@/guest/status-list'
 import { BrandedInfoBand, ContactsCard } from '@/guest/greeting'
 import { DiningFlow } from '@/guest/dining-flow'
+import { DiningMyReservations } from '@/guest/dining-my-reservations'
 
 type Tab = 'new' | 'status'
+type DiningTab = 'discover' | 'mine'
 
 // Every guest-facing module needs a directory label/icon here --
 // 'guest_requests' (Housekeeping) was the only one that existed until
@@ -56,6 +58,7 @@ export function GuestApp() {
   const [checked, setChecked] = useState(false)
   const [stay, setStay] = useState<StayInfo | null>(null)
   const [tab, setTab] = useState<Tab>('new')
+  const [diningTab, setDiningTab] = useState<DiningTab>('discover')
   const [refreshKey, setRefreshKey] = useState(0)
   // Runs once per page load regardless of an existing token: the hotel id
   // resolved from the URL slug is cached in memory only (lib/env.ts), which
@@ -213,7 +216,19 @@ export function GuestApp() {
           ) : selectedModuleSlug === 'dining' ? (
             <>
               <ModuleHeading slug="dining" />
-              <DiningFlow token={token} onSessionExpired={onSessionExpired} />
+              <div className="mb-5 flex gap-1 rounded-md bg-surface-2 p-1">
+                <TabButton active={diningTab === 'discover'} onClick={() => setDiningTab('discover')}>
+                  {t('dining.tabDiscover')}
+                </TabButton>
+                <TabButton active={diningTab === 'mine'} onClick={() => setDiningTab('mine')}>
+                  {t('dining.tabMine')}
+                </TabButton>
+              </div>
+              {diningTab === 'discover' ? (
+                <DiningFlow token={token} onSessionExpired={onSessionExpired} />
+              ) : (
+                <DiningMyReservations token={token} onSessionExpired={onSessionExpired} />
+              )}
             </>
           ) : availableModules === null ? (
             <div className="flex justify-center py-4">
