@@ -18,6 +18,41 @@
     inset 0 1px 0 rgba(255, 255, 255, .82);
 }
 
+/* This card and its tabs were entirely hardcoded to light-mode colors --
+   used by Housekeeping, Turni and Dining alike (see module-nav.tsx's own
+   "Canonical navigation chrome inside a Homisuite module" doc comment), so
+   the bug ("the whole module header stays light while everything else goes
+   dark") showed up in all three. Deliberately not referencing var(--surface)/
+   var(--ink)-style tokens here beyond --accent (already theme-aware in every
+   embedding context): Housekeeping's .hk-root, Turni's .shift-root and the
+   shell itself each name their base tokens differently (--foreground vs
+   --ink vs --shift-ink, etc.), so this shared package can't assume any of
+   those names resolve the same way. [data-theme='dark'] is always set on
+   the single outer <html>, though, regardless of which of those three
+   token namespaces is nested inside it here -- so (like the shell's own
+   :root blocks) a plain descendant selector on it is reliable everywhere
+   this component is used, without needing to coordinate with any of them. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ui-module-nav-card {
+    border-color: rgba(255, 255, 255, .08);
+    background:
+      radial-gradient(circle at 18% 10%, rgba(255,255,255,.04), transparent 38%),
+      linear-gradient(135deg, #221f3d 0%, #1c1b33 48%, #1a1930 100%);
+    box-shadow:
+      0 16px 38px color-mix(in srgb, var(--accent) 14%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, .05);
+  }
+}
+:root[data-theme='dark'] .ui-module-nav-card {
+  border-color: rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255,255,255,.04), transparent 38%),
+    linear-gradient(135deg, #221f3d 0%, #1c1b33 48%, #1a1930 100%);
+  box-shadow:
+    0 16px 38px color-mix(in srgb, var(--accent) 14%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
 .ui-module-nav-topline {
   display: flex;
   min-height: 34px;
@@ -51,6 +86,18 @@
   border-radius: 999px;
   background: rgba(237, 233, 251, .78);
   box-shadow: inset 0 1px 2px rgba(33, 27, 63, .035);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ui-module-nav-primary.ui-tabs {
+    border-color: rgba(255, 255, 255, .07);
+    background: rgba(13, 12, 26, .45);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .2);
+  }
+}
+:root[data-theme='dark'] .ui-module-nav-primary.ui-tabs {
+  border-color: rgba(255, 255, 255, .07);
+  background: rgba(13, 12, 26, .45);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .2);
 }
 .ui-module-nav-primary .ui-tabs-indicator { border-radius: 999px; }
 .ui-module-nav-primary .ui-tab {
@@ -155,6 +202,38 @@
   box-shadow: 0 2px 8px rgba(83, 55, 150, .07);
 }
 .ui-module-nav-primary .ui-tab[aria-selected='true'] .ui-tab-icon { color: #6d28f5; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ui-module-nav-primary .ui-tab,
+  :root:not([data-theme='light']) .ui-module-nav-secondary .ui-tab { color: #9294b8; }
+  :root:not([data-theme='light']) .ui-module-nav-primary .ui-tab[aria-selected='true'],
+  :root:not([data-theme='light']) .ui-module-nav-secondary .ui-tab[aria-selected='true'] { color: #f1eefa; }
+  :root:not([data-theme='light']) .ui-module-nav-primary .ui-tabs-indicator {
+    background: #2c2a4a;
+    box-shadow: 0 7px 18px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .2);
+  }
+  :root:not([data-theme='light']) .ui-module-nav-secondary .ui-tabs-indicator {
+    background: rgba(255,255,255,.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  }
+  /* Same dark pair already computed and AAA-verified for Housekeeping's own
+     (separately-maintained) copy of this same active-icon treatment --
+     #6d28f5, same literal hex, lightened the same way for the same reason:
+     an intentionally distinct accent, not one to fold into var(--accent). */
+  :root:not([data-theme='light']) .ui-module-nav-primary .ui-tab[aria-selected='true'] .ui-tab-icon { color: #bea2f6; }
+}
+:root[data-theme='dark'] .ui-module-nav-primary .ui-tab,
+:root[data-theme='dark'] .ui-module-nav-secondary .ui-tab { color: #9294b8; }
+:root[data-theme='dark'] .ui-module-nav-primary .ui-tab[aria-selected='true'],
+:root[data-theme='dark'] .ui-module-nav-secondary .ui-tab[aria-selected='true'] { color: #f1eefa; }
+:root[data-theme='dark'] .ui-module-nav-primary .ui-tabs-indicator {
+  background: #2c2a4a;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .2);
+}
+:root[data-theme='dark'] .ui-module-nav-secondary .ui-tabs-indicator {
+  background: rgba(255,255,255,.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+:root[data-theme='dark'] .ui-module-nav-primary .ui-tab[aria-selected='true'] .ui-tab-icon { color: #bea2f6; }
 
 @media (max-width: 640px) {
   .ui-module-nav-primary.ui-tabs,
