@@ -3,16 +3,28 @@
    so it doesn't need to share that file's hotel-shell-specific rules. */
 
 .platform-shell { min-height: 100%; display: flex; }
-.platform-sidebar { width: 240px; flex: 0 0 auto; background: var(--surface); border-right: 1px solid var(--line); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+/* Was a normal flex child, so it scrolled away with .platform-content on
+   any page taller than the viewport (Registro attività's own activity
+   table, easily hundreds of rows) -- "Esci" (and the theme toggle) were
+   only reachable by scrolling back to the top. Fixed to the viewport, the
+   same way the real hotel shell's own .sidebar already is (see styles.css),
+   it now stays in place regardless of how long the page is.
+   platform-content's own padding-left below replaces the spacing this used
+   to get for free from sitting in normal flex flow next to it. */
+.platform-sidebar { position: fixed; inset: 0 auto 0 0; width: 240px; background: var(--surface); border-right: 1px solid var(--line); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
 .platform-sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 8px 10px 16px; font-weight: 800; color: var(--ink); }
 .platform-sidebar-mark { border-radius: 6px; flex: 0 0 auto; }
 .platform-sidebar-brand small { display: block; font-weight: 600; color: var(--muted); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; }
 .platform-sidebar-nav { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; }
-.platform-sidebar-logout { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border: 0; background: transparent; border-radius: var(--r-sm); color: var(--ink-2); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 8px; }
+.platform-sidebar-theme-toggle,
+.platform-sidebar-logout { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border: 0; background: transparent; border-radius: var(--r-sm); color: var(--ink-2); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; flex: 0 0 auto; }
+.platform-sidebar-theme-toggle { margin-top: 8px; }
+.platform-sidebar-logout { margin-top: 2px; }
+.platform-sidebar-theme-toggle:hover,
 .platform-sidebar-logout:hover { background: var(--surface-2); color: var(--ink); }
 .platform-nav-item { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13px; }
 .platform-nav-item.active, .platform-nav-item:hover { background: var(--accent-soft); color: var(--accent); }
-.platform-content { flex: 1 1 auto; padding: 24px 28px; }
+.platform-content { flex: 1 1 auto; min-width: 0; padding: 24px 28px; padding-left: calc(240px + 28px); }
 .platform-content h1 { margin: 0 0 4px; font-size: 20px; }
 .platform-breadcrumb { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
 .platform-breadcrumb button { border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
@@ -67,3 +79,29 @@
    keeps the banner permanently visible while the shell's own sidebar/
    content scroll independently, exactly like the real hotel shell does. */
 .platform-operational-content .app-shell { min-height: 100%; }
+/* ShellLayout's sidebar is `position: fixed; inset: 0 auto 0 0` (see
+   styles.css) -- correct for its real, root-mounted usage, where nothing
+   ever precedes it. `position: fixed` is anchored to the true browser
+   viewport regardless of DOM nesting, so when ShellLayout is reused here,
+   nested below this banner, the sidebar ignored the banner's height
+   entirely and rendered starting at the actual top of the window --
+   painting its full-height, solid, z-index:30 column directly over the
+   banner for the sidebar's whole width. The banner itself was rendering
+   exactly as coded; it was just permanently hidden behind the sidebar, so
+   "Stai visualizzando come X"/"Sola lettura" was never actually visible in
+   this view. `position: sticky` gives the same persistent-while-scrolling
+   behavior, but -- unlike fixed -- starts from the element's normal
+   in-flow position (already correctly pushed below the banner here) and
+   then sticks to the top of its nearest scrolling ancestor
+   (.platform-operational-content, which is what actually scrolls in this
+   view) instead of the viewport. Scoped to this container only, so the
+   real, non-nested shell keeps its original fixed sidebar unchanged. */
+.platform-operational-content .sidebar { position: sticky; inset: auto; top: 0; }
+/* Same fixed-to-viewport issue, purely cosmetic here (the atmospheric
+   background wash, z-index -2): without this it would extend above/behind
+   the banner instead of starting where .shell-content actually begins.
+   .shell-content already establishes its own positioning context
+   (position: relative), so absolute containment here is enough -- no need
+   for sticky's scroll-tracking, since the wash is meant to stay with its
+   own container, not persist across scrolling. */
+.platform-operational-content .shell-content::before { position: absolute; }
