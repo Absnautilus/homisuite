@@ -62,6 +62,25 @@ export function HousekeepingModuleGate() {
 
   const settings = runtime.property?.settings ?? {}
   const actingAsMembershipId = runtime.platformActingAsMembershipId
+  // Housekeeping's own embedded chrome (EmbeddedNav's Richieste/Soggiorni/
+  // Gestione switcher, AdminHome's Camere/Menu/Disponibilità/... tabs) builds
+  // its internal nav targets by string-concatenating onto `basePath` and
+  // calling react-router's navigate() with the result -- and because those
+  // targets start with '/', navigate() treats them as absolute from the site
+  // root, not relative to wherever this gate is actually mounted. Hardcoding
+  // '/housekeeping' here (the module's own default) is only correct for the
+  // real, root-mounted route. Under Admin Master's operational view this gate
+  // is mounted nested, at .../admin/organizations/:id/properties/:id/view/
+  // housekeeping/* (see App.tsx) -- so every one of those internal tab clicks
+  // was navigating to the real top-level /housekeeping instead, exactly the
+  // same route-escaping bug HomePage's module cards had (see its own navPath
+  // comment), just one level deeper and inside the module itself rather than
+  // the shell. Passing the actual mounted prefix as basePath fixes every one
+  // of those sites at once, with no change needed inside the housekeeping
+  // package itself, since they already all key off this same prop.
+  const basePath = runtime.isPlatformOperationalView && runtime.property
+    ? `/admin/organizations/${runtime.property.organizationId}/properties/${runtime.property.id}/view/housekeeping`
+    : '/housekeeping'
   // Admin Master's operational view (Fase C, C3c) never has, and must never
   // be given, a real staff_profiles row -- this synthetic object is
   // client-side only, scoped to this render, and never written back to the
@@ -95,7 +114,7 @@ export function HousekeepingModuleGate() {
       supabase={supabase}
       hotelId={access.hotelId}
       hotelName={runtime.property?.name ?? 'Struttura'}
-      basePath="/housekeeping"
+      basePath={basePath}
       capabilities={{ manage: capabilities.manage, staysView: capabilities.manage || capabilities.queueManage, queueManage: capabilities.queueManage }}
       platformStaffManagement={{
         href: '/team',
