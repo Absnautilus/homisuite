@@ -153,13 +153,20 @@ select throws_ok(
   'a comment over 500 characters is rejected'
 );
 
--- ### restaurant_reservation_feedback itself still rejects a direct anon
---     read -- the RPCs are the only door, not a relaxed table-level grant ###
-select throws_ok(
-  $$ select * from restaurant_reservation_feedback $$,
-  '42501',
-  null,
-  'anon still cannot select from restaurant_reservation_feedback directly'
+-- ### restaurant_reservation_feedback itself still hides its rows from a
+--     direct anon SELECT -- its only select policy is scoped to
+--     `authenticated` (concierge read), and unlike INSERT/UPDATE (where a
+--     missing WITH CHECK policy raises 42501, see 070's own direct-insert
+--     test), a SELECT with no matching RLS policy just silently returns
+--     zero rows rather than erroring. Counted, not thrown: a real feedback
+--     row exists in the table at this point (submitted above), so this
+--     proves RLS actually hides it from anon, not merely that none exists
+--     to find. The RPCs above are the only door through which a guest ever
+--     actually sees a feedback row. ###
+select is(
+  (select count(*)::int from restaurant_reservation_feedback),
+  0,
+  'anon sees zero rows from restaurant_reservation_feedback directly, even though feedback exists'
 );
 
 reset role;
