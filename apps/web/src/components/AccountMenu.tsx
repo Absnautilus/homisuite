@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { dropdownTransitionClassName, useDropdownTransition } from '@homisuite/ui'
-import { ChevronDown, Languages, LogOut, Moon, Sun, UserRound } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, Languages, LogOut, Moon, Sun, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../core/client'
 import { readStoredThemePreference, resolveTheme, setThemePreference, subscribeThemeChange } from '../lib/theme'
+import { usePlatformAdminSelf } from '../platform/usePlatformAdminSelf'
 import { LanguageToggle } from './LanguageToggle'
 
 export function AccountMenu({ name }: { name: string }) {
@@ -11,6 +12,14 @@ export function AccountMenu({ name }: { name: string }) {
   const { state, mounted } = useDropdownTransition(open)
   const rootRef = useRef<HTMLDivElement>(null)
   const initials = name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase() || 'HF'
+  // Only ever true for an account that also holds a Platform Admin identity
+  // (e.g. this same account also has an ordinary membership at a demo
+  // property) -- gives them a way back to /admin from inside the regular
+  // shell, which otherwise has no link to it anywhere (by design: the two
+  // are deliberately separate surfaces -- see PlatformContext.tsx). Without
+  // this, leaving "Visualizza come"/closing an operational session and
+  // landing back in an ordinary membership's own shell was a dead end.
+  const { isAdmin } = usePlatformAdminSelf()
   // Tracks the *resolved* light/dark theme, not the raw preference (which
   // can be 'system') -- this is a binary quick-toggle, not the 3-way
   // Light/Dark/System radiogroup that lives in Settings (ThemeToggle).
@@ -58,6 +67,9 @@ export function AccountMenu({ name }: { name: string }) {
             <div><strong>{name}</strong><small>Account Homisuite</small></div>
           </div>
           <Link className="account-menu-row" to="/settings#account" onClick={() => setOpen(false)}><UserRound size={16} /><span>Profilo</span></Link>
+          {isAdmin && (
+            <Link className="account-menu-row" to="/admin" onClick={() => setOpen(false)}><LayoutDashboard size={16} /><span>Console Admin Master</span></Link>
+          )}
           <div className="account-language-row">
             <span><Languages size={16} /> Lingua</span>
             <LanguageToggle />
