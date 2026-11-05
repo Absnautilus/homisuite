@@ -70,6 +70,34 @@ export interface DiningHour {
   closes_at: string
 }
 
+// Mirrors dining's own ConfirmationStatus (apps/web/src/modules/dining/
+// types.ts) -- kept as a separate type here rather than shared across the
+// two apps, same as every other dining type already duplicated between
+// them (DiningCategory/DiningRestaurant/DiningHour above).
+export type DiningReservationStatus =
+  | 'new' | 'scheduled' | 'in_progress' | 'unavailable' | 'confirmed' | 'cancelled'
+  | 'pending' | 'declined'
+
+// One row from list_my_dining_reservations(p_token) -- the reservation's
+// own columns plus the left-joined feedback, if any, flattened onto it
+// (feedback_rating/feedback_comment null when none exists yet). See that
+// RPC's own migration comment for why this is a flattened read rather than
+// a separate feedback fetch: restaurant_reservation_feedback has no direct
+// anon grant at all, by design.
+export interface DiningReservation {
+  id: string
+  hotel_id: string
+  restaurant_id: string
+  reservation_date: string
+  reservation_time: string
+  party_size: number
+  confirmation_status: DiningReservationStatus
+  special_requests: string | null
+  created_at: string
+  feedback_rating: 1 | 2 | 3 | 4 | 5 | null
+  feedback_comment: string | null
+}
+
 export interface GuestRequest {
   id: string
   hotel_id: string
