@@ -103,6 +103,100 @@
   font-family: var(--font-sans);
 }
 
+/* Dark-mode values for every token above. This module was never wired to
+   the shell's [data-theme]/prefers-color-scheme switch (the whole point of
+   isolating these tokens on .hk-root -- see the comment above -- was that
+   the module and the shell can't restyle each other), so it just stayed
+   permanently light while the rest of the app went dark around it.
+   Base/accent tokens and wait/ok/bad/off's bg+ink reuse the shell's own
+   already-audited dark values exactly, since this module's light values
+   already matched the shell's one-for-one (off-ink's hue differs very
+   slightly, kept as its own hue here rather than snapped to the shell's).
+   prog (blue, "in progress") borrows the shell's --decorative-blue hue,
+   the only other blue in the app, lightened further for AAA as actual
+   status-pill text rather than a background wash. done (a second, darker
+   green distinct from ok) and terracotta have no shell equivalent, so
+   their dark pairs are computed fresh: same hue, inverted lightness,
+   re-verified against WCAG AAA (7:1) same as every ink/bg pair below.
+   -line (the third value per group, a border/divider -- the shell's own
+   amber/red/green/slate quartet never needed one) sits roughly 30% of the
+   way from -bg to -ink in lightness, same hue, enough to read as a
+   border without competing with -ink as text. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .hk-root {
+    --background: #100f1e;
+    --foreground: #f1eefa;
+    --muted: #9294b8;
+    --line: #332f55;
+    --line-strong: #413c68;
+    --surface: #1c1b33;
+    --surface-2: #221f3d;
+
+    --accent: #c77dee;
+    --accent-ink: #1b0c24;
+    --accent-soft: #2c1e3b;
+    --accent-soft-line: #4a3260;
+
+    --wait-bg: #2d2b0e;
+    --wait-ink: #feb06b;
+    --wait-line: #7d7718;
+    --prog-bg: #0f162c;
+    --prog-ink: #8aa3f5;
+    --prog-line: #1c3480;
+    --ok-bg: #212d26;
+    --ok-ink: #3ddb82;
+    --ok-line: #305a42;
+    --done-bg: #173023;
+    --done-ink: #36e287;
+    --done-line: #216442;
+    --bad-bg: #560e0e;
+    --bad-ink: #ecb3b3;
+    --bad-line: #b40f0f;
+    --off-bg: #232844;
+    --off-ink: #bfc1cd;
+    --off-line: #33408c;
+    --terracotta-bg: #2f1c13;
+    --terracotta-ink: #e39d7b;
+    --terracotta-line: #773c20;
+  }
+}
+:root[data-theme='dark'] .hk-root {
+  --background: #100f1e;
+  --foreground: #f1eefa;
+  --muted: #9294b8;
+  --line: #332f55;
+  --line-strong: #413c68;
+  --surface: #1c1b33;
+  --surface-2: #221f3d;
+
+  --accent: #c77dee;
+  --accent-ink: #1b0c24;
+  --accent-soft: #2c1e3b;
+  --accent-soft-line: #4a3260;
+
+  --wait-bg: #2d2b0e;
+  --wait-ink: #feb06b;
+  --wait-line: #7d7718;
+  --prog-bg: #0f162c;
+  --prog-ink: #8aa3f5;
+  --prog-line: #1c3480;
+  --ok-bg: #212d26;
+  --ok-ink: #3ddb82;
+  --ok-line: #305a42;
+  --done-bg: #173023;
+  --done-ink: #36e287;
+  --done-line: #216442;
+  --bad-bg: #560e0e;
+  --bad-ink: #ecb3b3;
+  --bad-line: #b40f0f;
+  --off-bg: #232844;
+  --off-ink: #bfc1cd;
+  --off-line: #33408c;
+  --terracotta-bg: #2f1c13;
+  --terracotta-ink: #e39d7b;
+  --terracotta-line: #773c20;
+}
+
 .hk-root .admin-nav.ui-tabs {
   display: flex;
   width: max-content;
@@ -114,7 +208,12 @@
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
-  border: 1px solid rgba(255, 255, 255, .66);
+  /* Was a hardcoded rgba(255,255,255,.66) -- a light edge highlight that
+     stayed white-translucent over a dark pill in dark mode. --line-strong
+     is a near-white gray in light mode (close to the same look) and a dark
+     blue-gray in dark mode, so color-mix gives each theme its own
+     appropriate subtle edge instead of one fixed value. */
+  border: 1px solid color-mix(in srgb, var(--line-strong) 66%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 3%, var(--surface-2));
   box-shadow: inset 0 1px 2px rgba(33, 27, 63, .03);
@@ -134,6 +233,10 @@
 .hk-root .admin-nav .ui-tab-icon > svg { width: 16px; height: 16px; }
 .hk-root .admin-nav .ui-tab-icon { flex-basis: 16px; }
 .hk-root .admin-nav .ui-tab[aria-selected='true'] .ui-tab-icon { color: #6d28f5; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .hk-root .admin-nav .ui-tab[aria-selected='true'] .ui-tab-icon { color: #bea2f6; }
+}
+:root[data-theme='dark'] .hk-root .admin-nav .ui-tab[aria-selected='true'] .ui-tab-icon { color: #bea2f6; }
 
 @media (max-width: 640px) {
   .hk-root .admin-nav.ui-tabs {
