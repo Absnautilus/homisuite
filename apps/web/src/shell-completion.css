@@ -357,6 +357,8 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .dining-search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .dining-search-box input { width: 100%; height: 36px; padding: 0 12px 0 32px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
 .dining-search-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dining-date-range-field { display: inline-flex; align-items: center; gap: 6px; }
+.dining-date-range-field small { color: var(--muted); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
 .dining-grid-wrap { overflow-x: auto; }
 table.dining-dense { width: 100%; border-collapse: collapse; min-width: 760px; }
 table.dining-dense th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); padding: 9px 14px; white-space: nowrap; }

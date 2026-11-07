@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
+import { Button, DatePicker } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import type { ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS } from './types'
@@ -12,19 +13,31 @@ interface TuttePanelProps {
 
 type SortCol = 'date' | 'time'
 
+// A hotel running for months accumulates thousands of reservations; without
+// a range or a cap, "Tutte" rendered every one of them in a single table on
+// every load. Loaded a page at a time instead -- "Mostra altre" pulls in
+// more of whatever the current filters already narrowed down to, not a
+// server round-trip (the full list is already in memory from ReservationsTab).
+const PAGE_SIZE = 50
+
 export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePanelProps) {
   const [search, setSearch] = useState('')
   const [restaurantFilter, setRestaurantFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [sort, setSort] = useState<{ col: SortCol; dir: 1 | -1 }>({ col: 'date', dir: -1 })
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
 
-  const rows = useMemo(() => {
+  const filteredSorted = useMemo(() => {
     const q = search.trim().toLowerCase()
     let filtered = reservations.filter((r) => {
       if (restaurantFilter && r.restaurant_id !== restaurantFilter) return false
       if (statusFilter && r.confirmation_status !== statusFilter) return false
+      if (dateFrom && r.reservation_date < dateFrom) return false
+      if (dateTo && r.reservation_date > dateTo) return false
       if (q) {
         const haystack = [r.guest_name, r.room_number ?? '', r.booking_reference ?? '', restaurantName(r.restaurant_id), r.special_requests ?? '', r.staff_notes ?? ''].join(' ').toLowerCase()
         if (!haystack.includes(q)) return false
@@ -38,7 +51,14 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
     })
     return filtered
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservations, search, restaurantFilter, statusFilter, sort])
+  }, [reservations, search, restaurantFilter, statusFilter, dateFrom, dateTo, sort])
+
+  // Narrowing the filters (or the underlying list itself) should always
+  // re-show from the top of the newly filtered set, not keep whatever
+  // deeper page count the previous, broader filter had reached.
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [search, restaurantFilter, statusFilter, dateFrom, dateTo])
+
+  const rows = filteredSorted.slice(0, visibleCount)
 
   function toggleSort(col: SortCol) {
     setSort((current) => current.col === col ? { col, dir: current.dir === 1 ? -1 : 1 } : { col, dir: 1 })
@@ -59,6 +79,11 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
           <option value="">Tutti gli stati</option>
           {Object.entries(CONFIRMATION_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Select>
+        <span className="dining-date-range-field"><small>Da</small><DatePicker value={dateFrom} onChange={setDateFrom} ariaLabel="Da data" /></span>
+        <span className="dining-date-range-field"><small>A</small><DatePicker value={dateTo} onChange={setDateTo} ariaLabel="A data" /></span>
+        {(dateFrom || dateTo) ? (
+          <Button variant="secondary" size="sm" onClick={() => { setDateFrom(''); setDateTo('') }}>Azzera date</Button>
+        ) : null}
       </div>
       <div className="dining-grid-wrap">
         <table className="dining-dense">
@@ -91,6 +116,13 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
           </tbody>
         </table>
         {rows.length === 0 ? <p className="muted" style={{ padding: 24, textAlign: 'center' }}>Nessuna prenotazione trovata.</p> : null}
+        {filteredSorted.length > rows.length ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 20px' }}>
+            <Button variant="secondary" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+              Mostra altre ({filteredSorted.length - rows.length} rimaste)
+            </Button>
+          </div>
+        ) : null}
       </div>
     </section>
   )

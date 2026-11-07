@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@homisuite/ui'
-import { Star, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { Button, DatePicker, TimePicker } from '@homisuite/ui'
+import { Pencil, Star, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
+import { useConfirm } from '../../components/ConfirmDialog'
 import { getFeedback, listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
 import type { ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS } from './types'
@@ -29,6 +30,14 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   const [addAltId, setAddAltId] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [editGuestName, setEditGuestName] = useState('')
+  const [editRoomNumber, setEditRoomNumber] = useState('')
+  const [editPartySize, setEditPartySize] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const [editSpecialRequests, setEditSpecialRequests] = useState('')
+  const [confirmDialog, confirm] = useConfirm()
 
   const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
 
@@ -60,17 +69,59 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     setError(null)
     setAddAltId('')
     setNote(reservation?.confirmation_note ?? '')
+    setEditing(false)
+    setEditGuestName(reservation?.guest_name ?? '')
+    setEditRoomNumber(reservation?.room_number ?? '')
+    setEditPartySize(reservation ? String(reservation.party_size) : '')
+    setEditDate(reservation?.reservation_date ?? '')
+    setEditTime(reservation?.reservation_time?.slice(0, 5) ?? '')
+    setEditSpecialRequests(reservation?.special_requests ?? '')
     void load()
   }, [reservation, load])
 
   async function setStatus(status: ConfirmationStatus) {
     if (!reservation) return
+    // Cancelling drops the booking from the active schedule with no undo
+    // visible anywhere in this panel -- worth one extra click to confirm,
+    // the same guard every other destructive action in the console uses.
+    if (status === 'cancelled') {
+      const ok = await confirm({
+        title: 'Annullare questa prenotazione?',
+        description: `${reservation.guest_name} · ${restaurantName(reservation.restaurant_id)}, ${formatDate(reservation.reservation_date)} alle ${reservation.reservation_time.slice(0, 5)}.`,
+        confirmLabel: 'Annulla prenotazione',
+      })
+      if (!ok) return
+    }
     setSaving(true)
     setError(null)
     try {
       await updateReservation(supabase, reservation.id, { confirmation_status: status })
       await onChanged()
       await load()
+    } catch (cause) {
+      setError(readableDiningError(cause))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveEdit(event: FormEvent) {
+    event.preventDefault()
+    if (!reservation) return
+    setSaving(true)
+    setError(null)
+    try {
+      await updateReservation(supabase, reservation.id, {
+        guest_name: editGuestName,
+        room_number: editRoomNumber || null,
+        party_size: Number(editPartySize),
+        reservation_date: editDate,
+        reservation_time: editTime,
+        special_requests: editSpecialRequests || null,
+      })
+      await onChanged()
+      await load()
+      setEditing(false)
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {
@@ -120,6 +171,8 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   const availableForAlt = restaurants.filter((r) => r.id !== reservation.restaurant_id && !alternatives.some((a) => a.restaurant_id === r.id))
 
   return (
+    <>
+    {confirmDialog}
     <SlideOver
       open={Boolean(reservation)}
       onClose={onClose}
@@ -151,11 +204,31 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
       {error ? <p className="form-error" role="alert">{error}</p> : null}
 
       <div className="dining-dp-section">
-        <h3>Ospite</h3>
-        <div className="dining-dp-kv">
-          <span className="v">{reservation.guest_name}</span>
-          <span className="k">{reservation.room_number ? `Camera ${reservation.room_number}` : 'Nessuna camera (ospite esterno)'}</span>
+        <div className="section-heading split">
+          <h3>Ospite</h3>
+          {canManage && !editing ? (
+            <button type="button" className="icon-button" aria-label="Modifica prenotazione" onClick={() => setEditing(true)}><Pencil size={14} /></button>
+          ) : null}
         </div>
+        {editing ? (
+          <form className="modal-form" id="edit-reservation-form" onSubmit={saveEdit}>
+            <label className="form-field"><span>Nome ospite</span><input value={editGuestName} onChange={(event) => setEditGuestName(event.target.value)} required minLength={1} maxLength={120} /></label>
+            <label className="form-field"><span>Camera</span><input value={editRoomNumber} onChange={(event) => setEditRoomNumber(event.target.value)} maxLength={20} /></label>
+            <label className="form-field"><span>Data</span><DatePicker value={editDate} onChange={setEditDate} ariaLabel="Data prenotazione" /></label>
+            <label className="form-field"><span>Ora</span><TimePicker value={editTime} onChange={setEditTime} ariaLabel="Ora prenotazione" /></label>
+            <label className="form-field"><span>Numero persone</span><input type="number" min={1} max={50} value={editPartySize} onChange={(event) => setEditPartySize(event.target.value)} required /></label>
+            <label className="form-field"><span>Richieste particolari</span><textarea rows={2} maxLength={500} spellCheck={false} value={editSpecialRequests} onChange={(event) => setEditSpecialRequests(event.target.value)} /></label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button variant="secondary" type="button" onClick={() => setEditing(false)} disabled={saving}>Annulla</Button>
+              <Button variant="primary" type="submit" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
+            </div>
+          </form>
+        ) : (
+          <div className="dining-dp-kv">
+            <span className="v">{reservation.guest_name}</span>
+            <span className="k">{reservation.room_number ? `Camera ${reservation.room_number}` : 'Nessuna camera (ospite esterno)'}</span>
+          </div>
+        )}
       </div>
 
       <div className="dining-dp-section">
@@ -231,5 +304,6 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
         ) : <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>Nessuna attività registrata.</p>}
       </div>
     </SlideOver>
+    </>
   )
 }

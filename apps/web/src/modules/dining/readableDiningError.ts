@@ -15,7 +15,9 @@ function extractMessage(cause: unknown): string {
 
 export function readableDiningError(cause: unknown): string {
   const message = extractMessage(cause)
-  if (/permission|forbidden|42501/i.test(message)) return 'Non hai i permessi necessari per questa operazione.'
+  if (/permission|forbidden|42501/i.test(message)) {
+    return 'Non hai i permessi necessari per questa operazione. Se pensi di doverli avere, chiedi a un amministratore di verificare il tuo ruolo e reparto in Team.'
+  }
   if (/closes_at|opens_at|restaurant_hours_closes_after_opens/i.test(message)) return 'L’orario di chiusura deve essere successivo a quello di apertura.'
   if (/confirmation_status/i.test(message)) return 'Stato di conferma non valido.'
   return 'Operazione non riuscita. Riprova.'
