@@ -66,7 +66,7 @@ export const helpContent: Record<string, HelpTopic> = {
   housekeeping: {
     title: 'Housekeeping',
     intro: 'Richieste degli ospiti e operatività delle camere.',
-    version: 2,
+    version: 3,
     sections: [
       {
         heading: 'La coda delle richieste',
@@ -91,7 +91,7 @@ export const helpContent: Record<string, HelpTopic> = {
   dining: {
     title: 'Ristorazione',
     intro: 'Ristoranti convenzionati e prenotazioni degli ospiti.',
-    version: 3,
+    version: 4,
     sections: [
       {
         heading: 'Prenotazioni · Oggi',
@@ -127,7 +127,7 @@ export const helpContent: Record<string, HelpTopic> = {
   turni: {
     title: 'Turni',
     intro: 'Pianificazione dei turni e copertura del personale.',
-    version: 2,
+    version: 3,
     sections: [
       {
         heading: 'Il calendario',
@@ -273,7 +273,27 @@ export const moduleTours: Record<string, ModuleTour> = {
       {
         target: '[data-tour="dining-nav"]',
         title: 'Le sezioni di Ristorazione',
-        body: 'Prenotazioni, Ristoranti, Categorie e Registro modifiche -- le ultime tre visibili solo a chi ha i permessi di gestione del modulo.',
+        body: 'Cinque schede in alto -- Prenotazioni, Ristoranti, Categorie, Registro modifiche e Impostazioni. Le vediamo una per una, poi entriamo nel dettaglio di Prenotazioni.',
+      },
+      {
+        target: '[role="tab"][data-value="ristoranti"]',
+        title: 'Ristoranti',
+        body: 'L’elenco dei ristoranti convenzionati: orari di apertura, se sono consigliati o visibili agli ospiti, e le loro impostazioni -- visibile solo a chi ha i permessi di gestione.',
+      },
+      {
+        target: '[role="tab"][data-value="categorie"]',
+        title: 'Categorie',
+        body: 'Le categorie usate per organizzare i ristoranti (es. colazione, cena, bar) -- anche questa riservata a chi gestisce il modulo.',
+      },
+      {
+        target: '[role="tab"][data-value="registro"]',
+        title: 'Registro modifiche',
+        body: 'La cronologia di ogni modifica fatta sulle prenotazioni -- chi, cosa e quando, utile in caso di dubbi su una richiesta.',
+      },
+      {
+        target: '[role="tab"][data-value="impostazioni"]',
+        title: 'Impostazioni',
+        body: 'Da qui gestisci le preferenze ospite selezionabili (vista mare, seggiolone…) e quali ristoranti sono visibili nell’app ospite.',
       },
       {
         target: '[data-tour="dining-queue"]',
@@ -315,6 +335,18 @@ export const moduleTours: Record<string, ModuleTour> = {
         activate: ['[role="tab"][data-value="/housekeeping"]'],
       },
       {
+        target: '[role="tab"][data-value="/housekeeping/soggiorni"]',
+        title: 'Soggiorni',
+        body: 'La lista delle camere occupate, con check-in e check-out: da qui registri un soggiorno, lo modifichi o lo chiudi -- visibile a chi gestisce la reception.',
+        activate: ['[role="tab"][data-value="/housekeeping"]'],
+      },
+      {
+        target: '[role="tab"][data-value="/housekeeping/admin"]',
+        title: 'Gestione',
+        body: 'Personale, camere, menu delle richieste (categorie e articoli), statistiche e integrazioni -- riservata a chi ha i permessi di amministrazione.',
+        activate: ['[role="tab"][data-value="/housekeeping"]'],
+      },
+      {
         target: '[data-tour="hk-tabs"]',
         title: 'Nuove, In corso, Completate',
         body: 'La coda è divisa in tre schede: le richieste nuove da prendere in carico, quelle già assegnate e in lavorazione, e lo storico di quelle completate o annullate.',
@@ -344,7 +376,12 @@ export const moduleTours: Record<string, ModuleTour> = {
       {
         target: '[data-tour="shifts-nav"]',
         title: 'Operativo e Impostazioni',
-        body: 'Il calendario, i tuoi turni e le tue richieste da un lato; la configurazione del modulo (dipendenti, unità, regole, codici turno) dall’altro -- quest’ultima visibile solo a chi gestisce i turni.',
+        body: 'Il calendario, i tuoi turni e le tue richieste da un lato; la configurazione del modulo dall’altro -- quest’ultima visibile solo a chi gestisce i turni.',
+      },
+      {
+        target: '[role="tab"][data-value="impostazioni"]',
+        title: 'Impostazioni del modulo',
+        body: 'Dipendenti, Unità, Regole turni e Codici turno -- la configurazione vera e propria: chi fa parte di ogni unità, come generare i turni automaticamente e quali codici (es. "M" mattina, "R" riposo) usare.',
       },
       {
         target: '[data-tour="shifts-grid"]',
