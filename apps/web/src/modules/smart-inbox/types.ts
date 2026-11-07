@@ -28,12 +28,23 @@ export interface InboxDraft {
   suggested_actions: SuggestedAction[]
   model: string | null
   status: 'pending' | 'sent' | 'discarded'
+  sent_by: string | null
   sent_at: string | null
   updated_at: string
 }
 
+export interface ConversationRef {
+  id: string
+  guest_address: string
+  guest_name: string | null
+  assigned_to: string | null
+  assigned_at: string | null
+}
+
 export interface InboxMessage {
   id: string
+  thread_id: string | null
+  conversation: ConversationRef | null
   from_address: string | null
   from_name: string | null
   subject: string | null
@@ -80,4 +91,9 @@ export interface UsageRow {
   output_tokens: number
   cache_read_input_tokens: number
   cache_creation_input_tokens: number
+}
+
+export interface Agent {
+  profile_id: string
+  full_name: string
 }

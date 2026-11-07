@@ -72,11 +72,11 @@ Deno.serve(async (request: Request) => {
 
       const { data: message, error: messageError } = await admin
         .from('smart_inbox_messages')
-        .select('id, mailbox_id, graph_message_id')
+        .select('id, mailbox_id, graph_message_id, thread_id')
         .eq('id', draft.message_id)
         .single()
       if (messageError) throw messageError
-      const target = message as { id: string; mailbox_id: string; graph_message_id: string }
+      const target = message as { id: string; mailbox_id: string; graph_message_id: string; thread_id: string | null }
 
       try {
         const { secret } = await loadMailbox(admin, target.mailbox_id)
@@ -103,6 +103,17 @@ Deno.serve(async (request: Request) => {
         .update({ status: 'replied' })
         .eq('id', target.id)
       if (repliedError) console.error('smart-inbox-actions: message not marked replied', repliedError)
+
+      // Whoever answers an unassigned guest becomes their agent, so the
+      // next email from the same guest lands with the same person.
+      if (target.thread_id) {
+        const { error: assignError } = await admin
+          .from('smart_inbox_conversations')
+          .update({ assigned_to: auth.userId, assigned_by: auth.userId })
+          .eq('id', target.thread_id)
+          .is('assigned_to', null)
+        if (assignError) console.error('smart-inbox-actions: conversation not auto-assigned', assignError)
+      }
       return json({ ok: true })
     }
 

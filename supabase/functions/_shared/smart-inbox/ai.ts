@@ -16,6 +16,12 @@ export interface KnowledgeEntry {
   content: string
 }
 
+export interface HistoryEntry {
+  from: 'guest' | 'hotel'
+  at: string
+  text: string
+}
+
 export interface DraftRequest {
   hotelName: string
   tone: 'cordiale' | 'formale' | 'essenziale'
@@ -28,7 +34,11 @@ export interface DraftRequest {
     receivedAt: string
     body: string
   }
+  // Earlier exchanges with the same guest, oldest first.
+  history?: HistoryEntry[]
 }
+
+export const HISTORY_ENTRY_CHARS = 1500
 
 export const CATEGORIES = ['information', 'request', 'booking', 'complaint', 'other'] as const
 export const URGENCIES = ['low', 'normal', 'high'] as const
@@ -111,9 +121,26 @@ export function buildKnowledgeBlock(entries: KnowledgeEntry[]): string {
   return `<hotel_information>\n${sections.join('\n\n')}\n</hotel_information>`
 }
 
-export function buildEmailMessage(email: DraftRequest['email']): string {
+function buildHistory(history: HistoryEntry[]): string[] {
+  if (history.length === 0) return []
+  const entries = history.map((entry) => {
+    const text = entry.text.trim()
+    const clipped = text.length > HISTORY_ENTRY_CHARS ? `${text.slice(0, HISTORY_ENTRY_CHARS)} […]` : text
+    return `<message from="${entry.from}" date="${entry.at}">\n${clipped}\n</message>`
+  })
+  return [
+    'Earlier messages with this guest, for context (oldest first). Stay consistent with what the hotel already wrote.',
+    '<previous_messages>',
+    ...entries,
+    '</previous_messages>',
+    '',
+  ]
+}
+
+export function buildEmailMessage(email: DraftRequest['email'], history: HistoryEntry[] = []): string {
   const sender = email.fromName ? `${email.fromName} <${email.fromAddress}>` : email.fromAddress
   return [
+    ...buildHistory(history),
     'Draft a reply to this guest email.',
     '',
     '<guest_email>',
@@ -204,7 +231,7 @@ export async function draftReply(
       { type: 'text', text: buildSystemPrompt(request.hotelName, request.tone, request.signature) },
       { type: 'text', text: buildKnowledgeBlock(request.knowledge), cache_control: { type: 'ephemeral' } },
     ],
-    messages: [{ role: 'user', content: buildEmailMessage(request.email) }],
+    messages: [{ role: 'user', content: buildEmailMessage(request.email, request.history ?? []) }],
   })
 
   const usage: DraftUsage = {

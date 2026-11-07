@@ -209,13 +209,14 @@ export const helpContent: Record<string, HelpTopic> = {
   'smart-inbox': {
     title: 'Smart Inbox',
     intro: 'Le email degli ospiti arrivate su Outlook, con una bozza di risposta già pronta.',
-    version: 1,
+    version: 2,
     sections: [
       {
         heading: 'Posta',
         icon: Inbox,
         body: [
-          '"Da gestire" raccoglie le email che aspettano una risposta. Apri un’email per leggere il messaggio dell’ospite e la bozza preparata dall’assistente.',
+          'Ogni ospite è una conversazione: tutte le sue email e le risposte già inviate stanno insieme, in ordine. "Da gestire" mostra gli ospiti che aspettano una risposta.',
+          'Ogni conversazione ha un agent, il collega che la segue. Usa "Prendi in carico" o scegli un collega dal menu Agent; in "Assegnate a me" trovi solo i tuoi ospiti. Chi risponde per primo a un ospite non assegnato ne diventa l’agent.',
           'Correggi la bozza se serve, poi premi "Invia risposta": parte dalla casella Outlook dell’hotel. Niente viene inviato senza la tua conferma.',
           'Le email segnate "Da gestire" in giallo (reclami, rimborsi, domande senza risposta nelle informazioni) vanno controllate con più attenzione.',
         ],

@@ -43,11 +43,29 @@ ritenta quelli `pending`/`failed` (massimo 3 tentativi).
 | Edge Functions | `smart-inbox-connect`, `smart-inbox-oauth-callback`, `smart-inbox-webhook`, `smart-inbox-actions`, `smart-inbox-maintenance` |
 | Interfaccia | `apps/web/src/modules/smart-inbox/` (rotta `/smart-inbox`) |
 
+### Conversazioni e agent
+
+- **Ogni ospite è una conversazione** (`smart_inbox_conversations`): una per
+  indirizzo mittente e struttura. Tutte le sue email ci finiscono dentro
+  (`smart_inbox_messages.thread_id`), insieme alle risposte già inviate.
+- **Ogni persona con `smart_inbox.view` è un agent.** Una conversazione si
+  assegna a un agent (`assigned_to`): "Prendi in carico", oppure dal menu
+  Agent a un collega. La vista "Assegnate a me" mostra solo i propri ospiti.
+  Se l'ospite è seguito da un altro agent, la conversazione lo dice, ma
+  chiunque può comunque rispondere.
+- Chi risponde a un ospite non assegnato ne diventa l'agent, così la prossima
+  email dello stesso ospite arriva alla stessa persona.
+- Il database accetta come assegnatario solo un agent della stessa struttura
+  (`smart_inbox_is_agent`); chi ha assegnato e quando sono registrati lato
+  server. L'elenco degli agent viene da `smart_inbox_agents(property_id)`.
+- L'assistente riceve gli ultimi 4 scambi con lo stesso ospite (email e
+  risposte inviate), per rispondere in modo coerente con quanto già scritto.
+
 ### Permessi
 
 | Capability | Ruoli | Cosa permette |
 |---|---|---|
-| `smart_inbox.view` | receptionist, manager, property_admin, organization_admin | leggere la posta, modificare/inviare bozze, archiviare |
+| `smart_inbox.view` | receptionist, manager, property_admin, organization_admin | essere agent: leggere la posta, prendere in carico/assegnare ospiti, modificare/inviare bozze, archiviare |
 | `smart_inbox.manage` | manager, property_admin, organization_admin | collegare/scollegare Outlook, impostazioni, informazioni hotel, consumo AI |
 
 Come per gli altri moduli, `membership_permission_grants` può concedere queste

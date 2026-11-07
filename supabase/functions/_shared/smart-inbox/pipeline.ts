@@ -1,6 +1,6 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
-import { AiRefusalError, draftReply, type DraftRequest, type DraftUsage } from './ai.ts'
+import { AiRefusalError, draftReply, type DraftRequest, type DraftUsage, type HistoryEntry } from './ai.ts'
 import { headerMap, ignoreReason } from './filters.ts'
 import { createReplyDraft, deleteMessage, getMessage, textToHtml } from './graph.ts'
 import { getAccessToken, loadMailbox, ReauthRequiredError } from './mailbox.ts'
@@ -85,6 +85,79 @@ async function recordUsage(admin: SupabaseClient, propertyId: string, messageId:
   if (error) console.error('smart-inbox: usage not recorded', error)
 }
 
+// One conversation per guest address per property. Returns its id.
+export async function attachToConversation(
+  admin: SupabaseClient,
+  propertyId: string,
+  messageId: string,
+  guestAddress: string,
+  guestName: string | null,
+  receivedAt: string,
+): Promise<string> {
+  const find = () => admin
+    .from('smart_inbox_conversations')
+    .select('id, last_message_at')
+    .eq('property_id', propertyId)
+    .eq('guest_address', guestAddress)
+    .maybeSingle()
+
+  let { data: conversation, error } = await find()
+  if (error) throw error
+  if (!conversation) {
+    const inserted = await admin
+      .from('smart_inbox_conversations')
+      .insert({ property_id: propertyId, guest_address: guestAddress, guest_name: guestName, last_message_at: receivedAt })
+      .select('id, last_message_at')
+      .single()
+    if (inserted.error) {
+      // Lost a race with another worker creating the same conversation.
+      if (inserted.error.code !== '23505') throw inserted.error
+      const again = await find()
+      if (again.error || !again.data) throw again.error ?? inserted.error
+      conversation = again.data
+    } else {
+      conversation = inserted.data
+    }
+  }
+  const row = conversation as { id: string; last_message_at: string }
+  const changes: Record<string, unknown> = {}
+  if (guestName) changes.guest_name = guestName
+  if (new Date(receivedAt) > new Date(row.last_message_at)) changes.last_message_at = receivedAt
+  if (Object.keys(changes).length > 0) {
+    const { error: updateError } = await admin.from('smart_inbox_conversations').update(changes).eq('id', row.id)
+    if (updateError) throw updateError
+  }
+  const { error: linkError } = await admin.from('smart_inbox_messages').update({ thread_id: row.id }).eq('id', messageId)
+  if (linkError) throw linkError
+  return row.id
+}
+
+export const HISTORY_MESSAGES = 4
+
+// The last few exchanges with this guest before `beforeIso`, oldest first:
+// each earlier guest email, followed by the reply the hotel sent to it.
+async function loadHistory(admin: SupabaseClient, threadId: string, messageId: string, beforeIso: string): Promise<HistoryEntry[]> {
+  const { data, error } = await admin
+    .from('smart_inbox_messages')
+    .select('id, received_at, body_text, body_preview, status, smart_inbox_drafts(body, status, sent_at)')
+    .eq('thread_id', threadId)
+    .neq('id', messageId)
+    .neq('status', 'ignored')
+    .lt('received_at', beforeIso)
+    .order('received_at', { ascending: false })
+    .limit(HISTORY_MESSAGES)
+  if (error) throw error
+  type Row = { received_at: string; body_text: string | null; body_preview: string | null; smart_inbox_drafts: { body: string; status: string; sent_at: string | null } | Array<{ body: string; status: string; sent_at: string | null }> | null }
+  const history: HistoryEntry[] = []
+  for (const row of ((data ?? []) as Row[]).reverse()) {
+    const text = row.body_text || row.body_preview
+    if (text) history.push({ from: 'guest', at: row.received_at, text })
+    const draft = Array.isArray(row.smart_inbox_drafts) ? row.smart_inbox_drafts[0] : row.smart_inbox_drafts
+    if (draft?.status === 'sent') history.push({ from: 'hotel', at: draft.sent_at ?? row.received_at, text: draft.body })
+  }
+  return history
+}
+
 async function loadPropertyContext(admin: SupabaseClient, propertyId: string) {
   const [property, settings, knowledge] = await Promise.all([
     admin.from('properties').select('name').eq('id', propertyId).single(),
@@ -138,6 +211,10 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
       received_at: email.receivedDateTime,
     })
 
+    const threadId = fromAddress
+      ? await attachToConversation(admin, message.property_id, message.id, fromAddress, email.from?.emailAddress?.name ?? null, email.receivedDateTime)
+      : null
+
     const context = await loadPropertyContext(admin, message.property_id)
 
     if (!options.force) {
@@ -166,6 +243,8 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
       return 'needs_attention'
     }
 
+    const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedDateTime) : []
+
     let drafted
     try {
       drafted = await draftReply(deps.anthropic, config.model, config.effort, {
@@ -180,6 +259,7 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
           receivedAt: email.receivedDateTime,
           body: bodyText || email.bodyPreview || '',
         },
+        history,
       })
     } catch (error) {
       const usage = (error as { usage?: DraftUsage }).usage

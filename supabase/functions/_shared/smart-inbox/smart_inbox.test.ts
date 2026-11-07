@@ -3,7 +3,7 @@ import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { decryptSecret, encryptSecret, sha256Hex, signState, toBase64, verifyState } from './crypto.ts'
 import { ignoreReason } from './filters.ts'
 import { textToHtml } from './graph.ts'
-import { AiRefusalError, buildKnowledgeBlock, buildSystemPrompt, draftReply, parseResult, supportsServerFallback, type DraftRequest } from './ai.ts'
+import { AiRefusalError, buildEmailMessage, buildKnowledgeBlock, buildSystemPrompt, draftReply, HISTORY_ENTRY_CHARS, parseResult, supportsServerFallback, type DraftRequest } from './ai.ts'
 import { readConfig } from './runtime.ts'
 
 const KEY = toBase64(crypto.getRandomValues(new Uint8Array(32)))
@@ -162,6 +162,17 @@ Deno.test('draftReply caches the knowledge base and asks for JSON output', async
   assertStringIncludes(params.system[1].text, '## Colazione')
   assertEquals(params.system[0].cache_control, undefined)
   assertStringIncludes(params.messages[0].content, 'A che ora è la colazione?')
+})
+
+Deno.test('earlier exchanges with the guest come before the new email, clipped', () => {
+  const text = buildEmailMessage(request.email, [
+    { from: 'guest', at: '2026-11-01T09:00:00Z', text: 'Avete il parcheggio?' },
+    { from: 'hotel', at: '2026-11-01T10:00:00Z', text: 'x'.repeat(HISTORY_ENTRY_CHARS + 50) },
+  ])
+  assert(text.indexOf('<previous_messages>') < text.indexOf('<guest_email>'))
+  assertStringIncludes(text, '<message from="guest" date="2026-11-01T09:00:00Z">\nAvete il parcheggio?')
+  assertStringIncludes(text, `${'x'.repeat(HISTORY_ENTRY_CHARS)} […]`)
+  assert(!buildEmailMessage(request.email).includes('<previous_messages>'), 'no history block for a first email')
 })
 
 Deno.test('draftReply surfaces refusals with their usage', async () => {

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, UsageRow } from './types'
+import type { Agent, InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, UsageRow } from './types'
 
 // Untyped SupabaseClient, same as Dining: the shared Database type
 // (core-sdk) doesn't know this module's tables. Every table here is
@@ -28,23 +28,53 @@ async function invoke<T>(client: SupabaseClient, name: string, body: Record<stri
   return data as T
 }
 
-const MESSAGE_COLUMNS = 'id, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
-const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_at, updated_at'
+const MESSAGE_COLUMNS = 'id, thread_id, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
+const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_by, sent_at, updated_at'
+const CONVERSATION_COLUMNS = 'id, guest_address, guest_name, assigned_to, assigned_at'
+const SELECT = `${MESSAGE_COLUMNS}, conversation:smart_inbox_conversations(${CONVERSATION_COLUMNS}), smart_inbox_drafts(${DRAFT_COLUMNS})`
+
+type MessageRow = Record<string, unknown> & { smart_inbox_drafts: InboxDraft | InboxDraft[] | null }
+
+function toMessage(row: MessageRow): InboxMessage {
+  const { smart_inbox_drafts: drafts, ...message } = row
+  const draft = Array.isArray(drafts) ? drafts[0] ?? null : drafts ?? null
+  return { ...(message as Omit<InboxMessage, 'draft'>), draft }
+}
 
 export async function listMessages(client: SupabaseClient, propertyId: string, statuses: MessageStatus[], limit = 100): Promise<InboxMessage[]> {
   const { data, error } = await client
     .from('smart_inbox_messages')
-    .select(`${MESSAGE_COLUMNS}, smart_inbox_drafts(${DRAFT_COLUMNS})`)
+    .select(SELECT)
     .eq('property_id', propertyId)
     .in('status', statuses)
     .order('received_at', { ascending: false })
     .limit(limit)
   if (error) throw error
-  return (data ?? []).map((row) => {
-    const { smart_inbox_drafts: drafts, ...message } = row as Record<string, unknown> & { smart_inbox_drafts: InboxDraft | InboxDraft[] | null }
-    const draft = Array.isArray(drafts) ? drafts[0] ?? null : drafts ?? null
-    return { ...(message as Omit<InboxMessage, 'draft'>), draft }
-  })
+  return (data ?? []).map((row) => toMessage(row as MessageRow))
+}
+
+// Every message of one guest conversation, oldest first.
+export async function listThread(client: SupabaseClient, threadId: string): Promise<InboxMessage[]> {
+  const { data, error } = await client
+    .from('smart_inbox_messages')
+    .select(SELECT)
+    .eq('thread_id', threadId)
+    .order('received_at', { ascending: true })
+    .limit(200)
+  if (error) throw error
+  return (data ?? []).map((row) => toMessage(row as MessageRow))
+}
+
+export async function listAgents(client: SupabaseClient, propertyId: string): Promise<Agent[]> {
+  const { data, error } = await client.rpc('smart_inbox_agents', { p_property_id: propertyId })
+  if (error) throw error
+  return (data ?? []) as Agent[]
+}
+
+export async function assignConversation(client: SupabaseClient, threadId: string, profileId: string | null): Promise<void> {
+  const { data, error } = await client.from('smart_inbox_conversations').update({ assigned_to: profileId }).eq('id', threadId).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
 }
 
 export async function setMessageStatus(client: SupabaseClient, messageId: string, status: 'dismissed' | 'needs_attention'): Promise<void> {

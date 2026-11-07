@@ -3,10 +3,11 @@ import type { MessageCategory, MessageStatus, MessageUrgency, SuggestedAction, U
 // Pure presentation helpers, kept free of React/Supabase so they can be
 // unit-tested with node --test (see labels.test.mjs).
 
-export type InboxView = 'todo' | 'replied' | 'archived'
+export type InboxView = 'todo' | 'mine' | 'replied' | 'archived'
 
 const VIEW_STATUSES: Record<InboxView, MessageStatus[]> = {
   todo: ['draft_ready', 'needs_attention', 'failed', 'pending', 'processing'],
+  mine: ['draft_ready', 'needs_attention', 'failed', 'pending', 'processing'],
   replied: ['replied'],
   archived: ['dismissed', 'ignored'],
 }
@@ -27,6 +28,64 @@ export const STATUS_LABELS: Record<MessageStatus, string> = {
 }
 
 export type StatusTone = 'ok' | 'warn' | 'danger' | 'neutral'
+
+// Messages that still ask something of a person.
+export function isActionable(status: MessageStatus): boolean {
+  return VIEW_STATUSES.todo.includes(status)
+}
+
+export interface ConversationGroup<M> {
+  key: string
+  threadId: string | null
+  guestName: string
+  guestAddress: string | null
+  assignedTo: string | null
+  latest: M
+  messages: M[]
+  openCount: number
+}
+
+// One list row per guest: messages of the same conversation are grouped,
+// newest conversation first. A message not yet linked to a conversation
+// (its sender isn't known until it has been read from Outlook) is its own
+// row.
+export function groupByConversation<M extends {
+  id: string
+  thread_id: string | null
+  received_at: string
+  status: MessageStatus
+  from_name: string | null
+  from_address: string | null
+  conversation: { guest_address: string; guest_name: string | null; assigned_to: string | null } | null
+}>(messages: M[]): ConversationGroup<M>[] {
+  const groups = new Map<string, ConversationGroup<M>>()
+  for (const message of messages) {
+    const key = message.thread_id ?? `message:${message.id}`
+    let group = groups.get(key)
+    if (!group) {
+      group = {
+        key,
+        threadId: message.thread_id,
+        guestName: message.conversation?.guest_name?.trim() || message.from_name?.trim() || message.conversation?.guest_address || message.from_address || 'Mittente sconosciuto',
+        guestAddress: message.conversation?.guest_address ?? message.from_address,
+        assignedTo: message.conversation?.assigned_to ?? null,
+        latest: message,
+        messages: [],
+        openCount: 0,
+      }
+      groups.set(key, group)
+    }
+    group.messages.push(message)
+    if (isActionable(message.status)) group.openCount++
+    if (message.received_at > group.latest.received_at) group.latest = message
+  }
+  return [...groups.values()].sort((a, b) => (a.latest.received_at < b.latest.received_at ? 1 : -1))
+}
+
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '?'
+}
 
 export function statusTone(status: MessageStatus): StatusTone {
   if (status === 'draft_ready' || status === 'replied') return 'ok'

@@ -18,6 +18,7 @@ const TABS = [
 
 const INBOX_VIEWS = [
   { value: 'todo', label: 'Da gestire' },
+  { value: 'mine', label: 'Assegnate a me' },
   { value: 'replied', label: 'Risposte inviate' },
   { value: 'archived', label: 'Archiviate' },
 ]
@@ -93,7 +94,7 @@ export function SmartInboxPage() {
       />
       {/* Panels stay mounted (as in Dining) so switching tab never throws
           away a half-edited draft or form. */}
-      <div hidden={tab !== 'posta'}><InboxTab client={supabase} propertyId={propertyId} view={view} active={tab === 'posta'} /></div>
+      <div hidden={tab !== 'posta'}><InboxTab client={supabase} propertyId={propertyId} currentProfileId={runtime.profile?.id ?? null} view={view} active={tab === 'posta'} /></div>
       <div hidden={tab !== 'informazioni'}><KnowledgeTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
       <div hidden={tab !== 'impostazioni'}><SettingsTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
     </div>

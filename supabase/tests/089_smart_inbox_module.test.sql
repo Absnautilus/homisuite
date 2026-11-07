@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(36);
+select plan(49);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: A and B are entitled properties in different organizations;
@@ -59,6 +59,10 @@ insert into smart_inbox_mailboxes (id, property_id, email_address) values
 
 insert into smart_inbox_mailbox_secrets (mailbox_id, refresh_token_ciphertext, graph_subscription_id) values
   ('00000089-0000-0000-0000-000000000061', 'ciphertext-a', 'sub-a');
+
+insert into smart_inbox_conversations (id, property_id, guest_address, guest_name) values
+  ('00000089-0000-0000-0000-000000000091', '00000089-0000-0000-0000-000000000011', 'mario@guest.example', 'Mario'),
+  ('00000089-0000-0000-0000-000000000092', '00000089-0000-0000-0000-000000000012', 'anna@guest.example', 'Anna');
 
 insert into smart_inbox_messages (id, property_id, mailbox_id, graph_message_id, subject, status) values
   ('00000089-0000-0000-0000-000000000071', '00000089-0000-0000-0000-000000000011', '00000089-0000-0000-0000-000000000061', 'graph-a-1', 'Orari colazione?', 'draft_ready'),
@@ -120,9 +124,31 @@ select ok(
   'settings updated_by is server-stamped, not client-writable'
 );
 
+update smart_inbox_messages set thread_id = '00000089-0000-0000-0000-000000000091'
+where id in ('00000089-0000-0000-0000-000000000071', '00000089-0000-0000-0000-000000000072');
+
+select ok(
+  has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'assigned_to', 'update')
+  and not has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'guest_address', 'update')
+  and not has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'assigned_by', 'update')
+  and not has_table_privilege('authenticated', 'public.smart_inbox_conversations', 'insert,delete'),
+  'staff can only change who a conversation is assigned to'
+);
+
 -- ---------------------------------------------------------------------------
 -- Tenant integrity
 -- ---------------------------------------------------------------------------
+select throws_ok(
+  $$update smart_inbox_messages set thread_id = '00000089-0000-0000-0000-000000000092'
+    where id = '00000089-0000-0000-0000-000000000071'$$,
+  '23503', null,
+  'a message cannot join another property guest conversation'
+);
+select throws_ok(
+  $$insert into smart_inbox_conversations (property_id, guest_address) values ('00000089-0000-0000-0000-000000000011', 'Mario@Guest.example')$$,
+  '23514', null,
+  'guest addresses are stored lower-cased'
+);
 select throws_ok(
   $$insert into smart_inbox_messages (property_id, mailbox_id, graph_message_id)
     values ('00000089-0000-0000-0000-000000000011', '00000089-0000-0000-0000-000000000062', 'cross')$$,
@@ -192,6 +218,53 @@ select is(
 set local role authenticated;
 set local request.jwt.claim.sub = '00000089-0000-0000-0000-000000000041';
 
+-- Agents and conversations
+select is((select count(*)::int from smart_inbox_conversations), 1, 'receptionist sees only their property conversations');
+select is(
+  (select array_agg(full_name order by full_name) from smart_inbox_agents('00000089-0000-0000-0000-000000000011')),
+  array['Manager A', 'Reception A'],
+  'the agents of a property are its staff with smart_inbox.view'
+);
+select is(
+  (select count(*)::int from smart_inbox_agents('00000089-0000-0000-0000-000000000012')),
+  0,
+  'another property agents are not listed'
+);
+update smart_inbox_conversations set assigned_to = '00000089-0000-0000-0000-000000000041'
+where id = '00000089-0000-0000-0000-000000000091';
+select is(
+  (select row(assigned_to, assigned_by, assigned_at is not null)::text from smart_inbox_conversations where id = '00000089-0000-0000-0000-000000000091'),
+  row('00000089-0000-0000-0000-000000000041'::uuid, '00000089-0000-0000-0000-000000000041'::uuid, true)::text,
+  'an agent can take a conversation; who and when are stamped server-side'
+);
+select lives_ok(
+  $$update smart_inbox_conversations set assigned_to = '00000089-0000-0000-0000-000000000042'
+    where id = '00000089-0000-0000-0000-000000000091'$$,
+  'an agent can hand a conversation to a colleague'
+);
+select throws_ok(
+  $$update smart_inbox_conversations set assigned_to = '00000089-0000-0000-0000-000000000043'
+    where id = '00000089-0000-0000-0000-000000000091'$$,
+  '42501', null,
+  'a conversation cannot be assigned to staff of another property'
+);
+select throws_ok(
+  $$update smart_inbox_conversations set assigned_to = '00000089-0000-0000-0000-000000000044'
+    where id = '00000089-0000-0000-0000-000000000091'$$,
+  '42501', null,
+  'a conversation cannot be assigned to a colleague who is not a Smart Inbox agent'
+);
+update smart_inbox_conversations set assigned_to = '00000089-0000-0000-0000-000000000041'
+where id = '00000089-0000-0000-0000-000000000092';
+reset role;
+select is(
+  (select assigned_to from smart_inbox_conversations where id = '00000089-0000-0000-0000-000000000092'),
+  null,
+  'an agent cannot take another property conversation'
+);
+set local role authenticated;
+set local request.jwt.claim.sub = '00000089-0000-0000-0000-000000000041';
+
 update smart_inbox_messages set status = 'dismissed'
 where id = '00000089-0000-0000-0000-000000000071';
 select is(
@@ -251,6 +324,16 @@ set local request.jwt.claim.sub = '00000089-0000-0000-0000-000000000043';
 
 select is((select count(*)::int from smart_inbox_messages), 2, 'manager B sees only property B messages');
 select is((select count(*)::int from smart_inbox_settings), 0, 'manager B cannot read property A settings');
+select is(
+  (select array_agg(guest_address) from smart_inbox_conversations),
+  array['anna@guest.example'],
+  'manager B sees only property B conversations'
+);
+select is(
+  smart_inbox_is_agent('00000089-0000-0000-0000-000000000011', '00000089-0000-0000-0000-000000000041'),
+  false,
+  'smart_inbox_is_agent answers nothing about a property the caller does not work for'
+);
 
 -- ---------------------------------------------------------------------------
 -- Manager C: property without the module fails closed
