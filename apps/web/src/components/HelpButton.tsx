@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CircleHelp } from 'lucide-react'
+import { CircleHelp, Compass } from 'lucide-react'
 import { Button, Modal } from '@homisuite/ui'
 import { helpTopicFor, moduleTours } from '../content/helpContent'
 import { TourOverlay } from './TourOverlay'
@@ -29,18 +29,14 @@ function markSeen(key: string, version: number) {
 
 // Present on every real-staff screen (mounted once in ShellLayout, not per
 // page) so there's always the same "?" in the same place, regardless of
-// which module is open. Every module with real UI to point at
-// (moduleTours) launches a real spotlight tour over its own actual
-// elements (TourOverlay) rather than describing them in a modal -- the
-// very first time this browser ever sees a 'ready' shell, on its own
-// (always the Home tour, wherever that first landing happens to be, since
-// steps with no matching element on the current page are skipped), and
-// again any time afterward from this button, for whichever module is open.
-// A module with nothing concrete to tour yet (Transfer) falls back to its
-// short animated guide from helpContent.ts instead. Either kind badges
-// itself when its content has changed since this browser last saw it (the
-// tour's or topic's own `version` field -- see helpContent.ts's doc
-// comment for what this does and doesn't automate).
+// which module is open. Clicking it always opens this screen's own guide
+// (the HelpTopic modal below) -- it never jumps straight into the tour on
+// its own, so it behaves the same everywhere and never fires something the
+// person didn't ask for. When this module also has a real spotlight tour
+// (moduleTours), the guide's footer carries a "Rivedi il tour" action that
+// starts it on demand. The one tour that still launches on its own is the
+// Home one, the very first time this browser ever sees a 'ready' shell --
+// a one-time welcome, not something this button triggers afterward.
 export function HelpButton({ moduleKey }: { moduleKey: string }) {
   const [open, setOpen] = useState(false)
   const [activeTourKey, setActiveTourKey] = useState<string | null>(null)
@@ -48,19 +44,16 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
   const [hasUpdate, setHasUpdate] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const autoShown = useRef(false)
+  const topic = helpTopicFor(moduleKey)
   const tour = moduleTours[moduleKey]
 
-  const topic = helpTopicFor(moduleKey)
-
   // Re-checks whenever the open screen changes (navigating to a different
-  // module) or a panel closes (closing marks whatever was just viewed as
+  // module) or the guide closes (closing marks whatever was just viewed as
   // seen, which should clear its own badge immediately).
   useEffect(() => {
     const seen = readSeenVersions()
-    const currentVersion = tour ? tour.version : topic.version
-    setHasUpdate(currentVersion > (seen[moduleKey] ?? 0))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleKey, open, activeTourKey])
+    setHasUpdate(topic.version > (seen[moduleKey] ?? 0))
+  }, [moduleKey, open, topic.version])
 
   useEffect(() => {
     if (autoShown.current) return
@@ -85,12 +78,8 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
   }, [])
 
   function onFabClick() {
-    if (tour) {
-      setActiveTourKey(moduleKey)
-    } else {
-      setStepIndex(0)
-      setOpen(true)
-    }
+    setStepIndex(0)
+    setOpen(true)
   }
 
   function closeGuide() {
@@ -98,13 +87,13 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
     setOpen(false)
   }
 
-  function closeTour(key: string) {
-    const closed = moduleTours[key]
-    if (closed) markSeen(key, closed.version)
-    setActiveTourKey(null)
+  function startTour() {
+    markSeen(moduleKey, topic.version)
+    setOpen(false)
+    setActiveTourKey(moduleKey)
   }
 
-  const activeTour = activeTourKey ? moduleTours[activeTourKey] : null
+  const activeTourSteps = activeTourKey ? moduleTours[activeTourKey]?.steps : undefined
   const isLast = stepIndex === topic.sections.length - 1
   const section = topic.sections[stepIndex]!
   const Icon = section.icon
@@ -123,56 +112,59 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
         {hasUpdate ? <span className="help-fab-dot" aria-hidden="true" /> : null}
       </button>
 
-      {activeTour ? <TourOverlay steps={activeTour.steps} onFinish={() => closeTour(activeTourKey!)} /> : null}
+      {activeTourSteps ? <TourOverlay steps={activeTourSteps} onFinish={() => setActiveTourKey(null)} /> : null}
 
-      {!tour && (
-        <Modal
-          open={open}
-          title={topic.title}
-          description={topic.intro}
-          onClose={closeGuide}
-          originRef={triggerRef}
-          footer={
-            <div className="help-footer">
-              <div className="help-dots" role="tablist" aria-label="Passi della guida">
-                {topic.sections.map((item, index) => (
-                  <button
-                    key={item.heading}
-                    type="button"
-                    role="tab"
-                    aria-selected={index === stepIndex}
-                    aria-label={`Passo ${index + 1} di ${topic.sections.length}: ${item.heading}`}
-                    className={`help-dot${index === stepIndex ? ' is-active' : ''}`}
-                    onClick={() => setStepIndex(index)}
-                  />
-                ))}
-              </div>
-              <div className="help-footer-actions">
-                {stepIndex > 0 ? (
-                  <Button variant="secondary" onClick={() => setStepIndex((value) => value - 1)}>Indietro</Button>
-                ) : null}
-                {isLast ? (
-                  <Button variant="primary" onClick={closeGuide}>Ho capito</Button>
-                ) : (
-                  <Button variant="primary" onClick={() => setStepIndex((value) => value + 1)}>Avanti</Button>
-                )}
-              </div>
+      <Modal
+        open={open}
+        title={topic.title}
+        description={topic.intro}
+        onClose={closeGuide}
+        originRef={triggerRef}
+        footer={
+          <div className="help-footer">
+            <div className="help-dots" role="tablist" aria-label="Passi della guida">
+              {topic.sections.map((item, index) => (
+                <button
+                  key={item.heading}
+                  type="button"
+                  role="tab"
+                  aria-selected={index === stepIndex}
+                  aria-label={`Passo ${index + 1} di ${topic.sections.length}: ${item.heading}`}
+                  className={`help-dot${index === stepIndex ? ' is-active' : ''}`}
+                  onClick={() => setStepIndex(index)}
+                />
+              ))}
             </div>
-          }
-        >
-          {/* Keying on stepIndex remounts this block on every step change,
-              which is what re-triggers the CSS entrance animation below --
-              cheaper and more robust than hand-rolling a transition group
-              for what's at most a handful of steps. */}
-          <div className="help-step" key={stepIndex}>
-            <div className="help-step-icon"><Icon size={26} /></div>
-            <h3>{section.heading}</h3>
-            <ul>
-              {section.body.map((line) => <li key={line}>{line}</li>)}
-            </ul>
+            <div className="help-footer-actions">
+              {tour ? (
+                <Button variant="secondary" className="push-left" onClick={startTour}>
+                  <Compass size={15} /> Rivedi il tour
+                </Button>
+              ) : null}
+              {stepIndex > 0 ? (
+                <Button variant="secondary" onClick={() => setStepIndex((value) => value - 1)}>Indietro</Button>
+              ) : null}
+              {isLast ? (
+                <Button variant="primary" onClick={closeGuide}>Ho capito</Button>
+              ) : (
+                <Button variant="primary" onClick={() => setStepIndex((value) => value + 1)}>Avanti</Button>
+              )}
+            </div>
           </div>
-        </Modal>
-      )}
+        }
+      >
+        {/* Keying on stepIndex remounts this block on every step change,
+            which is what re-triggers the CSS entrance animation below --
+            cheaper and more robust than hand-rolling a transition group
+            for what's at most a handful of steps. */}
+        <div className="help-step" key={stepIndex}>
+          <div className="help-step-icon"><Icon size={26} /></div>
+          <h3>{section.heading}</h3>
+          <ul>
+            {section.body.map((line) => <li key={line}>{line}</li>)}
+          </ul>
+        </div>
+      </Modal>
     </>
   )
 }

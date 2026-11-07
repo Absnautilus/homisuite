@@ -1,4 +1,8 @@
-import { Clock, Compass, LayoutGrid, type LucideIcon } from 'lucide-react'
+import {
+  Boxes, Building2, CalendarCheck, CalendarDays, Clock, Compass, Hotel, Inbox,
+  LayoutGrid, ListChecks, Plus, Search, Settings2, UserCog, UserPlus, UserRound, Users,
+  UtensilsCrossed, type LucideIcon,
+} from 'lucide-react'
 import type { TourStep } from '../components/TourOverlay'
 
 // One short, accurate guide per screen -- written from what each module's
@@ -9,8 +13,9 @@ import type { TourStep } from '../components/TourOverlay'
 // new screen's guide is just adding an entry here.
 //
 // `version` is what keeps a returning staff member from missing a change:
-// bump it whenever a topic's content actually changes (a new workflow, a
-// renamed button, a whole new section) -- HelpButton compares it against
+// bump it whenever a topic's content -- OR the matching entry in
+// moduleTours below -- actually changes (a new workflow, a renamed
+// button, a step added to the tour) -- HelpButton compares it against
 // what this browser last saw and badges the floating button until they
 // open it again. The guide's text still only updates when someone (today,
 // a Claude session) edits this file alongside the real feature -- nothing
@@ -51,19 +56,148 @@ export const helpContent: Record<string, HelpTopic> = {
         heading: 'Serve aiuto in una sezione specifica?',
         icon: LayoutGrid,
         body: [
-          'Il pulsante "?" in basso a destra mostra sempre la guida della schermata in cui ti trovi -- non devi tornare qui.',
+          'Il pulsante "?" in basso a destra apre sempre la guida della schermata in cui ti trovi -- non devi tornare qui.',
+          'Da quella guida, quando la sezione ne ha uno, puoi anche far ripartire il tour interattivo che evidenzia gli elementi reali della pagina.',
           'Un puntino acceso sul pulsante significa che quella guida è stata aggiornata da quando l’hai vista l’ultima volta.',
         ],
       },
     ],
   },
-  // Every module with real, interactive UI (housekeeping, dining, turni,
-  // team, impostazioni, moduli) has no modal entry here -- its floating
-  // button launches a real spotlight tour (TourOverlay, via moduleTours
-  // below) over its actual elements instead of describing them in a
-  // modal. See HelpButton.tsx. Only screens with nothing concrete to
-  // point at yet (transfer) stay on this modal, alongside the generic
-  // welcome topic above.
+  housekeeping: {
+    title: 'Housekeeping',
+    intro: 'Richieste degli ospiti e operatività delle camere.',
+    version: 2,
+    sections: [
+      {
+        heading: 'La coda delle richieste',
+        icon: ListChecks,
+        body: [
+          'Nuove, in corso e completate vivono su schede separate (Nuove / In corso / Completate), non in un unico elenco.',
+          'Prendi in carico una richiesta per assegnartela; aggiornane lo stato man mano che procedi.',
+        ],
+      },
+      {
+        heading: 'Se vedi solo questa schermata, senza menu laterale',
+        icon: Hotel,
+        body: ['È normale: il tuo ruolo è impostato per operare solo su Housekeeping, senza accesso agli altri moduli.'],
+      },
+      {
+        heading: 'Gestione',
+        icon: Settings2,
+        body: ['Categorie, articoli e impostazioni del reparto sono visibili solo a chi ha i permessi di gestione per questo modulo.'],
+      },
+    ],
+  },
+  dining: {
+    title: 'Ristorazione',
+    intro: 'Ristoranti convenzionati e prenotazioni degli ospiti.',
+    version: 3,
+    sections: [
+      {
+        heading: 'Prenotazioni · Oggi',
+        icon: CalendarCheck,
+        body: [
+          'In alto trovi il riepilogo della giornata e la coda "Da gestire", raggruppata per il tipo di azione che serve (contattare il ristorante, proporre un’alternativa, prendere in carico una richiesta nuova).',
+          'Sotto, il programma completo di oggi, filtrabile per stato.',
+        ],
+      },
+      {
+        heading: 'Prenotazioni · Tutte',
+        icon: Search,
+        body: [
+          'L’archivio completo, con ricerca libera e filtri per ristorante, stato e intervallo di date, così non scorri più l’intera cronologia.',
+          'Apri una riga per vedere il dettaglio: puoi anche modificare i dati della prenotazione (ospite, camera, data, ora, persone), non solo lo stato.',
+        ],
+      },
+      {
+        heading: 'Aggiungi prenotazione',
+        icon: Plus,
+        body: [
+          'Per una prenotazione presa per telefono o di persona -- si trova in alto a destra nella scheda Prenotazioni.',
+          'Puoi segnare anche le preferenze dell’ospite (es. vista mare, seggiolone), le stesse che compaiono per le prenotazioni fatte dall’ospite.',
+        ],
+      },
+      {
+        heading: 'Ristoranti, Categorie, Registro modifiche',
+        icon: UtensilsCrossed,
+        body: ['Gestiscono l’elenco dei ristoranti e delle categorie, e tengono traccia di ogni modifica fatta sulle prenotazioni -- riservati a chi ha i permessi di gestione.'],
+      },
+    ],
+  },
+  turni: {
+    title: 'Turni',
+    intro: 'Pianificazione dei turni e copertura del personale.',
+    version: 2,
+    sections: [
+      {
+        heading: 'Il calendario',
+        icon: CalendarDays,
+        body: [
+          'Mostra l’organico assegnato mese per mese, reparto per reparto.',
+          'Chi gestisce i turni può generare automaticamente le assegnazioni o modificarle a mano; il personale operativo vede qui il proprio turno.',
+        ],
+      },
+      {
+        heading: 'Richieste',
+        icon: Inbox,
+        body: ['Cambi turno, ferie e assenze passano dalla casella di richieste -- chi le gestisce le approva o le rifiuta da lì.'],
+      },
+    ],
+  },
+  team: {
+    title: 'Team',
+    intro: 'Chi ha accesso a questa struttura, con quale ruolo.',
+    version: 2,
+    sections: [
+      {
+        heading: 'L’elenco',
+        icon: Users,
+        body: ['Ogni riga mostra ruolo, mansione e stato dell’accesso di una persona.'],
+      },
+      {
+        heading: 'Azioni su una persona',
+        icon: UserCog,
+        body: [
+          'Modifica ruolo o mansione, reimposta la password, attiva/disattiva l’accesso, oppure rimuovi la persona dalla struttura.',
+          'I permessi aggiuntivi oltre a quelli del ruolo base (ad esempio dare a un receptionist anche la gestione di un modulo) si assegnano persona per persona.',
+        ],
+      },
+      {
+        heading: 'Nuovo utente',
+        icon: UserPlus,
+        body: ['Crea un account con username e password per chi non ha (o non vuole usare) un indirizzo email.'],
+      },
+    ],
+  },
+  impostazioni: {
+    title: 'Impostazioni',
+    intro: 'Il tuo profilo e le preferenze dell’app.',
+    version: 2,
+    sections: [
+      {
+        heading: 'Il tuo account',
+        icon: UserRound,
+        body: ['Profilo, sicurezza dell’accesso, lingua e tema (chiaro/scuro) si gestiscono da qui.'],
+      },
+      {
+        heading: 'Struttura',
+        icon: Building2,
+        body: ['Chi ha i permessi di amministrazione trova anche i dati della struttura, come logo e fuso orario.'],
+      },
+    ],
+  },
+  moduli: {
+    title: 'Moduli',
+    intro: 'I moduli disponibili su Homisuite e quelli attivi per questa struttura.',
+    version: 2,
+    sections: [
+      {
+        heading: 'Attivare o disattivare un modulo',
+        icon: Boxes,
+        body: ['È una decisione a livello di struttura, separata dai permessi dei singoli membri del team -- un modulo attivo qui va comunque abilitato persona per persona da Team, se serve limitarne l’accesso.'],
+      },
+    ],
+  },
   transfer: {
     title: 'Transfer',
     intro: 'Gestione di transfer e spostamenti degli ospiti.',
@@ -88,38 +222,39 @@ export function helpTopicFor(moduleKey: string): HelpTopic {
 // of a screen (a facchino's stripped Housekeeping queue, an employee's
 // read-only Turni) just shortens the tour rather than breaking it.
 //
-// `version` works exactly like HelpTopic's own: bump it whenever a
-// module's real steps actually change (a renamed element, a moved button,
-// a whole new step) so HelpButton's badge tells a returning member
-// something changed here.
+// Never launched directly from the floating "?" -- clicking it always
+// opens the module's own HelpTopic modal first (see HelpButton.tsx); a
+// "Rivedi il tour" action inside that modal starts the tour below for
+// whichever module has one. The one exception is the very first time this
+// browser ever opens Homisuite, where the Home tour runs once on its own
+// as the welcome. A module's own HelpTopic.version is still what drives
+// its badge -- bump that (not anything here) when a tour's steps change.
 export interface ModuleTour {
-  version: number
   steps: TourStep[]
 }
 
 export const moduleTours: Record<string, ModuleTour> = {
   home: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="brand"]',
         title: 'Benvenuto in Homisuite',
-        body: 'Un tour rapido di quattro passi prima di iniziare. Lo ritrovi sempre dal pulsante "?" in basso a destra.',
+        body: 'Un tour rapido prima di iniziare. Lo ritrovi sempre dalla guida che apre il pulsante "?" in basso a destra.',
       },
       {
         target: '[data-tour="property-switcher"]',
         title: 'La tua struttura',
-        body: 'Se lavori in più strutture, da qui cambi quella attiva in qualsiasi momento.',
+        body: 'Se lavori in più strutture, da qui cambi quella attiva in qualsiasi momento -- ogni modulo, ogni richiesta e ogni membro del team che vedi dipende da quale struttura hai selezionato qui.',
       },
       {
         target: '[data-tour="nav"]',
         title: 'I moduli',
-        body: 'La barra laterale elenca i moduli attivi per questa struttura -- vedi solo quelli a cui hai davvero accesso.',
+        body: 'La barra laterale elenca i moduli attivi per questa struttura -- vedi solo quelli a cui hai davvero accesso. Team, Impostazioni e Moduli sono sempre in fondo, separati dai moduli operativi.',
       },
       {
         target: '[data-tour="module-grid"]',
         title: 'Apri un modulo',
-        body: 'Da qui apri rapidamente qualsiasi modulo abilitato -- tocca la card intera, non solo il testo.',
+        body: 'Da qui apri rapidamente qualsiasi modulo abilitato -- tocca la card intera, non solo il testo. Ogni modulo ha poi la sua guida e il suo tour, richiamabili dal "?" al suo interno.',
       },
       {
         target: '[data-tour="account"]',
@@ -129,152 +264,161 @@ export const moduleTours: Record<string, ModuleTour> = {
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Questo pulsante mostra sempre la guida della schermata in cui ti trovi, e da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Questo pulsante apre sempre la guida della schermata in cui ti trovi; da lì, quando c’è un tour per quella sezione, puoi farlo ripartire quando vuoi.',
       },
     ],
   },
   dining: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="dining-nav"]',
         title: 'Le sezioni di Ristorazione',
-        body: 'Prenotazioni, Ristoranti, Categorie e Registro modifiche -- le ultime tre visibili solo a chi ha i permessi di gestione.',
+        body: 'Prenotazioni, Ristoranti, Categorie e Registro modifiche -- le ultime tre visibili solo a chi ha i permessi di gestione del modulo.',
       },
       {
         target: '[data-tour="dining-queue"]',
         title: 'Da gestire',
-        body: 'Le richieste che hanno bisogno di un’azione, raggruppate per cosa serve fare: contattare il ristorante, proporre un’alternativa o prendere in carico una richiesta nuova.',
+        body: 'Le richieste che hanno bisogno di un’azione, raggruppate per cosa serve fare: "Non disponibile" vuole un’alternativa, "In attesa di conferma" va seguita, "Nuove richieste" va presa in carico. L’ordine dei gruppi segue l’urgenza.',
       },
       {
         target: '[data-tour="dining-add"]',
         title: 'Aggiungi prenotazione',
-        body: 'Per una prenotazione presa per telefono o di persona.',
+        body: 'Per una prenotazione presa per telefono o di persona. Puoi segnare anche le preferenze dell’ospite (vista mare, seggiolone…), le stesse che vede chi gestisce la richiesta.',
       },
       {
         target: '[data-tour="dining-today"]',
         title: 'Programma di oggi',
-        body: 'L’elenco completo delle prenotazioni di oggi, filtrabile per stato.',
+        body: 'L’elenco completo delle prenotazioni di oggi, filtrabile per stato. Apri una riga per vedere il dettaglio e modificarne i dati.',
+      },
+      {
+        target: '[data-tour="dining-filters"]',
+        title: 'Cercare nell’archivio',
+        body: 'Nella scheda "Tutte" puoi cercare per ospite, camera o ristorante, e restringere per stato o per intervallo di date -- utile per ritrovare una prenotazione passata senza scorrere tutto lo storico.',
       },
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Da qui apri la guida di questa sezione, con un pulsante per rivedere questo tour quando vuoi.',
       },
     ],
   },
   housekeeping: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="hk-nav"]',
         title: 'Richieste, Soggiorni, Gestione',
-        body: 'Le sezioni di Housekeeping -- vedi solo quelle a cui hai accesso.',
+        body: 'Le sezioni di Housekeeping -- vedi solo quelle a cui hai accesso. Chi gestisce la reception vede anche i conteggi delle richieste da fare direttamente qui.',
+      },
+      {
+        target: '[data-tour="hk-tabs"]',
+        title: 'Nuove, In corso, Completate',
+        body: 'La coda è divisa in tre schede: le richieste nuove da prendere in carico, quelle già assegnate e in lavorazione, e lo storico di quelle completate o annullate.',
       },
       {
         target: '[data-tour="hk-queue"]',
-        title: 'La coda delle richieste',
-        body: 'Nuove, in corso e completate, su schede separate. Prendi in carico una richiesta per assegnartela.',
+        title: 'Una richiesta',
+        body: 'Ogni scheda mostra camera, oggetto richiesto e tempo trascorso. Prendi in carico una richiesta per assegnartela, poi aggiornane lo stato quando la completi.',
       },
       {
         target: '[data-tour="hk-new-request"]',
         title: 'Nuova richiesta',
-        body: 'Per registrare una richiesta arrivata per telefono o di persona.',
+        body: 'Per registrare una richiesta arrivata per telefono o di persona, invece che dall’app ospite.',
       },
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Da qui apri la guida di questa sezione, con un pulsante per rivedere questo tour quando vuoi.',
       },
     ],
   },
   turni: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="shifts-nav"]',
         title: 'Operativo e Impostazioni',
-        body: 'Il calendario e i tuoi turni da un lato, la configurazione del modulo dall’altro -- quest’ultima visibile solo a chi gestisce i turni.',
+        body: 'Il calendario, i tuoi turni e le tue richieste da un lato; la configurazione del modulo (dipendenti, unità, regole, codici turno) dall’altro -- quest’ultima visibile solo a chi gestisce i turni.',
       },
       {
         target: '[data-tour="shifts-grid"]',
         title: 'Il calendario',
-        body: 'L’organico assegnato giorno per giorno. Chi gestisce i turni può modificarlo direttamente da qui.',
+        body: 'L’organico assegnato giorno per giorno, un codice turno per cella. Chi gestisce i turni può modificarlo direttamente cliccando su una cella; i turni bloccati restano fissi anche dopo una nuova assegnazione automatica.',
       },
       {
         target: '[data-tour="shifts-actions"]',
         title: 'Assegna e salva',
-        body: 'Genera automaticamente i turni del mese o modificali a mano, poi salva per rendere definitive le modifiche.',
+        body: 'Genera automaticamente i turni del mese rispettando le regole di copertura, oppure modificali a mano. Lo stato Bozza/Definitivo riguarda un mese alla volta; salva per rendere permanenti le modifiche.',
+      },
+      {
+        target: '[data-tour="shifts-requests"]',
+        title: 'Richieste in sospeso',
+        body: 'Cambi turno, ferie e permessi arrivano qui prima di essere approvati o rifiutati da chi gestisce il reparto.',
       },
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Da qui apri la guida di questa sezione, con un pulsante per rivedere questo tour quando vuoi.',
       },
     ],
   },
   team: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="team-add"]',
         title: 'Crea profilo',
-        body: 'Aggiungi una persona al team, con invito email o con credenziali dirette.',
+        body: 'Aggiungi una persona al team, con invito email o con credenziali dirette (username e password) per chi non usa un indirizzo email.',
       },
       {
         target: '[data-tour="team-table"]',
         title: 'Il team',
-        body: 'Ruolo, mansione e stato dell’accesso di ogni persona, raggruppati per mansione.',
+        body: 'Ruolo, mansione e stato dell’accesso di ogni persona, raggruppati per mansione. Da ogni riga puoi modificare, reimpostare la password, gestire i moduli a cui ha accesso o rimuovere la persona.',
       },
       {
         target: '[data-tour="team-jobs"]',
         title: 'Mansioni della struttura',
-        body: 'Descrivono il lavoro reale in hotel, separate dal ruolo Homisuite che decide cosa si può fare nel software.',
+        body: 'Descrivono il lavoro reale in hotel (es. Reception, Governante) e sono separate dal ruolo Homisuite, che decide invece cosa quella persona può fare nel software.',
       },
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Da qui apri la guida di questa sezione, con un pulsante per rivedere questo tour quando vuoi.',
       },
     ],
   },
   impostazioni: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="settings-account"]',
         title: 'Il tuo account',
-        body: 'Profilo, lingua, tema e notifiche si gestiscono da qui.',
+        body: 'Profilo, lingua, tema chiaro/scuro e notifiche push si gestiscono da qui -- valgono per te, in ogni struttura in cui lavori.',
       },
       {
         target: '[data-tour="settings-property"]',
         title: 'Struttura',
-        body: 'Dati condivisi come logo, fuso orario e contatti pubblici -- visibile solo a chi amministra la struttura.',
+        body: 'Dati condivisi da tutti i moduli: logo, fuso orario, orari di check-in/out e contatti pubblici -- visibile solo a chi amministra la struttura.',
       },
       {
         target: '[data-tour="settings-modules"]',
         title: 'Impostazioni moduli',
-        body: 'Configurazioni specifiche di ogni modulo attivo.',
+        body: 'Configurazioni specifiche di ogni modulo attivo (ad esempio categorie e articoli di Housekeeping), separate dalle preferenze personali qui sopra.',
       },
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Da qui apri la guida di questa sezione, con un pulsante per rivedere questo tour quando vuoi.',
       },
     ],
   },
   moduli: {
-    version: 1,
     steps: [
       {
         target: '[data-tour="modules-list"]',
         title: 'I moduli di questa struttura',
-        body: 'Attivo o non attivo, a livello di struttura -- indipendente dai permessi dei singoli membri del team, che si gestiscono da Team.',
+        body: 'Attivo o non attivo, a livello di struttura -- indipendente dai permessi dei singoli membri del team: un modulo attivo qui va comunque abilitato persona per persona da Team, se serve limitarne l’accesso.',
       },
       {
         target: '[data-tour="help-fab"]',
         title: 'Hai bisogno di aiuto?',
-        body: 'Da qui puoi far ripartire questo tour quando vuoi.',
+        body: 'Da qui apri la guida di questa sezione, con un pulsante per rivedere questo tour quando vuoi.',
       },
     ],
   },

@@ -66,7 +66,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
 
   return (
     <section className="shell-card">
-      <div className="dining-grid-toolbar">
+      <div className="dining-grid-toolbar" data-tour="dining-filters">
         <div className="dining-search-box">
           <Search size={15} />
           <input type="search" placeholder="Cerca ospite, camera, ristorante…" value={search} onChange={(event) => setSearch(event.target.value)} />

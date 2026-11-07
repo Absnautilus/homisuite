@@ -145,7 +145,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
 
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm" data-tour="hk-queue">
         {!embeddedNav || embeddedNav.minimal ? (
-          <div className="border-b border-line bg-surface px-4 py-3 sm:px-5">
+          <div className="border-b border-line bg-surface px-4 py-3 sm:px-5" data-tour="hk-tabs">
             <Tabs
               items={[
                 { value: 'new', label: `${t('staff.queue.tabNew')} (${pending.length})` },
