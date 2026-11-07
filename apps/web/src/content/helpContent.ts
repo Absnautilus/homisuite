@@ -1,7 +1,7 @@
 import {
   Boxes, Building2, CalendarCheck, CalendarDays, Clock, Compass, Hotel, Inbox,
   LayoutGrid, ListChecks, Plus, Search, Settings2, UserCog, UserPlus, UserRound, Users,
-  UtensilsCrossed, type LucideIcon,
+  Mail, Sparkles, UtensilsCrossed, type LucideIcon,
 } from 'lucide-react'
 import type { TourStep } from '../components/TourOverlay'
 
@@ -204,6 +204,38 @@ export const helpContent: Record<string, HelpTopic> = {
     version: 1,
     sections: [
       { heading: 'In arrivo', icon: Clock, body: ['Questo modulo non è ancora disponibile.'] },
+    ],
+  },
+  'smart-inbox': {
+    title: 'Smart Inbox',
+    intro: 'Le email degli ospiti arrivate su Outlook, con una bozza di risposta già pronta.',
+    version: 1,
+    sections: [
+      {
+        heading: 'Posta',
+        icon: Inbox,
+        body: [
+          '"Da gestire" raccoglie le email che aspettano una risposta. Apri un’email per leggere il messaggio dell’ospite e la bozza preparata dall’assistente.',
+          'Correggi la bozza se serve, poi premi "Invia risposta": parte dalla casella Outlook dell’hotel. Niente viene inviato senza la tua conferma.',
+          'Le email segnate "Da gestire" in giallo (reclami, rimborsi, domande senza risposta nelle informazioni) vanno controllate con più attenzione.',
+        ],
+      },
+      {
+        heading: 'Informazioni hotel',
+        icon: Sparkles,
+        body: [
+          'L’assistente risponde solo con quello che è scritto in questa sezione. Se un’informazione manca, scrive che il team risponderà a breve.',
+          'Aggiungi una sezione per argomento (colazione, parcheggio, check-in...). Più è completa, meno email restano da gestire a mano.',
+        ],
+      },
+      {
+        heading: 'Impostazioni',
+        icon: Mail,
+        body: [
+          'Un responsabile collega qui la casella Outlook (es. info@) accedendo con l’account Microsoft 365 della casella.',
+          'Firma, tono e mittenti da ignorare valgono per tutte le bozze della struttura.',
+        ],
+      },
     ],
   },
 }

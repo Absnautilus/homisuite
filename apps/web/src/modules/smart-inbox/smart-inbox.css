@@ -1,0 +1,77 @@
+/* Smart Inbox -- module-local styles. Tokens only (no hard-coded colors),
+   so light and dark themes both work through the shell's own variables. */
+
+.smart-inbox-layout { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.smart-inbox-list { overflow: hidden; }
+.smart-inbox-list-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 6px 16px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.smart-inbox-items { list-style: none; margin: 0; padding: 0; max-height: calc(100vh - 260px); overflow-y: auto; }
+.smart-inbox-items li + li { border-top: 1px solid var(--line); }
+.smart-inbox-item { display: grid; gap: 4px; width: 100%; padding: 12px 16px; border: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.smart-inbox-item:hover { background: var(--surface-2); }
+.smart-inbox-item.selected { background: var(--accent-soft); }
+.smart-inbox-item:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+.smart-inbox-item-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.smart-inbox-item-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-inbox-item-top time { flex: 0 0 auto; color: var(--muted); font-size: 11.5px; }
+.smart-inbox-item-subject { font-size: 12.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-inbox-item-summary { color: var(--muted); font-size: 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.smart-inbox-item-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+
+.smart-inbox-status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 750; background: var(--surface-2); color: var(--muted); }
+.smart-inbox-status.tone-ok { background: var(--green-bg); color: var(--green-ink); }
+.smart-inbox-status.tone-warn { background: var(--amber-bg); color: var(--amber-ink); }
+.smart-inbox-status.tone-danger { background: var(--red-bg); color: var(--red-ink); }
+
+.smart-inbox-detail { display: grid; gap: 16px; padding: 18px 20px 20px; min-width: 0; }
+.smart-inbox-detail-empty { padding: 0; }
+.smart-inbox-detail-head { display: grid; gap: 10px; }
+.smart-inbox-detail-head h2 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.smart-inbox-detail-head p { margin: 4px 0 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.smart-inbox-back { display: none; justify-self: start; min-height: 36px; }
+.smart-inbox-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.smart-inbox-summary { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent-text); font-size: 13px; font-weight: 600; }
+.smart-inbox-summary svg { flex: 0 0 auto; margin-top: 2px; }
+.smart-inbox-note { margin: 0; font-size: 12px; }
+.smart-inbox-detail h3 { margin: 0 0 8px; color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.smart-inbox-email-body { max-height: 320px; overflow-y: auto; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.smart-inbox-actions-box ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+.smart-inbox-draft textarea { min-height: 220px; line-height: 1.55; }
+.smart-inbox-draft textarea[readonly] { background: var(--surface-2); }
+.smart-inbox-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.smart-inbox-buttons .btn { display: inline-flex; align-items: center; gap: 6px; }
+.smart-inbox-notice { margin: 8px 0 0; color: var(--green-ink); font-size: 12.5px; font-weight: 650; }
+.smart-inbox-buttons .smart-inbox-notice { margin: 0; }
+.smart-inbox-warn { display: inline-flex; align-items: center; gap: 5px; color: var(--amber-ink); font-size: 12px; font-weight: 650; }
+
+.smart-inbox-knowledge { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.smart-inbox-knowledge li { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.smart-inbox-knowledge li:last-child { border-bottom: 0; }
+.smart-inbox-knowledge li.inactive .smart-inbox-knowledge-text { opacity: .55; }
+.smart-inbox-knowledge-text { min-width: 0; }
+.smart-inbox-knowledge-text strong { font-size: 13.5px; }
+.smart-inbox-knowledge-text p { margin: 4px 0 0; color: var(--ink-2); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.smart-inbox-knowledge-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+
+.smart-inbox-mailbox { display: flex; align-items: center; gap: 13px; padding: 0 20px 18px; flex-wrap: wrap; }
+.smart-inbox-mailbox-text { display: grid; gap: 3px; min-width: 0; flex: 1 1 220px; font-size: 13px; }
+.smart-inbox-mailbox-text strong { overflow-wrap: anywhere; }
+.smart-inbox-mailbox-text span { font-size: 12px; }
+.smart-inbox-mailbox-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.smart-inbox-mailbox + .smart-inbox-note { padding: 0 20px 16px; }
+.smart-inbox-settings-form { padding: 0 20px 20px; }
+.smart-inbox-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.smart-inbox-toggle-row strong { font-size: 13px; }
+.smart-inbox-toggle-row p { margin: 2px 0 0; font-size: 12px; }
+.smart-inbox-usage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0 20px 20px; }
+.smart-inbox-usage div { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.smart-inbox-usage dt { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.smart-inbox-usage dd { margin: 4px 0 0; font-size: 1rem; font-weight: 750; }
+
+@media (max-width: 900px) {
+  .smart-inbox-layout { grid-template-columns: minmax(0, 1fr); }
+  .smart-inbox-layout.has-selection .smart-inbox-list { display: none; }
+  .smart-inbox-layout:not(.has-selection) .smart-inbox-detail { display: none; }
+  .smart-inbox-back { display: inline-flex; }
+  .smart-inbox-items { max-height: none; }
+  .smart-inbox-usage { grid-template-columns: minmax(0, 1fr); }
+}

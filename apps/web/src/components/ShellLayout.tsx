@@ -21,6 +21,7 @@ const moduleSlugByPath: Record<string, string> = {
   '/dining': 'dining',
   '/turni': 'shifts',
   '/transfer': 'transfers',
+  '/smart-inbox': 'smart_inbox',
 }
 
 // helpContent's own keys, by the same absolute-equivalent path
@@ -34,6 +35,7 @@ function helpKeyForPath(pathname: string): string {
   if (pathname.startsWith('/settings')) return 'impostazioni'
   if (pathname.startsWith('/modules')) return 'moduli'
   if (pathname.startsWith('/transfer')) return 'transfer'
+  if (pathname.startsWith('/smart-inbox')) return 'smart-inbox'
   return GENERAL_HELP_KEY
 }
 

@@ -27,6 +27,11 @@ const DiningModuleGate = lazy(async () => {
   return { default: module.DiningModuleGate }
 })
 
+const SmartInboxPage = lazy(async () => {
+  const module = await import('../modules/smart-inbox/SmartInboxPage')
+  return { default: module.SmartInboxPage }
+})
+
 const ShiftPlannerPage = lazy(async () => {
   const module = await import('../modules/shifts/ShiftPlannerPage')
   return { default: module.ShiftPlannerPage }
@@ -73,6 +78,7 @@ export function App() {
         <Route path="housekeeping/*" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
         <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
         <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />
+        <Route path="smart-inbox" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Smart Inbox…" />}><SmartInboxPage /></Suspense>} />
         <Route path="transfer" element={<PlaceholderPage title="Transfer" />} />
         <Route path="modules" element={<ModulesPage />} />
         <Route path="team" element={<TeamPage />} />

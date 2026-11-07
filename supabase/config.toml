@@ -33,3 +33,23 @@ enable_signup = false
 # for the rest of that boundary.
 [functions.early-access-signup]
 verify_jwt = false
+
+# Smart Inbox: three functions are called by something other than a
+# signed-in staff member, so the gateway's JWT check must be off and each
+# function authenticates the request itself:
+#   * oauth-callback -- the browser coming back from Microsoft sign-in;
+#     trusted only through the HMAC-signed, expiring `state`.
+#   * webhook -- Microsoft Graph change notifications; each one is checked
+#     against the subscription's clientState (stored as a SHA-256 hash).
+#   * maintenance -- the scheduler; requires the SMART_INBOX_CRON_SECRET
+#     header.
+# smart-inbox-connect and smart-inbox-actions keep the default (JWT
+# required) and check smart_inbox.* permissions as the caller.
+[functions.smart-inbox-oauth-callback]
+verify_jwt = false
+
+[functions.smart-inbox-webhook]
+verify_jwt = false
+
+[functions.smart-inbox-maintenance]
+verify_jwt = false
