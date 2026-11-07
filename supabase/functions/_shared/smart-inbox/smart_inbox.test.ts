@@ -114,12 +114,29 @@ const validOutput = {
   needs_human_reason: null,
   reply: 'Gentile Mario,\n...\nFront Office',
   suggested_actions: [{ type: 'transfer', details: 'Venerdì 14:00, 2 persone' }, { type: 'unknown', details: 'x' }],
+  stay_month: '2026-12',
 }
 
 Deno.test('parseResult accepts valid output and drops unknown action types', () => {
   const result = parseResult(JSON.stringify(validOutput))
   assertEquals(result.category, 'request')
   assertEquals(result.suggested_actions, [{ type: 'transfer', details: 'Venerdì 14:00, 2 persone' }])
+})
+
+Deno.test('parseResult keeps a valid stay month and drops a malformed one', () => {
+  assertEquals(parseResult(JSON.stringify(validOutput)).stay_month, '2026-12')
+  assertEquals(parseResult(JSON.stringify({ ...validOutput, stay_month: '2026-13' })).stay_month, null)
+  assertEquals(parseResult(JSON.stringify({ ...validOutput, stay_month: null })).stay_month, null)
+})
+
+Deno.test('templates join the cached hotel block; guest notes go with the email', () => {
+  const block = buildKnowledgeBlock([{ title: 'Colazione', content: '7-10:30' }], [{ title: 'Check-in', body: 'Gentile {nome}, il check-in è dalle 14.' }])
+  assertStringIncludes(block, '<reply_templates>')
+  assertStringIncludes(block, '<template title="Check-in">\nGentile {nome}')
+  assert(!buildKnowledgeBlock([]).includes('<reply_templates>'))
+  const message = buildEmailMessage(request.email, [], 'Cliente abituale, allergico alle noci')
+  assert(message.startsWith('<staff_notes_about_guest>\nCliente abituale'))
+  assert(!buildEmailMessage(request.email, [], '  ').includes('staff_notes'))
 })
 
 Deno.test('parseResult rejects malformed output', () => {

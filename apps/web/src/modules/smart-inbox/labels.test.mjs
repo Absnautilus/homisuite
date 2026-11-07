@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { actionErrorLabel, groupByConversation, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
+import { actionErrorLabel, draftHint, fillTemplate, groupByConversation, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
 
 describe('Smart Inbox labels', () => {
   it('splits messages into the three inbox views without overlap', () => {
@@ -64,6 +64,31 @@ describe('Smart Inbox labels', () => {
     assert.equal(groups[0].assignedTo, 'agent-1')
     assert.equal(groups[1].key, 'message:c')
     assert.equal(groups[1].guestName, 'new@y.it')
+  })
+
+  it('reduces every status to Da rispondere / Risposto / Archiviata', () => {
+    assert.equal(simpleState('draft_ready'), 'to_answer')
+    assert.equal(simpleState('needs_attention'), 'to_answer')
+    assert.equal(simpleState('pending'), 'to_answer')
+    assert.equal(simpleState('replied'), 'answered')
+    assert.equal(simpleState('ignored'), 'archived')
+    assert.equal(draftHint('needs_attention', false), 'Da scrivere a mano')
+    assert.equal(draftHint('replied', true), null)
+  })
+
+  it('labels and converts stay months', () => {
+    assert.equal(monthLabel('2026-12-01'), 'Dicembre 2026')
+    assert.equal(monthLabel(null), null)
+    assert.equal(monthInputValue('2026-12-01'), '2026-12')
+    assert.equal(monthFromInput('2026-12'), '2026-12-01')
+    assert.equal(monthFromInput('2026-13'), null)
+    assert.equal(monthFromInput(''), null)
+  })
+
+  it('fills {nome} in templates with the guest first name only', () => {
+    assert.equal(fillTemplate('Gentile {nome}, grazie.', 'Mario Rossi'), 'Gentile Mario, grazie.')
+    assert.equal(fillTemplate('Gentile {nome}, grazie.', 'mario@x.it'), 'Gentile, grazie.')
+    assert.equal(fillTemplate('Hi {NOME}!', null), 'Hi!')
   })
 
   it('makes avatar initials from a name', () => {

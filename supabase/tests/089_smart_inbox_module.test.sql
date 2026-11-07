@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(49);
+select plan(54);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: A and B are entitled properties in different organizations;
@@ -129,10 +129,13 @@ where id in ('00000089-0000-0000-0000-000000000071', '00000089-0000-0000-0000-00
 
 select ok(
   has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'assigned_to', 'update')
+  and has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'is_urgent', 'update')
+  and has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'stay_month', 'update')
+  and has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'notes', 'update')
   and not has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'guest_address', 'update')
   and not has_column_privilege('authenticated', 'public.smart_inbox_conversations', 'assigned_by', 'update')
   and not has_table_privilege('authenticated', 'public.smart_inbox_conversations', 'insert,delete'),
-  'staff can only change who a conversation is assigned to'
+  'staff can only change the assignee, urgency, stay month and notes of a conversation'
 );
 
 -- ---------------------------------------------------------------------------
@@ -144,6 +147,14 @@ select throws_ok(
   '23503', null,
   'a message cannot join another property guest conversation'
 );
+select throws_ok(
+  $$update smart_inbox_conversations set stay_month = '2026-12-15' where id = '00000089-0000-0000-0000-000000000091'$$,
+  '23514', null,
+  'a stay month is stored as the first day of the month'
+);
+insert into smart_inbox_templates (id, property_id, title, body) values
+  ('00000089-0000-0000-0000-0000000000a1', '00000089-0000-0000-0000-000000000011', 'Check-in', 'Gentile {nome}, il check-in è dalle 14.'),
+  ('00000089-0000-0000-0000-0000000000a2', '00000089-0000-0000-0000-000000000012', 'Parking', 'Dear {nome}, parking is 25 euro.');
 select throws_ok(
   $$insert into smart_inbox_conversations (property_id, guest_address) values ('00000089-0000-0000-0000-000000000011', 'Mario@Guest.example')$$,
   '23514', null,
@@ -254,6 +265,20 @@ select throws_ok(
   '42501', null,
   'a conversation cannot be assigned to a colleague who is not a Smart Inbox agent'
 );
+update smart_inbox_conversations
+set is_urgent = true, stay_month = '2026-12-01', notes = 'Cliente abituale, allergico alle noci'
+where id = '00000089-0000-0000-0000-000000000091';
+select is(
+  (select row(is_urgent, stay_month, notes)::text from smart_inbox_conversations where id = '00000089-0000-0000-0000-000000000091'),
+  row(true, '2026-12-01'::date, 'Cliente abituale, allergico alle noci')::text,
+  'an agent can mark a guest urgent, set the stay month and write notes'
+);
+select is((select count(*)::int from smart_inbox_templates), 1, 'agents read only their property templates');
+select throws_ok(
+  $$insert into smart_inbox_templates (property_id, title, body) values ('00000089-0000-0000-0000-000000000011', 'x', 'y')$$,
+  '42501', null,
+  'a receptionist cannot create reply templates'
+);
 update smart_inbox_conversations set assigned_to = '00000089-0000-0000-0000-000000000041'
 where id = '00000089-0000-0000-0000-000000000092';
 reset role;
@@ -294,6 +319,10 @@ select lives_ok(
   $$insert into smart_inbox_knowledge_entries (property_id, title, content)
     values ('00000089-0000-0000-0000-000000000011', 'Spa', 'Aperta 10-20')$$,
   'manager can add a knowledge base entry'
+);
+select lives_ok(
+  $$insert into smart_inbox_templates (property_id, title, body) values ('00000089-0000-0000-0000-000000000011', 'Parcheggio', 'Gentile {nome}, il parcheggio costa 25 euro.')$$,
+  'a manager can create reply templates'
 );
 select lives_ok(
   $$update smart_inbox_settings set tone = 'formale' where property_id = '00000089-0000-0000-0000-000000000011'$$,

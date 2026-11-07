@@ -113,6 +113,17 @@ Deno.serve(async (request: Request) => {
           .eq('id', target.thread_id)
           .is('assigned_to', null)
         if (assignError) console.error('smart-inbox-actions: conversation not auto-assigned', assignError)
+
+        // Answered: the guest stops being urgent unless another email of
+        // theirs is still waiting.
+        const { count, error: openError } = await admin
+          .from('smart_inbox_messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('thread_id', target.thread_id)
+          .in('status', ['pending', 'processing', 'draft_ready', 'needs_attention', 'failed'])
+        if (!openError && count === 0) {
+          await admin.from('smart_inbox_conversations').update({ is_urgent: false }).eq('id', target.thread_id)
+        }
       }
       return json({ ok: true })
     }

@@ -39,6 +39,17 @@ export interface ConversationRef {
   guest_name: string | null
   assigned_to: string | null
   assigned_at: string | null
+  is_urgent: boolean
+  // First day of the stay month (YYYY-MM-01), or null.
+  stay_month: string | null
+  notes: string
+}
+
+export interface ReplyTemplate {
+  id: string
+  title: string
+  body: string
+  sort_order: number
 }
 
 export interface InboxMessage {

@@ -1,25 +1,27 @@
 import { useEffect, useState } from 'react'
 import { ModuleNav } from '@homisuite/ui'
-import { BookOpenText, Inbox, Settings } from 'lucide-react'
+import { BookOpenText, FileText, Inbox, Settings } from 'lucide-react'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { InboxTab } from './InboxTab'
 import { KnowledgeTab } from './KnowledgeTab'
 import { SettingsTab } from './SettingsTab'
+import { TemplatesTab } from './TemplatesTab'
 import type { InboxView } from './labels'
 import './smart-inbox.css'
 
 const TABS = [
   { value: 'posta', label: 'Posta', icon: <Inbox /> },
   { value: 'informazioni', label: 'Informazioni hotel', icon: <BookOpenText /> },
+  { value: 'modelli', label: 'Modelli di risposta', icon: <FileText /> },
   { value: 'impostazioni', label: 'Impostazioni', icon: <Settings /> },
 ]
 
 const INBOX_VIEWS = [
-  { value: 'todo', label: 'Da gestire' },
+  { value: 'todo', label: 'Da rispondere' },
   { value: 'mine', label: 'Assegnate a me' },
-  { value: 'replied', label: 'Risposte inviate' },
+  { value: 'replied', label: 'Risposto' },
   { value: 'archived', label: 'Archiviate' },
 ]
 
@@ -96,6 +98,7 @@ export function SmartInboxPage() {
           away a half-edited draft or form. */}
       <div hidden={tab !== 'posta'}><InboxTab client={supabase} propertyId={propertyId} currentProfileId={runtime.profile?.id ?? null} view={view} active={tab === 'posta'} /></div>
       <div hidden={tab !== 'informazioni'}><KnowledgeTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
+      <div hidden={tab !== 'modelli'}><TemplatesTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
       <div hidden={tab !== 'impostazioni'}><SettingsTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
     </div>
   )

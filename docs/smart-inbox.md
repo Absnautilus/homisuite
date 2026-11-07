@@ -61,12 +61,32 @@ ritenta quelli `pending`/`failed` (massimo 3 tentativi).
 - L'assistente riceve gli ultimi 4 scambi con lo stesso ospite (email e
   risposte inviate), per rispondere in modo coerente con quanto già scritto.
 
+### Chiarezza e carico mentale
+
+- **Due stati per lo staff**: "Da rispondere" (giallo) e "Risposto" (verde),
+  più "Archiviata". Gli stati tecnici della pipeline restano sotto, come
+  frase breve ("Bozza pronta", "Da scrivere a mano").
+- **Contatori** in alto: ospiti da rispondere, urgenti, risposte inviate oggi.
+- **Urgente / non urgente** (`smart_inbox_conversations.is_urgent`): l'AI lo
+  imposta su un'email urgente, si azzera quando l'hotel risponde (se non ci
+  sono altre email aperte), lo staff lo cambia con un clic. Gli urgenti sono
+  in cima e c'è il filtro "Solo urgenti".
+- **Mese del soggiorno** (`stay_month`): l'AI lo ricava dalle date nell'email
+  (se nessuno l'ha già impostato), lo staff lo corregge; filtro per mese.
+- **Note sull'ospite** (`notes`): visibili a tutti gli agent e passate
+  all'AI, che le usa senza mai citarle.
+- **Modelli di risposta** (`smart_inbox_templates`, gestiti da chi ha
+  `smart_inbox.manage`): si inseriscono nella bozza con un clic, `{nome}`
+  diventa il nome dell'ospite; l'AI li riceve nel blocco in cache come
+  formulazioni approvate.
+- Dopo l'invio l'interfaccia passa da sola all'ospite successivo.
+
 ### Permessi
 
 | Capability | Ruoli | Cosa permette |
 |---|---|---|
 | `smart_inbox.view` | receptionist, manager, property_admin, organization_admin | essere agent: leggere la posta, prendere in carico/assegnare ospiti, modificare/inviare bozze, archiviare |
-| `smart_inbox.manage` | manager, property_admin, organization_admin | collegare/scollegare Outlook, impostazioni, informazioni hotel, consumo AI |
+| `smart_inbox.manage` | manager, property_admin, organization_admin | collegare/scollegare Outlook, impostazioni, informazioni hotel, modelli di risposta, consumo AI |
 
 Come per gli altri moduli, `membership_permission_grants` può concedere queste
 capability a una singola persona.

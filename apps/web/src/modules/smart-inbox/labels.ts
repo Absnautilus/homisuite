@@ -16,6 +16,55 @@ export function statusesForView(view: InboxView): MessageStatus[] {
   return VIEW_STATUSES[view]
 }
 
+// What staff need to know at a glance: does this still need an answer?
+export type SimpleState = 'to_answer' | 'answered' | 'archived'
+
+export function simpleState(status: MessageStatus): SimpleState {
+  if (status === 'replied') return 'answered'
+  if (status === 'dismissed' || status === 'ignored') return 'archived'
+  return 'to_answer'
+}
+
+export const SIMPLE_STATE_LABELS: Record<SimpleState, string> = {
+  to_answer: 'Da rispondere',
+  answered: 'Risposto',
+  archived: 'Archiviata',
+}
+
+// The secondary line under "Da rispondere": what is waiting, in plain words.
+export function draftHint(status: MessageStatus, hasDraft: boolean): string | null {
+  if (status === 'pending' || status === 'processing') return 'Bozza in preparazione'
+  if (status === 'failed') return 'Bozza non riuscita'
+  if (status === 'needs_attention') return hasDraft ? 'Bozza da controllare con attenzione' : 'Da scrivere a mano'
+  if (status === 'draft_ready') return 'Bozza pronta'
+  return null
+}
+
+const MONTH_FORMAT = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+// '2026-12-01' -> 'Dicembre 2026'
+export function monthLabel(month: string | null): string | null {
+  if (!month || !/^\d{4}-\d{2}/.test(month)) return null
+  const label = MONTH_FORMAT.format(new Date(`${month.slice(0, 7)}-01T00:00:00Z`))
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+// <input type="month"> value ('2026-12') <-> stored date ('2026-12-01')
+export function monthInputValue(month: string | null): string {
+  return month ? month.slice(0, 7) : ''
+}
+
+export function monthFromInput(value: string): string | null {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? `${value}-01` : null
+}
+
+// Inserts a template, with {nome} replaced by the guest's first name.
+export function fillTemplate(body: string, guestName: string | null): string {
+  const first = guestName?.trim().split(/\s+/)[0] ?? ''
+  const looksLikeName = first && !first.includes('@')
+  return body.replace(/\{nome\}/gi, looksLikeName ? first : '').replace(/[ \t]+([,.!?])/g, '$1')
+}
+
 export const STATUS_LABELS: Record<MessageStatus, string> = {
   pending: 'In arrivo',
   processing: 'In elaborazione',
@@ -40,6 +89,9 @@ export interface ConversationGroup<M> {
   guestName: string
   guestAddress: string | null
   assignedTo: string | null
+  isUrgent: boolean
+  stayMonth: string | null
+  notes: string
   latest: M
   messages: M[]
   openCount: number
@@ -56,7 +108,7 @@ export function groupByConversation<M extends {
   status: MessageStatus
   from_name: string | null
   from_address: string | null
-  conversation: { guest_address: string; guest_name: string | null; assigned_to: string | null } | null
+  conversation: { guest_address: string; guest_name: string | null; assigned_to: string | null; is_urgent?: boolean; stay_month?: string | null; notes?: string } | null
 }>(messages: M[]): ConversationGroup<M>[] {
   const groups = new Map<string, ConversationGroup<M>>()
   for (const message of messages) {
@@ -69,6 +121,9 @@ export function groupByConversation<M extends {
         guestName: message.conversation?.guest_name?.trim() || message.from_name?.trim() || message.conversation?.guest_address || message.from_address || 'Mittente sconosciuto',
         guestAddress: message.conversation?.guest_address ?? message.from_address,
         assignedTo: message.conversation?.assigned_to ?? null,
+        isUrgent: message.conversation?.is_urgent ?? false,
+        stayMonth: message.conversation?.stay_month ?? null,
+        notes: message.conversation?.notes ?? '',
         latest: message,
         messages: [],
         openCount: 0,

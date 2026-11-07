@@ -125,6 +125,24 @@ create trigger smart_inbox_knowledge_entries_set_updated_at
 -- ---------------------------------------------------------------------------
 -- Mailbox connection (one per property)
 -- ---------------------------------------------------------------------------
+-- Reply templates the staff insert with one click ({nome} becomes the
+-- guest's first name). The AI also sees them as approved wording.
+create table smart_inbox_templates (
+  id uuid primary key default gen_random_uuid(),
+  property_id uuid not null references properties(id) on delete cascade,
+  title text not null check (char_length(btrim(title)) between 1 and 120),
+  body text not null check (char_length(btrim(body)) between 1 and 8000),
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index smart_inbox_templates_property_idx on smart_inbox_templates(property_id, sort_order);
+
+create trigger smart_inbox_templates_set_updated_at
+  before update on smart_inbox_templates
+  for each row execute function set_updated_at();
+
 create table smart_inbox_mailboxes (
   id uuid primary key default gen_random_uuid(),
   property_id uuid not null unique references properties(id) on delete cascade,
@@ -177,6 +195,16 @@ create table smart_inbox_conversations (
   assigned_to uuid references profiles(id) on delete set null,
   assigned_by uuid references profiles(id) on delete set null,
   assigned_at timestamptz,
+  -- Staff-facing triage, all editable by any agent:
+  --   is_urgent   set by the AI on an urgent email, cleared when the hotel
+  --               replies; staff can flip it either way.
+  --   stay_month  the month of the guest's stay (first day of that month),
+  --               filled by the AI when the email mentions dates.
+  --   notes       what colleagues should know about this guest (VIP,
+  --               allergies, preferences); also given to the AI.
+  is_urgent boolean not null default false,
+  stay_month date check (stay_month is null or extract(day from stay_month) = 1),
+  notes text not null default '' check (char_length(notes) <= 4000),
   last_message_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -381,6 +409,7 @@ create index smart_inbox_ai_usage_property_idx on smart_inbox_ai_usage(property_
 -- ---------------------------------------------------------------------------
 alter table smart_inbox_settings enable row level security;
 alter table smart_inbox_knowledge_entries enable row level security;
+alter table smart_inbox_templates enable row level security;
 alter table smart_inbox_mailboxes enable row level security;
 alter table smart_inbox_mailbox_secrets enable row level security;
 alter table smart_inbox_conversations enable row level security;
@@ -406,6 +435,16 @@ create policy smart_inbox_knowledge_entries_update on smart_inbox_knowledge_entr
 create policy smart_inbox_knowledge_entries_delete on smart_inbox_knowledge_entries for delete to authenticated
   using (has_permission(property_id, 'smart_inbox.manage'));
 
+create policy smart_inbox_templates_select on smart_inbox_templates for select to authenticated
+  using (has_permission(property_id, 'smart_inbox.view'));
+create policy smart_inbox_templates_insert on smart_inbox_templates for insert to authenticated
+  with check (has_permission(property_id, 'smart_inbox.manage'));
+create policy smart_inbox_templates_update on smart_inbox_templates for update to authenticated
+  using (has_permission(property_id, 'smart_inbox.manage'))
+  with check (has_permission(property_id, 'smart_inbox.manage'));
+create policy smart_inbox_templates_delete on smart_inbox_templates for delete to authenticated
+  using (has_permission(property_id, 'smart_inbox.manage'));
+
 create policy smart_inbox_mailboxes_select on smart_inbox_mailboxes for select to authenticated
   using (has_permission(property_id, 'smart_inbox.view'));
 
@@ -413,9 +452,10 @@ create policy smart_inbox_mailboxes_select on smart_inbox_mailboxes for select t
 
 create policy smart_inbox_conversations_select on smart_inbox_conversations for select to authenticated
   using (has_permission(property_id, 'smart_inbox.view'));
--- Taking a conversation, handing it to a colleague, or releasing it. Only
--- assigned_to is client-writable, and only to another agent of the same
--- property (or nobody).
+-- Taking a conversation, handing it to a colleague or releasing it, and
+-- triage (urgent, stay month, notes). Only those columns are
+-- client-writable; an assignee must be another agent of the same property
+-- (or nobody).
 create policy smart_inbox_conversations_update on smart_inbox_conversations for update to authenticated
   using (has_permission(property_id, 'smart_inbox.view'))
   with check (
@@ -453,13 +493,13 @@ create policy smart_inbox_ai_usage_select on smart_inbox_ai_usage for select to 
 -- relying on policy absence alone as the denial mechanism.
 -- ---------------------------------------------------------------------------
 revoke all on table
-  smart_inbox_settings, smart_inbox_knowledge_entries, smart_inbox_mailboxes,
-  smart_inbox_mailbox_secrets, smart_inbox_conversations, smart_inbox_messages,
+  smart_inbox_settings, smart_inbox_knowledge_entries, smart_inbox_templates,
+  smart_inbox_mailboxes, smart_inbox_mailbox_secrets, smart_inbox_conversations, smart_inbox_messages,
   smart_inbox_drafts, smart_inbox_ai_usage
 from public, anon, authenticated;
 
 grant select on table
-  smart_inbox_settings, smart_inbox_knowledge_entries, smart_inbox_mailboxes,
+  smart_inbox_settings, smart_inbox_knowledge_entries, smart_inbox_templates, smart_inbox_mailboxes,
   smart_inbox_conversations, smart_inbox_messages, smart_inbox_drafts,
   smart_inbox_ai_usage
 to authenticated;
@@ -475,7 +515,11 @@ grant update (title, content, active, sort_order)
   on table smart_inbox_knowledge_entries to authenticated;
 grant delete on table smart_inbox_knowledge_entries to authenticated;
 
-grant update (assigned_to) on table smart_inbox_conversations to authenticated;
+grant insert (property_id, title, body, sort_order) on table smart_inbox_templates to authenticated;
+grant update (title, body, sort_order) on table smart_inbox_templates to authenticated;
+grant delete on table smart_inbox_templates to authenticated;
+
+grant update (assigned_to, is_urgent, stay_month, notes) on table smart_inbox_conversations to authenticated;
 grant update (status) on table smart_inbox_messages to authenticated;
 grant update (body) on table smart_inbox_drafts to authenticated;
 
@@ -490,7 +534,7 @@ grant execute on function smart_inbox_agents(uuid) to authenticated;
 comment on table smart_inbox_mailbox_secrets is
   'Service-role only: encrypted Microsoft refresh token and Graph subscription state for a Smart Inbox mailbox. No client policy or grant, ever.';
 comment on table smart_inbox_conversations is
-  'One conversation per guest sender per property, with the staff agent assigned to it. Staff may only change assigned_to, to another agent of the same property.';
+  'One conversation per guest sender per property, with the staff agent assigned to it. Staff may change the assignee (to another agent of the same property), urgency, stay month and notes.';
 comment on table smart_inbox_drafts is
   'AI-generated reply drafts. Staff may edit body while pending; sending happens only through the smart-inbox-actions Edge Function.';
 comment on column smart_inbox_drafts.suggested_actions is

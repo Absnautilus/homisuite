@@ -98,7 +98,58 @@
 .smart-inbox-message .smart-inbox-buttons { margin-top: 0; }
 .smart-inbox-message .smart-inbox-buttons:empty { display: none; }
 
+/* At-a-glance: summary, states, urgency, month */
+.smart-inbox-inbox { gap: 14px; }
+.smart-inbox-summary-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.smart-inbox-counter { display: flex; align-items: baseline; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.smart-inbox-counter strong { font-size: 1.6rem; line-height: 1; font-weight: 800; color: var(--ink); }
+.smart-inbox-counter span { color: var(--ink-2); font-size: 12.5px; font-weight: 650; }
+.smart-inbox-counter.warn { background: var(--amber-bg); border-color: transparent; }
+.smart-inbox-counter.warn strong, .smart-inbox-counter.warn span { color: var(--amber-ink); }
+.smart-inbox-counter.danger { background: var(--red-bg); border-color: transparent; }
+.smart-inbox-counter.danger strong, .smart-inbox-counter.danger span { color: var(--red-ink); }
+.smart-inbox-counter.ok strong { color: var(--green-ink); }
+.smart-inbox-toast { gap: 8px; justify-content: flex-start; background: var(--green-bg); color: var(--green-ink); border-color: transparent; font-weight: 650; }
+
+.smart-inbox-state { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+.smart-inbox-state.state-to_answer { background: var(--amber-bg); color: var(--amber-ink); }
+.smart-inbox-state.state-answered { background: var(--green-bg); color: var(--green-ink); }
+.smart-inbox-state.state-archived { background: var(--surface-2); color: var(--muted); }
+.smart-inbox-urgent-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: var(--red-bg); color: var(--red-ink); font-size: 11.5px; font-weight: 800; }
+.smart-inbox-month-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 10.5px; font-weight: 700; }
+.smart-inbox-hint { color: var(--ink-2); font-size: 12px; font-weight: 650; align-self: center; }
+.smart-inbox-item.urgent { box-shadow: inset 4px 0 0 var(--red-ink); }
+
+.smart-inbox-filters { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.smart-inbox-filters .icon-button { margin-left: auto; width: 36px; height: 36px; }
+.smart-inbox-filter-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.smart-inbox-filter-chip.active { border-color: transparent; background: var(--red-bg); color: var(--red-ink); }
+.smart-inbox-month-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-2); }
+.smart-inbox-month-filter select { border: 0; background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 700; min-height: 32px; cursor: pointer; }
+
+.smart-inbox-triage { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.smart-inbox-triage .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; }
+.smart-inbox-urgent-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.smart-inbox-urgent-toggle.on { border-color: transparent; background: var(--red-bg); color: var(--red-ink); }
+.smart-inbox-urgent-toggle:disabled { opacity: .6; cursor: not-allowed; }
+.smart-inbox-month-field { flex: 0 1 190px; }
+.smart-inbox-agent-field { flex: 1 1 200px; max-width: 300px; }
+.smart-inbox-notes > span { display: inline-flex; align-items: center; gap: 5px; }
+.smart-inbox-notes textarea { min-height: 60px; font-size: 14px; }
+.smart-inbox-saved { margin-left: 6px; color: var(--green-ink); font-style: normal; text-transform: none; letter-spacing: 0; }
+.smart-inbox-draft-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.smart-inbox-draft-head h3 { margin: 0; }
+.smart-inbox-template-picker { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); color: var(--accent-text); }
+.smart-inbox-template-picker select { border: 0; background: transparent; color: inherit; font: inherit; font-size: 12.5px; font-weight: 700; min-height: 34px; cursor: pointer; }
+.smart-inbox-reply-head { display: flex; align-items: center; gap: 5px; }
+
 @media (max-width: 900px) {
+  .smart-inbox-summary-bar { gap: 8px; }
+  .smart-inbox-counter { flex-direction: column; gap: 4px; padding: 10px 12px; }
+  .smart-inbox-counter strong { font-size: 1.3rem; }
+  .smart-inbox-counter span { font-size: 11px; }
+  .smart-inbox-month-field, .smart-inbox-agent-field { flex: 1 1 100%; max-width: none; }
+
   .smart-inbox-layout { grid-template-columns: minmax(0, 1fr); }
   .smart-inbox-layout.has-selection .smart-inbox-list { display: none; }
   .smart-inbox-layout:not(.has-selection) .smart-inbox-detail { display: none; }

@@ -159,7 +159,7 @@ async function loadHistory(admin: SupabaseClient, threadId: string, messageId: s
 }
 
 async function loadPropertyContext(admin: SupabaseClient, propertyId: string) {
-  const [property, settings, knowledge] = await Promise.all([
+  const [property, settings, knowledge, templates] = await Promise.all([
     admin.from('properties').select('name').eq('id', propertyId).single(),
     admin.from('smart_inbox_settings').select('*').eq('property_id', propertyId).maybeSingle(),
     admin
@@ -169,8 +169,15 @@ async function loadPropertyContext(admin: SupabaseClient, propertyId: string) {
       .eq('active', true)
       .order('sort_order')
       .order('created_at'),
+    admin
+      .from('smart_inbox_templates')
+      .select('title, body')
+      .eq('property_id', propertyId)
+      .order('sort_order')
+      .order('created_at'),
   ])
   if (property.error) throw property.error
+  if (templates.error) throw templates.error
   if (settings.error) throw settings.error
   if (knowledge.error) throw knowledge.error
   const row = settings.data as { reply_signature?: string; tone?: DraftRequest['tone']; auto_draft?: boolean; ignored_senders?: string[] } | null
@@ -181,6 +188,7 @@ async function loadPropertyContext(admin: SupabaseClient, propertyId: string) {
     autoDraft: row?.auto_draft ?? true,
     ignoredSenders: row?.ignored_senders ?? [],
     knowledge: (knowledge.data ?? []) as DraftRequest['knowledge'],
+    templates: (templates.data ?? []) as NonNullable<DraftRequest['templates']>,
   }
 }
 
@@ -244,6 +252,12 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
     }
 
     const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedDateTime) : []
+    let conversation: { notes: string; stay_month: string | null } | null = null
+    if (threadId) {
+      const { data, error } = await admin.from('smart_inbox_conversations').select('notes, stay_month').eq('id', threadId).single()
+      if (error) throw error
+      conversation = data as { notes: string; stay_month: string | null }
+    }
 
     let drafted
     try {
@@ -252,6 +266,8 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
         tone: context.tone,
         signature: context.signature,
         knowledge: context.knowledge,
+        templates: context.templates,
+        guestNotes: conversation?.notes ?? '',
         email: {
           fromName: email.from?.emailAddress?.name ?? null,
           fromAddress,
@@ -311,6 +327,19 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
           ? await admin.from('smart_inbox_drafts').update(draftFields).eq('id', existing.id)
           : await admin.from('smart_inbox_drafts').insert({ property_id: message.property_id, message_id: message.id, ...draftFields })
         if (error) throw error
+      }
+    }
+
+    // Triage on the guest conversation: an urgent email flags the guest as
+    // urgent (until the hotel replies), and the stay month is filled in if
+    // nobody has set it yet. Staff can change both.
+    if (threadId) {
+      const triage: Record<string, unknown> = {}
+      if (result.urgency === 'high') triage.is_urgent = true
+      if (result.stay_month && !conversation?.stay_month) triage.stay_month = `${result.stay_month}-01`
+      if (Object.keys(triage).length > 0) {
+        const { error } = await admin.from('smart_inbox_conversations').update(triage).eq('id', threadId)
+        if (error) console.error('smart-inbox: conversation triage not saved', error)
       }
     }
 

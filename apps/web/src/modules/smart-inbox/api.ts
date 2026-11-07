@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Agent, InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, UsageRow } from './types'
+import type { Agent, InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, ReplyTemplate, UsageRow } from './types'
 
 // Untyped SupabaseClient, same as Dining: the shared Database type
 // (core-sdk) doesn't know this module's tables. Every table here is
@@ -30,7 +30,7 @@ async function invoke<T>(client: SupabaseClient, name: string, body: Record<stri
 
 const MESSAGE_COLUMNS = 'id, thread_id, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
 const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_by, sent_at, updated_at'
-const CONVERSATION_COLUMNS = 'id, guest_address, guest_name, assigned_to, assigned_at'
+const CONVERSATION_COLUMNS = 'id, guest_address, guest_name, assigned_to, assigned_at, is_urgent, stay_month, notes'
 const SELECT = `${MESSAGE_COLUMNS}, conversation:smart_inbox_conversations(${CONVERSATION_COLUMNS}), smart_inbox_drafts(${DRAFT_COLUMNS})`
 
 type MessageRow = Record<string, unknown> & { smart_inbox_drafts: InboxDraft | InboxDraft[] | null }
@@ -69,6 +69,73 @@ export async function listAgents(client: SupabaseClient, propertyId: string): Pr
   const { data, error } = await client.rpc('smart_inbox_agents', { p_property_id: propertyId })
   if (error) throw error
   return (data ?? []) as Agent[]
+}
+
+export async function updateConversation(client: SupabaseClient, threadId: string, changes: { is_urgent?: boolean; stay_month?: string | null; notes?: string }): Promise<void> {
+  const { data, error } = await client.from('smart_inbox_conversations').update(changes).eq('id', threadId).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
+}
+
+// Numbers for the summary bar: guests waiting, of which urgent, and
+// replies sent today.
+export async function loadSummary(client: SupabaseClient, propertyId: string): Promise<{ toAnswer: number; urgent: number; answeredToday: number }> {
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const [open, sent] = await Promise.all([
+    client
+      .from('smart_inbox_messages')
+      .select('id, thread_id, conversation:smart_inbox_conversations(is_urgent)')
+      .eq('property_id', propertyId)
+      .in('status', ['pending', 'processing', 'draft_ready', 'needs_attention', 'failed'])
+      .limit(1000),
+    client
+      .from('smart_inbox_drafts')
+      .select('id', { count: 'exact', head: true })
+      .eq('property_id', propertyId)
+      .eq('status', 'sent')
+      .gte('sent_at', todayStart.toISOString()),
+  ])
+  if (open.error) throw open.error
+  if (sent.error) throw sent.error
+  const guests = new Map<string, boolean>()
+  for (const row of (open.data ?? []) as Array<{ id: string; thread_id: string | null; conversation: { is_urgent: boolean } | Array<{ is_urgent: boolean }> | null }>) {
+    const conversation = Array.isArray(row.conversation) ? row.conversation[0] : row.conversation
+    guests.set(row.thread_id ?? row.id, conversation?.is_urgent ?? false)
+  }
+  return {
+    toAnswer: guests.size,
+    urgent: [...guests.values()].filter(Boolean).length,
+    answeredToday: sent.count ?? 0,
+  }
+}
+
+export async function listTemplates(client: SupabaseClient, propertyId: string): Promise<ReplyTemplate[]> {
+  const { data, error } = await client
+    .from('smart_inbox_templates')
+    .select('id, title, body, sort_order')
+    .eq('property_id', propertyId)
+    .order('sort_order')
+    .order('created_at')
+  if (error) throw error
+  return (data ?? []) as ReplyTemplate[]
+}
+
+export async function createTemplate(client: SupabaseClient, propertyId: string, template: { title: string; body: string; sort_order: number }): Promise<void> {
+  const { error } = await client.from('smart_inbox_templates').insert({ property_id: propertyId, ...template })
+  if (error) throw error
+}
+
+export async function updateTemplate(client: SupabaseClient, id: string, changes: { title?: string; body?: string }): Promise<void> {
+  const { data, error } = await client.from('smart_inbox_templates').update(changes).eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
+}
+
+export async function deleteTemplate(client: SupabaseClient, id: string): Promise<void> {
+  const { data, error } = await client.from('smart_inbox_templates').delete().eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
 }
 
 export async function assignConversation(client: SupabaseClient, threadId: string, profileId: string | null): Promise<void> {
