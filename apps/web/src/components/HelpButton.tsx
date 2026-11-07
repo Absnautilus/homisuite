@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { CircleHelp } from 'lucide-react'
 import { Button, Modal } from '@homisuite/ui'
-import { APP_TOUR_VERSION, appTourSteps, helpTopicFor } from '../content/helpContent'
+import { helpTopicFor, moduleTours } from '../content/helpContent'
 import { TourOverlay } from './TourOverlay'
 
 const SEEN_STORAGE_KEY = 'homisuite.onboarding.seen.v1'
 const SEEN_VERSIONS_KEY = 'homisuite.help.seenVersions.v1'
-const TOUR_SEEN_KEY = '__tour__'
 
 function readSeenVersions(): Record<string, number> {
   try {
@@ -30,22 +29,26 @@ function markSeen(key: string, version: number) {
 
 // Present on every real-staff screen (mounted once in ShellLayout, not per
 // page) so there's always the same "?" in the same place, regardless of
-// which module is open. Three jobs: on Home, launches the real spotlight
-// tour over the actual sidebar/modules/help button (TourOverlay) rather
-// than describing them in a modal -- the first time this browser ever sees
-// a 'ready' shell, on its own, and again any time afterward from this
-// button. On every other screen, shows that screen's own short animated
-// guide, badging itself when its content has changed since this browser
-// last saw it (helpContent.ts's own `version` field -- see its doc
+// which module is open. Every module with real UI to point at
+// (moduleTours) launches a real spotlight tour over its own actual
+// elements (TourOverlay) rather than describing them in a modal -- the
+// very first time this browser ever sees a 'ready' shell, on its own
+// (always the Home tour, wherever that first landing happens to be, since
+// steps with no matching element on the current page are skipped), and
+// again any time afterward from this button, for whichever module is open.
+// A module with nothing concrete to tour yet (Transfer) falls back to its
+// short animated guide from helpContent.ts instead. Either kind badges
+// itself when its content has changed since this browser last saw it (the
+// tour's or topic's own `version` field -- see helpContent.ts's doc
 // comment for what this does and doesn't automate).
 export function HelpButton({ moduleKey }: { moduleKey: string }) {
   const [open, setOpen] = useState(false)
-  const [tourOpen, setTourOpen] = useState(false)
+  const [activeTourKey, setActiveTourKey] = useState<string | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
   const [hasUpdate, setHasUpdate] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const autoShown = useRef(false)
-  const isHome = moduleKey === 'home'
+  const tour = moduleTours[moduleKey]
 
   const topic = helpTopicFor(moduleKey)
 
@@ -54,11 +57,10 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
   // seen, which should clear its own badge immediately).
   useEffect(() => {
     const seen = readSeenVersions()
-    const currentVersion = isHome ? APP_TOUR_VERSION : topic.version
-    const seenKey = isHome ? TOUR_SEEN_KEY : moduleKey
-    setHasUpdate(currentVersion > (seen[seenKey] ?? 0))
+    const currentVersion = tour ? tour.version : topic.version
+    setHasUpdate(currentVersion > (seen[moduleKey] ?? 0))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleKey, open, tourOpen])
+  }, [moduleKey, open, activeTourKey])
 
   useEffect(() => {
     if (autoShown.current) return
@@ -70,7 +72,7 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
       seen = true // Can't tell -- better to stay quiet than interrupt every load.
     }
     if (seen) return
-    setTourOpen(true)
+    setActiveTourKey('home')
     try {
       localStorage.setItem(SEEN_STORAGE_KEY, '1')
     } catch {
@@ -83,8 +85,8 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
   }, [])
 
   function onFabClick() {
-    if (isHome) {
-      setTourOpen(true)
+    if (tour) {
+      setActiveTourKey(moduleKey)
     } else {
       setStepIndex(0)
       setOpen(true)
@@ -96,11 +98,13 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
     setOpen(false)
   }
 
-  function closeTour() {
-    markSeen(TOUR_SEEN_KEY, APP_TOUR_VERSION)
-    setTourOpen(false)
+  function closeTour(key: string) {
+    const closed = moduleTours[key]
+    if (closed) markSeen(key, closed.version)
+    setActiveTourKey(null)
   }
 
+  const activeTour = activeTourKey ? moduleTours[activeTourKey] : null
   const isLast = stepIndex === topic.sections.length - 1
   const section = topic.sections[stepIndex]!
   const Icon = section.icon
@@ -119,9 +123,9 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
         {hasUpdate ? <span className="help-fab-dot" aria-hidden="true" /> : null}
       </button>
 
-      {tourOpen ? <TourOverlay steps={appTourSteps} onFinish={closeTour} /> : null}
+      {activeTour ? <TourOverlay steps={activeTour.steps} onFinish={() => closeTour(activeTourKey!)} /> : null}
 
-      {!isHome && (
+      {!tour && (
         <Modal
           open={open}
           title={topic.title}

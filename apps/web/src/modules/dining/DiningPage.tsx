@@ -34,20 +34,22 @@ export function DiningPage({ hotelId, hotelName, canManage, staffProfileId, time
 
   return (
     <div className="page-stack dining-page">
-      <ModuleNav
-        propertyName={hotelName}
-        moduleName="Ristorazione"
-        items={TABS}
-        value={tab}
-        onValueChange={setTab}
-        ariaLabel="Sezioni Ristorazione"
-        secondary={tab === 'prenotazioni' ? {
-          items: RESERVATION_SUBTABS,
-          value: reservationsView,
-          onValueChange: (value) => setReservationsView(value as 'oggi' | 'tutte'),
-          ariaLabel: 'Prenotazioni',
-        } : undefined}
-      />
+      <div data-tour="dining-nav">
+        <ModuleNav
+          propertyName={hotelName}
+          moduleName="Ristorazione"
+          items={TABS}
+          value={tab}
+          onValueChange={setTab}
+          ariaLabel="Sezioni Ristorazione"
+          secondary={tab === 'prenotazioni' ? {
+            items: RESERVATION_SUBTABS,
+            value: reservationsView,
+            onValueChange: (value) => setReservationsView(value as 'oggi' | 'tutte'),
+            ariaLabel: 'Prenotazioni',
+          } : undefined}
+        />
+      </div>
       {/* All five panels stay mounted, switching only which is visible --
           unmounting/remounting a tab (the previous behaviour) discarded
           whatever the person had open or typed there, e.g. the "Aggiungi

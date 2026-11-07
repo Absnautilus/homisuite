@@ -199,7 +199,7 @@ export function TeamPage() {
 
   return (
     <div className="page-stack team-page">
-      <PageHeader eyebrow={propertyName} title="Team" description="Persone, accessi Homisuite e mansioni operative della struttura." actions={team.canManage ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : undefined} />
+      <PageHeader eyebrow={propertyName} title="Team" description="Persone, accessi Homisuite e mansioni operative della struttura." actions={team.canManage ? <button className="primary-action" type="button" data-tour="team-add" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : undefined} />
 
       <section className="shell-card team-principle-card">
         <div className="icon-tile"><ShieldCheck size={20} /></div>
@@ -208,7 +208,7 @@ export function TeamPage() {
 
       {error ? <div className="shell-alert error" role="alert">{error}<button type="button" onClick={() => void loadTeam()}>Riprova</button></div> : null}
 
-      <section className="shell-card">
+      <section className="shell-card" data-tour="team-table">
         <div className="section-heading split">
           <div><h2>Persone</h2><p>Il team collegato a {propertyName}.</p></div>
           <span className="status-chip">{loading ? 'Caricamento…' : `${team.members.length} ${team.members.length === 1 ? 'profilo' : 'profili'}`}</span>
@@ -234,7 +234,7 @@ export function TeamPage() {
         {!loading && team.members.length === 0 ? <PageState kind="empty" icon={Users} title="Nessuna persona collegata a questa struttura." /> : null}
       </section>
 
-      <section className="shell-card">
+      <section className="shell-card" data-tour="team-jobs">
         <div className="section-heading split">
           <div><h2>Mansioni della struttura</h2><p>Attiva solo quelle utili o creane di specifiche per l’hotel.</p></div>
           {team.canManage ? <button className="secondary-action" type="button" onClick={() => setJobEditor('new')}><Plus size={16} /> Nuova mansione</button> : null}

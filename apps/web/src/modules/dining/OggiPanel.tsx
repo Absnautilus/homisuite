@@ -65,7 +65,7 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
         <strong>{coperti}</strong> coperti
       </div>
 
-      <section className="shell-card">
+      <section className="shell-card" data-tour="dining-queue">
         <div className="dining-queue-head" style={{ padding: '16px 20px 0' }}>
           <h2>Da gestire</h2>
           <span className="count">{queueTotal}</span>
@@ -115,7 +115,7 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
         </div>
       </section>
 
-      <section className="shell-card">
+      <section className="shell-card" data-tour="dining-today">
         <div className="section-heading split" style={{ padding: '16px 20px 0' }}>
           <div><h2>Programma di oggi</h2></div>
         </div>

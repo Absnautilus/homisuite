@@ -95,7 +95,7 @@ export function ModulesPage() {
       )}
 
       {state === 'ready' && (
-        <section className="module-grid">
+        <section className="module-grid" data-tour="modules-list">
           {registered.map((module) => {
             const meta = catalog[module.slug] ?? {
               title: module.display_name,

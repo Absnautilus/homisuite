@@ -50,7 +50,7 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
     <>
       <div className="section-heading split" style={{ marginBottom: 14 }}>
         <div><h2>Prenotazioni</h2><p>Tutte le richieste di prenotazione, comprese quelle inserite manualmente.</p></div>
-        {canManage && restaurants.length > 0 ? <button className="primary-action" type="button" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
+        {canManage && restaurants.length > 0 ? <button className="primary-action" type="button" data-tour="dining-add" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
       </div>
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
       {!loading && restaurants.length === 0 ? (

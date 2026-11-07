@@ -60,7 +60,7 @@ export function SettingsPage() {
       <PageHeader eyebrow="Homisuite" title="Impostazioni" description="Preferenze della struttura, del tuo account e dei moduli." />
 
       {canManageProperty && (
-        <section className="settings-section">
+        <section className="settings-section" data-tour="settings-property">
           <div className="settings-section-title"><Building2 size={18} /><div><h2>Struttura</h2><p>Configurazione condivisa di {propertyName}.</p></div></div>
           <div className="settings-list shell-card">
             <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={() => setPropertyOpen(true)} />
@@ -70,7 +70,7 @@ export function SettingsPage() {
         </section>
       )}
 
-      <section className="settings-section" id="account">
+      <section className="settings-section" id="account" data-tour="settings-account">
         <div className="settings-section-title"><UserRound size={18} /><div><h2>Account</h2><p>Preferenze personali valide in tutta la suite.</p></div></div>
         <div className="settings-list shell-card">
           <SettingRow icon={<UserRound size={17} />} title="Profilo" detail={profileName} onClick={() => setProfileOpen(true)} />
@@ -91,7 +91,7 @@ export function SettingsPage() {
       </section>
 
       {canManageStaff && (
-        <section className="settings-section">
+        <section className="settings-section" data-tour="settings-modules">
           <div className="settings-section-title"><Puzzle size={18} /><div><h2>Impostazioni moduli</h2><p>Configurazioni specifiche, senza duplicare le preferenze globali.</p></div></div>
           <div className="settings-list shell-card">
             {housekeepingAccess.status === 'compatible' ? (
