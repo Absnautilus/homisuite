@@ -1,5 +1,5 @@
 import {
-  Bell, Boxes, Building2, CalendarCheck, CalendarDays, Clock, Compass, Hotel, Inbox,
+  Boxes, Building2, CalendarCheck, CalendarDays, Clock, Compass, Hotel, Inbox,
   LayoutGrid, ListChecks, Plus, Search, Settings2, UserCog, UserPlus, UserRound, Users,
   UtensilsCrossed, type LucideIcon,
 } from 'lucide-react'
@@ -60,26 +60,9 @@ export const helpContent: Record<string, HelpTopic> = {
       },
     ],
   },
-  home: {
-    title: 'Home',
-    intro: 'Il punto di partenza: da qui apri rapidamente i moduli abilitati per questa struttura.',
-    version: 1,
-    sections: [
-      {
-        heading: 'Le card dei moduli',
-        icon: LayoutGrid,
-        body: [
-          'Vedi solo i moduli attivati per la struttura E a cui il tuo account ha davvero accesso -- se un modulo non appare, chiedi a un amministratore di verificarlo da Team.',
-          'Tocca una card intera per aprire il modulo, non solo il testo "Apri modulo".',
-        ],
-      },
-      {
-        heading: 'Avvisi',
-        icon: Bell,
-        body: ['La riga in basso segnala eventuali criticità urgenti che richiedono attenzione.'],
-      },
-    ],
-  },
+  // Home has no modal entry here -- the floating button launches the real
+  // spotlight tour (TourOverlay, via appTourSteps below) over its actual
+  // elements instead, not a description of them. See HelpButton.tsx.
   housekeeping: {
     title: 'Housekeeping',
     intro: 'Richieste degli ospiti e operatività delle camere.',
@@ -228,3 +211,44 @@ export const helpContent: Record<string, HelpTopic> = {
 export function helpTopicFor(moduleKey: string): HelpTopic {
   return helpContent[moduleKey] ?? helpContent[GENERAL_HELP_KEY]!
 }
+
+// The real, interactive first-time tour (TourOverlay) -- spotlights actual
+// elements on the real page in sequence, rather than describing them in a
+// modal. Each target is a data-tour attribute added at the source
+// (ShellLayout, HomePage, HelpButton itself), never a guessed selector.
+// Steps whose target isn't on the current page are skipped automatically
+// (see TourOverlay), so this same list is safe to launch from any screen,
+// not only Home.
+export const APP_TOUR_VERSION = 1
+export const appTourSteps = [
+  {
+    target: '[data-tour="brand"]',
+    title: 'Benvenuto in Homisuite',
+    body: 'Un tour rapido di quattro passi prima di iniziare. Lo ritrovi sempre dal pulsante "?" in basso a destra.',
+  },
+  {
+    target: '[data-tour="property-switcher"]',
+    title: 'La tua struttura',
+    body: 'Se lavori in più strutture, da qui cambi quella attiva in qualsiasi momento.',
+  },
+  {
+    target: '[data-tour="nav"]',
+    title: 'I moduli',
+    body: 'La barra laterale elenca i moduli attivi per questa struttura -- vedi solo quelli a cui hai davvero accesso.',
+  },
+  {
+    target: '[data-tour="module-grid"]',
+    title: 'Apri un modulo',
+    body: 'Da qui apri rapidamente qualsiasi modulo abilitato -- tocca la card intera, non solo il testo.',
+  },
+  {
+    target: '[data-tour="account"]',
+    title: 'Il tuo account',
+    body: 'Profilo e uscita dall’app sono sempre qui, in basso.',
+  },
+  {
+    target: '[data-tour="help-fab"]',
+    title: 'Hai bisogno di aiuto?',
+    body: 'Questo pulsante mostra sempre la guida della schermata in cui ti trovi, e da qui puoi far ripartire questo tour quando vuoi.',
+  },
+]

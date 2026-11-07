@@ -232,10 +232,10 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        {brandMark}
-        {propertySwitcher}
-        <nav className="sidebar-nav" aria-label="Navigazione principale">{navSections}</nav>
-        <div className="sidebar-account"><AccountMenu name={displayName} /></div>
+        <div data-tour="brand">{brandMark}</div>
+        <div data-tour="property-switcher">{propertySwitcher}</div>
+        <nav className="sidebar-nav" aria-label="Navigazione principale" data-tour="nav">{navSections}</nav>
+        <div className="sidebar-account" data-tour="account"><AccountMenu name={displayName} /></div>
       </aside>
 
       <div className="shell-content">

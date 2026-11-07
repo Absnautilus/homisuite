@@ -506,3 +506,34 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
 @media (max-width: 920px) {
   .help-fab { right: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
+
+/* The interactive tour (TourOverlay) -- spotlights a real element already
+   on the page instead of describing it in a modal. .tour-dim is the
+   full-screen dimming layer (and click-to-advance target); .tour-spotlight
+   is a transparent box whose oversized box-shadow IS the dim layer's
+   cutout -- the standard trick for a highlight hole without an SVG mask --
+   plus a glowing accent ring so the highlighted element reads as "this
+   one, right now" rather than just "undimmed". */
+.tour-root { position: fixed; inset: 0; z-index: 410; }
+.tour-dim { position: fixed; inset: 0; cursor: pointer; }
+.tour-spotlight {
+  position: fixed; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(12, 9, 22, .62), 0 0 0 3px var(--accent), 0 0 24px 4px color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: top .32s var(--motion-ease), left .32s var(--motion-ease), width .32s var(--motion-ease), height .32s var(--motion-ease);
+}
+.tour-card {
+  position: fixed; z-index: 411; width: 320px; max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg); padding: 18px 18px 16px; animation: help-step-enter .3s var(--motion-ease) both;
+}
+.tour-close { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
+.tour-close:hover { background: var(--surface-2); color: var(--ink); }
+.tour-step-count { display: block; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--accent-text); margin-bottom: 4px; }
+.tour-card h3 { font-size: 15.5px; margin: 0 0 6px; padding-right: 20px; }
+.tour-card p { font-size: 13.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 14px; }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tour-nav-buttons { display: flex; gap: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight { transition: none; }
+  .tour-card { animation: none; }
+}

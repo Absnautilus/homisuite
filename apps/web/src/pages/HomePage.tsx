@@ -63,7 +63,7 @@ export function HomePage() {
           </div>
         }
       />
-      <section className="module-grid">
+      <section className="module-grid" data-tour="module-grid">
         {/* The whole card is the link (not just "Apri modulo"): a bigger,
             more forgiving touch target on a hotel front desk, and one clear
             affordance instead of a card that half-invites a click anywhere
