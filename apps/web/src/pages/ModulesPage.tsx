@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@homisuite/ui'
-import { CalendarDays, CarFront, Hotel, Puzzle, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { CalendarDays, CarFront, Hotel, Mail, Puzzle, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { PageState } from '../components/PageState'
@@ -37,6 +37,11 @@ const catalog: Record<string, { title: string; description: string; icon: Lucide
     title: 'Transfer',
     description: 'Organizzazione e tracciamento dei transfer e degli spostamenti degli ospiti.',
     icon: CarFront,
+  },
+  smart_inbox: {
+    title: 'Smart Inbox',
+    description: 'Le email degli ospiti da Outlook, con bozze di risposta preparate dall\'assistente sulle informazioni della struttura.',
+    icon: Mail,
   },
 }
 

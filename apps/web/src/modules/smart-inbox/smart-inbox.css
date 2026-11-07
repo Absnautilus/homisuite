@@ -1,0 +1,159 @@
+/* Smart Inbox -- module-local styles. Tokens only (no hard-coded colors),
+   so light and dark themes both work through the shell's own variables. */
+
+.smart-inbox-layout { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.smart-inbox-list { overflow: hidden; }
+.smart-inbox-list-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 6px 16px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.smart-inbox-items { list-style: none; margin: 0; padding: 0; max-height: calc(100vh - 260px); overflow-y: auto; }
+.smart-inbox-items li + li { border-top: 1px solid var(--line); }
+.smart-inbox-item { display: grid; gap: 4px; width: 100%; padding: 12px 16px; border: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.smart-inbox-item:hover { background: var(--surface-2); }
+.smart-inbox-item.selected { background: var(--accent-soft); }
+.smart-inbox-item:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+.smart-inbox-item-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.smart-inbox-item-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-inbox-item-top time { flex: 0 0 auto; color: var(--muted); font-size: 11.5px; }
+.smart-inbox-item-subject { font-size: 12.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-inbox-item-summary { color: var(--muted); font-size: 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.smart-inbox-item-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+
+.smart-inbox-status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 750; background: var(--surface-2); color: var(--muted); }
+.smart-inbox-status.tone-ok { background: var(--green-bg); color: var(--green-ink); }
+.smart-inbox-status.tone-warn { background: var(--amber-bg); color: var(--amber-ink); }
+.smart-inbox-status.tone-danger { background: var(--red-bg); color: var(--red-ink); }
+
+.smart-inbox-detail { display: grid; gap: 16px; padding: 18px 20px 20px; min-width: 0; }
+.smart-inbox-detail-empty { padding: 0; }
+.smart-inbox-detail-head { display: grid; gap: 10px; }
+.smart-inbox-detail-head h2 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.smart-inbox-detail-head p { margin: 4px 0 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.smart-inbox-back { display: none; justify-self: start; min-height: 36px; }
+.smart-inbox-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.smart-inbox-summary { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent-text); font-size: 13px; font-weight: 600; }
+.smart-inbox-summary svg { flex: 0 0 auto; margin-top: 2px; }
+.smart-inbox-note { margin: 0; font-size: 12px; }
+.smart-inbox-detail h3 { margin: 0 0 8px; color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.smart-inbox-email-body { max-height: 320px; overflow-y: auto; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.smart-inbox-actions-box ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+.smart-inbox-draft textarea { min-height: 220px; line-height: 1.55; }
+.smart-inbox-draft textarea[readonly] { background: var(--surface-2); }
+.smart-inbox-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.smart-inbox-buttons .btn { display: inline-flex; align-items: center; gap: 6px; }
+.smart-inbox-notice { margin: 8px 0 0; color: var(--green-ink); font-size: 12.5px; font-weight: 650; }
+.smart-inbox-buttons .smart-inbox-notice { margin: 0; }
+.smart-inbox-warn { display: inline-flex; align-items: center; gap: 5px; color: var(--amber-ink); font-size: 12px; font-weight: 650; }
+
+.smart-inbox-knowledge { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.smart-inbox-knowledge li { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.smart-inbox-knowledge li:last-child { border-bottom: 0; }
+.smart-inbox-knowledge li.inactive .smart-inbox-knowledge-text { opacity: .55; }
+.smart-inbox-knowledge-text { min-width: 0; }
+.smart-inbox-knowledge-text strong { font-size: 13.5px; }
+.smart-inbox-knowledge-text p { margin: 4px 0 0; color: var(--ink-2); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.smart-inbox-knowledge-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+
+.smart-inbox-mailbox { display: flex; align-items: center; gap: 13px; padding: 0 20px 18px; flex-wrap: wrap; }
+.smart-inbox-mailbox-text { display: grid; gap: 3px; min-width: 0; flex: 1 1 220px; font-size: 13px; }
+.smart-inbox-mailbox-text strong { overflow-wrap: anywhere; }
+.smart-inbox-mailbox-text span { font-size: 12px; }
+.smart-inbox-mailbox-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.smart-inbox-mailbox + .smart-inbox-note { padding: 0 20px 16px; }
+.smart-inbox-settings-form { padding: 0 20px 20px; }
+.smart-inbox-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.smart-inbox-toggle-row strong { font-size: 13px; }
+.smart-inbox-toggle-row p { margin: 2px 0 0; font-size: 12px; }
+.smart-inbox-usage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0 20px 20px; }
+.smart-inbox-usage div { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.smart-inbox-usage dt { color: var(--muted); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.smart-inbox-usage dd { margin: 4px 0 0; font-size: 1rem; font-weight: 750; }
+
+/* Guests and agents */
+.smart-inbox-guest { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.smart-inbox-guest strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-inbox-avatar { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text); font-size: 9.5px; font-weight: 800; }
+.smart-inbox-avatar.large { width: 40px; height: 40px; font-size: 13px; }
+.smart-inbox-agent-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 10.5px; font-weight: 700; }
+.smart-inbox-agent-chip.unassigned { color: var(--muted); font-weight: 600; }
+.smart-inbox-guest-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.smart-inbox-guest-head h2 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.smart-inbox-guest-head p { margin: 2px 0 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.smart-inbox-assign { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.smart-inbox-assign .form-field { flex: 1 1 220px; max-width: 320px; }
+.smart-inbox-assign .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; }
+.smart-inbox-owner-note { display: flex; align-items: center; gap: 6px; margin: 0; padding: 8px 10px; border-radius: var(--r-sm); background: var(--amber-bg); color: var(--amber-ink); font-size: 12.5px; font-weight: 650; }
+
+/* Conversation thread */
+.smart-inbox-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.smart-inbox-message { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.smart-inbox-message.open { border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); box-shadow: 0 6px 18px -14px rgba(22, 24, 43, .35); }
+.smart-inbox-message-head { display: grid; gap: 8px; }
+.smart-inbox-message-head > div:first-child { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.smart-inbox-message-head strong { overflow-wrap: anywhere; }
+.smart-inbox-message-head time { flex: 0 0 auto; color: var(--muted); font-size: 11.5px; }
+.smart-inbox-email-body.collapsed { max-height: 4.8em; overflow: hidden; }
+.smart-inbox-expand { justify-self: start; color: var(--accent-text); }
+.smart-inbox-reply { margin-left: 18px; padding: 10px 12px; border-left: 3px solid var(--accent); border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--accent-soft); }
+.smart-inbox-reply-head { margin: 0 0 6px; color: var(--accent-text); font-size: 11.5px; font-weight: 750; }
+.smart-inbox-reply-body { font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.smart-inbox-message .smart-inbox-buttons { margin-top: 0; }
+.smart-inbox-message .smart-inbox-buttons:empty { display: none; }
+
+/* At-a-glance: summary, states, urgency, month */
+.smart-inbox-inbox { gap: 14px; }
+.smart-inbox-summary-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.smart-inbox-counter { display: flex; align-items: baseline; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.smart-inbox-counter strong { font-size: 1.6rem; line-height: 1; font-weight: 800; color: var(--ink); }
+.smart-inbox-counter span { color: var(--ink-2); font-size: 12.5px; font-weight: 650; }
+.smart-inbox-counter.warn { background: var(--amber-bg); border-color: transparent; }
+.smart-inbox-counter.warn strong, .smart-inbox-counter.warn span { color: var(--amber-ink); }
+.smart-inbox-counter.danger { background: var(--red-bg); border-color: transparent; }
+.smart-inbox-counter.danger strong, .smart-inbox-counter.danger span { color: var(--red-ink); }
+.smart-inbox-counter.ok strong { color: var(--green-ink); }
+.smart-inbox-toast { gap: 8px; justify-content: flex-start; background: var(--green-bg); color: var(--green-ink); border-color: transparent; font-weight: 650; }
+
+.smart-inbox-state { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; }
+.smart-inbox-state.state-to_answer { background: var(--amber-bg); color: var(--amber-ink); }
+.smart-inbox-state.state-answered { background: var(--green-bg); color: var(--green-ink); }
+.smart-inbox-state.state-archived { background: var(--surface-2); color: var(--muted); }
+.smart-inbox-urgent-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: var(--red-bg); color: var(--red-ink); font-size: 11.5px; font-weight: 800; }
+.smart-inbox-month-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 10.5px; font-weight: 700; }
+.smart-inbox-hint { color: var(--ink-2); font-size: 12px; font-weight: 650; align-self: center; }
+.smart-inbox-item.urgent { box-shadow: inset 4px 0 0 var(--red-ink); }
+
+.smart-inbox-filters { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.smart-inbox-filters .icon-button { margin-left: auto; width: 36px; height: 36px; }
+.smart-inbox-filter-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.smart-inbox-filter-chip.active { border-color: transparent; background: var(--red-bg); color: var(--red-ink); }
+.smart-inbox-month-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-2); }
+.smart-inbox-month-filter select { border: 0; background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 700; min-height: 32px; cursor: pointer; }
+
+.smart-inbox-triage { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.smart-inbox-triage .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; }
+.smart-inbox-urgent-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.smart-inbox-urgent-toggle.on { border-color: transparent; background: var(--red-bg); color: var(--red-ink); }
+.smart-inbox-urgent-toggle:disabled { opacity: .6; cursor: not-allowed; }
+.smart-inbox-month-field { flex: 0 1 190px; }
+.smart-inbox-agent-field { flex: 1 1 200px; max-width: 300px; }
+.smart-inbox-notes > span { display: inline-flex; align-items: center; gap: 5px; }
+.smart-inbox-notes textarea { min-height: 60px; font-size: 14px; }
+.smart-inbox-saved { margin-left: 6px; color: var(--green-ink); font-style: normal; text-transform: none; letter-spacing: 0; }
+.smart-inbox-draft-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.smart-inbox-draft-head h3 { margin: 0; }
+.smart-inbox-template-picker { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); color: var(--accent-text); }
+.smart-inbox-template-picker select { border: 0; background: transparent; color: inherit; font: inherit; font-size: 12.5px; font-weight: 700; min-height: 34px; cursor: pointer; }
+.smart-inbox-reply-head { display: flex; align-items: center; gap: 5px; }
+
+@media (max-width: 900px) {
+  .smart-inbox-summary-bar { gap: 8px; }
+  .smart-inbox-counter { flex-direction: column; gap: 4px; padding: 10px 12px; }
+  .smart-inbox-counter strong { font-size: 1.3rem; }
+  .smart-inbox-counter span { font-size: 11px; }
+  .smart-inbox-month-field, .smart-inbox-agent-field { flex: 1 1 100%; max-width: none; }
+
+  .smart-inbox-layout { grid-template-columns: minmax(0, 1fr); }
+  .smart-inbox-layout.has-selection .smart-inbox-list { display: none; }
+  .smart-inbox-layout:not(.has-selection) .smart-inbox-detail { display: none; }
+  .smart-inbox-back { display: inline-flex; }
+  .smart-inbox-items { max-height: none; }
+  .smart-inbox-usage { grid-template-columns: minmax(0, 1fr); }
+}

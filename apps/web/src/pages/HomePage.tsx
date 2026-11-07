@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { PageHeader } from '@homisuite/ui'
-import { ArrowRight, CalendarDays, CarFront, CircleCheck, Hotel, UtensilsCrossed } from 'lucide-react'
+import { ArrowRight, CalendarDays, CarFront, CircleCheck, Hotel, Mail, UtensilsCrossed } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
@@ -11,6 +11,7 @@ const moduleCatalog = [
   { slug: 'dining', title: 'Ristorazione', description: 'Ristoranti convenzionati e prenotazioni.', path: '/dining', icon: UtensilsCrossed },
   { slug: 'shifts', title: 'Turni', description: 'Pianificazione e copertura dei turni.', path: '/turni', icon: CalendarDays },
   { slug: 'transfers', title: 'Transfer', description: 'Gestione transfer e spostamenti ospiti.', path: '/transfer', icon: CarFront },
+  { slug: 'smart_inbox', title: 'Smart Inbox', description: 'Email degli ospiti con bozze di risposta pronte.', path: '/smart-inbox', icon: Mail },
 ]
 
 // "Lunedì 22 settembre 2026" -- Intl gives it lowercase, capitalized to

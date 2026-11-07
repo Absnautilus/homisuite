@@ -95,6 +95,22 @@ jobs:
           deno-version: v2.x
       - run: deno check --node-modules-dir=auto supabase/functions/notify-new-request/index.ts supabase/functions/notify-request-event/index.ts
 
+  smart-inbox-functions:
+    name: Edge Functions — Smart Inbox (Deno check + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      # Same working-directory rule as early-access-function above: run from
+      # the directory holding the deno.json that disables node_modules
+      # resolution, never from the npm workspace root.
+      - working-directory: supabase/functions/_shared/smart-inbox
+        run: deno check ../../smart-inbox-connect/index.ts ../../smart-inbox-oauth-callback/index.ts ../../smart-inbox-webhook/index.ts ../../smart-inbox-actions/index.ts ../../smart-inbox-maintenance/index.ts
+      - working-directory: supabase/functions/_shared/smart-inbox
+        run: deno test --allow-env .
+
   database:
     # Keep the established check name so branch-protection rules continue to
     # recognize this job after the browser coverage is added.

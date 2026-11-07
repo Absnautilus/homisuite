@@ -69,6 +69,7 @@ docs/
   guest-access.md                    guest_sessions
   rls.md                             enforcement e helper Core
   module-integration.md              integrazione dei moduli con la piattaforma
+  smart-inbox.md                     modulo Smart Inbox: Outlook + bozze AI, setup
   architecture/monorepo.md           target monorepo (apps/web, modules/*,
                                       packages/*), boundary, CI, rollback
 ```

@@ -1,7 +1,7 @@
 import {
   Boxes, Building2, CalendarCheck, CalendarDays, Clock, Compass, Hotel, Inbox,
   LayoutGrid, ListChecks, Plus, Search, Settings2, UserCog, UserPlus, UserRound, Users,
-  UtensilsCrossed, type LucideIcon,
+  FileText, Mail, Sparkles, UtensilsCrossed, type LucideIcon,
 } from 'lucide-react'
 import type { TourStep } from '../components/TourOverlay'
 
@@ -204,6 +204,51 @@ export const helpContent: Record<string, HelpTopic> = {
     version: 1,
     sections: [
       { heading: 'In arrivo', icon: Clock, body: ['Questo modulo non è ancora disponibile.'] },
+    ],
+  },
+  'smart-inbox': {
+    title: 'Smart Inbox',
+    intro: 'Le email degli ospiti arrivate su Outlook, con una bozza di risposta già pronta.',
+    version: 3,
+    sections: [
+      {
+        heading: 'Posta',
+        icon: Inbox,
+        body: [
+          'In alto vedi subito quanti ospiti aspettano una risposta, quanti sono urgenti e quante risposte sono partite oggi.',
+          'Ogni ospite è una conversazione con due soli stati: "Da rispondere" (giallo) o "Risposto" (verde). Gli urgenti hanno il bordo rosso e stanno in cima; poi chi aspetta da più tempo.',
+          'Filtra per "Solo urgenti" o per mese del soggiorno. Il mese lo propone l’assistente leggendo l’email; puoi cambiarlo, come anche "Urgente / Non urgente", con un clic.',
+          'Nelle "Note sull’ospite" scrivi quello che i colleghi devono sapere (VIP, allergie, ricorrenze): le legge anche l’assistente.',
+          'Dopo "Invia risposta" si passa da soli all’ospite successivo da rispondere.',
+          'Ogni conversazione ha un agent, il collega che la segue. Usa "Prendi in carico" o scegli un collega dal menu Agent; in "Assegnate a me" trovi solo i tuoi ospiti. Chi risponde per primo a un ospite non assegnato ne diventa l’agent.',
+          'Correggi la bozza se serve, poi premi "Invia risposta": parte dalla casella Outlook dell’hotel. Niente viene inviato senza la tua conferma.',
+          'Se sotto lo stato leggi "Bozza da controllare con attenzione" o "Da scrivere a mano" (reclami, rimborsi, domande senza risposta nelle informazioni), rileggi bene prima di inviare.',
+        ],
+      },
+      {
+        heading: 'Informazioni hotel',
+        icon: Sparkles,
+        body: [
+          'L’assistente risponde solo con quello che è scritto in questa sezione. Se un’informazione manca, scrive che il team risponderà a breve.',
+          'Aggiungi una sezione per argomento (colazione, parcheggio, check-in...). Più è completa, meno email restano da gestire a mano.',
+        ],
+      },
+      {
+        heading: 'Modelli di risposta',
+        icon: FileText,
+        body: [
+          'Risposte pronte (istruzioni check-in, come arrivare, cancellazioni…) da inserire con "Inserisci modello" mentre scrivi. {nome} diventa il nome dell’ospite.',
+          'L’assistente usa i modelli anche come esempio quando prepara le bozze.',
+        ],
+      },
+      {
+        heading: 'Impostazioni',
+        icon: Mail,
+        body: [
+          'Un responsabile collega qui la casella Outlook (es. info@) accedendo con l’account Microsoft 365 della casella.',
+          'Firma, tono e mittenti da ignorare valgono per tutte le bozze della struttura.',
+        ],
+      },
     ],
   },
 }
