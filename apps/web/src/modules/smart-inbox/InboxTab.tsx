@@ -22,6 +22,7 @@ import {
   actionErrorLabel,
   draftHint,
   fillTemplate,
+  insertTemplateText,
   groupByConversation,
   ignoreReasonLabel,
   initials,
@@ -492,6 +493,9 @@ function MessageCard({ client, message, guestName, templates, agentName, onChang
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Last caret position the person left in the draft; null until they
+  // click or type in it (then templates go where they were working).
+  const cursorRef = useRef<{ start: number; end: number } | null>(null)
   const dirty = Boolean(draft) && editable && body !== draft?.body
 
   // A regenerated draft arrives through a reload: adopt it unless the
@@ -520,18 +524,14 @@ function MessageCard({ client, message, guestName, templates, agentName, onChang
     const template = templates.find((item) => item.id === templateId)
     if (!template) return
     const text = fillTemplate(template.body, guestName)
+    const { value, caret } = insertTemplateText(body, text, cursorRef.current)
+    setBody(value)
+    cursorRef.current = { start: caret, end: caret }
     const area = textareaRef.current
-    if (!area || !body.trim()) {
-      setBody(text)
-      return
-    }
-    const start = area.selectionStart ?? body.length
-    const end = area.selectionEnd ?? body.length
-    const next = `${body.slice(0, start)}${text}${body.slice(end)}`
-    setBody(next)
+    if (!area) return
     requestAnimationFrame(() => {
       area.focus()
-      area.setSelectionRange(start + text.length, start + text.length)
+      area.setSelectionRange(caret, caret)
     })
   }
 
@@ -603,7 +603,14 @@ function MessageCard({ client, message, guestName, templates, agentName, onChang
           </div>
           <label className="form-field">
             <span className="sr-only">Testo della risposta</span>
-            <textarea ref={textareaRef} value={body} onChange={(event) => setBody(event.target.value)} rows={12} maxLength={20000} />
+            <textarea
+              ref={textareaRef}
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              onSelect={(event) => { cursorRef.current = { start: event.currentTarget.selectionStart, end: event.currentTarget.selectionEnd } }}
+              rows={12}
+              maxLength={20000}
+            />
           </label>
         </div>
       ) : null}

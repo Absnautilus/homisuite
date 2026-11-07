@@ -65,6 +65,30 @@ export function fillTemplate(body: string, guestName: string | null): string {
   return body.replace(/\{nome\}/gi, looksLikeName ? first : '').replace(/[ \t]+([,.!?])/g, '$1')
 }
 
+// Where a template lands in a draft:
+//  * at the cursor, if the person has been working in the text (padded
+//    with blank lines so it never glues onto a word);
+//  * otherwise just before the closing paragraph (greeting + signature),
+//    which is how replies end -- so the template reads as the body.
+export function insertTemplateText(body: string, text: string, cursor: { start: number; end: number } | null): { value: string; caret: number } {
+  if (!body.trim()) return { value: text, caret: text.length }
+  if (cursor) {
+    const before = body.slice(0, cursor.start)
+    const after = body.slice(cursor.end)
+    const lead = before && !before.endsWith('\n') ? '\n\n' : ''
+    const trail = after && !after.startsWith('\n') ? '\n\n' : ''
+    const inserted = `${lead}${text}${trail}`
+    return { value: `${before}${inserted}${after}`, caret: before.length + lead.length + text.length }
+  }
+  const closing = body.trimEnd().lastIndexOf('\n\n')
+  if (closing <= 0) {
+    const value = `${body.trimEnd()}\n\n${text}`
+    return { value, caret: value.length }
+  }
+  const before = body.slice(0, closing)
+  return { value: `${before}\n\n${text}${body.slice(closing)}`, caret: before.length + 2 + text.length }
+}
+
 export const STATUS_LABELS: Record<MessageStatus, string> = {
   pending: 'In arrivo',
   processing: 'In elaborazione',
