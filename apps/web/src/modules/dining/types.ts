@@ -34,6 +34,11 @@ export interface Restaurant {
 
 export type CommercialAgreement = 'partner_commission' | 'partner_no_commission' | 'none'
 export type PreferredContactMethod = 'phone' | 'whatsapp' | 'email'
+// What commission_rate's number means: a percentage (0-100) of the basis
+// below, or a fixed euro amount.
+export type CommissionType = 'percentage' | 'fixed_amount'
+// What the commission applies to: once for the whole booking, or per guest.
+export type CommissionBasis = 'per_guest' | 'total'
 
 export interface RestaurantOperationalProfile {
   restaurant_id: string
@@ -44,6 +49,8 @@ export interface RestaurantOperationalProfile {
   contact_person: string | null
   commercial_agreement: CommercialAgreement
   commission_rate: number | null
+  commission_type: CommissionType
+  commission_basis: CommissionBasis
   booking_notes: string | null
   difficult_times: string | null
   last_verified_on: string | null
@@ -53,6 +60,16 @@ export const COMMERCIAL_AGREEMENT_LABELS: Record<CommercialAgreement, string> = 
   partner_commission: 'Convenzionato con provvigione',
   partner_no_commission: 'Convenzionato senza provvigione',
   none: 'Nessun accordo',
+}
+
+export const COMMISSION_TYPE_LABELS: Record<CommissionType, string> = {
+  percentage: 'Percentuale',
+  fixed_amount: 'Importo fisso',
+}
+
+export const COMMISSION_BASIS_LABELS: Record<CommissionBasis, string> = {
+  total: 'Sul totale della prenotazione',
+  per_guest: 'Per persona',
 }
 
 export interface RestaurantHour {

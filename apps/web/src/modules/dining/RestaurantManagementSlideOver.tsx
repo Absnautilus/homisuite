@@ -4,8 +4,8 @@ import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { supabase } from '../../core/client'
 import { getOperationalProfile, getRestaurantStats, saveRestaurantManagement, type RestaurantStats } from './api'
-import type { CommercialAgreement, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile } from './types'
-import { COMMERCIAL_AGREEMENT_LABELS } from './types'
+import type { CommercialAgreement, CommissionBasis, CommissionType, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile } from './types'
+import { COMMERCIAL_AGREEMENT_LABELS, COMMISSION_BASIS_LABELS, COMMISSION_TYPE_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
 import { SlideOver } from './SlideOver'
 
@@ -20,6 +20,8 @@ const EMPTY_PROFILE: RestaurantOperationalProfile = {
   contact_person: null,
   commercial_agreement: 'none',
   commission_rate: null,
+  commission_type: 'percentage',
+  commission_basis: 'total',
   booking_notes: null,
   difficult_times: null,
   last_verified_on: null,
@@ -73,10 +75,15 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
 
   async function saveAll() {
     if (!restaurant) return
+    const merged = { ...restaurant, ...publicForm, ...curatedForm }
+    if (!merged.name?.trim() || merged.walk_minutes == null || !merged.address?.trim()) {
+      setTab('public')
+      setError('Nome, distanza a piedi e indirizzo sono obbligatori.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
-      const merged = { ...restaurant, ...publicForm, ...curatedForm }
       await saveRestaurantManagement(supabase, restaurant.id, {
         name: merged.name,
         cuisine: merged.cuisine,
@@ -129,7 +136,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
 
       {tab === 'public' ? (
         <div className="dining-field-grid">
-          <label className="form-field"><span>Nome</span><input value={publicForm.name ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, name: e.target.value }))} /></label>
+          <label className="form-field"><span>Nome</span><input required value={publicForm.name ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, name: e.target.value }))} /></label>
           <label className="form-field"><span>Cucina</span><input value={publicForm.cuisine ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, cuisine: e.target.value || null }))} /></label>
           <label className="form-field"><span>Fascia prezzo</span>
             <Select id="price-tier" name="price_tier" value={String(publicForm.price_tier ?? '')} onChange={(v) => setPublicForm((f) => ({ ...f, price_tier: (v ? Number(v) : null) as Restaurant['price_tier'] }))}>
@@ -137,8 +144,8 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
               <option value="1">€</option><option value="2">€€</option><option value="3">€€€</option><option value="4">€€€€</option>
             </Select>
           </label>
-          <label className="form-field"><span>Distanza a piedi (minuti)</span><input type="number" min={0} value={publicForm.walk_minutes ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, walk_minutes: e.target.value ? Number(e.target.value) : null }))} /></label>
-          <label className="form-field span2"><span>Indirizzo</span><input value={publicForm.address ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, address: e.target.value || null }))} /></label>
+          <label className="form-field"><span>Distanza a piedi (minuti)</span><input required type="number" min={0} value={publicForm.walk_minutes ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, walk_minutes: e.target.value ? Number(e.target.value) : null }))} /></label>
+          <label className="form-field span2"><span>Indirizzo</span><input required value={publicForm.address ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, address: e.target.value || null }))} /></label>
           <label className="form-field"><span>Sito web</span><input value={publicForm.website_url ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, website_url: e.target.value || null }))} /></label>
           <label className="form-field"><span>Link Google Maps</span><input value={publicForm.maps_url ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, maps_url: e.target.value || null }))} placeholder="https://maps.google.com/…" /></label>
           <label className="form-field span2"><span>Descrizione breve</span><textarea rows={2} value={publicForm.short_description ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, short_description: e.target.value || null }))} /></label>
@@ -165,26 +172,49 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       ) : null}
 
       {tab === 'ops' ? (
-        <div className="dining-field-grid">
-          <label className="form-field"><span>Telefono</span><input value={opsForm.contact_phone ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_phone: e.target.value || null }))} /></label>
-          <label className="form-field"><span>Email</span><input value={opsForm.contact_email ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_email: e.target.value || null }))} /></label>
-          <label className="form-field"><span>WhatsApp</span><input value={opsForm.contact_whatsapp ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_whatsapp: e.target.value || null }))} /></label>
-          <label className="form-field"><span>Metodo di contatto preferito</span>
-            <Select id="preferred-contact" name="preferred_contact_method" value={opsForm.preferred_contact_method ?? ''} onChange={(v) => setOpsForm((f) => ({ ...f, preferred_contact_method: (v || null) as PreferredContactMethod | null }))}>
-              <option value="">—</option><option value="phone">Telefono</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option>
-            </Select>
-          </label>
-          <label className="form-field"><span>Persona di riferimento</span><input value={opsForm.contact_person ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_person: e.target.value || null }))} /></label>
-          <label className="form-field"><span>Accordo commerciale</span>
-            <Select id="commercial-agreement" name="commercial_agreement" value={opsForm.commercial_agreement} onChange={(v) => setOpsForm((f) => ({ ...f, commercial_agreement: v as CommercialAgreement }))}>
-              {Object.entries(COMMERCIAL_AGREEMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </Select>
-          </label>
-          <label className="form-field"><span>Provvigione (%)</span><input type="number" min={0} max={100} step="0.01" value={opsForm.commission_rate ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, commission_rate: e.target.value ? Number(e.target.value) : null }))} /></label>
-          <label className="form-field span2"><span>Note di prenotazione</span><textarea rows={2} value={opsForm.booking_notes ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, booking_notes: e.target.value || null }))} /></label>
-          <label className="form-field span2"><span>Giorni/orari difficili</span><input value={opsForm.difficult_times ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, difficult_times: e.target.value || null }))} /></label>
-          <label className="form-field"><span>Ultima verifica</span><input type="date" value={opsForm.last_verified_on ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, last_verified_on: e.target.value || null }))} /></label>
-        </div>
+        <>
+          <div className="dining-visibility-note" style={{ marginBottom: 14 }}>Questa sezione non è mai visibile agli ospiti -- è ad uso esclusivo dello staff.</div>
+          <div className="dining-field-grid">
+            <label className="form-field"><span>Telefono</span><input value={opsForm.contact_phone ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_phone: e.target.value || null }))} /></label>
+            <label className="form-field"><span>Email</span><input value={opsForm.contact_email ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_email: e.target.value || null }))} /></label>
+            <label className="form-field"><span>WhatsApp</span><input value={opsForm.contact_whatsapp ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_whatsapp: e.target.value || null }))} /></label>
+            <label className="form-field"><span>Metodo di contatto preferito</span>
+              <Select id="preferred-contact" name="preferred_contact_method" value={opsForm.preferred_contact_method ?? ''} onChange={(v) => setOpsForm((f) => ({ ...f, preferred_contact_method: (v || null) as PreferredContactMethod | null }))}>
+                <option value="">—</option><option value="phone">Telefono</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option>
+              </Select>
+            </label>
+            <label className="form-field"><span>Persona di riferimento</span><input value={opsForm.contact_person ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_person: e.target.value || null }))} /></label>
+            <label className="form-field"><span>Accordo commerciale</span>
+              <Select id="commercial-agreement" name="commercial_agreement" value={opsForm.commercial_agreement} onChange={(v) => setOpsForm((f) => ({ ...f, commercial_agreement: v as CommercialAgreement }))}>
+                {Object.entries(COMMERCIAL_AGREEMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </Select>
+            </label>
+            <label className="form-field"><span>Tipo provvigione</span>
+              <Select id="commission-type" name="commission_type" value={opsForm.commission_type} onChange={(v) => setOpsForm((f) => ({ ...f, commission_type: v as CommissionType }))}>
+                {Object.entries(COMMISSION_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </Select>
+            </label>
+            <label className="form-field"><span>Calcolata</span>
+              <Select id="commission-basis" name="commission_basis" value={opsForm.commission_basis} onChange={(v) => setOpsForm((f) => ({ ...f, commission_basis: v as CommissionBasis }))}>
+                {Object.entries(COMMISSION_BASIS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </Select>
+            </label>
+            <label className="form-field">
+              <span>Provvigione {opsForm.commission_type === 'percentage' ? '(%)' : '(€)'}</span>
+              <input
+                type="number"
+                min={0}
+                max={opsForm.commission_type === 'percentage' ? 100 : undefined}
+                step="0.01"
+                value={opsForm.commission_rate ?? ''}
+                onChange={(e) => setOpsForm((f) => ({ ...f, commission_rate: e.target.value ? Number(e.target.value) : null }))}
+              />
+            </label>
+            <label className="form-field span2"><span>Note di prenotazione</span><textarea rows={2} value={opsForm.booking_notes ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, booking_notes: e.target.value || null }))} /></label>
+            <label className="form-field span2"><span>Giorni/orari difficili</span><input value={opsForm.difficult_times ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, difficult_times: e.target.value || null }))} /></label>
+            <label className="form-field"><span>Ultima verifica</span><input type="date" value={opsForm.last_verified_on ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, last_verified_on: e.target.value || null }))} /></label>
+          </div>
+        </>
       ) : null}
 
       {tab === 'perf' ? (

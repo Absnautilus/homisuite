@@ -4,7 +4,7 @@
 -- DELETE+INSERT / two-separate-updates versions as non-atomic.
 begin;
 create extension if not exists pgtap;
-select plan(17);
+select plan(19);
 
 insert into hotels (id, name, timezone, active) values
   ('00000071-0000-0000-0000-00000000ff01', 'Hotel Settantuno A', 'Europe/Rome', true),
@@ -174,6 +174,27 @@ select is(
   (select row(commercial_agreement, commission_rate) from restaurant_operational_profiles where restaurant_id = '00000071-0000-0000-0000-0000000da001'),
   row('partner_commission'::text, 15.5::numeric),
   'save_restaurant_management saves the operational profile half in the same call'
+);
+select is(
+  (select row(commission_type, commission_basis) from restaurant_operational_profiles where restaurant_id = '00000071-0000-0000-0000-0000000da001'),
+  row('percentage'::text, 'total'::text),
+  'omitting the new trailing commission_type/commission_basis arguments defaults to percentage-of-total, matching the column defaults'
+);
+
+-- ### commission_type/commission_basis: a fixed euro amount per guest ###
+set local role authenticated;
+set local request.jwt.claim.sub = '00000071-0000-0000-0000-000000000a01';
+select save_restaurant_management(
+  '00000071-0000-0000-0000-0000000da001', 'Ristorante A1 Rinominato', 'Giapponese', 3::smallint, 10::smallint,
+  'Via Roma 1', null, null, null, array[]::text[], true, 1, null, null, null, true,
+  '+39 000', null, null, null, null, 'partner_commission', 5.00, null, null, null,
+  'fixed_amount', 'per_guest'
+);
+reset role;
+select is(
+  (select row(commission_rate, commission_type, commission_basis) from restaurant_operational_profiles where restaurant_id = '00000071-0000-0000-0000-0000000da001'),
+  row(5.00::numeric, 'fixed_amount'::text, 'per_guest'::text),
+  'a fixed euro-per-guest commission saves as given, not forced back to a 0-100 percentage'
 );
 
 -- ### an unauthorized caller gets a clear error, not a silent partial save ###

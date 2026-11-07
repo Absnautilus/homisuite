@@ -91,7 +91,7 @@ export const helpContent: Record<string, HelpTopic> = {
   dining: {
     title: 'Ristorazione',
     intro: 'Ristoranti convenzionati e prenotazioni degli ospiti.',
-    version: 4,
+    version: 5,
     sections: [
       {
         heading: 'Prenotazioni · Oggi',

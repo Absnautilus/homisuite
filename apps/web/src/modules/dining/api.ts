@@ -239,6 +239,8 @@ export async function saveRestaurantManagement(
     p_booking_notes: operational.booking_notes,
     p_difficult_times: operational.difficult_times,
     p_last_verified_on: operational.last_verified_on,
+    p_commission_type: operational.commission_type,
+    p_commission_basis: operational.commission_basis,
   })
   if (error) throw error
 }
