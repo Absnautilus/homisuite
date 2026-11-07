@@ -5,6 +5,16 @@ const ORG_ADMIN_EMAIL = 'e2e-org-admin@example.test'
 const RECEPTIONIST_EMAIL = 'e2e-receptionist@example.test'
 
 async function login(page: import('@playwright/test').Page, email: string) {
+  // The one-time welcome tour (HelpButton) opens a full-screen overlay on a
+  // browser's first authenticated load, which would sit over every control
+  // these tests click. Start as a returning user who has already seen it.
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('homisuite.onboarding.seen.v1', '1')
+    } catch {
+      // Storage unavailable: the tour shows, as it would for a real user.
+    }
+  })
   await page.goto('/')
   await page.getByLabel('Email o identificativo').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
