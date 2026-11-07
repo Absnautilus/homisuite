@@ -3,6 +3,8 @@ import { ArrowLeft, Menu, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useDropdownTransition } from '@homisuite/ui'
 import { shellNavigation } from '../app/navigation'
+import { GENERAL_HELP_KEY } from '../content/helpContent'
+import { HelpButton } from './HelpButton'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { getPropertyLogoUrl } from '../core/propertyLogo'
@@ -19,6 +21,20 @@ const moduleSlugByPath: Record<string, string> = {
   '/dining': 'dining',
   '/turni': 'shifts',
   '/transfer': 'transfers',
+}
+
+// helpContent's own keys, by the same absolute-equivalent path
+// effectivePathname already normalizes to (nested or not).
+function helpKeyForPath(pathname: string): string {
+  if (pathname === '/') return 'home'
+  if (pathname.startsWith('/housekeeping')) return 'housekeeping'
+  if (pathname.startsWith('/dining')) return 'dining'
+  if (pathname.startsWith('/turni')) return 'turni'
+  if (pathname.startsWith('/team')) return 'team'
+  if (pathname.startsWith('/settings')) return 'impostazioni'
+  if (pathname.startsWith('/modules')) return 'moduli'
+  if (pathname.startsWith('/transfer')) return 'transfer'
+  return GENERAL_HELP_KEY
 }
 
 export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boolean } = {}) {
@@ -174,6 +190,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
     return (
       <div className="app-shell app-shell-minimal">
         <main className="page-content"><Outlet /></main>
+        <HelpButton moduleKey="housekeeping" />
       </div>
     )
   }
@@ -259,6 +276,8 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
           </div>
         </div>
       )}
+
+      <HelpButton moduleKey={helpKeyForPath(effectivePathname)} />
     </div>
   )
 }
