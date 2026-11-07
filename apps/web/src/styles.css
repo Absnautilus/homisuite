@@ -517,8 +517,8 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
 .tour-root { position: fixed; inset: 0; z-index: 410; }
 .tour-dim { position: fixed; inset: 0; cursor: pointer; }
 .tour-spotlight {
-  position: fixed; border-radius: 12px; pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(12, 9, 22, .62), 0 0 0 3px var(--accent), 0 0 24px 4px color-mix(in srgb, var(--accent) 55%, transparent);
+  position: fixed; border-radius: 14px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(20, 16, 32, .42), 0 0 0 2px var(--accent), 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
   transition: top .32s var(--motion-ease), left .32s var(--motion-ease), width .32s var(--motion-ease), height .32s var(--motion-ease);
 }
 .tour-card {

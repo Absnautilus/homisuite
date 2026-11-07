@@ -77,6 +77,10 @@ export function Tabs({ items, value, onValueChange, className, variant = 'accent
           type="button"
           role="tab"
           aria-selected={item.value === value}
+          // A plain, stable hook for code that needs to drive a specific tab
+          // programmatically (TourOverlay's `activate` selectors) -- never
+          // used for styling, so it's safe to rely on from the outside.
+          data-value={item.value}
           className="ui-tab"
           onClick={() => onValueChange(item.value)}
         >

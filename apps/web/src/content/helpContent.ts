@@ -279,21 +279,25 @@ export const moduleTours: Record<string, ModuleTour> = {
         target: '[data-tour="dining-queue"]',
         title: 'Da gestire',
         body: 'Le richieste che hanno bisogno di un’azione, raggruppate per cosa serve fare: "Non disponibile" vuole un’alternativa, "In attesa di conferma" va seguita, "Nuove richieste" va presa in carico. L’ordine dei gruppi segue l’urgenza.',
+        activate: ['[role="tab"][data-value="prenotazioni"]', '[role="tab"][data-value="oggi"]'],
       },
       {
         target: '[data-tour="dining-add"]',
         title: 'Aggiungi prenotazione',
         body: 'Per una prenotazione presa per telefono o di persona. Puoi segnare anche le preferenze dell’ospite (vista mare, seggiolone…), le stesse che vede chi gestisce la richiesta.',
+        activate: ['[role="tab"][data-value="prenotazioni"]'],
       },
       {
         target: '[data-tour="dining-today"]',
         title: 'Programma di oggi',
         body: 'L’elenco completo delle prenotazioni di oggi, filtrabile per stato. Apri una riga per vedere il dettaglio e modificarne i dati.',
+        activate: ['[role="tab"][data-value="prenotazioni"]', '[role="tab"][data-value="oggi"]'],
       },
       {
         target: '[data-tour="dining-filters"]',
         title: 'Cercare nell’archivio',
         body: 'Nella scheda "Tutte" puoi cercare per ospite, camera o ristorante, e restringere per stato o per intervallo di date -- utile per ritrovare una prenotazione passata senza scorrere tutto lo storico.',
+        activate: ['[role="tab"][data-value="prenotazioni"]', '[role="tab"][data-value="tutte"]'],
       },
       {
         target: '[data-tour="help-fab"]',
@@ -308,21 +312,25 @@ export const moduleTours: Record<string, ModuleTour> = {
         target: '[data-tour="hk-nav"]',
         title: 'Richieste, Soggiorni, Gestione',
         body: 'Le sezioni di Housekeeping -- vedi solo quelle a cui hai accesso. Chi gestisce la reception vede anche i conteggi delle richieste da fare direttamente qui.',
+        activate: ['[role="tab"][data-value="/housekeeping"]'],
       },
       {
         target: '[data-tour="hk-tabs"]',
         title: 'Nuove, In corso, Completate',
         body: 'La coda è divisa in tre schede: le richieste nuove da prendere in carico, quelle già assegnate e in lavorazione, e lo storico di quelle completate o annullate.',
+        activate: ['[role="tab"][data-value="/housekeeping"]'],
       },
       {
         target: '[data-tour="hk-queue"]',
         title: 'Una richiesta',
         body: 'Ogni scheda mostra camera, oggetto richiesto e tempo trascorso. Prendi in carico una richiesta per assegnartela, poi aggiornane lo stato quando la completi.',
+        activate: ['[role="tab"][data-value="/housekeeping"]'],
       },
       {
         target: '[data-tour="hk-new-request"]',
         title: 'Nuova richiesta',
         body: 'Per registrare una richiesta arrivata per telefono o di persona, invece che dall’app ospite.',
+        activate: ['[role="tab"][data-value="/housekeeping"]'],
       },
       {
         target: '[data-tour="help-fab"]',
@@ -342,11 +350,13 @@ export const moduleTours: Record<string, ModuleTour> = {
         target: '[data-tour="shifts-grid"]',
         title: 'Il calendario',
         body: 'L’organico assegnato giorno per giorno, un codice turno per cella. Chi gestisce i turni può modificarlo direttamente cliccando su una cella; i turni bloccati restano fissi anche dopo una nuova assegnazione automatica.',
+        activate: ['[role="tab"][data-value="operativo"]', '[role="tab"][data-value="calendar"]'],
       },
       {
         target: '[data-tour="shifts-actions"]',
         title: 'Assegna e salva',
         body: 'Genera automaticamente i turni del mese rispettando le regole di copertura, oppure modificali a mano. Lo stato Bozza/Definitivo riguarda un mese alla volta; salva per rendere permanenti le modifiche.',
+        activate: ['[role="tab"][data-value="operativo"]', '[role="tab"][data-value="calendar"]'],
       },
       {
         target: '[data-tour="shifts-requests"]',

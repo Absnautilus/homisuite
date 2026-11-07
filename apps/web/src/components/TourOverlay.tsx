@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@homisuite/ui'
 
@@ -13,6 +13,15 @@ export interface TourStep {
   target: string
   title: string
   body: string
+  // Selectors to click, in order, before measuring `target` -- for a step
+  // whose element only exists under a specific tab/sub-view (e.g. a module
+  // nav tab, via its data-value hook in Tabs). Each click gets a short
+  // moment to take effect before the next one, since switching a tab is a
+  // React state update, not instant. Without this, a step whose element
+  // sits behind a different tab than whatever the person happened to have
+  // open would just look missing and get skipped -- for a tour built from
+  // steps spread across several tabs, that could skip most of it.
+  activate?: string[]
 }
 
 const CARD_WIDTH = 320
@@ -38,43 +47,59 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
   // different page than where the tour started, a sidebar hidden under the
   // mobile breakpoint, an element a permission gate didn't render) -- in
   // every case the right move is to move straight past it, not stall or
-  // spotlight an empty corner of the screen.
+  // spotlight an empty corner of the screen. Before giving up on a step,
+  // though, run its `activate` clicks (switch to the tab/sub-view it
+  // actually lives on) and check again -- most "missing" targets are just
+  // one tab away, not genuinely absent. Hides the card for this brief
+  // window (clearing `rect`) rather than leaving the previous step's
+  // spotlight sitting there while the tab switches underneath it.
   useEffect(() => {
     if (!step) {
       onFinish()
       return
     }
-    const element = document.querySelector(step.target)
-    const visible = element && element.getBoundingClientRect().width > 0
-    if (!visible) {
-      if (index < steps.length - 1) setIndex((value) => value + 1)
-      else onFinish()
+    let cancelled = false
+    let cleanupListeners: (() => void) | undefined
+    setRect(null)
+
+    async function run() {
+      for (const selector of step!.activate ?? []) {
+        if (cancelled) return
+        document.querySelector<HTMLElement>(selector)?.click()
+        await new Promise((resolve) => setTimeout(resolve, 80))
+      }
+      if (cancelled) return
+      const element = document.querySelector(step!.target)
+      const visible = element && element.getBoundingClientRect().width > 0
+      if (!visible) {
+        if (index < steps.length - 1) setIndex((value) => value + 1)
+        else onFinish()
+        return
+      }
+      element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      function update() {
+        const nextRect = element!.getBoundingClientRect()
+        setRect(nextRect)
+        setPlaceAbove(window.innerHeight - nextRect.bottom < 200 && nextRect.top > 200)
+      }
+      update()
+      // Scrolling into view is smooth (animated), so the first measurement
+      // is taken mid-scroll -- one re-measure once it's had time to settle.
+      const settleTimer = window.setTimeout(update, 340)
+      window.addEventListener('resize', update)
+      window.addEventListener('scroll', update, true)
+      cleanupListeners = () => {
+        window.clearTimeout(settleTimer)
+        window.removeEventListener('resize', update)
+        window.removeEventListener('scroll', update, true)
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+      cleanupListeners?.()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, step])
-
-  useLayoutEffect(() => {
-    if (!step) return
-    const element = document.querySelector(step.target)
-    if (!element) return
-    element.scrollIntoView({ block: 'center', behavior: 'smooth' })
-
-    function update() {
-      const nextRect = element!.getBoundingClientRect()
-      setRect(nextRect)
-      setPlaceAbove(window.innerHeight - nextRect.bottom < 200 && nextRect.top > 200)
-    }
-    update()
-    // Scrolling into view is smooth (animated), so the first measurement is
-    // taken mid-scroll -- one re-measure once it's had time to settle.
-    const settleTimer = window.setTimeout(update, 340)
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.clearTimeout(settleTimer)
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
   }, [index, step])
 
   useEffect(() => {
