@@ -371,13 +371,14 @@ const MODULE_CATALOG: { slug: string; title: string }[] = [
   { slug: 'guest_requests', title: 'Housekeeping' },
   { slug: 'dining', title: 'Ristorazione' },
   { slug: 'shifts', title: 'Turni' },
+  { slug: 'smart_inbox', title: 'Smart Inbox' },
   { slug: 'transfers', title: 'Transfer' },
 ]
 
 // Every module-scoped permission a member can be individually granted,
 // independent of their role -- see 20261008090000_member_permission_overrides.sql
 // (dining.manage/shifts.manage) and 20261014090000_guest_requests_manage_and_view_all.sql
-// (the two Housekeeping slugs). A module with no entry here still gets the
+// (the two Housekeeping slugs), plus Smart Inbox (20261107180000). A module with no entry here still gets the
 // "Accesso al modulo" toggle below, just no nested permission rows (e.g.
 // Transfer, which has no admin functionality of its own yet).
 const MODULE_PERMISSIONS: Record<string, { slug: string; label: string }[]> = {
@@ -387,6 +388,13 @@ const MODULE_PERMISSIONS: Record<string, { slug: string; label: string }[]> = {
   ],
   dining: [{ slug: 'dining.manage', label: 'Amministrazione' }],
   shifts: [{ slug: 'shifts.manage', label: 'Amministrazione' }],
+  // smart_inbox.view = answers guests (an "agent"); receptionists and up
+  // have it by role. smart_inbox.manage = templates, hotel information,
+  // settings and the Outlook mailbox.
+  smart_inbox: [
+    { slug: 'smart_inbox.view', label: 'Risponde agli ospiti' },
+    { slug: 'smart_inbox.manage', label: 'Amministrazione' },
+  ],
 }
 
 function ModulesModal({ member, propertyId, entitlements, onClose }: { member: TeamMember | null; propertyId: string; entitlements: ModuleEntitlement[]; onClose: () => void }) {

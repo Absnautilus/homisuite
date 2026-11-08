@@ -226,13 +226,21 @@ Non è in una migration apposta: il secret non deve finire nel repository.
 
 ## Attivazione per una struttura
 
-Decisione commerciale, come per Ristorazione e Turni (service role):
+Decisione commerciale, come per Ristorazione e Turni: dalla console
+Piattaforma (scheda della struttura → Moduli → Smart Inbox), oppure con il
+service role:
 
 ```sql
 insert into property_modules (property_id, module_id, enabled)
 select '<property-id>', id, true from modules where slug = 'smart_inbox'
 on conflict (property_id, module_id) do update set enabled = true;
 ```
+
+Chi può usarlo: receptionist e manager rispondono agli ospiti per ruolo,
+manager e admin gestiscono modelli, informazioni e impostazioni. In **Team →
+Moduli** si può spegnere Smart Inbox per una singola persona (non compare più
+neanche tra gli agent a cui assegnare un ospite) o dare "Risponde agli ospiti"
+/ "Amministrazione" a chi non li ha per ruolo.
 
 Poi, in homisuite → Smart Inbox:
 
