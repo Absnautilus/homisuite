@@ -22,7 +22,14 @@ export interface SmartInboxConfig {
   microsoft: MicrosoftConfig
 }
 
-export function readConfig(env: Pick<typeof Deno.env, 'get'> = Deno.env): SmartInboxConfig | null {
+// `requireMicrosoft: false` is for the staff actions: "Componi risposta"
+// (pasted messages) works before the Microsoft app exists; Outlook calls
+// then fail with mailbox errors instead of the whole function refusing.
+export function readConfig(
+  env: Pick<typeof Deno.env, 'get'> = Deno.env,
+  options: { requireMicrosoft?: boolean } = {},
+): SmartInboxConfig | null {
+  const requireMicrosoft = options.requireMicrosoft ?? true
   const supabaseUrl = env.get('SUPABASE_URL')
   const anonKey = env.get('SUPABASE_ANON_KEY')
   const serviceRoleKey = env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -32,7 +39,8 @@ export function readConfig(env: Pick<typeof Deno.env, 'get'> = Deno.env): SmartI
   const anthropicApiKey = env.get('ANTHROPIC_API_KEY')
   const clientId = env.get('SMART_INBOX_MS_CLIENT_ID')
   const clientSecret = env.get('SMART_INBOX_MS_CLIENT_SECRET')
-  if (!supabaseUrl || !anonKey || !serviceRoleKey || !appUrl || !tokenKey || !stateSecret || !anthropicApiKey || !clientId || !clientSecret) {
+  if (!supabaseUrl || !anonKey || !serviceRoleKey || !appUrl || !tokenKey || !stateSecret || !anthropicApiKey) return null
+  if (requireMicrosoft && (!clientId || !clientSecret)) {
     return null
   }
   const functionsUrl = (env.get('SMART_INBOX_FUNCTIONS_URL') ?? `${supabaseUrl}/functions/v1`).replace(/\/+$/, '')
@@ -50,8 +58,8 @@ export function readConfig(env: Pick<typeof Deno.env, 'get'> = Deno.env): SmartI
     model: env.get('SMART_INBOX_MODEL') || DEFAULT_MODEL,
     effort: effort === 'low' || effort === 'medium' || effort === 'high' ? effort : DEFAULT_EFFORT,
     microsoft: {
-      clientId,
-      clientSecret,
+      clientId: clientId ?? '',
+      clientSecret: clientSecret ?? '',
       tenant: env.get('SMART_INBOX_MS_TENANT') || 'organizations',
       redirectUri: `${functionsUrl}/smart-inbox-oauth-callback`,
     },

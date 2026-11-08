@@ -1,20 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ModuleNav } from '@homisuite/ui'
-import { BookOpenText, FileText, Inbox, Settings } from 'lucide-react'
+import { BookOpenText, ClipboardPaste, FileText, Inbox, Settings } from 'lucide-react'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
+import { DEFAULT_SETTINGS, loadSettings, loadSignature } from './api'
+import { ComposeTab } from './ComposeTab'
 import { InboxTab } from './InboxTab'
 import { KnowledgeTab } from './KnowledgeTab'
 import { SettingsTab } from './SettingsTab'
 import { TemplatesTab } from './TemplatesTab'
 import type { InboxView } from './labels'
+import type { InboxSettings, SignatureInfo } from './types'
 import './smart-inbox.css'
 
 const TABS = [
   { value: 'posta', label: 'Posta', icon: <Inbox /> },
+  { value: 'componi', label: 'Componi risposta', icon: <ClipboardPaste /> },
+  { value: 'modelli', label: 'Modelli', icon: <FileText /> },
   { value: 'informazioni', label: 'Informazioni hotel', icon: <BookOpenText /> },
-  { value: 'modelli', label: 'Modelli di risposta', icon: <FileText /> },
   { value: 'impostazioni', label: 'Impostazioni', icon: <Settings /> },
 ]
 
@@ -40,6 +44,25 @@ export function SmartInboxPage() {
   const [access, setAccess] = useState<Access>({ status: 'loading' })
   const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).has('outlook') ? 'impostazioni' : 'posta'))
   const [view, setView] = useState<InboxView>('todo')
+  const [settings, setSettings] = useState<InboxSettings>(DEFAULT_SETTINGS)
+  const [signature, setSignature] = useState<SignatureInfo | null>(null)
+  const propertyName = runtime.property?.name ?? 'Struttura'
+  const ready = access.status === 'ready'
+
+  // Settings drive the signature under every reply, the channels offered
+  // in Componi risposta and the translation; reloaded after a save.
+  const loadReplySettings = useCallback(async () => {
+    if (!propertyId) return
+    try {
+      const next = await loadSettings(supabase, propertyId)
+      setSettings(next)
+      setSignature(await loadSignature(supabase, propertyId, propertyName, next))
+    } catch (cause) {
+      console.error('Smart Inbox: reply settings not loaded', cause)
+    }
+  }, [propertyId, propertyName])
+
+  useEffect(() => { if (ready) void loadReplySettings() }, [ready, loadReplySettings])
 
   useEffect(() => {
     if (!entitled) {
@@ -81,7 +104,7 @@ export function SmartInboxPage() {
   return (
     <div className="page-stack smart-inbox-page">
       <ModuleNav
-        propertyName={runtime.property?.name ?? 'Struttura'}
+        propertyName={propertyName}
         moduleName="Smart Inbox"
         items={TABS}
         value={tab}
@@ -96,10 +119,31 @@ export function SmartInboxPage() {
       />
       {/* Panels stay mounted (as in Dining) so switching tab never throws
           away a half-edited draft or form. */}
-      <div hidden={tab !== 'posta'}><InboxTab client={supabase} propertyId={propertyId} currentProfileId={runtime.profile?.id ?? null} view={view} active={tab === 'posta'} /></div>
+      <div hidden={tab !== 'posta'}>
+        <InboxTab
+          client={supabase}
+          propertyId={propertyId}
+          currentProfileId={runtime.profile?.id ?? null}
+          view={view}
+          active={tab === 'posta'}
+          signature={signature}
+          showTranslation={settings.show_translation}
+          onCompose={() => setTab('componi')}
+        />
+      </div>
+      <div hidden={tab !== 'componi'}>
+        <ComposeTab
+          client={supabase}
+          propertyId={propertyId}
+          enabledSources={settings.enabled_sources}
+          signature={signature}
+          showTranslation={settings.show_translation}
+          onDone={() => { setView('todo'); setTab('posta') }}
+        />
+      </div>
       <div hidden={tab !== 'informazioni'}><KnowledgeTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
       <div hidden={tab !== 'modelli'}><TemplatesTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
-      <div hidden={tab !== 'impostazioni'}><SettingsTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
+      <div hidden={tab !== 'impostazioni'}><SettingsTab client={supabase} propertyId={propertyId} propertyName={propertyName} canManage={access.canManage} onSaved={loadReplySettings} /></div>
     </div>
   )
 }

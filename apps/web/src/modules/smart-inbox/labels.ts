@@ -1,4 +1,4 @@
-import type { MessageCategory, MessageStatus, MessageUrgency, SuggestedAction, UsageRow } from './types'
+import type { GuestDetails, KnowledgeCategory, MessageCategory, MessageSource, MessageStatus, MessageUrgency, PastedSource, SuggestedAction, TemplateCategory, UsageRow } from './types'
 
 // Pure presentation helpers, kept free of React/Supabase so they can be
 // unit-tested with node --test (see labels.test.mjs).
@@ -238,6 +238,11 @@ const ACTION_ERROR_LABELS: Record<string, string> = {
   busy: 'Il messaggio è già in elaborazione: riprova tra poco.',
   server_not_configured: 'Smart Inbox non è ancora configurato sul server.',
   not_found: 'Messaggio non trovato.',
+  source_disabled: 'Questo canale è disattivato nelle impostazioni.',
+  too_long: 'Il messaggio è troppo lungo: incolla solo il testo dell\'ospite.',
+  empty: 'Incolla prima il messaggio dell\'ospite.',
+  ai_refused: 'L\'assistente non ha potuto riscrivere la risposta: modificala a mano.',
+  internal_error: 'Qualcosa non ha funzionato. Riprova tra qualche istante.',
 }
 
 export function actionErrorLabel(code: string | null): string {
@@ -294,3 +299,159 @@ export function summarizeUsage(rows: UsageRow[]): UsageSummary {
 export function formatSender(message: { from_name: string | null; from_address: string | null }): string {
   return message.from_name?.trim() || message.from_address || 'Mittente sconosciuto'
 }
+
+// ---------------------------------------------------------------------------
+// Channels
+// ---------------------------------------------------------------------------
+export const SOURCE_LABELS: Record<MessageSource, string> = {
+  outlook: 'Outlook',
+  booking: 'Booking.com',
+  expedia: 'Expedia',
+  airbnb: 'Airbnb',
+  whatsapp: 'WhatsApp',
+  phone: 'Telefono',
+  other: 'Altro',
+}
+
+export const PASTED_SOURCES: PastedSource[] = ['booking', 'expedia', 'airbnb', 'whatsapp', 'phone', 'other']
+
+// "Booking.com · incollato" in the list, so it's clear the reply has to be
+// pasted back there.
+export function sourceBadge(source: MessageSource): string {
+  return source === 'outlook' ? SOURCE_LABELS.outlook : `${SOURCE_LABELS[source]} · incollato`
+}
+
+// ---------------------------------------------------------------------------
+// Signature (mirrors supabase/functions/_shared/smart-inbox/signature.ts,
+// which signs the reply that is actually sent)
+// ---------------------------------------------------------------------------
+export const DEFAULT_AGENT_SIGNATURE = '{agent}\n{ruolo} — {hotel}'
+export const DEFAULT_PROPERTY_SIGNATURE = 'Front Office — {hotel}'
+
+export function renderSignature(template: string, values: { agent: string | null; role: string | null; hotel: string }): string {
+  const filled = template
+    .replace(/\{agent\}/gi, values.agent?.trim() ?? '')
+    .replace(/\{ruolo\}/gi, values.role?.trim() ?? '')
+    .replace(/\{hotel\}/gi, values.hotel.trim())
+  return filled
+    .split(/\r?\n/)
+    .map((line) => line
+      .replace(/\s+/g, ' ')
+      .replace(/^\s*[—–\-,·|]\s*/, '')
+      .replace(/\s*[—–\-,·|]\s*$/, '')
+      .trim())
+    .filter((line) => line.length > 0)
+    .join('\n')
+}
+
+export function appendSignature(body: string, signature: string): string {
+  const text = body.trimEnd()
+  return signature ? `${text}\n${signature}` : text
+}
+
+// ---------------------------------------------------------------------------
+// Templates and information
+// ---------------------------------------------------------------------------
+export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
+  prima_arrivo: 'Prima dell\'arrivo',
+  prenotazioni: 'Prenotazioni',
+  soggiorno: 'Durante il soggiorno',
+  dopo: 'Dopo il soggiorno',
+  altro: 'Altro',
+}
+
+export const KNOWLEDGE_CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
+  arrivo_partenza: 'Arrivo e partenza',
+  servizi: 'Servizi',
+  regole_prezzi: 'Regole e prezzi',
+  altro: 'Altro',
+}
+
+export const LANGUAGE_LABELS: Record<string, string> = {
+  it: 'Italiano',
+  en: 'English',
+  de: 'Deutsch',
+  fr: 'Français',
+  es: 'Español',
+  nl: 'Nederlands',
+  pt: 'Português',
+}
+
+const LANGUAGE_NAMES_IT: Record<string, string> = {
+  it: 'italiano', en: 'inglese', de: 'tedesco', fr: 'francese', es: 'spagnolo', nl: 'olandese', pt: 'portoghese', ru: 'russo', zh: 'cinese', ja: 'giapponese', pl: 'polacco',
+}
+
+// 'de' / 'de-AT' -> 'tedesco'
+export function languageName(code: string | null): string | null {
+  if (!code) return null
+  return LANGUAGE_NAMES_IT[code.toLowerCase().slice(0, 2)] ?? code
+}
+
+// "IT · EN · DE": the base text is Italian, then each written version.
+export function templateLanguages(translations: Record<string, string>): string[] {
+  const extra = Object.entries(translations ?? {})
+    .filter(([code, text]) => code !== 'it' && typeof text === 'string' && text.trim())
+    .map(([code]) => code.toUpperCase())
+  return ['IT', ...extra.sort()]
+}
+
+// Fields a template can contain; the assistant fills them from the
+// guest's message ({nome} also when inserting a template by hand).
+export const TEMPLATE_FIELDS = ['{nome}', '{data arrivo}', '{ora arrivo}', '{data partenza}', '{notti}', '{ospiti}', '{n° prenotazione}']
+
+const SAMPLE_GUEST: Record<string, string> = {
+  nome: 'Lukas',
+  'data arrivo': '14 dicembre',
+  'ora arrivo': '23:00',
+  'data partenza': '17 dicembre',
+  notti: '3',
+  ospiti: '2 adulti e 1 bambina',
+  'n° prenotazione': '4021 887 512',
+}
+
+// Preview with an example guest; {info: Parcheggio} shows the entry text.
+export function previewTemplate(body: string, information: Array<{ title: string; content: string }> = []): string {
+  return body.replace(/\{([^{}]+)\}/g, (match, rawName: string) => {
+    const name = rawName.trim().toLowerCase()
+    if (name.startsWith('info:')) {
+      const title = name.slice(5).trim()
+      const entry = information.find((item) => item.title.trim().toLowerCase() === title)
+      return entry ? entry.content.trim() : match
+    }
+    return SAMPLE_GUEST[name] ?? match
+  })
+}
+
+// Most frequent topics first; the same topic written differently
+// ("Animali", "animali ammessi?") counts once when it differs only in case
+// and punctuation.
+export function topicCounts(topics: string[], limit = 5): Array<{ topic: string; count: number }> {
+  const counts = new Map<string, { topic: string; count: number }>()
+  for (const raw of topics) {
+    const topic = raw.trim()
+    if (!topic) continue
+    const key = topic.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim()
+    if (!key) continue
+    const entry = counts.get(key)
+    if (entry) entry.count++
+    else counts.set(key, { topic: topic.charAt(0).toUpperCase() + topic.slice(1), count: 1 })
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic)).slice(0, limit)
+}
+
+// ---------------------------------------------------------------------------
+// Componi risposta
+// ---------------------------------------------------------------------------
+export const GUEST_DETAIL_LABELS: Array<[Exclude<keyof GuestDetails, 'requests'>, string]> = [
+  ['arrival_date', 'Arrivo'],
+  ['arrival_time', 'Orario arrivo'],
+  ['departure_date', 'Partenza'],
+  ['guests', 'Ospiti'],
+  ['booking_reference', 'N° prenotazione'],
+]
+
+export const QUICK_REFINEMENTS: Array<{ label: string; instruction: string }> = [
+  { label: 'Più breve', instruction: 'Rendi la risposta più breve, mantenendo tutte le informazioni importanti.' },
+  { label: 'Più formale', instruction: 'Rendi il tono più formale.' },
+  { label: 'Più calorosa', instruction: 'Rendi il tono più caloroso e accogliente.' },
+]

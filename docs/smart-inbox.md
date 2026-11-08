@@ -9,6 +9,44 @@ Modulo Core-native (come Turni): tabelle con `property_id`, RLS su
 `has_permission()`, entitlement tramite `property_modules`. Nessuna struttura lo
 ha attivo finché non viene abilitato (vedi [Attivazione](#attivazione-per-una-struttura)).
 
+## Componi risposta (canali non collegati)
+
+Per i messaggi che non arrivano da soli — extranet Booking.com/Expedia/Airbnb,
+WhatsApp, telefono — lo staff apre **Componi risposta**, sceglie il canale e
+incolla il testo dell'ospite. L'assistente:
+
+1. legge i dati dell'ospite (nome, date, orario, ospiti, n° prenotazione,
+   cosa chiede) e li mostra in "Dati trovati";
+2. sceglie i **modelli** adatti (leggendo il loro "quando usarlo"), li compila
+   con quei dati e usa la versione nella lingua dell'ospite, o traduce
+   l'italiano;
+3. usa le **informazioni hotel** (con le note per l'assistente);
+4. scrive la risposta nella lingua dell'ospite, con la **traduzione italiana**
+   sotto per lo staff, e segnala i dati mancanti e gli argomenti senza
+   risposta.
+
+La risposta si rifinisce con un clic ("Più breve", "Più formale", "Più
+calorosa") o con un'istruzione libera; poi *Copia e segna come risposto* la
+mette negli appunti, firmata, da incollare nel canale. Il messaggio resta in
+Posta nello storico dell'ospite, con il canale indicato
+(`smart_inbox_messages.source`; conversazione `<canale>:<nome>`). Chi incolla
+diventa l'agent dell'ospite se non ne ha già uno.
+
+Funziona anche **senza Outlook collegato**: per questa parte servono solo
+`ANTHROPIC_API_KEY` e i secret di base (non quelli Microsoft).
+
+## Firma dell'agent
+
+Ogni risposta è firmata da chi la invia. In Impostazioni il responsabile
+imposta un modello di firma con `{agent}` (nome dal profilo), `{ruolo}`
+(qualifica in Team) e `{hotel}`; default `{agent}` / `{ruolo} — {hotel}`.
+L'assistente scrive solo il testo e la formula di saluto nella lingua
+dell'ospite ("Mit freundlichen Grüßen,"): la firma viene aggiunta dal server al
+momento dell'invio (`signature.ts`), mai scritta dall'AI. Se permesso, sotto la
+bozza si può scegliere di firmare a nome della struttura senza nome ("Front
+Office — {hotel}"). La bozza speculare in Outlook porta la firma dell'agent
+assegnato all'ospite; all'invio si usa sempre la firma di chi invia.
+
 ## Flusso
 
 ```
@@ -200,9 +238,16 @@ Poi, in homisuite → Smart Inbox:
 
 1. **Impostazioni** → *Collega Outlook* (un manager), accedendo con l'account
    Microsoft 365 della casella da gestire.
-2. **Informazioni hotel** → una sezione per argomento (colazione, parcheggio,
-   check-in…). L'assistente risponde solo con quello che è scritto qui.
-3. **Impostazioni** → firma, tono, mittenti da ignorare.
+2. **Informazioni hotel** → una voce per argomento (colazione, parcheggio,
+   check-in…), con categoria e, se serve, una nota per l'assistente.
+   L'assistente risponde solo con quello che è scritto qui; in cima compaiono
+   le domande degli ospiti che non trovano risposta.
+3. **Modelli** → risposte approvate per categoria, con "quando usarlo", campi
+   (`{nome}`, `{data arrivo}`, `{ora arrivo}`, `{notti}`, `{ospiti}`,
+   `{n° prenotazione}`, `{info: Titolo}`) e versioni in altre lingue.
+4. **Impostazioni** → firma dell'agent, firma della struttura, tono,
+   traduzione, canali da incollare, mittenti da ignorare.
+5. In **Team**, la qualifica di ciascuno: è il `{ruolo}` della firma.
 
 ## Limiti di questa prima versione
 
@@ -215,5 +260,5 @@ Poi, in homisuite → Smart Inbox:
   indicate allo staff: Smart Inbox non scrive nelle tabelle di altri moduli
   (`docs/module-integration.md`). Un contratto esplicito verso Transfer /
   Ristorazione / Housekeeping è il passo successivo.
-- WhatsApp non è ancora supportato: la pipeline (filtri → Claude → bozza →
-  approvazione) è pensata per aggiungere un secondo canale.
+- WhatsApp, Booking.com e gli altri canali sono gestiti incollando i messaggi
+  (Componi risposta): non c'è ancora un collegamento diretto.
