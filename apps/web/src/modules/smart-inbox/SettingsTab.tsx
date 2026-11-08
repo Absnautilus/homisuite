@@ -6,8 +6,8 @@ import { PageState } from '../../components/PageState'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { disconnectOutlook, loadMailbox, loadMonthUsage, loadSettings, saveSettings, SmartInboxActionError, startOutlookConnection } from './api'
-import { actionErrorLabel, parseSenderList, summarizeUsage, type UsageSummary } from './labels'
-import type { InboxSettings, Mailbox, Tone } from './types'
+import { actionErrorLabel, appendSignature, DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, PASTED_SOURCES, parseSenderList, renderSignature, SOURCE_LABELS, summarizeUsage, type UsageSummary } from './labels'
+import type { InboxSettings, Mailbox, PastedSource, Tone } from './types'
 
 const OUTLOOK_RESULTS: Record<string, { ok: boolean; text: string }> = {
   connected: { ok: true, text: 'Casella Outlook collegata. Le nuove email arriveranno in Posta.' },
@@ -34,7 +34,13 @@ function readOutlookResult(): string | null {
   return result
 }
 
-export function SettingsTab({ client, propertyId, canManage }: { client: SupabaseClient; propertyId: string; canManage: boolean }) {
+export function SettingsTab({ client, propertyId, propertyName, canManage, onSaved }: {
+  client: SupabaseClient
+  propertyId: string
+  propertyName: string
+  canManage: boolean
+  onSaved: () => Promise<void> | void
+}) {
   const [mailbox, setMailbox] = useState<Mailbox | null>(null)
   const [settings, setSettings] = useState<InboxSettings | null>(null)
   const [sendersText, setSendersText] = useState('')
@@ -109,6 +115,7 @@ export function SettingsTab({ client, propertyId, canManage }: { client: Supabas
       setSettings(next)
       setSendersText(next.ignored_senders.join('\n'))
       setSaved(true)
+      await onSaved()
     } catch {
       setError('Impostazioni non salvate. Riprova.')
     } finally {
@@ -121,6 +128,14 @@ export function SettingsTab({ client, propertyId, canManage }: { client: Supabas
   }
   if (!settings) return <PageState kind="loading" title="Caricamento impostazioni…" />
 
+  const sample = appendSignature('Cordiali saluti,', renderSignature(settings.signature_template || DEFAULT_AGENT_SIGNATURE, { agent: 'Luca Ferri', role: 'Receptionist', hotel: propertyName }))
+  const propertySample = renderSignature(settings.reply_signature || DEFAULT_PROPERTY_SIGNATURE, { agent: null, role: null, hotel: propertyName })
+  const toggleSource = (source: PastedSource) => setSettings({
+    ...settings,
+    enabled_sources: settings.enabled_sources.includes(source)
+      ? settings.enabled_sources.filter((item) => item !== source)
+      : PASTED_SOURCES.filter((item) => item === source || settings.enabled_sources.includes(item)),
+  })
   const result = outlookResult ? OUTLOOK_RESULTS[outlookResult] ?? OUTLOOK_RESULTS.error : null
   const connected = mailbox && mailbox.status !== 'disconnected'
   const needsReconnect = mailbox?.status === 'error'
@@ -133,7 +148,7 @@ export function SettingsTab({ client, propertyId, canManage }: { client: Supabas
       <section className="shell-card">
         <div className="section-heading">
           <h2>Casella Outlook</h2>
-          <p>Smart Inbox legge le nuove email arrivate in Posta in arrivo e prepara le bozze. Niente viene inviato senza conferma.</p>
+          <p>Le email arrivano da sole con una bozza pronta. Booking.com, WhatsApp e gli altri canali si incollano in Componi risposta.</p>
         </div>
         <div className="smart-inbox-mailbox">
           <span className="icon-tile"><Mail size={17} /></span>
@@ -172,55 +187,103 @@ export function SettingsTab({ client, propertyId, canManage }: { client: Supabas
         {!canManage ? <p className="muted smart-inbox-note">Solo un responsabile può collegare o scollegare la casella.</p> : null}
       </section>
 
-      <section className="shell-card">
-        <div className="section-heading">
-          <h2>Risposte</h2>
-          <p>Come l'assistente scrive le bozze per questa struttura.</p>
-        </div>
-        <form className="modal-form smart-inbox-settings-form" onSubmit={submit}>
-          <label className="form-field">
-            <span>Firma</span>
-            <textarea
-              rows={3}
-              maxLength={2000}
-              value={settings.reply_signature}
-              onChange={(event) => setSettings({ ...settings, reply_signature: event.target.value })}
-              placeholder={'Cordiali saluti,\nFront Office — Hotel'}
-              disabled={!canManage}
-            />
-          </label>
-          <label className="form-field">
-            <span>Tono</span>
-            <select value={settings.tone} onChange={(event) => setSettings({ ...settings, tone: event.target.value as Tone })} disabled={!canManage}>
-              {TONES.map((tone) => <option key={tone.value} value={tone.value}>{tone.label}</option>)}
-            </select>
-          </label>
-          <div className="smart-inbox-toggle-row">
-            <div>
-              <strong>Prepara le bozze automaticamente</strong>
-              <p className="muted">Se disattivato, le email arrivano in Posta e la bozza si genera solo quando la chiedi.</p>
-            </div>
-            <Switch checked={settings.auto_draft} onChange={() => setSettings({ ...settings, auto_draft: !settings.auto_draft })} aria-label="Prepara le bozze automaticamente" disabled={!canManage} />
+      <form className="page-stack" onSubmit={submit}>
+        <section className="shell-card">
+          <div className="section-heading">
+            <h2>Canali da incollare</h2>
+            <p>Quelli attivi compaiono in Componi risposta.</p>
           </div>
-          <label className="form-field">
-            <span>Mittenti da ignorare</span>
-            <textarea
-              rows={4}
-              value={sendersText}
-              onChange={(event) => setSendersText(event.target.value)}
-              placeholder={'fornitore.it\namministrazione@partner.it'}
-              disabled={!canManage}
-            />
-            <small>Un indirizzo o un dominio per riga. Le notifiche dei portali (Booking, Expedia…), le newsletter e le risposte automatiche sono già escluse.</small>
-          </label>
-          {canManage ? (
-            <div className="smart-inbox-buttons">
-              <Button variant="primary" type="submit" disabled={busy !== null}>{busy === 'save' ? 'Salvataggio…' : 'Salva impostazioni'}</Button>
-              {saved ? <span className="smart-inbox-notice" role="status">Salvato.</span> : null}
+          <div className="smart-inbox-sources smart-inbox-pad">
+            {PASTED_SOURCES.map((source) => (
+              <label key={source} className={`smart-inbox-filter-chip${settings.enabled_sources.includes(source) ? ' active' : ''}`}>
+                <input type="checkbox" className="sr-only" checked={settings.enabled_sources.includes(source)} onChange={() => toggleSource(source)} disabled={!canManage} />
+                {SOURCE_LABELS[source]}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="shell-card">
+          <div className="section-heading">
+            <h2>Come scrive l'assistente</h2>
+            <p>Valido per tutte le risposte della struttura. Niente viene inviato senza conferma.</p>
+          </div>
+          <div className="modal-form smart-inbox-settings-form">
+            <label className="form-field">
+              <span>Firma · firma chi risponde</span>
+              <textarea
+                rows={3}
+                maxLength={1000}
+                value={settings.signature_template}
+                onChange={(event) => setSettings({ ...settings, signature_template: event.target.value })}
+                placeholder={DEFAULT_AGENT_SIGNATURE}
+                disabled={!canManage}
+              />
+              <small>Scrivi {'{agent}'} per il nome, {'{ruolo}'} per il ruolo e {'{hotel}'} per la struttura. Nome e ruolo vengono dal profilo di ciascuno in Team; la formula di saluto la scrive l'assistente nella lingua dell'ospite.</small>
+            </label>
+            <div className="smart-inbox-preview">
+              <h3>Esempio</h3>
+              <p>{sample}</p>
             </div>
-          ) : null}
-        </form>
-      </section>
+            <div className="smart-inbox-toggle-row">
+              <div>
+                <strong>Permetti di firmare a nome della struttura (senza nome)</strong>
+                <p className="muted">Chi risponde può sceglierlo sotto la bozza: “{propertySample}”.</p>
+              </div>
+              <Switch checked={settings.allow_property_signature} onChange={() => setSettings({ ...settings, allow_property_signature: !settings.allow_property_signature })} aria-label="Permetti la firma a nome della struttura" disabled={!canManage} />
+            </div>
+            {settings.allow_property_signature ? (
+              <label className="form-field">
+                <span>Firma della struttura</span>
+                <input
+                  maxLength={500}
+                  value={settings.reply_signature}
+                  onChange={(event) => setSettings({ ...settings, reply_signature: event.target.value })}
+                  placeholder={DEFAULT_PROPERTY_SIGNATURE}
+                  disabled={!canManage}
+                />
+              </label>
+            ) : null}
+            <label className="form-field">
+              <span>Tono</span>
+              <select value={settings.tone} onChange={(event) => setSettings({ ...settings, tone: event.target.value as Tone })} disabled={!canManage}>
+                {TONES.map((tone) => <option key={tone.value} value={tone.value}>{tone.label}</option>)}
+              </select>
+            </label>
+            <div className="smart-inbox-toggle-row">
+              <div>
+                <strong>Mostra la traduzione italiana allo staff</strong>
+                <p className="muted">L'assistente risponde sempre nella lingua dell'ospite; sotto trovi la traduzione.</p>
+              </div>
+              <Switch checked={settings.show_translation} onChange={() => setSettings({ ...settings, show_translation: !settings.show_translation })} aria-label="Mostra la traduzione italiana" disabled={!canManage} />
+            </div>
+            <div className="smart-inbox-toggle-row">
+              <div>
+                <strong>Prepara le bozze delle email automaticamente</strong>
+                <p className="muted">Se disattivato, le email arrivano in Posta e la bozza si genera solo quando la chiedi.</p>
+              </div>
+              <Switch checked={settings.auto_draft} onChange={() => setSettings({ ...settings, auto_draft: !settings.auto_draft })} aria-label="Prepara le bozze automaticamente" disabled={!canManage} />
+            </div>
+            <label className="form-field">
+              <span>Mittenti email da ignorare</span>
+              <textarea
+                rows={4}
+                value={sendersText}
+                onChange={(event) => setSendersText(event.target.value)}
+                placeholder={'fornitore.it\namministrazione@partner.it'}
+                disabled={!canManage}
+              />
+              <small>Un indirizzo o un dominio per riga. Le notifiche dei portali (Booking, Expedia…), le newsletter e le risposte automatiche sono già escluse.</small>
+            </label>
+            {canManage ? (
+              <div className="smart-inbox-buttons">
+                <Button variant="primary" type="submit" disabled={busy !== null}>{busy === 'save' ? 'Salvataggio…' : 'Salva impostazioni'}</Button>
+                {saved ? <span className="smart-inbox-notice" role="status">Salvato.</span> : null}
+              </div>
+            ) : <p className="muted smart-inbox-note">Solo un responsabile può cambiare queste impostazioni.</p>}
+          </div>
+        </section>
+      </form>
 
       {usage ? (
         <section className="shell-card">
@@ -229,7 +292,7 @@ export function SettingsTab({ client, propertyId, canManage }: { client: Supabas
             <p>Stima indicativa del costo dell'assistente. Il dato di fatturazione ufficiale è nella console Anthropic.</p>
           </div>
           <dl className="smart-inbox-usage">
-            <div><dt>Email elaborate</dt><dd>{usage.calls.toLocaleString('it-IT')}</dd></div>
+            <div><dt>Risposte preparate</dt><dd>{usage.calls.toLocaleString('it-IT')}</dd></div>
             <div><dt>Token letti / scritti</dt><dd>{usage.inputTokens.toLocaleString('it-IT')} / {usage.outputTokens.toLocaleString('it-IT')}</dd></div>
             <div><dt>Costo stimato</dt><dd>{usage.estimatedUsd === null ? 'n.d.' : `$ ${usage.estimatedUsd.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</dd></div>
           </dl>

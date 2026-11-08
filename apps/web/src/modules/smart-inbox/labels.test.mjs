@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { actionErrorLabel, draftHint, fillTemplate, groupByConversation, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
+import { appendSignature, DEFAULT_AGENT_SIGNATURE, languageName, previewTemplate, renderSignature, sourceBadge, templateLanguages, topicCounts, actionErrorLabel, draftHint, fillTemplate, groupByConversation, insertTemplateText, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
 
 describe('Smart Inbox labels', () => {
   it('splits messages into the three inbox views without overlap', () => {
@@ -91,9 +91,50 @@ describe('Smart Inbox labels', () => {
     assert.equal(fillTemplate('Hi {NOME}!', null), 'Hi!')
   })
 
+  it('inserts a template before the closing paragraph when nobody is typing', () => {
+    const draft = 'Gentile Mario,\n\ngrazie per la richiesta.\n\nCordiali saluti,\nFront Office'
+    const { value } = insertTemplateText(draft, 'Il parcheggio costa 25 euro.', null)
+    assert.equal(value, 'Gentile Mario,\n\ngrazie per la richiesta.\n\nIl parcheggio costa 25 euro.\n\nCordiali saluti,\nFront Office')
+  })
+
+  it('inserts a template at the cursor without gluing it to words', () => {
+    const { value, caret } = insertTemplateText('Ciao Mario, grazie.', 'TESTO', { start: 11, end: 11 })
+    assert.equal(value, 'Ciao Mario,\n\nTESTO\n\n grazie.')
+    assert.equal(value.slice(0, caret), 'Ciao Mario,\n\nTESTO')
+    assert.equal(insertTemplateText('', 'TESTO', null).value, 'TESTO')
+    assert.equal(insertTemplateText('Solo una riga', 'TESTO', null).value, 'Solo una riga\n\nTESTO')
+  })
+
   it('makes avatar initials from a name', () => {
     assert.equal(initials('Giulia Bianchi'), 'GB')
     assert.equal(initials('Marco'), 'M')
     assert.equal(initials('  '), '?')
+  })
+
+  it('renders the agent signature like the server does', () => {
+    assert.equal(renderSignature(DEFAULT_AGENT_SIGNATURE, { agent: 'Luca Ferri', role: 'Receptionist', hotel: 'Hotel Laguna' }), 'Luca Ferri\nReceptionist — Hotel Laguna')
+    assert.equal(renderSignature(DEFAULT_AGENT_SIGNATURE, { agent: 'Luca Ferri', role: null, hotel: 'Hotel Laguna' }), 'Luca Ferri\nHotel Laguna')
+    assert.equal(appendSignature('Mit freundlichen Grüßen,\n\n', 'Luca Ferri'), 'Mit freundlichen Grüßen,\nLuca Ferri')
+  })
+
+  it('labels channels, languages and template versions', () => {
+    assert.equal(sourceBadge('outlook'), 'Outlook')
+    assert.equal(sourceBadge('booking'), 'Booking.com · incollato')
+    assert.equal(languageName('de-AT'), 'tedesco')
+    assert.deepEqual(templateLanguages({ en: 'Hi', de: 'Hallo', fr: ' ' }), ['IT', 'DE', 'EN'])
+  })
+
+  it('previews a template with an example guest and the hotel information', () => {
+    assert.equal(
+      previewTemplate('Gentile {nome}, arrivo il {data arrivo}. {info: Parcheggio} {sconosciuto}', [{ title: 'Parcheggio', content: '200 m, 25 €' }]),
+      'Gentile Lukas, arrivo il 14 dicembre. 200 m, 25 € {sconosciuto}',
+    )
+  })
+
+  it('counts recurring topics regardless of case and punctuation', () => {
+    assert.deepEqual(topicCounts(['Animali ammessi?', 'animali ammessi', 'Deposito bagagli', ' ']), [
+      { topic: 'Animali ammessi?', count: 2 },
+      { topic: 'Deposito bagagli', count: 1 },
+    ])
   })
 })

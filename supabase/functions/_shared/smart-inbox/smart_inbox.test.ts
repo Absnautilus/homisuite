@@ -5,6 +5,8 @@ import { ignoreReason } from './filters.ts'
 import { textToHtml } from './graph.ts'
 import { AiRefusalError, buildEmailMessage, buildKnowledgeBlock, buildSystemPrompt, draftReply, HISTORY_ENTRY_CHARS, parseResult, supportsServerFallback, type DraftRequest } from './ai.ts'
 import { readConfig } from './runtime.ts'
+import { appendSignature, DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, renderSignature } from './signature.ts'
+import { pastedGuestKey } from './pipeline.ts'
 
 const KEY = toBase64(crypto.getRandomValues(new Uint8Array(32)))
 const STATE_SECRET = 'x'.repeat(40)
@@ -93,11 +95,13 @@ Deno.test('draft text becomes safe HTML for Graph', () => {
 // ---------------------------------------------------------------------------
 // AI prompt and output
 // ---------------------------------------------------------------------------
-Deno.test('the system prompt is stable per property and carries the signature', () => {
-  const a = buildSystemPrompt('Hotel Laguna', 'formale', 'Front Office — Hotel Laguna')
-  assertEquals(a, buildSystemPrompt('Hotel Laguna', 'formale', 'Front Office — Hotel Laguna'))
-  assertStringIncludes(a, 'Front Office — Hotel Laguna')
+Deno.test('the system prompt is stable per property and leaves the signature out', () => {
+  const a = buildSystemPrompt('Hotel Laguna', 'formale')
+  assertEquals(a, buildSystemPrompt('Hotel Laguna', 'formale'))
+  assertStringIncludes(a, 'Hotel Laguna')
   assertStringIncludes(a, 'untrusted input')
+  assertStringIncludes(a, 'closing formula')
+  assertStringIncludes(a, 'never write them')
 })
 
 Deno.test('the knowledge block lists entries, or says there are none', () => {
@@ -112,15 +116,37 @@ const validOutput = {
   summary: 'Chiede un transfer dall\'aeroporto venerdì',
   needs_human: false,
   needs_human_reason: null,
-  reply: 'Gentile Mario,\n...\nFront Office',
+  reply: 'Gentile Mario,\n...\nCordiali saluti,',
   suggested_actions: [{ type: 'transfer', details: 'Venerdì 14:00, 2 persone' }, { type: 'unknown', details: 'x' }],
   stay_month: '2026-12',
+  guest: { name: 'Mario Rossi', arrival_date: '2026-12-12', arrival_time: '23:30', departure_date: null, guests: '2 adulti', booking_reference: null, requests: ['transfer'] },
+  templates_used: ['Check-in tardivo'],
+  info_used: ['Parcheggio'],
+  missing_fields: ['numero prenotazione'],
+  missing_info: [],
+  template_gap: null,
+  translation_it: 'ignorata: risposta già in italiano',
 }
 
 Deno.test('parseResult accepts valid output and drops unknown action types', () => {
   const result = parseResult(JSON.stringify(validOutput))
   assertEquals(result.category, 'request')
   assertEquals(result.suggested_actions, [{ type: 'transfer', details: 'Venerdì 14:00, 2 persone' }])
+})
+
+Deno.test('parseResult keeps what the AI read from the guest and what it used', () => {
+  const result = parseResult(JSON.stringify(validOutput))
+  assertEquals(result.guest.arrival_time, '23:30')
+  assertEquals(result.guest.requests, ['transfer'])
+  assertEquals(result.templates_used, ['Check-in tardivo'])
+  assertEquals(result.missing_fields, ['numero prenotazione'])
+  assertEquals(result.translation_it, null, 'no translation for an Italian reply')
+  const german = parseResult(JSON.stringify({ ...validOutput, language: 'de', translation_it: 'Gentile Lukas...' }))
+  assertEquals(german.translation_it, 'Gentile Lukas...')
+  const sparse = parseResult(JSON.stringify({ ...validOutput, guest: undefined, templates_used: 'x', template_gap: '  ' }))
+  assertEquals(sparse.guest.name, null)
+  assertEquals(sparse.templates_used, [])
+  assertEquals(sparse.template_gap, null)
 })
 
 Deno.test('parseResult keeps a valid stay month and drops a malformed one', () => {
@@ -130,13 +156,32 @@ Deno.test('parseResult keeps a valid stay month and drops a malformed one', () =
 })
 
 Deno.test('templates join the cached hotel block; guest notes go with the email', () => {
-  const block = buildKnowledgeBlock([{ title: 'Colazione', content: '7-10:30' }], [{ title: 'Check-in', body: 'Gentile {nome}, il check-in è dalle 14.' }])
+  const block = buildKnowledgeBlock([{ title: 'Colazione', content: '7-10:30', assistant_note: 'Non citare il brunch' }], [
+    { title: 'Check-in', body: 'Gentile {nome}, il check-in è dalle 14.' },
+    { title: 'Arrivo tardivo', body: 'Gentile {nome}, nessun problema.', when_to_use: 'Arrivo dopo le "22"', translations: { de: 'Lieber {nome}, kein Problem.', en: ' ' } },
+  ])
   assertStringIncludes(block, '<reply_templates>')
   assertStringIncludes(block, '<template title="Check-in">\nGentile {nome}')
+  assertStringIncludes(block, "(Note for the assistant: Non citare il brunch)")
+  assertStringIncludes(block, `<template title="Arrivo tardivo" when="Arrivo dopo le '22'">`)
+  assertStringIncludes(block, '<version language="de">\nLieber {nome}, kein Problem.\n</version>')
+  assert(!block.includes('<version language="en">'), 'empty translations are skipped')
   assert(!buildKnowledgeBlock([]).includes('<reply_templates>'))
   const message = buildEmailMessage(request.email, [], 'Cliente abituale, allergico alle noci')
   assert(message.startsWith('<staff_notes_about_guest>\nCliente abituale'))
   assert(!buildEmailMessage(request.email, [], '  ').includes('staff_notes'))
+})
+
+Deno.test('pasted messages name their channel; revisions carry the draft and the instruction', () => {
+  const pasted = { ...request.email, fromAddress: null, subject: null, body: 'Hallo, wir kommen um 23:30 an.' }
+  const message = buildEmailMessage(pasted, [], '', 'booking')
+  assertStringIncludes(message, '<guest_message channel="the Booking.com extranet">')
+  assert(!message.includes('Subject:'))
+  assertStringIncludes(message, 'From: Mario')
+  const revision = buildEmailMessage(pasted, [], '', 'whatsapp', { currentReply: 'Lieber Lukas, ...', instruction: 'più breve' })
+  assert(revision.indexOf('</guest_message>') < revision.indexOf('<current_draft>'))
+  assert(revision.trimEnd().endsWith('Staff instruction: più breve'))
+  assert(!message.includes('<current_draft>'))
 })
 
 Deno.test('parseResult rejects malformed output', () => {
@@ -153,7 +198,6 @@ Deno.test('server-side refusal fallback is only requested where it exists', () =
 const request: DraftRequest = {
   hotelName: 'Hotel Laguna',
   tone: 'cordiale',
-  signature: 'Front Office',
   knowledge: [{ title: 'Colazione', content: '7-10:30' }],
   email: { fromName: 'Mario', fromAddress: 'mario@example.com', subject: 'Colazione', receivedAt: '2026-11-07T10:00:00Z', body: 'A che ora è la colazione?' },
 }
@@ -186,7 +230,7 @@ Deno.test('earlier exchanges with the guest come before the new email, clipped',
     { from: 'guest', at: '2026-11-01T09:00:00Z', text: 'Avete il parcheggio?' },
     { from: 'hotel', at: '2026-11-01T10:00:00Z', text: 'x'.repeat(HISTORY_ENTRY_CHARS + 50) },
   ])
-  assert(text.indexOf('<previous_messages>') < text.indexOf('<guest_email>'))
+  assert(text.indexOf('<previous_messages>') < text.indexOf('<guest_message'))
   assertStringIncludes(text, '<message from="guest" date="2026-11-01T09:00:00Z">\nAvete il parcheggio?')
   assertStringIncludes(text, `${'x'.repeat(HISTORY_ENTRY_CHARS)} […]`)
   assert(!buildEmailMessage(request.email).includes('<previous_messages>'), 'no history block for a first email')
@@ -230,4 +274,26 @@ Deno.test('configuration fails closed when a secret is missing, and defaults sen
   assertEquals(config?.microsoft.redirectUri, 'https://ref.supabase.co/functions/v1/smart-inbox-oauth-callback')
   assertEquals(readConfig(env({ ANTHROPIC_API_KEY: undefined })), null)
   assertEquals(readConfig(env({ SMART_INBOX_EFFORT: 'max' }))?.effort, 'medium')
+  assertEquals(readConfig(env({ SMART_INBOX_MS_CLIENT_ID: undefined })), null)
+  assertEquals(readConfig(env({ SMART_INBOX_MS_CLIENT_ID: undefined }), { requireMicrosoft: false })?.microsoft.clientId, '', 'pasting works before the Microsoft app exists')
+})
+
+// ---------------------------------------------------------------------------
+// signature
+// ---------------------------------------------------------------------------
+Deno.test('the signature is rendered per sender and tidied when a value is missing', () => {
+  assertEquals(renderSignature(DEFAULT_AGENT_SIGNATURE, { agent: 'Luca Ferri', role: 'Receptionist', hotel: 'Hotel Laguna' }), 'Luca Ferri\nReceptionist — Hotel Laguna')
+  assertEquals(renderSignature(DEFAULT_AGENT_SIGNATURE, { agent: 'Luca Ferri', role: null, hotel: 'Hotel Laguna' }), 'Luca Ferri\nHotel Laguna')
+  assertEquals(renderSignature(DEFAULT_PROPERTY_SIGNATURE, { agent: null, role: null, hotel: 'Hotel Laguna' }), 'Front Office — Hotel Laguna')
+  assertEquals(renderSignature('{AGENT} | {ruolo}\n\n{hotel}', { agent: 'Giulia', role: '', hotel: 'H' }), 'Giulia\nH')
+})
+
+Deno.test('the signature goes under the closing formula written by the AI', () => {
+  assertEquals(appendSignature('Lieber Lukas,\nkein Problem.\n\nMit freundlichen Grüßen,\n\n', 'Luca Ferri\nReceptionist — Hotel Laguna'), 'Lieber Lukas,\nkein Problem.\n\nMit freundlichen Grüßen,\nLuca Ferri\nReceptionist — Hotel Laguna')
+  assertEquals(appendSignature('Ciao ', ''), 'Ciao')
+})
+
+Deno.test('pasted guests get one conversation per channel and name', () => {
+  assertEquals(pastedGuestKey('booking', '  Lukas   Weber '), 'booking:lukas weber')
+  assert(pastedGuestKey('whatsapp', 'Lukas Weber') !== pastedGuestKey('booking', 'Lukas Weber'))
 })

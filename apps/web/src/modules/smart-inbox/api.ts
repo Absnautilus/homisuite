@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Agent, InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, ReplyTemplate, UsageRow } from './types'
+import type { Agent, InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
+import { DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, renderSignature, topicCounts } from './labels'
 
 // Untyped SupabaseClient, same as Dining: the shared Database type
 // (core-sdk) doesn't know this module's tables. Every table here is
@@ -28,8 +29,8 @@ async function invoke<T>(client: SupabaseClient, name: string, body: Record<stri
   return data as T
 }
 
-const MESSAGE_COLUMNS = 'id, thread_id, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
-const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_by, sent_at, updated_at'
+const MESSAGE_COLUMNS = 'id, thread_id, source, created_by, guest_details, missing_info, template_gap, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
+const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_by, sent_at, updated_at, templates_used, info_used, missing_fields, translation, signed_as'
 const CONVERSATION_COLUMNS = 'id, guest_address, guest_name, assigned_to, assigned_at, is_urgent, stay_month, notes'
 const SELECT = `${MESSAGE_COLUMNS}, conversation:smart_inbox_conversations(${CONVERSATION_COLUMNS}), smart_inbox_drafts(${DRAFT_COLUMNS})`
 
@@ -51,6 +52,12 @@ export async function listMessages(client: SupabaseClient, propertyId: string, s
     .limit(limit)
   if (error) throw error
   return (data ?? []).map((row) => toMessage(row as MessageRow))
+}
+
+export async function getMessage(client: SupabaseClient, messageId: string): Promise<InboxMessage | null> {
+  const { data, error } = await client.from('smart_inbox_messages').select(SELECT).eq('id', messageId).maybeSingle()
+  if (error) throw error
+  return data ? toMessage(data as MessageRow) : null
 }
 
 // Every message of one guest conversation, oldest first.
@@ -110,10 +117,13 @@ export async function loadSummary(client: SupabaseClient, propertyId: string): P
   }
 }
 
+const TEMPLATE_COLUMNS = 'id, title, body, sort_order, category, when_to_use, translations, updated_at'
+type TemplateValues = Pick<ReplyTemplate, 'title' | 'body' | 'category' | 'when_to_use' | 'translations'>
+
 export async function listTemplates(client: SupabaseClient, propertyId: string): Promise<ReplyTemplate[]> {
   const { data, error } = await client
     .from('smart_inbox_templates')
-    .select('id, title, body, sort_order')
+    .select(TEMPLATE_COLUMNS)
     .eq('property_id', propertyId)
     .order('sort_order')
     .order('created_at')
@@ -121,12 +131,12 @@ export async function listTemplates(client: SupabaseClient, propertyId: string):
   return (data ?? []) as ReplyTemplate[]
 }
 
-export async function createTemplate(client: SupabaseClient, propertyId: string, template: { title: string; body: string; sort_order: number }): Promise<void> {
+export async function createTemplate(client: SupabaseClient, propertyId: string, template: TemplateValues & { sort_order: number }): Promise<void> {
   const { error } = await client.from('smart_inbox_templates').insert({ property_id: propertyId, ...template })
   if (error) throw error
 }
 
-export async function updateTemplate(client: SupabaseClient, id: string, changes: { title?: string; body?: string }): Promise<void> {
+export async function updateTemplate(client: SupabaseClient, id: string, changes: Partial<TemplateValues>): Promise<void> {
   const { data, error } = await client.from('smart_inbox_templates').update(changes).eq('id', id).select('id')
   if (error) throw error
   if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
@@ -156,8 +166,68 @@ export async function saveDraftBody(client: SupabaseClient, draftId: string, bod
   if (!data || data.length === 0) throw new SmartInboxActionError('already_sent')
 }
 
-export function sendReply(client: SupabaseClient, draftId: string, body: string): Promise<{ ok: true }> {
-  return invoke(client, 'smart-inbox-actions', { action: 'send', draftId, body })
+// Signs `body` as the caller (or the property) and replies. For a pasted
+// message nothing is sent: `text` is what staff paste back in the channel.
+export function sendReply(client: SupabaseClient, draftId: string, body: string, signAs: SignAs = 'agent'): Promise<{ ok: true; text: string; signedAs: SignAs; channel: string }> {
+  return invoke(client, 'smart-inbox-actions', { action: 'send', draftId, body, signAs })
+}
+
+export function composeReply(client: SupabaseClient, propertyId: string, input: { source: PastedSource; text: string; guestName: string }): Promise<{ messageId: string; threadId: string | null; status: MessageStatus }> {
+  return invoke(client, 'smart-inbox-actions', { action: 'compose', propertyId, ...input })
+}
+
+export function refineDraft(client: SupabaseClient, draftId: string, instruction: string, body: string): Promise<{ ok: true }> {
+  return invoke(client, 'smart-inbox-actions', { action: 'refine', draftId, instruction, body })
+}
+
+// The caller's own signature (name from the profile, role from Team).
+export async function loadSignature(client: SupabaseClient, propertyId: string, hotelName: string, settings: InboxSettings): Promise<SignatureInfo> {
+  const { data, error } = await client.rpc('smart_inbox_signature_identity', { p_property_id: propertyId })
+  if (error) throw error
+  const identity = (Array.isArray(data) ? data[0] : data) as { full_name: string | null; job_title: string | null } | undefined
+  const name = identity?.full_name ?? null
+  return {
+    agent: renderSignature(settings.signature_template || DEFAULT_AGENT_SIGNATURE, { agent: name, role: identity?.job_title ?? null, hotel: hotelName }),
+    property: settings.allow_property_signature ? renderSignature(settings.reply_signature || DEFAULT_PROPERTY_SIGNATURE, { agent: null, role: null, hotel: hotelName }) : null,
+    name,
+  }
+}
+
+// How many replies this month used each template (by title, as the
+// assistant reports it).
+export async function loadTemplateUsage(client: SupabaseClient, propertyId: string, now = new Date()): Promise<Map<string, number>> {
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const { data, error } = await client
+    .from('smart_inbox_drafts')
+    .select('templates_used')
+    .eq('property_id', propertyId)
+    .gte('created_at', monthStart)
+    .limit(5000)
+  if (error) throw error
+  const counts = new Map<string, number>()
+  for (const row of (data ?? []) as Array<{ templates_used: string[] | null }>) {
+    for (const title of row.templates_used ?? []) counts.set(title, (counts.get(title) ?? 0) + 1)
+  }
+  return counts
+}
+
+// What guests asked in the last 60 days that the information doesn't
+// cover, and replies written without a fitting template: the two lists
+// that tell a manager what to add next.
+export async function loadGaps(client: SupabaseClient, propertyId: string, now = new Date()): Promise<{ missingInfo: Array<{ topic: string; count: number }>; templateGaps: Array<{ topic: string; count: number }> }> {
+  const since = new Date(now.getTime() - 60 * 24 * 3600 * 1000).toISOString()
+  const { data, error } = await client
+    .from('smart_inbox_messages')
+    .select('missing_info, template_gap')
+    .eq('property_id', propertyId)
+    .gte('created_at', since)
+    .limit(2000)
+  if (error) throw error
+  const rows = (data ?? []) as Array<{ missing_info: string[] | null; template_gap: string | null }>
+  return {
+    missingInfo: topicCounts(rows.flatMap((row) => row.missing_info ?? [])),
+    templateGaps: topicCounts(rows.map((row) => row.template_gap).filter((value): value is string => Boolean(value))),
+  }
 }
 
 export function regenerateDraft(client: SupabaseClient, messageId: string): Promise<{ status: MessageStatus }> {
@@ -167,7 +237,7 @@ export function regenerateDraft(client: SupabaseClient, messageId: string): Prom
 export async function listKnowledge(client: SupabaseClient, propertyId: string): Promise<KnowledgeEntry[]> {
   const { data, error } = await client
     .from('smart_inbox_knowledge_entries')
-    .select('id, title, content, active, sort_order')
+    .select('id, title, content, active, sort_order, category, assistant_note, updated_at')
     .eq('property_id', propertyId)
     .order('sort_order')
     .order('created_at')
@@ -175,12 +245,12 @@ export async function listKnowledge(client: SupabaseClient, propertyId: string):
   return (data ?? []) as KnowledgeEntry[]
 }
 
-export async function createKnowledge(client: SupabaseClient, propertyId: string, entry: Pick<KnowledgeEntry, 'title' | 'content'> & { sort_order: number }): Promise<void> {
+export async function createKnowledge(client: SupabaseClient, propertyId: string, entry: Pick<KnowledgeEntry, 'title' | 'content' | 'category' | 'assistant_note'> & { sort_order: number }): Promise<void> {
   const { error } = await client.from('smart_inbox_knowledge_entries').insert({ property_id: propertyId, ...entry })
   if (error) throw error
 }
 
-export async function updateKnowledge(client: SupabaseClient, id: string, changes: Partial<Pick<KnowledgeEntry, 'title' | 'content' | 'active' | 'sort_order'>>): Promise<void> {
+export async function updateKnowledge(client: SupabaseClient, id: string, changes: Partial<Pick<KnowledgeEntry, 'title' | 'content' | 'active' | 'sort_order' | 'category' | 'assistant_note'>>): Promise<void> {
   const { data, error } = await client.from('smart_inbox_knowledge_entries').update(changes).eq('id', id).select('id')
   if (error) throw error
   if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
@@ -192,16 +262,25 @@ export async function deleteKnowledge(client: SupabaseClient, id: string): Promi
   if (!data || data.length === 0) throw new SmartInboxActionError('forbidden')
 }
 
-export const DEFAULT_SETTINGS: InboxSettings = { reply_signature: '', tone: 'cordiale', auto_draft: true, ignored_senders: [] }
+export const DEFAULT_SETTINGS: InboxSettings = {
+  reply_signature: DEFAULT_PROPERTY_SIGNATURE,
+  tone: 'cordiale',
+  auto_draft: true,
+  ignored_senders: [],
+  signature_template: DEFAULT_AGENT_SIGNATURE,
+  allow_property_signature: true,
+  show_translation: true,
+  enabled_sources: ['booking', 'expedia', 'airbnb', 'whatsapp', 'phone', 'other'],
+}
 
 export async function loadSettings(client: SupabaseClient, propertyId: string): Promise<InboxSettings> {
   const { data, error } = await client
     .from('smart_inbox_settings')
-    .select('reply_signature, tone, auto_draft, ignored_senders')
+    .select('reply_signature, tone, auto_draft, ignored_senders, signature_template, allow_property_signature, show_translation, enabled_sources')
     .eq('property_id', propertyId)
     .maybeSingle()
   if (error) throw error
-  return (data as InboxSettings | null) ?? DEFAULT_SETTINGS
+  return { ...DEFAULT_SETTINGS, ...((data as Partial<InboxSettings> | null) ?? {}) }
 }
 
 export async function saveSettings(client: SupabaseClient, propertyId: string, settings: InboxSettings): Promise<void> {

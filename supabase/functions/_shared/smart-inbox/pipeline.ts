@@ -1,21 +1,27 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
-import { AiRefusalError, draftReply, type DraftRequest, type DraftUsage, type HistoryEntry } from './ai.ts'
+import { AiRefusalError, draftReply, type DraftRequest, type DraftResult, type DraftUsage, type HistoryEntry } from './ai.ts'
 import { headerMap, ignoreReason } from './filters.ts'
 import { createReplyDraft, deleteMessage, getMessage, textToHtml } from './graph.ts'
 import { getAccessToken, loadMailbox, ReauthRequiredError } from './mailbox.ts'
 import type { SmartInboxConfig } from './runtime.ts'
+import { appendSignature, signatureFor } from './signature.ts'
 
-// One inbound email, end to end:
-//   claim -> read from Graph -> filter -> Claude -> store draft (+ Outlook
-//   reply draft) -> account usage.
+// One guest message, end to end:
+//   Outlook:  claim -> read from Graph -> filter -> Claude -> store draft
+//             (+ signed Outlook reply draft) -> account usage.
+//   Pasted:   staff paste a message from Booking/WhatsApp/... -> Claude ->
+//             store draft for them to copy back into that channel.
+//   Revision: staff ask to change a draft ("più breve") -> Claude -> store.
 // Every step writes through the service-role client; staff only ever see
 // the result through RLS.
 
-// Longer than any normal guest email. Above this the message goes to a
-// person instead of being cut: a truncated email could get a wrong answer.
+// Longer than any normal guest message. Above this the message goes to a
+// person instead of being cut: a truncated message could get a wrong answer.
 export const MAX_BODY_CHARS = 40_000
 export const MAX_ATTEMPTS = 3
+export const PASTED_SOURCES = ['booking', 'expedia', 'airbnb', 'whatsapp', 'phone', 'other'] as const
+export type PastedSource = (typeof PASTED_SOURCES)[number]
 
 export interface PipelineDeps {
   admin: SupabaseClient
@@ -23,16 +29,23 @@ export interface PipelineDeps {
   anthropic: Anthropic
 }
 
-type MessageStatus = 'pending' | 'processing' | 'draft_ready' | 'needs_attention' | 'ignored' | 'replied' | 'dismissed' | 'failed'
+export type MessageStatus = 'pending' | 'processing' | 'draft_ready' | 'needs_attention' | 'ignored' | 'replied' | 'dismissed' | 'failed'
 
 interface MessageRow {
   id: string
   property_id: string
-  mailbox_id: string
-  graph_message_id: string
+  mailbox_id: string | null
+  graph_message_id: string | null
+  thread_id: string | null
+  source: string
+  from_name: string | null
+  body_text: string | null
+  received_at: string
   status: MessageStatus
   attempts: number
 }
+
+const MESSAGE_COLUMNS = 'id, property_id, mailbox_id, graph_message_id, thread_id, source, from_name, body_text, received_at, status, attempts'
 
 export interface ProcessOptions {
   // Staff explicitly asked for a (new) draft: bypasses auto_draft = false.
@@ -42,7 +55,7 @@ export interface ProcessOptions {
 async function claim(admin: SupabaseClient, messageId: string, force: boolean): Promise<MessageRow | null> {
   const { data: current, error } = await admin
     .from('smart_inbox_messages')
-    .select('id, property_id, mailbox_id, graph_message_id, status, attempts')
+    .select(MESSAGE_COLUMNS)
     .eq('id', messageId)
     .maybeSingle()
   if (error) throw error
@@ -61,7 +74,7 @@ async function claim(admin: SupabaseClient, messageId: string, force: boolean): 
     .eq('id', row.id)
     .eq('status', row.status)
     .eq('attempts', row.attempts)
-    .select('id, property_id, mailbox_id, graph_message_id, status, attempts')
+    .select(MESSAGE_COLUMNS)
     .maybeSingle()
   if (claimError) throw claimError
   return (claimed as MessageRow | null) ?? null
@@ -85,7 +98,8 @@ async function recordUsage(admin: SupabaseClient, propertyId: string, messageId:
   if (error) console.error('smart-inbox: usage not recorded', error)
 }
 
-// One conversation per guest address per property. Returns its id.
+// One conversation per guest per property. For email the key is the sender
+// address; for pasted messages it is "<channel>:<guest name>".
 export async function attachToConversation(
   admin: SupabaseClient,
   propertyId: string,
@@ -132,10 +146,15 @@ export async function attachToConversation(
   return row.id
 }
 
+// "booking:lukas weber" -- stable per channel + guest name.
+export function pastedGuestKey(source: string, guestName: string): string {
+  return `${source}:${guestName.trim().toLowerCase().replace(/\s+/g, ' ')}`.slice(0, 200)
+}
+
 export const HISTORY_MESSAGES = 4
 
 // The last few exchanges with this guest before `beforeIso`, oldest first:
-// each earlier guest email, followed by the reply the hotel sent to it.
+// each earlier guest message, followed by the reply the hotel sent to it.
 async function loadHistory(admin: SupabaseClient, threadId: string, messageId: string, beforeIso: string): Promise<HistoryEntry[]> {
   const { data, error } = await admin
     .from('smart_inbox_messages')
@@ -164,14 +183,14 @@ async function loadPropertyContext(admin: SupabaseClient, propertyId: string) {
     admin.from('smart_inbox_settings').select('*').eq('property_id', propertyId).maybeSingle(),
     admin
       .from('smart_inbox_knowledge_entries')
-      .select('title, content')
+      .select('title, content, assistant_note')
       .eq('property_id', propertyId)
       .eq('active', true)
       .order('sort_order')
       .order('created_at'),
     admin
       .from('smart_inbox_templates')
-      .select('title, body')
+      .select('title, body, when_to_use, translations')
       .eq('property_id', propertyId)
       .order('sort_order')
       .order('created_at'),
@@ -180,32 +199,149 @@ async function loadPropertyContext(admin: SupabaseClient, propertyId: string) {
   if (templates.error) throw templates.error
   if (settings.error) throw settings.error
   if (knowledge.error) throw knowledge.error
-  const row = settings.data as { reply_signature?: string; tone?: DraftRequest['tone']; auto_draft?: boolean; ignored_senders?: string[] } | null
+  const row = settings.data as { tone?: DraftRequest['tone']; auto_draft?: boolean; ignored_senders?: string[]; enabled_sources?: string[] } | null
   return {
     hotelName: (property.data as { name: string }).name,
-    signature: row?.reply_signature ?? '',
     tone: row?.tone ?? 'cordiale',
     autoDraft: row?.auto_draft ?? true,
     ignoredSenders: row?.ignored_senders ?? [],
+    enabledSources: row?.enabled_sources ?? [...PASTED_SOURCES],
     knowledge: (knowledge.data ?? []) as DraftRequest['knowledge'],
     templates: (templates.data ?? []) as NonNullable<DraftRequest['templates']>,
   }
 }
 
+type PropertyContext = Awaited<ReturnType<typeof loadPropertyContext>>
+
+interface ConversationContext {
+  notes: string
+  stay_month: string | null
+  assigned_to: string | null
+}
+
+async function loadConversation(admin: SupabaseClient, threadId: string | null): Promise<ConversationContext | null> {
+  if (!threadId) return null
+  const { data, error } = await admin.from('smart_inbox_conversations').select('notes, stay_month, assigned_to').eq('id', threadId).single()
+  if (error) throw error
+  return data as ConversationContext
+}
+
+// Claude call + usage accounting. Returns null when the model declined
+// (the message is then left for a person with error "ai_refused").
+async function runAi(deps: PipelineDeps, message: { id: string; property_id: string }, request: DraftRequest): Promise<{ result: DraftResult; usage: DraftUsage } | null> {
+  try {
+    const drafted = await draftReply(deps.anthropic, deps.config.model, deps.config.effort, request)
+    await recordUsage(deps.admin, message.property_id, message.id, drafted.usage)
+    return drafted
+  } catch (error) {
+    const usage = (error as { usage?: DraftUsage }).usage
+    if (usage) await recordUsage(deps.admin, message.property_id, message.id, usage)
+    if (error instanceof AiRefusalError) return null
+    throw error
+  }
+}
+
+function draftFields(result: DraftResult, usage: DraftUsage, reply: string) {
+  return {
+    body: reply,
+    ai_body: reply,
+    suggested_actions: result.suggested_actions,
+    model: usage.model,
+    edited_by: null,
+    status: 'pending',
+    templates_used: result.templates_used,
+    info_used: result.info_used,
+    missing_fields: result.missing_fields,
+    translation: result.translation_it,
+  }
+}
+
+async function existingDraft(admin: SupabaseClient, messageId: string) {
+  const { data, error } = await admin
+    .from('smart_inbox_drafts')
+    .select('id, status, graph_draft_id')
+    .eq('message_id', messageId)
+    .maybeSingle()
+  if (error) throw error
+  return data as { id: string; status: string; graph_draft_id: string | null } | null
+}
+
+async function saveDraft(admin: SupabaseClient, message: { id: string; property_id: string }, fields: Record<string, unknown>, existing: { id: string } | null): Promise<void> {
+  const { error } = existing
+    ? await admin.from('smart_inbox_drafts').update(fields).eq('id', existing.id)
+    : await admin.from('smart_inbox_drafts').insert({ property_id: message.property_id, message_id: message.id, ...fields })
+  if (error) throw error
+}
+
+// Urgent email -> urgent guest (until the hotel replies); stay month filled
+// when nobody set it yet. Staff can change both.
+async function applyTriage(admin: SupabaseClient, threadId: string | null, conversation: ConversationContext | null, result: DraftResult): Promise<void> {
+  if (!threadId) return
+  const triage: Record<string, unknown> = {}
+  if (result.urgency === 'high') triage.is_urgent = true
+  if (result.stay_month && !conversation?.stay_month) triage.stay_month = `${result.stay_month}-01`
+  if (Object.keys(triage).length === 0) return
+  const { error } = await admin.from('smart_inbox_conversations').update(triage).eq('id', threadId)
+  if (error) console.error('smart-inbox: conversation triage not saved', error)
+}
+
+function messageResultFields(result: DraftResult, status: MessageStatus) {
+  return {
+    status,
+    language: result.language,
+    category: result.category,
+    urgency: result.urgency,
+    summary: result.needs_human && result.needs_human_reason
+      ? `${result.summary} — ${result.needs_human_reason}`
+      : result.summary,
+    guest_details: {
+      arrival_date: result.guest.arrival_date,
+      arrival_time: result.guest.arrival_time,
+      departure_date: result.guest.departure_date,
+      guests: result.guest.guests,
+      booking_reference: result.guest.booking_reference,
+      requests: result.guest.requests,
+    },
+    missing_info: result.missing_info,
+    template_gap: result.template_gap,
+    ignore_reason: null,
+    error: null,
+  }
+}
+
+function statusFor(result: DraftResult): MessageStatus {
+  return result.needs_human || !result.reply.trim() ? 'needs_attention' : 'draft_ready'
+}
+
+function baseRequest(context: PropertyContext, conversation: ConversationContext | null): Pick<DraftRequest, 'hotelName' | 'tone' | 'knowledge' | 'templates' | 'guestNotes'> {
+  return {
+    hotelName: context.hotelName,
+    tone: context.tone,
+    knowledge: context.knowledge,
+    templates: context.templates,
+    guestNotes: conversation?.notes ?? '',
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Outlook messages (and regenerating any message)
+// ---------------------------------------------------------------------------
 export async function processMessage(deps: PipelineDeps, messageId: string, options: ProcessOptions = {}): Promise<MessageStatus | null> {
   const { admin, config } = deps
   const message = await claim(admin, messageId, options.force ?? false)
   if (!message) return null
 
   try {
-    const { mailbox, secret } = await loadMailbox(admin, message.mailbox_id)
+    if (message.source !== 'outlook') return await draftPasted(deps, message)
+
+    const { mailbox, secret } = await loadMailbox(admin, message.mailbox_id as string)
     if (mailbox.status === 'disconnected' || !secret) {
       await finish(admin, message.id, { status: 'failed', error: 'mailbox_disconnected' })
       return 'failed'
     }
 
     const accessToken = await getAccessToken(admin, config, secret)
-    const email = await getMessage(accessToken, message.graph_message_id)
+    const email = await getMessage(accessToken, message.graph_message_id as string)
     const fromAddress = email.from?.emailAddress?.address?.toLowerCase() ?? null
     const bodyText = (email.uniqueBody?.content ?? email.body?.content ?? '').trim()
 
@@ -252,108 +388,48 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
     }
 
     const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedDateTime) : []
-    let conversation: { notes: string; stay_month: string | null } | null = null
-    if (threadId) {
-      const { data, error } = await admin.from('smart_inbox_conversations').select('notes, stay_month').eq('id', threadId).single()
-      if (error) throw error
-      conversation = data as { notes: string; stay_month: string | null }
-    }
+    const conversation = await loadConversation(admin, threadId)
 
-    let drafted
-    try {
-      drafted = await draftReply(deps.anthropic, config.model, config.effort, {
-        hotelName: context.hotelName,
-        tone: context.tone,
-        signature: context.signature,
-        knowledge: context.knowledge,
-        templates: context.templates,
-        guestNotes: conversation?.notes ?? '',
-        email: {
-          fromName: email.from?.emailAddress?.name ?? null,
-          fromAddress,
-          subject: email.subject,
-          receivedAt: email.receivedDateTime,
-          body: bodyText || email.bodyPreview || '',
-        },
-        history,
-      })
-    } catch (error) {
-      const usage = (error as { usage?: DraftUsage }).usage
-      if (usage) await recordUsage(admin, message.property_id, message.id, usage)
-      if (error instanceof AiRefusalError) {
-        await finish(admin, message.id, { status: 'needs_attention', error: 'ai_refused' })
-        return 'needs_attention'
-      }
-      throw error
+    const drafted = await runAi(deps, message, {
+      ...baseRequest(context, conversation),
+      channel: 'outlook',
+      email: {
+        fromName: email.from?.emailAddress?.name ?? null,
+        fromAddress,
+        subject: email.subject,
+        receivedAt: email.receivedDateTime,
+        body: bodyText || email.bodyPreview || '',
+      },
+      history,
+    })
+    if (!drafted) {
+      await finish(admin, message.id, { status: 'needs_attention', error: 'ai_refused' })
+      return 'needs_attention'
     }
-
     const { result, usage } = drafted
-    await recordUsage(admin, message.property_id, message.id, usage)
-
     const reply = result.reply.trim()
-    const status: MessageStatus = result.needs_human || !reply ? 'needs_attention' : 'draft_ready'
 
     if (reply) {
-      const { data: existingRow, error: existingError } = await admin
-        .from('smart_inbox_drafts')
-        .select('id, status, graph_draft_id')
-        .eq('message_id', message.id)
-        .maybeSingle()
-      if (existingError) throw existingError
-      const existing = existingRow as { id: string; status: string; graph_draft_id: string | null } | null
-
+      const existing = await existingDraft(admin, message.id)
       if (!existing || existing.status !== 'sent') {
-        // Mirror the proposal into Outlook's Drafts folder, replacing the
-        // previous one on a regenerate. Best effort: the draft in homisuite
-        // is the source of truth and can be sent without it.
+        // Mirror the proposal into Outlook's Drafts folder, signed by the
+        // guest's agent (or the property while nobody owns the guest).
+        // Best effort: the draft in homisuite is the source of truth.
         let graphDraftId: string | null = null
         try {
           if (existing?.graph_draft_id) await deleteMessage(accessToken, existing.graph_draft_id)
-          graphDraftId = (await createReplyDraft(accessToken, message.graph_message_id, textToHtml(reply))).id
+          const signature = await signatureFor(admin, message.property_id, conversation?.assigned_to ?? null, conversation?.assigned_to ? 'agent' : 'property')
+          graphDraftId = (await createReplyDraft(accessToken, message.graph_message_id as string, textToHtml(appendSignature(reply, signature.text)))).id
         } catch (error) {
           console.warn('smart-inbox: Outlook draft not updated', error)
         }
-
-        const draftFields = {
-          body: reply,
-          ai_body: reply,
-          suggested_actions: result.suggested_actions,
-          model: usage.model,
-          graph_draft_id: graphDraftId,
-          edited_by: null,
-          status: 'pending',
-        }
-        const { error } = existing
-          ? await admin.from('smart_inbox_drafts').update(draftFields).eq('id', existing.id)
-          : await admin.from('smart_inbox_drafts').insert({ property_id: message.property_id, message_id: message.id, ...draftFields })
-        if (error) throw error
+        await saveDraft(admin, message, { ...draftFields(result, usage, reply), graph_draft_id: graphDraftId }, existing)
       }
     }
 
-    // Triage on the guest conversation: an urgent email flags the guest as
-    // urgent (until the hotel replies), and the stay month is filled in if
-    // nobody has set it yet. Staff can change both.
-    if (threadId) {
-      const triage: Record<string, unknown> = {}
-      if (result.urgency === 'high') triage.is_urgent = true
-      if (result.stay_month && !conversation?.stay_month) triage.stay_month = `${result.stay_month}-01`
-      if (Object.keys(triage).length > 0) {
-        const { error } = await admin.from('smart_inbox_conversations').update(triage).eq('id', threadId)
-        if (error) console.error('smart-inbox: conversation triage not saved', error)
-      }
-    }
-
-    await finish(admin, message.id, {
-      status,
-      language: result.language,
-      category: result.category,
-      urgency: result.urgency,
-      summary: result.needs_human && result.needs_human_reason
-        ? `${result.summary} — ${result.needs_human_reason}`
-        : result.summary,
-      ignore_reason: null,
-      error: null,
-    })
+    await applyTriage(admin, threadId, conversation, result)
+    const status = statusFor(result)
+    await finish(admin, message.id, messageResultFields(result, status))
     return status
   } catch (error) {
     const code = error instanceof ReauthRequiredError
@@ -363,4 +439,172 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
     await finish(admin, message.id, { status: 'failed', error: code }).catch(() => {})
     return 'failed'
   }
+}
+
+// ---------------------------------------------------------------------------
+// Pasted messages ("Componi risposta")
+// ---------------------------------------------------------------------------
+async function draftPasted(deps: PipelineDeps, message: MessageRow): Promise<MessageStatus> {
+  const { admin } = deps
+  const body = (message.body_text ?? '').trim()
+  let threadId = message.thread_id
+  const context = await loadPropertyContext(admin, message.property_id)
+  const history = threadId ? await loadHistory(admin, threadId, message.id, message.received_at) : []
+  let conversation = await loadConversation(admin, threadId)
+
+  const drafted = await runAi(deps, message, {
+    ...baseRequest(context, conversation),
+    channel: message.source,
+    email: { fromName: message.from_name, fromAddress: null, subject: null, receivedAt: message.received_at, body },
+    history,
+  })
+  if (!drafted) {
+    await finish(admin, message.id, { status: 'needs_attention', error: 'ai_refused' })
+    return 'needs_attention'
+  }
+  const { result, usage } = drafted
+
+  // Staff may paste without typing the name: the AI reads it from the
+  // message, and the guest's conversation is found or started with it.
+  if (!threadId) {
+    const name = message.from_name?.trim() || result.guest.name || 'Ospite'
+    threadId = await attachToConversation(admin, message.property_id, message.id, pastedGuestKey(message.source, name), name, message.received_at)
+    conversation = await loadConversation(admin, threadId)
+    if (!message.from_name && result.guest.name) await finish(admin, message.id, { from_name: result.guest.name })
+  }
+
+  const reply = result.reply.trim()
+  if (reply) {
+    const existing = await existingDraft(admin, message.id)
+    if (!existing || existing.status !== 'sent') await saveDraft(admin, message, draftFields(result, usage, reply), existing)
+  }
+  await applyTriage(admin, threadId, conversation, result)
+  const status = statusFor(result)
+  await finish(admin, message.id, messageResultFields(result, status))
+  return status
+}
+
+export interface ComposeInput {
+  propertyId: string
+  userId: string
+  source: PastedSource
+  text: string
+  guestName: string | null
+}
+
+export class ComposeError extends Error {
+  constructor(readonly code: 'source_disabled' | 'too_long' | 'empty') {
+    super(code)
+    this.name = 'ComposeError'
+  }
+}
+
+// Records a message pasted by staff and drafts the reply. The person who
+// pasted it becomes the guest's agent if nobody is yet.
+export async function composePasted(deps: PipelineDeps, input: ComposeInput): Promise<{ messageId: string; threadId: string | null; status: MessageStatus }> {
+  const { admin } = deps
+  const text = input.text.trim()
+  if (!text) throw new ComposeError('empty')
+  if (text.length > MAX_BODY_CHARS) throw new ComposeError('too_long')
+  const context = await loadPropertyContext(admin, input.propertyId)
+  if (!context.enabledSources.includes(input.source)) throw new ComposeError('source_disabled')
+
+  const guestName = input.guestName?.trim() || null
+  const now = new Date().toISOString()
+  const { data: inserted, error } = await admin
+    .from('smart_inbox_messages')
+    .insert({
+      property_id: input.propertyId,
+      source: input.source,
+      created_by: input.userId,
+      from_name: guestName,
+      body_text: text,
+      body_preview: text.slice(0, 255),
+      received_at: now,
+      status: 'processing',
+      attempts: 1,
+    })
+    .select(MESSAGE_COLUMNS)
+    .single()
+  if (error) throw error
+  const message = inserted as MessageRow
+
+  if (guestName) {
+    message.thread_id = await attachToConversation(admin, input.propertyId, message.id, pastedGuestKey(input.source, guestName), guestName, now)
+  }
+
+  let status: MessageStatus
+  try {
+    status = await draftPasted(deps, message)
+  } catch (cause) {
+    console.error('smart-inbox: compose failed', message.id, cause)
+    await finish(admin, message.id, { status: 'failed', error: cause instanceof Error ? cause.message.slice(0, 300) : 'unknown_error' }).catch(() => {})
+    status = 'failed'
+  }
+
+  const { data: row } = await admin.from('smart_inbox_messages').select('thread_id').eq('id', message.id).single()
+  const threadId = (row as { thread_id: string | null } | null)?.thread_id ?? null
+  if (threadId) {
+    await admin
+      .from('smart_inbox_conversations')
+      .update({ assigned_to: input.userId, assigned_by: input.userId })
+      .eq('id', threadId)
+      .is('assigned_to', null)
+  }
+  return { messageId: message.id, threadId, status }
+}
+
+// ---------------------------------------------------------------------------
+// Revising a draft on request ("più breve", "aggiungi che...")
+// ---------------------------------------------------------------------------
+export async function reviseDraft(deps: PipelineDeps, draftId: string, instruction: string, currentBody: string): Promise<'revised' | 'refused' | 'not_pending'> {
+  const { admin } = deps
+  const { data: draftRow, error } = await admin
+    .from('smart_inbox_drafts')
+    .select('id, status, message_id')
+    .eq('id', draftId)
+    .single()
+  if (error) throw error
+  const draft = draftRow as { id: string; status: string; message_id: string }
+  if (draft.status !== 'pending') return 'not_pending'
+
+  const { data: messageRow, error: messageError } = await admin
+    .from('smart_inbox_messages')
+    .select(`${MESSAGE_COLUMNS}, from_address, subject`)
+    .eq('id', draft.message_id)
+    .single()
+  if (messageError) throw messageError
+  const message = messageRow as MessageRow & { from_address: string | null; subject: string | null }
+
+  const context = await loadPropertyContext(admin, message.property_id)
+  const conversation = await loadConversation(admin, message.thread_id)
+  const history = message.thread_id ? await loadHistory(admin, message.thread_id, message.id, message.received_at) : []
+
+  const drafted = await runAi(deps, message, {
+    ...baseRequest(context, conversation),
+    channel: message.source,
+    email: {
+      fromName: message.from_name,
+      fromAddress: message.from_address,
+      subject: message.subject,
+      receivedAt: message.received_at,
+      body: message.body_text ?? '',
+    },
+    history,
+    revision: { currentReply: currentBody, instruction },
+  })
+  if (!drafted) return 'refused'
+  const { result, usage } = drafted
+  const reply = result.reply.trim()
+  if (!reply) return 'refused'
+
+  // A revision replaces the proposal: the Outlook mirror (if any) is stale
+  // and is rebuilt from the approved text when sending.
+  const { error: updateError } = await admin
+    .from('smart_inbox_drafts')
+    .update({ ...draftFields(result, usage, reply) })
+    .eq('id', draft.id)
+    .eq('status', 'pending')
+  if (updateError) throw updateError
+  return 'revised'
 }

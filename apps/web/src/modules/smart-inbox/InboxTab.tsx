@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Button } from '@homisuite/ui'
-import { AlertTriangle, Archive, ArrowLeft, CalendarDays, CheckCircle2, CircleAlert, Clock3, FileText, RefreshCw, RotateCcw, Send, Sparkles, StickyNote, UserCheck } from 'lucide-react'
+import { AlertTriangle, Archive, ArrowLeft, CalendarDays, CheckCircle2, CircleAlert, Clock3, ClipboardPaste, Inbox, RefreshCw, RotateCcw, Sparkles, StickyNote, UserCheck } from 'lucide-react'
 import { PageState } from '../../components/PageState'
 import {
   assignConversation,
@@ -11,17 +11,13 @@ import {
   listThread,
   loadSummary,
   regenerateDraft,
-  saveDraftBody,
-  sendReply,
   setMessageStatus,
   SmartInboxActionError,
   updateConversation,
 } from './api'
 import {
-  ACTION_LABELS,
   actionErrorLabel,
   draftHint,
-  fillTemplate,
   groupByConversation,
   ignoreReasonLabel,
   initials,
@@ -32,11 +28,14 @@ import {
   monthLabel,
   SIMPLE_STATE_LABELS,
   simpleState,
+  SOURCE_LABELS,
+  sourceBadge,
   statusesForView,
   type ConversationGroup,
   type InboxView,
 } from './labels'
-import type { Agent, InboxMessage, ReplyTemplate } from './types'
+import { ReplyComposer } from './ReplyComposer'
+import type { Agent, InboxMessage, MessageSource, ReplyTemplate, SignatureInfo } from './types'
 
 const POLL_MS = 30_000
 const NO_MONTH = 'none'
@@ -73,12 +72,15 @@ function StateBadge({ status }: { status: InboxMessage['status'] }) {
 // The inbox is organised by guest: one row per conversation, each looked
 // after by one agent. Designed to answer "who is waiting, and who first?"
 // without having to read anything.
-export function InboxTab({ client, propertyId, currentProfileId, view, active }: {
+export function InboxTab({ client, propertyId, currentProfileId, view, active, signature, showTranslation, onCompose }: {
   client: SupabaseClient
   propertyId: string
   currentProfileId: string | null
   view: InboxView
   active: boolean
+  signature: SignatureInfo | null
+  showTranslation: boolean
+  onCompose: () => void
 }) {
   const [messages, setMessages] = useState<InboxMessage[] | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
@@ -88,6 +90,7 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [onlyUrgent, setOnlyUrgent] = useState(false)
   const [month, setMonth] = useState('')
+  const [channel, setChannel] = useState<'' | MessageSource>('')
   const [notice, setNotice] = useState<string | null>(null)
   const loadToken = useRef(0)
 
@@ -156,6 +159,8 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
     return view === 'mine' ? all.filter((group) => group.assignedTo && group.assignedTo === currentProfileId) : all
   }, [messages, view, currentProfileId])
 
+  const channels = useMemo(() => [...new Set(allGroups.map((group) => group.latest.source))].sort(), [allGroups])
+
   const months = useMemo(() => {
     const set = new Set(allGroups.map((group) => group.stayMonth).filter((value): value is string => Boolean(value)))
     return [...set].sort()
@@ -167,27 +172,28 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
   const groups = useMemo(() => {
     const filtered = allGroups.filter((group) =>
       (!onlyUrgent || group.isUrgent)
+      && (!channel || group.messages.some((message) => message.source === channel))
       && (!month || (month === NO_MONTH ? !group.stayMonth : group.stayMonth === month)))
     if (view !== 'todo' && view !== 'mine') return filtered
     return [...filtered].sort((a, b) => {
       if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1
       return a.latest.received_at < b.latest.received_at ? -1 : 1
     })
-  }, [allGroups, onlyUrgent, month, view])
+  }, [allGroups, onlyUrgent, month, channel, view])
 
   const selected = groups.find((group) => group.key === selectedKey) ?? allGroups.find((group) => group.key === selectedKey) ?? null
 
   // After a reply, go straight to the next guest waiting, so nobody has to
   // decide "what now?".
-  const handleSent = useCallback((sentKey: string, stillOpen: boolean) => {
+  const handleSent = useCallback((sentKey: string, stillOpen: boolean, done: string) => {
     if (stillOpen || (view !== 'todo' && view !== 'mine')) {
-      setNotice('Risposta inviata.')
+      setNotice(`${done}.`)
       return
     }
     const index = groups.findIndex((group) => group.key === sentKey)
     const next = groups[index + 1] ?? groups[index - 1] ?? null
     setSelectedKey(next ? next.key : null)
-    setNotice(next ? `Risposta inviata. Ora: ${next.guestName}` : 'Risposta inviata. Non ci sono altri ospiti da rispondere.')
+    setNotice(next ? `${done}. Ora: ${next.guestName}` : `${done}. Non ci sono altri ospiti da rispondere.`)
   }, [groups, view])
 
   if (loadError && !messages) {
@@ -223,6 +229,16 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
             >
               <AlertTriangle size={13} aria-hidden="true" /> Solo urgenti
             </button>
+            {channels.length > 1 || channel ? (
+              <label className="smart-inbox-month-filter">
+                <Inbox size={14} aria-hidden="true" />
+                <span className="sr-only">Canale</span>
+                <select value={channel} onChange={(event) => setChannel(event.target.value as '' | MessageSource)}>
+                  <option value="">Tutti i canali</option>
+                  {channels.map((value) => <option key={value} value={value}>{SOURCE_LABELS[value]}</option>)}
+                </select>
+              </label>
+            ) : null}
             <label className="smart-inbox-month-filter">
               <CalendarDays size={14} aria-hidden="true" />
               <span className="sr-only">Mese del soggiorno</span>
@@ -237,8 +253,9 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
           {groups.length === 0 ? (
             <PageState
               kind="empty"
-              title={onlyUrgent || month ? 'Nessun ospite con questi filtri.' : EMPTY_TITLES[view]}
-              description={view === 'todo' && !onlyUrgent && !month ? 'Le nuove email degli ospiti compariranno qui con una bozza di risposta.' : undefined}
+              title={onlyUrgent || month || channel ? 'Nessun ospite con questi filtri.' : EMPTY_TITLES[view]}
+              description={view === 'todo' && !onlyUrgent && !month && !channel ? 'Le nuove email degli ospiti compariranno qui con una bozza di risposta. Per Booking, WhatsApp e gli altri canali usa Componi risposta.' : undefined}
+              action={view === 'todo' && !onlyUrgent && !month && !channel ? { label: 'Componi risposta', onClick: onCompose } : undefined}
             />
           ) : (
             <ul className="smart-inbox-items">
@@ -263,9 +280,10 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
                       <span className="smart-inbox-item-tags">
                         <StateBadge status={group.latest.status} />
                         {group.isUrgent ? <span className="smart-inbox-urgent-badge"><AlertTriangle size={12} aria-hidden="true" /> Urgente</span> : null}
+                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source)}</span>
                         {group.openCount > 1 ? <span className="status-chip">{group.openCount} email</span> : null}
                       </span>
-                      <span className="smart-inbox-item-subject">{group.latest.subject || '(senza oggetto)'}</span>
+                      {group.latest.source === 'outlook' ? <span className="smart-inbox-item-subject">{group.latest.subject || '(senza oggetto)'}</span> : null}
                       <span className="smart-inbox-item-summary">{group.latest.summary || group.latest.body_preview || ''}</span>
                       <span className="smart-inbox-item-tags">
                         {stay ? <span className="smart-inbox-month-chip"><CalendarDays size={12} aria-hidden="true" /> {stay}</span> : null}
@@ -290,6 +308,8 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
             templates={templates}
             currentProfileId={currentProfileId}
             agentName={agentName}
+            signature={signature}
+            showTranslation={showTranslation}
             onBack={() => setSelectedKey(null)}
             onChanged={load}
             onSent={handleSent}
@@ -304,16 +324,18 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active }:
   )
 }
 
-function ConversationDetail({ client, group, agents, templates, currentProfileId, agentName, onBack, onChanged, onSent }: {
+function ConversationDetail({ client, group, agents, templates, currentProfileId, agentName, signature, showTranslation, onBack, onChanged, onSent }: {
   client: SupabaseClient
   group: ConversationGroup<InboxMessage>
   agents: Agent[]
   templates: ReplyTemplate[]
   currentProfileId: string | null
   agentName: (profileId: string | null) => string | null
+  signature: SignatureInfo | null
+  showTranslation: boolean
   onBack: () => void
   onChanged: () => Promise<void>
-  onSent: (key: string, stillOpen: boolean) => void
+  onSent: (key: string, stillOpen: boolean, done: string) => void
 }) {
   const [thread, setThread] = useState<InboxMessage[] | null>(group.threadId ? null : group.messages)
   const [busy, setBusy] = useState(false)
@@ -367,11 +389,11 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
     }
   }
 
-  async function afterSend() {
+  async function afterSend(done: string) {
     const next = await loadThread()
     const stillOpen = (next ?? []).some((message) => isActionable(message.status))
     await onChanged()
-    onSent(group.key, stillOpen)
+    onSent(group.key, stillOpen, done)
   }
 
   const assignedTo = group.assignedTo
@@ -386,7 +408,13 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
           <span className="smart-inbox-avatar large" aria-hidden="true">{initials(group.guestName)}</span>
           <div>
             <h2>{group.guestName}</h2>
-            {group.guestAddress ? <p className="muted">{group.guestAddress}</p> : null}
+            {group.guestAddress && group.latest.source === 'outlook' ? <p className="muted">{group.guestAddress}</p> : null}
+            {group.latest.source !== 'outlook' ? (
+              <p className="muted">
+                <ClipboardPaste size={12} aria-hidden="true" /> Messaggio da {SOURCE_LABELS[group.latest.source]}
+                {group.latest.created_by ? `, incollato da ${agentName(group.latest.created_by) === 'Tu' ? 'te' : agentName(group.latest.created_by)}` : ''}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -463,6 +491,8 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
                 guestName={group.guestName}
                 templates={templates}
                 agentName={agentName}
+                signature={signature}
+                showTranslation={showTranslation}
                 onChanged={refresh}
                 onSent={afterSend}
               />
@@ -474,65 +504,35 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
   )
 }
 
-function MessageCard({ client, message, guestName, templates, agentName, onChanged, onSent }: {
+function MessageCard({ client, message, guestName, templates, agentName, signature, showTranslation, onChanged, onSent }: {
   client: SupabaseClient
   message: InboxMessage
   guestName: string
   templates: ReplyTemplate[]
   agentName: (profileId: string | null) => string | null
+  signature: SignatureInfo | null
+  showTranslation: boolean
   onChanged: () => Promise<void>
-  onSent: () => Promise<void>
+  onSent: (done: string) => Promise<void>
 }) {
   const draft = message.draft
   const actionable = isActionable(message.status)
-  const editable = actionable && (draft?.status === 'pending' || !draft)
-  const [body, setBody] = useState(draft?.body ?? '')
+  const editable = actionable && draft?.status === 'pending'
   const [expanded, setExpanded] = useState(actionable)
-  const [busy, setBusy] = useState<null | 'send' | 'save' | 'regenerate' | 'status'>(null)
+  const [busy, setBusy] = useState<null | 'regenerate' | 'status'>(null)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const dirty = Boolean(draft) && editable && body !== draft?.body
 
-  // A regenerated draft arrives through a reload: adopt it unless the
-  // person is in the middle of editing.
-  useEffect(() => {
-    if (!dirty) setBody(draft?.body ?? '')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft?.body])
-
-  async function run(kind: NonNullable<typeof busy>, action: () => Promise<unknown>, done?: string, after: () => Promise<void> = onChanged) {
+  async function run(kind: NonNullable<typeof busy>, action: () => Promise<unknown>) {
     setBusy(kind)
     setError(null)
-    setNotice(null)
     try {
       await action()
-      if (done) setNotice(done)
-      await after()
+      await onChanged()
     } catch (cause) {
       setError(readableError(cause))
     } finally {
       setBusy(null)
     }
-  }
-
-  function insertTemplate(templateId: string) {
-    const template = templates.find((item) => item.id === templateId)
-    if (!template) return
-    const text = fillTemplate(template.body, guestName)
-    const area = textareaRef.current
-    if (!area || !body.trim()) {
-      setBody(text)
-      return
-    }
-    const start = area.selectionStart ?? body.length
-    const end = area.selectionEnd ?? body.length
-    const next = `${body.slice(0, start)}${text}${body.slice(end)}`
-    setBody(next)
-    requestAnimationFrame(() => {
-      area.focus()
-      area.setSelectionRange(start + text.length, start + text.length)
-    })
   }
 
   const problem = messageErrorLabel(message.error)
@@ -541,12 +541,13 @@ function MessageCard({ client, message, guestName, templates, agentName, onChang
   const guestText = message.body_text || message.body_preview || 'Contenuto non ancora disponibile.'
   const sentReply = draft?.status === 'sent' ? draft : null
   const sentBy = sentReply?.sent_by ? agentName(sentReply.sent_by) : null
+  const pasted = message.source !== 'outlook'
 
   return (
     <article className={`smart-inbox-message${actionable ? ' open' : ''}`}>
       <header className="smart-inbox-message-head">
         <div>
-          <strong>{message.subject || '(senza oggetto)'}</strong>
+          <strong>{pasted ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
           <time dateTime={message.received_at}>{formatWhen(message.received_at)}</time>
         </div>
         <div className="smart-inbox-meta">
@@ -569,43 +570,24 @@ function MessageCard({ client, message, guestName, templates, agentName, onChang
       {sentReply ? (
         <div className="smart-inbox-reply">
           <p className="smart-inbox-reply-head">
-            <CheckCircle2 size={13} aria-hidden="true" /> Risposto{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
+            <CheckCircle2 size={13} aria-hidden="true" /> {pasted ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
           </p>
           <div className="smart-inbox-reply-body">{sentReply.body}</div>
         </div>
       ) : null}
 
-      {actionable && draft && draft.suggested_actions.length > 0 ? (
-        <div className="smart-inbox-actions-box">
-          <h3>Da organizzare</h3>
-          <ul>
-            {draft.suggested_actions.map((action, index) => (
-              <li key={index}><strong>{ACTION_LABELS[action.type]}:</strong> {action.details}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {actionable && draft && editable ? (
-        <div className="smart-inbox-draft">
-          <div className="smart-inbox-draft-head">
-            <h3>La tua risposta</h3>
-            {templates.length > 0 ? (
-              <label className="smart-inbox-template-picker">
-                <FileText size={14} aria-hidden="true" />
-                <span className="sr-only">Inserisci un modello</span>
-                <select value="" onChange={(event) => insertTemplate(event.target.value)}>
-                  <option value="">Inserisci modello…</option>
-                  {templates.map((template) => <option key={template.id} value={template.id}>{template.title}</option>)}
-                </select>
-              </label>
-            ) : null}
-          </div>
-          <label className="form-field">
-            <span className="sr-only">Testo della risposta</span>
-            <textarea ref={textareaRef} value={body} onChange={(event) => setBody(event.target.value)} rows={12} maxLength={20000} />
-          </label>
-        </div>
+      {editable && draft ? (
+        <ReplyComposer
+          client={client}
+          message={message}
+          draft={draft}
+          guestName={guestName}
+          templates={templates}
+          signature={signature}
+          showTranslation={showTranslation}
+          onChanged={onChanged}
+          onSent={({ copied }) => onSent(pasted ? (copied ? 'Risposta copiata e segnata come risposta' : 'Segnata come risposta: copia il testo dallo storico') : 'Risposta inviata')}
+        />
       ) : null}
       {actionable && !draft ? (
         <p className="muted smart-inbox-note">
@@ -614,19 +596,8 @@ function MessageCard({ client, message, guestName, templates, agentName, onChang
       ) : null}
 
       {error ? <p className="form-error" role="alert">{error}</p> : null}
-      {notice ? <p className="smart-inbox-notice" role="status">{notice}</p> : null}
 
       <div className="smart-inbox-buttons">
-        {actionable && draft && editable ? (
-          <Button variant="primary" onClick={() => void run('send', () => sendReply(client, draft.id, body), undefined, onSent)} disabled={busy !== null || !body.trim()}>
-            <Send size={15} /> {busy === 'send' ? 'Invio…' : 'Invia risposta'}
-          </Button>
-        ) : null}
-        {dirty && draft ? (
-          <Button variant="secondary" onClick={() => void run('save', () => saveDraftBody(client, draft.id, body), 'Bozza salvata.')} disabled={busy !== null}>
-            {busy === 'save' ? 'Salvataggio…' : 'Salva bozza'}
-          </Button>
-        ) : null}
         {actionable && message.status !== 'processing' ? (
           <Button variant="secondary" onClick={() => void run('regenerate', () => regenerateDraft(client, message.id))} disabled={busy !== null}>
             <Sparkles size={15} /> {busy === 'regenerate' ? 'Generazione…' : draft ? 'Rigenera bozza' : 'Genera bozza'}
