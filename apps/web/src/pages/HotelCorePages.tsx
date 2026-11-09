@@ -15,7 +15,6 @@ type Stay = {
   id: string
   room_id: string
   guest_last_name: string
-  guest_pin: string
   check_in_at: string
   check_out_at: string
   status: 'active' | 'closed' | 'cancelled'
@@ -148,7 +147,7 @@ export function CoreRoomsPage() {
 }
 
 export function CoreStaysPage() {
-  const { hotelId, error: accessError } = useCoreHotel()
+  const { hotelId, error: accessError, loading } = useCoreHotel()
   const [rooms, setRooms] = useState<Room[]>([])
   const [stays, setStays] = useState<Stay[]>([])
   const [roomId, setRoomId] = useState('')
@@ -158,17 +157,18 @@ export function CoreStaysPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [revealedPinIds, setRevealedPinIds] = useState<string[]>([])
+  const [revealedPins, setRevealedPins] = useState<Record<string, string>>({})
 
   const reload = useCallback(async () => {
     if (!hotelId) return
     const [roomsResult, staysResult] = await Promise.all([
       hotelDb.from('rooms').select('id,room_number,active').eq('hotel_id', hotelId).order('room_number'),
-      hotelDb.from('stays').select('id,room_id,guest_last_name,guest_pin,check_in_at,check_out_at,status,rooms(room_number)')
+      hotelDb.from('stays').select('id,room_id,guest_last_name,check_in_at,check_out_at,status,rooms(room_number)')
         .eq('hotel_id', hotelId).eq('status', 'active').order('check_in_at', { ascending: false }),
     ])
     if (roomsResult.error) throw roomsResult.error
     if (staysResult.error) throw staysResult.error
+    setRevealedPins({})
     setRooms(roomsResult.data ?? [])
     setStays((staysResult.data ?? []).map((stay) => ({ ...stay, rooms: Array.isArray(stay.rooms) ? (stay.rooms[0] ?? null) : stay.rooms })) as Stay[])
   }, [hotelId])
@@ -176,6 +176,26 @@ export function CoreStaysPage() {
     setRooms([]); setStays([])
     void reload().catch((cause) => setError(errorText(cause)))
   }, [reload])
+
+  async function togglePin(stay: Stay) {
+    if (revealedPins[stay.id] !== undefined) {
+      setRevealedPins(current => {
+        const next = { ...current }
+        delete next[stay.id]
+        return next
+      })
+      return
+    }
+    if (!hotelId) return
+    setError(null)
+    try {
+      const result = await hotelDb.from('stays').select('guest_pin')
+        .eq('hotel_id', hotelId).eq('id', stay.id).eq('status', 'active').maybeSingle()
+      if (result.error) throw result.error
+      if (!result.data) throw new Error('Soggiorno non disponibile.')
+      setRevealedPins(current => ({ ...current, [stay.id]: String(result.data.guest_pin ?? '') }))
+    } catch (cause) { setError(errorText(cause)) }
+  }
 
   async function addStay(event: FormEvent) {
     event.preventDefault()
@@ -253,6 +273,7 @@ export function CoreStaysPage() {
     <div className="page-stack">
       <PageHeader eyebrow="Hotel Core" title="Soggiorni" description="Gestione condivisa dei soggiorni, anche senza Housekeeping." />
       <CoreNavigation />
+      {loading && <p role="status">Verifica accesso alla struttura…</p>}
       {accessError && <p role="alert">{accessError}</p>}
       {error && <p role="alert">{error}</p>}
       {hotelId && (
@@ -279,7 +300,7 @@ export function CoreStaysPage() {
                 <span className="settings-row-main">
                   <strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
                   <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
-                  <small>PIN ospite: {revealedPinIds.includes(stay.id) ? stay.guest_pin : '••••'} <button type="button" onClick={() => setRevealedPinIds(ids => ids.includes(stay.id) ? ids.filter(id => id !== stay.id) : [...ids, stay.id])}>{revealedPinIds.includes(stay.id) ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
+                  <small>PIN ospite: {revealedPins[stay.id] ?? '••••'} <button type="button" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
                 </span>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => editStay(stay)}>Modifica</button>
