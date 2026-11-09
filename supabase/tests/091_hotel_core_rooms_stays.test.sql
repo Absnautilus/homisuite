@@ -34,11 +34,12 @@ select is(
  and mo.slug='guest_requests' and pm.enabled),0,
  'Housekeeping is disabled');
 
+select platform_property_id as core_property_a from legacy_property_mapping where legacy_hotel_id='00000092-0000-0000-0000-00000000ff01' \\gset
+select platform_property_id as core_property_b from legacy_property_mapping where legacy_hotel_id='00000092-0000-0000-0000-00000000ff02' \\gset
 set local role authenticated;
 set local request.jwt.claim.sub='00000092-0000-0000-0000-000000000a01';
 select is(
- core_hotel_id_for_property((select platform_property_id from legacy_property_mapping
- where legacy_hotel_id='00000092-0000-0000-0000-00000000ff01')),
+ core_hotel_id_for_property(:'core_property_a'::uuid),
  '00000092-0000-0000-0000-00000000ff01'::uuid,
  'Core admin resolves the hotel without module entitlement');
 select lives_ok(
@@ -54,14 +55,12 @@ select is(
  'Core admin reads its stay');
 
 select is(
- core_hotel_id_for_property((select platform_property_id from legacy_property_mapping
- where legacy_hotel_id='00000092-0000-0000-0000-00000000ff02')),
+ core_hotel_id_for_property(:'core_property_b'::uuid),
  null::uuid, 'Core admin cannot resolve a different organization property');
 
 set local request.jwt.claim.sub='00000092-0000-0000-0000-000000000a02';
 select is(
- core_hotel_id_for_property((select platform_property_id from legacy_property_mapping
- where legacy_hotel_id='00000092-0000-0000-0000-00000000ff01')),
+ core_hotel_id_for_property(:'core_property_a'::uuid),
  null::uuid,'receptionist without core.property.manage cannot use management bridge');
 select is((select count(*)::int from stays where hotel_id='00000092-0000-0000-0000-00000000ff01'),0,
  'receptionist cannot read Core stays without management permission or Housekeeping entitlement');
