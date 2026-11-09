@@ -9,7 +9,7 @@ import { getEnabledModules } from './modules'
 import { getGuestRequestsLegacyHotelId, getGuestRequestsSlugForProperty } from './guestRequests'
 import { getDiningLegacyHotelId } from './dining'
 import { archiveTeamMember, createJobTitle, createTeamMemberWithCredentials, getHousekeepingAccessStatus, getJobTitles, getMemberModuleAccessStatus, getMemberPermissionStatus, getPropertyRoles, getTeamMembers, grantHousekeepingAccess, grantMemberPermission, inviteTeamMember, resetTeamMemberPassword, revokeHousekeepingAccess, revokeMemberPermission, setMemberModuleAccess, updateJobTitle, updateTeamMember } from './team'
-import { archivePlatformTeamMember, closePlatformOperationalSession, completeGuestRequestAsPlatformImpersonation, createPlatformOrganization, createPlatformProperty, createPlatformTeamMember, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOperationalSessions, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, getPlatformPropertyTeam, logPlatformConsoleAccess, logPlatformOperationalView, openPlatformImpersonationSession, openPlatformOperationalSession, resetPlatformTeamMemberPassword, revokePlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty, updatePlatformTeamMember } from './platformAdmin'
+import { archivePlatformTeamMember, closePlatformOperationalSession, completeGuestRequestAsPlatformImpersonation, createStayAsPlatformImpersonation, type PlatformCreatedStay, createPlatformOrganization, createPlatformProperty, createPlatformTeamMember, getMyPlatformOperationalSession, getPlatformAdminSelfStatus, getPlatformAuditLog, getPlatformOperationalSessions, getPlatformOrganizations, getPlatformProperties, getPlatformPropertyModules, getPlatformPropertyTeam, logPlatformConsoleAccess, logPlatformOperationalView, openPlatformImpersonationSession, openPlatformOperationalSession, resetPlatformTeamMemberPassword, revokePlatformOperationalSession, setPlatformPropertyModule, updatePlatformOrganization, updatePlatformProperty, updatePlatformTeamMember } from './platformAdmin'
 
 export interface CoreClient {
   // Escape hatch for a module that needs the raw Supabase client (e.g. to
@@ -68,6 +68,7 @@ export interface CoreClient {
   createPlatformTeamMember: (input: CreatePlatformTeamMemberInput) => Promise<CreatePlatformTeamMemberResult>
   openPlatformImpersonationSession: (propertyId: string, actingAsMembershipId: string, reason?: string) => Promise<string>
   completeGuestRequestAsPlatformImpersonation: (guestRequestId: string, actingAsMembershipId: string) => Promise<void>
+  createStayAsPlatformImpersonation: (input: { propertyId: string; roomId: string; guestLastName: string; checkInAt: string; checkOutAt: string; actingAsMembershipId: string }) => Promise<PlatformCreatedStay>
   updatePlatformTeamMember: (input: UpdatePlatformTeamMemberInput) => Promise<void>
   archivePlatformTeamMember: (membershipId: string) => Promise<void>
   resetPlatformTeamMemberPassword: (input: ResetPlatformTeamMemberPasswordInput) => Promise<void>
@@ -131,6 +132,7 @@ export function createCoreClient(supabaseUrl: string, supabaseAnonKey: string): 
       openPlatformImpersonationSession(raw, propertyId, actingAsMembershipId, reason),
     completeGuestRequestAsPlatformImpersonation: (guestRequestId, actingAsMembershipId) =>
       completeGuestRequestAsPlatformImpersonation(raw, guestRequestId, actingAsMembershipId),
+    createStayAsPlatformImpersonation: (input) => createStayAsPlatformImpersonation(raw, input),
     updatePlatformTeamMember: (input) => updatePlatformTeamMember(raw, input),
     archivePlatformTeamMember: (membershipId) => archivePlatformTeamMember(raw, membershipId),
     resetPlatformTeamMemberPassword: (input) => resetPlatformTeamMemberPassword(raw, input),
