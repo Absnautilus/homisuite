@@ -25,10 +25,11 @@ interface AdminHomeProps {
   platformStaffManagement?: PlatformStaffManagementLink
   /** Embedded mode only: scopes the operators roster to this hotel. */
   hotelId?: string
+  sharedCoreNavigation?: boolean
   embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
 }
 
-export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId, embeddedNav }: AdminHomeProps) {
+export function AdminHome({ profile, basePath, embedded = false, platformStaffManagement, hotelId, embeddedNav, sharedCoreNavigation = false }: AdminHomeProps) {
   const { t } = useLocale()
   const navigate = useNavigate()
   const hotelName = useHotelName()
@@ -38,7 +39,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
   // which pane is visible -- the nav and the content can't disagree since
   // both read the same match().
   const tabs = [
-    {
+    ...(!sharedCoreNavigation ? [{
       to: basePath,
       label: t('staff.admin.tabStaff'),
       match: (p: string) => p === basePath || p === `${basePath}/`,
@@ -49,6 +50,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
       ),
     },
     { to: `${basePath}/camere`, label: t('staff.admin.tabRooms'), match: (p: string) => p.startsWith(`${basePath}/camere`), element: <RoomsPage hotelId={operationalHotelId} /> },
+    ] : []),
     { to: `${basePath}/menu`, label: t('staff.admin.tabMenu'), match: (p: string) => p.startsWith(`${basePath}/menu`), element: <ItemsPage hotelId={operationalHotelId} /> },
     { to: `${basePath}/disponibilita`, label: t('staff.admin.tabAvailability'), match: (p: string) => p.startsWith(`${basePath}/disponibilita`), element: <AvailabilityPage hotelId={operationalHotelId} /> },
     { to: `${basePath}/statistiche`, label: t('staff.admin.tabStats'), match: (p: string) => p.startsWith(`${basePath}/statistiche`), element: <StatsPage hotelId={operationalHotelId} /> },
@@ -56,7 +58,10 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
     { to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> },
   ]
   const activeTab = tabs.find((tab) => tab.match(location.pathname))
-  const tabIcons = [<UsersRound />, <BedDouble />, <ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
+  const selectedTab = activeTab?.to ?? (sharedCoreNavigation ? `${basePath}/menu` : basePath)
+  const tabIcons = sharedCoreNavigation
+    ? [<ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
+    : [<UsersRound />, <BedDouble />, <ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
   const navItems = tabs.map((tab, index) => ({ value: tab.to, label: tab.label, icon: tabIcons[index] }))
 
 
@@ -68,7 +73,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
           {...embeddedNav}
           secondary={{
             items: navItems,
-            value: activeTab?.to ?? basePath,
+            value: selectedTab,
             onValueChange: (value) => navigate(value),
             ariaLabel: t('staff.nav.admin'),
             scrollIntoView: true,
@@ -97,7 +102,7 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
           rather than destroying it is what makes switching back to it
           instant instead of flashing through a loading state again. */}
       {tabs.map((tab) => (
-        <div key={tab.to} hidden={tab.to !== (activeTab?.to ?? basePath)}>{tab.element}</div>
+        <div key={tab.to} hidden={tab.to !== selectedTab}>{tab.element}</div>
       ))}
     </div>
   )
