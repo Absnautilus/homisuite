@@ -109,6 +109,17 @@ export function HousekeepingModuleGate() {
   const onCompleteOverride = actingAsMembershipId
     ? (requestId: string) => core.completeGuestRequestAsPlatformImpersonation(requestId, actingAsMembershipId)
     : undefined
+  const onCreateStayOverride = actingAsMembershipId && runtime.isPlatformOperationalView && runtime.property
+    ? (input: { roomId: string; guestLastName: string; checkInAt: string; checkOutAt: string }) =>
+        core.createStayAsPlatformImpersonation({
+          propertyId: runtime.property!.id,
+          actingAsMembershipId,
+          roomId: input.roomId,
+          guestLastName: input.guestLastName,
+          checkInAt: input.checkInAt,
+          checkOutAt: input.checkOutAt,
+        })
+    : undefined
   return (
     <HousekeepingModule
       supabase={supabase}
@@ -127,6 +138,7 @@ export function HousekeepingModuleGate() {
       }}
       readOnlyProfile={readOnlyProfile}
       onCompleteOverride={onCompleteOverride}
+      onCreateStayOverride={onCreateStayOverride}
     />
   )
 }
