@@ -199,7 +199,9 @@ test('organization admin manages Core rooms and stays independently of Housekeep
 
   await page.getByRole('link', { name: 'Soggiorni', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Soggiorni' })).toBeVisible()
-  await page.getByLabel('Camera', { exact: true }).selectOption({ label: roomNumber })
+  await expect(page.getByRole('button', { name: 'Attiva soggiorno' })).toBeVisible({ timeout: 10000 })
+  await expect(page.getByRole('option', { name: roomNumber })).toBeAttached({ timeout: 10000 })
+  await page.getByRole('combobox').selectOption({ label: roomNumber })
   await page.getByLabel('Cognome ospite').fill('CoreTest')
   await page.getByLabel('Check-in').fill('2030-05-01T14:00')
   await page.getByLabel('Check-out').fill('2030-05-02T11:00')
