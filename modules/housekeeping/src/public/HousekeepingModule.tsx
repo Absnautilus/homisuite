@@ -5,6 +5,7 @@ import { HotelBrandingProvider } from '@/lib/hotel-branding-context'
 import { configureSupabaseClient } from '@/lib/supabase'
 import { StaffApp } from '@/staff/staff-app'
 import type { StaffProfile } from '@/lib/staff-types'
+import type { Stay } from '@/lib/stays-api'
 import '../embedded.css'
 
 export interface HousekeepingCapabilities {
@@ -71,6 +72,7 @@ export interface HousekeepingModuleProps {
    * staff always use the module's own write path.
    */
   onCompleteOverride?: (requestId: string) => Promise<void>
+  onCreateStayOverride?: (input: { hotelId: string; roomId: string; guestLastName: string; checkInAt: string; checkOutAt: string }) => Promise<Stay>
 }
 
 /**
@@ -90,6 +92,7 @@ export function HousekeepingModule({
   hotelSettings,
   readOnlyProfile,
   onCompleteOverride,
+  onCreateStayOverride,
 }: HousekeepingModuleProps) {
   // This compatibility boundary must run before StaffApp effects or API calls
   // so integrated mode never creates Housekeeping's standalone Supabase client.
@@ -109,6 +112,7 @@ export function HousekeepingModule({
               hotelSettings={hotelSettings}
               readOnlyProfile={readOnlyProfile}
               onCompleteOverride={onCompleteOverride}
+              onCreateStayOverride={onCreateStayOverride}
             />
           </HotelBrandingProvider>
         </UiScaleProvider>
