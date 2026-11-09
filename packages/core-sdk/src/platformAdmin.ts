@@ -288,3 +288,38 @@ export async function resetPlatformTeamMemberPassword(
   const { error } = await client.functions.invoke('platform-reset-team-member-password', { body: input })
   if (error) throw await invokePlatformErrorMessage(error)
 }
+
+export interface PlatformCreatedStay {
+  id: string
+  room_id: string
+  guest_last_name: string
+  guest_pin: string
+  check_in_at: string
+  check_out_at: string
+  status: 'active' | 'closed' | 'cancelled'
+  rooms: { room_number: string } | null
+}
+
+/** Narrow audited write while in a privileged, property-scoped "view as" session. */
+export async function createStayAsPlatformImpersonation(
+  client: SupabaseClient<Database>,
+  input: {
+    propertyId: string
+    roomId: string
+    guestLastName: string
+    checkInAt: string
+    checkOutAt: string
+    actingAsMembershipId: string
+  },
+): Promise<PlatformCreatedStay> {
+  const { data, error } = await client.rpc('platform_impersonated_create_stay', {
+    p_property_id: input.propertyId,
+    p_room_id: input.roomId,
+    p_guest_last_name: input.guestLastName,
+    p_check_in_at: input.checkInAt,
+    p_check_out_at: input.checkOutAt,
+    p_acting_as_membership_id: input.actingAsMembershipId,
+  })
+  if (error) throw error
+  return data as unknown as PlatformCreatedStay
+}
