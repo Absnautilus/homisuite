@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { PageHeader } from '@homisuite/ui'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload } from 'lucide-react'
+import { Button, PageHeader, Tabs } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { parseOperaArrivals, operaDateToLocalValue } from '../lib/operaImport'
@@ -104,12 +105,12 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
     if (ok) await onImported().catch(cause => setError(errorText(cause)))
     setDrafts([])
   }
-  return <details className="shell-card p-4">
-    <summary className="cursor-pointer font-semibold">Importa soggiorni da Opera</summary>
+  return <details className="shell-card rounded-xl p-5">
+    <summary className="cursor-pointer font-semibold flex items-center gap-2"><Upload size={17} /> Importa soggiorni da Opera</summary>
     <p>Carica un report arrivi Opera in formato testo delimitato. Controlla camere, ospiti e date prima di importare.</p>
     <label>Report Opera <input aria-label="Report Opera" type="file" accept=".txt,.csv,text/plain" onChange={e => { void readFile(e.target.files?.[0]) }} /></label>
     {warnings.length > 0 && <p role="status">{warnings.length} righe del report richiedono attenzione.</p>}
-    {drafts.map(d => <div className="settings-row flex flex-wrap gap-2" key={d.key}>
+    {drafts.map(d => <div className="settings-row flex flex-wrap items-center gap-3" key={d.key}>
       <label><input type="checkbox" checked={d.include} onChange={e => update(d.key, { include: e.target.checked })} /> Importa</label>
       <select aria-label="Camera Opera" value={d.roomId} onChange={e => update(d.key, { roomId: e.target.value })}>
         <option value="">Camera non assegnata</option>
@@ -119,7 +120,7 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
       <input aria-label="Check-in Opera" type="datetime-local" value={d.checkIn} onChange={e => update(d.key, { checkIn: e.target.value })} />
       <input aria-label="Check-out Opera" type="datetime-local" value={d.checkOut} onChange={e => update(d.key, { checkOut: e.target.value })} />
     </div>)}
-    {drafts.length > 0 && <button type="button" className="btn btn-primary" disabled={busy || !drafts.some(d => d.include)} onClick={() => { void importSelected() }}>{busy ? 'Importazione…' : 'Conferma importazione'}</button>}
+    {drafts.length > 0 && <Button variant="primary" loading={busy} disabled={!drafts.some(d => d.include)} onClick={() => { void importSelected() }}>{busy ? 'Importazione…' : 'Conferma importazione'}</Button>}
     {result && <p role="status">{result}</p>}
     {error && <p role="alert">{error}</p>}
   </details>
@@ -127,14 +128,14 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
 
 function CoreNavigation() {
   const location = useLocation()
-  return (
-    <nav aria-label="Gestione hotel" className="flex flex-wrap gap-3">
-      <Link to="/settings/rooms" aria-current={location.pathname.endsWith('/rooms') ? 'page' : undefined}>Camere</Link>
-      <Link to="/settings/stays" aria-current={location.pathname.endsWith('/stays') ? 'page' : undefined}>Soggiorni</Link>
-      <Link to="/team">Team</Link>
-      <Link to="/settings">Impostazioni</Link>
-    </nav>
-  )
+  const navigate = useNavigate()
+  const items = [
+    { value: '/settings/rooms', label: 'Camere', icon: <BedDouble size={17} /> },
+    { value: '/settings/stays', label: 'Soggiorni', icon: <CalendarDays size={17} /> },
+    { value: '/team', label: 'Team', icon: <UsersRound size={17} /> },
+    { value: '/settings', label: 'Impostazioni', icon: <Settings2 size={17} /> },
+  ]
+  return <Tabs items={items} value={location.pathname} onValueChange={navigate} variant="surface" scrollIntoView aria-label="Gestione hotel" />
 }
 
 export function CoreRoomsPage() {
@@ -207,19 +208,19 @@ export function CoreRoomsPage() {
       {error && <p role="alert">{error}</p>}
       {hotelId && (
         <>
-          <form onSubmit={(e) => { void addRoom(e) }} className="flex flex-wrap gap-3 items-end">
-            <label>Numero camera <input className="form-input" required value={number} onChange={(e) => setNumber(e.target.value)} /></label>
-            <button className="btn btn-primary" type="submit" disabled={busy}>Aggiungi camera</button>
+          <form onSubmit={(e) => { void addRoom(e) }} className="shell-card rounded-xl p-5 flex flex-wrap gap-4 items-end">
+            <label className="flex flex-col gap-2 text-sm font-medium text-foreground">Numero camera <input className="form-input min-w-48 rounded-lg" required value={number} onChange={(e) => setNumber(e.target.value)} /></label>
+            <Button variant="primary" type="submit" loading={busy}><Plus size={16} /> Aggiungi camera</Button>
           </form>
           <div className="settings-list shell-card">
             {rooms.length === 0 && <p>Nessuna camera configurata.</p>}
             {rooms.map(room => (
               <div key={room.id} className="settings-row">
-                <span className="settings-row-main"><strong>Camera {room.room_number}</strong> · {room.active ? 'Attiva' : 'Disattivata'}</span>
-                <button type="button" onClick={() => { void toggleRoom(room) }}>
+                <span className="settings-row-main"><span className="settings-row-icon"><BedDouble size={17} /></span><span><strong>Camera {room.room_number}</strong><small>{room.active ? 'Attiva' : 'Disattivata'}</small></span></span>
+                <Button variant="secondary" size="sm" onClick={() => { void toggleRoom(room) }}>
                   {room.active ? 'Disattiva' : 'Attiva'}
-                </button>
-                <button type="button" onClick={() => { void deleteRoom(room) }}>Elimina</button>
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => { void deleteRoom(room) }}>Elimina</Button>
               </div>
             ))}
           </div>
@@ -363,19 +364,19 @@ export function CoreStaysPage() {
       {hotelId && (
         <>
           <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
-          <form onSubmit={(e) => { void addStay(e) }} className="shell-card p-4 grid gap-3">
-            <label>Camera
-              <select required value={roomId} onChange={e => setRoomId(e.target.value)}>
+          <form onSubmit={(e) => { void addStay(e) }} className="shell-card rounded-xl p-5 grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium">Camera
+              <select className="form-input rounded-lg" required value={roomId} onChange={e => setRoomId(e.target.value)}>
                 <option value="">Seleziona camera</option>
                 {rooms.filter(room => room.active || room.id === roomId).map(room => <option key={room.id} value={room.id}>{room.room_number}</option>)}
               </select>
             </label>
-            <label>Cognome ospite <input required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
-            <label>Check-in <input type="datetime-local" required value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label>
-            <label>Check-out <input type="datetime-local" required value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label>
-            <div className="flex gap-2">
-              <button className="btn btn-primary" type="submit" disabled={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</button>
-              {editingId && <button type="button" onClick={resetForm}>Annulla modifica</button>}
+            <label className="flex flex-col gap-2 text-sm font-medium">Cognome ospite <input className="form-input rounded-lg" required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
+            <label className="flex flex-col gap-2 text-sm font-medium">Check-in <input className="form-input rounded-lg" type="datetime-local" required value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label>
+            <label className="flex flex-col gap-2 text-sm font-medium">Check-out <input className="form-input rounded-lg" type="datetime-local" required value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label>
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+              <Button variant="primary" type="submit" loading={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</Button>
+              {editingId && <Button variant="secondary" onClick={resetForm}>Annulla modifica</Button>}
             </div>
           </form>
           <div className="settings-list shell-card">
@@ -388,10 +389,10 @@ export function CoreStaysPage() {
                   <small>PIN ospite: {revealedPins[stay.id] ?? '••••'} <button type="button" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
                 </span>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => editStay(stay)}>Modifica</button>
-                  <button type="button" onClick={() => { void extendStay(stay) }}>Estendi</button>
-                  <button type="button" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</button>
-                  <button type="button" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</button>
+                  <Button variant="secondary" size="sm" onClick={() => editStay(stay)}>Modifica</Button>
+                  <Button variant="secondary" size="sm" onClick={() => { void extendStay(stay) }}>Estendi</Button>
+                  <Button variant="primary" size="sm" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</Button>
+                  <Button variant="danger" size="sm" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</Button>
                 </div>
               </div>
             ))}
