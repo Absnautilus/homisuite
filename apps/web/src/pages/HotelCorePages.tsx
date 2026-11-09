@@ -131,6 +131,7 @@ function CoreNavigation() {
     <nav aria-label="Gestione hotel" className="flex flex-wrap gap-3">
       <Link to="/settings/rooms" aria-current={location.pathname.endsWith('/rooms') ? 'page' : undefined}>Camere</Link>
       <Link to="/settings/stays" aria-current={location.pathname.endsWith('/stays') ? 'page' : undefined}>Soggiorni</Link>
+      <Link to="/team">Team</Link>
       <Link to="/settings">Impostazioni</Link>
     </nav>
   )

@@ -86,15 +86,16 @@ test('receptionist sees the complete property roster in read-only mode', async (
   await expect(page.getByRole('button', { name: /Rimuovi E2E/ })).toHaveCount(0)
 })
 
-test('organization admin can navigate the mapped Housekeeping stay', async ({ page }) => {
+test('organization admin reaches shared Core stays from legacy Housekeeping deep link', async ({ page }) => {
   await login(page, ORG_ADMIN_EMAIL)
   await page.goto('/housekeeping')
   await expect(page.getByRole('tab', { name: 'Richieste', exact: true })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Soggiorni', exact: true })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Gestione', exact: true })).toBeVisible()
-  await page.getByRole('tab', { name: 'Soggiorni', exact: true }).click()
+  await expect(page.getByRole('tab', { name: 'Soggiorni', exact: true })).toHaveCount(0)
+  await page.goto('/housekeeping/soggiorni')
+  await expect(page).toHaveURL(/\/settings\/stays$/)
   await expect(page.getByRole('heading', { name: 'Soggiorni' })).toBeVisible()
-  await expect(page.getByText(/Camera 101 · Rossi/)).toBeVisible()
+  await expect(page.getByText(/Rossi/)).toBeVisible()
 })
 
 test('organization admin can manage a Housekeeping request category and its item', async ({ page }, testInfo) => {
