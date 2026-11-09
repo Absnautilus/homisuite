@@ -34,8 +34,8 @@ select is(
  and mo.slug='guest_requests' and pm.enabled),0,
  'Housekeeping is disabled');
 
-select platform_property_id as core_property_a from legacy_property_mapping where legacy_hotel_id='00000092-0000-0000-0000-00000000ff01' \\gset
-select platform_property_id as core_property_b from legacy_property_mapping where legacy_hotel_id='00000092-0000-0000-0000-00000000ff02' \\gset
+select platform_property_id as core_property_a from legacy_property_mapping where legacy_hotel_id='00000092-0000-0000-0000-00000000ff01' \gset
+select platform_property_id as core_property_b from legacy_property_mapping where legacy_hotel_id='00000092-0000-0000-0000-00000000ff02' \gset
 set local role authenticated;
 set local request.jwt.claim.sub='00000092-0000-0000-0000-000000000a01';
 select is(
