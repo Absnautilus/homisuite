@@ -63,6 +63,7 @@ export interface HousekeepingModuleProps {
    * object instead of resolving `fetchMyProfile()`, and it is never written
    * back to the database. Omit for every ordinary embedding.
    */
+  sharedCoreNavigation?: boolean
   readOnlyProfile?: StaffProfile
   /**
    * Shell-supplied replacement for the queue's own completion write --
@@ -89,6 +90,7 @@ export function HousekeepingModule({
   platformStaffManagement,
   hotelSettings,
   readOnlyProfile,
+  sharedCoreNavigation = false,
   onCompleteOverride,
 }: HousekeepingModuleProps) {
   // This compatibility boundary must run before StaffApp effects or API calls
@@ -108,6 +110,7 @@ export function HousekeepingModule({
               platformStaffManagement={platformStaffManagement}
               hotelSettings={hotelSettings}
               readOnlyProfile={readOnlyProfile}
+              sharedCoreNavigation={sharedCoreNavigation}
               onCompleteOverride={onCompleteOverride}
             />
           </HotelBrandingProvider>
