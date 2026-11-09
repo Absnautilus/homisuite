@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { HousekeepingModule } from '@homisuite/housekeeping-module'
 import type { StaffProfile } from '@homisuite/housekeeping-module'
 import '@homisuite/housekeeping-module/style.css'
@@ -26,6 +27,14 @@ export function HousekeepingModuleGate() {
   // for a facchino) via useHousekeepingCapabilities, so both read the same
   // cached resolution instead of querying twice.
   const capabilities = useHousekeepingCapabilities()
+  const [canUseCoreInventory, setCanUseCoreInventory] = useState(false)
+  useEffect(() => {
+    let active = true
+    Promise.all([runtime.hasPermission('core.property.manage'), runtime.hasPermission('core.staff.manage')])
+      .then(([property, staff]) => { if (active) setCanUseCoreInventory(property || staff) })
+      .catch(() => { if (active) setCanUseCoreInventory(false) })
+    return () => { active = false }
+  }, [runtime.hasPermission, runtime.property?.id])
 
   if (access.status === 'loading' || capabilities === null) {
     return <PageState kind="loading" title="Caricamento Housekeeping…" />
@@ -126,7 +135,7 @@ export function HousekeepingModuleGate() {
         checkOutTime: typeof settings.checkOutTime === 'string' ? settings.checkOutTime : null,
       }}
       readOnlyProfile={readOnlyProfile}
-      sharedCoreNavigation={!runtime.isPlatformOperationalView}
+      sharedCoreNavigation={!runtime.isPlatformOperationalView && canUseCoreInventory}
       onCompleteOverride={onCompleteOverride}
     />
   )
