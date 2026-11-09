@@ -7,7 +7,7 @@ import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { ModulesPage } from '../pages/ModulesPage'
 import { TeamPage } from '../pages/TeamPage'
 import { SettingsPage } from '../pages/SettingsPage'
-import { CoreRoomsPage, CoreStaysPage } from '../pages/HotelCorePages'
+import { CoreRoomsPage, CoreStaysPage, CoreIntegrationsPage } from '../pages/HotelCorePages'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { PlatformProvider } from '../platform/PlatformContext'
 import { PlatformLayout } from '../platform/PlatformLayout'
@@ -86,6 +86,7 @@ export function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/rooms" element={<CoreRoomsPage />} />
         <Route path="settings/stays" element={<CoreStaysPage />} />
+        <Route path="settings/integrations" element={<CoreIntegrationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
