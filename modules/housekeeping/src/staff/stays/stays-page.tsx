@@ -51,11 +51,13 @@ function defaultDateTimeInput(daysFromNow: number, time: string): string {
   return toLocalInputValue(d.toISOString())
 }
 
-export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
+export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav, readOnly = false, onCreateStayOverride }: {
   hotelId: string
   hotelSettings?: PlatformHotelSettings
   profile?: StaffProfile
   embeddedNav?: { basePath: string; staysAllowed: boolean; manageAllowed: boolean }
+  readOnly?: boolean
+  onCreateStayOverride?: (input: { hotelId: string; roomId: string; guestLastName: string; checkInAt: string; checkOutAt: string }) => Promise<Stay>
 }) {
   const { t } = useLocale()
   const hotelName = useHotelName()
@@ -86,8 +88,10 @@ export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
         <PageHeader eyebrow={hotelName} title={t('staff.stays.title')} description={t('staff.stays.subtitle')} />
       )}
 
-      <NewStayForm hotelId={hotelId} rooms={rooms} hotelSettings={hotelSettings} onCreated={reload} />
-      <OperaImportPanel hotelId={hotelId} rooms={rooms} onImported={reload} />
+      {(!readOnly || onCreateStayOverride) && (
+        <NewStayForm hotelId={hotelId} rooms={rooms} hotelSettings={hotelSettings} onCreated={reload} onCreateStayOverride={onCreateStayOverride} />
+      )}
+      {!readOnly && <OperaImportPanel hotelId={hotelId} rooms={rooms} onImported={reload} />}
 
       {error && <p className="text-sm text-bad-ink">{error}</p>}
 
@@ -97,14 +101,14 @@ export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
         ) : stays.length === 0 ? (
           <EmptyState icon={<IconBedEmpty className="h-6 w-6" />} title={t('staff.stays.emptyTitle')} description={t('staff.stays.emptyDesc')} />
         ) : (
-          stays.map((stay) => <StayRow key={stay.id} hotelId={hotelId} stay={stay} rooms={allRooms} onChanged={reload} />)
+          stays.map((stay) => <StayRow key={stay.id} hotelId={hotelId} stay={stay} rooms={allRooms} onChanged={reload} readOnly={readOnly} />)
         )}
       </div>
     </div>
   )
 }
 
-function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: string; rooms: Room[]; hotelSettings?: PlatformHotelSettings; onCreated: () => Promise<void> }) {
+function NewStayForm({ hotelId, rooms, hotelSettings, onCreated, onCreateStayOverride }: { hotelId: string; rooms: Room[]; hotelSettings?: PlatformHotelSettings; onCreated: () => Promise<void>; onCreateStayOverride?: (input: { hotelId: string; roomId: string; guestLastName: string; checkInAt: string; checkOutAt: string }) => Promise<Stay> }) {
   const { t } = useLocale()
   const [roomId, setRoomId] = useState('')
   const [lastName, setLastName] = useState('')
@@ -120,7 +124,7 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
     setError(null)
     setCreatedPin(null)
     try {
-      const stay = await createStay({
+      const stay = await (onCreateStayOverride ?? createStay)({
         hotelId,
         roomId,
         guestLastName: lastName.trim(),
@@ -208,7 +212,7 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
   )
 }
 
-function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: Stay; rooms: Room[]; onChanged: () => Promise<void> }) {
+function StayRow({ hotelId, stay, rooms, onChanged, readOnly = false }: { hotelId: string; stay: Stay; rooms: Room[]; onChanged: () => Promise<void>; readOnly?: boolean }) {
   const { t } = useLocale()
   const { push } = useToast()
   const [editingCheckout, setEditingCheckout] = useState(false)
@@ -252,6 +256,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
   // to leave the person guessing whether anything happened beyond the row
   // quietly changing.
   async function run(action: () => Promise<void>, successMessage?: string): Promise<boolean> {
+    if (readOnly) return false
     setPending(true)
     setActionError(null)
     try {
@@ -375,7 +380,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
                 {t('staff.stays.cancel')}
               </Button>
             </div>
-          ) : (
+          ) : !readOnly ? (
             <div className="flex flex-wrap gap-2">
               <IconButton tone="neutral" icon={Pencil} label={t('staff.stays.edit')} disabled={pending} onClick={startEditingDetails} />
               <IconButton
@@ -395,7 +400,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
               />
               <IconButton tone="danger" icon={Power} label={t('staff.stays.deactivate')} disabled={pending} onClick={onDeactivate} />
             </div>
-          )}
+          ) : null}
         </div>
         {actionError && <p className="mt-2 text-xs font-semibold text-bad-ink" role="alert">{actionError}</p>}
 
