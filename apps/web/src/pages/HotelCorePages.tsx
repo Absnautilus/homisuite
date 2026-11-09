@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { PageHeader } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
+import { parseOperaArrivals, operaDateToLocalValue } from '../lib/operaImport'
 
 // The Core SDK schema currently models only Core tables; the existing
 // legacy rooms/stays tables and new bridge RPC are not yet in its type map.
@@ -61,6 +62,69 @@ function useCoreHotel() {
   return { hotelId, error, loading }
 }
 
+type OperaDraft = { key: string; roomId: string; guestName: string; checkIn: string; checkOut: string; include: boolean }
+
+function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; rooms: Room[]; onImported: () => Promise<void> }) {
+  const [drafts, setDrafts] = useState<OperaDraft[]>([])
+  const [warnings, setWarnings] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  async function readFile(file: File | undefined) {
+    if (!file) return
+    setError(null); setResult(null)
+    try {
+      const parsed = parseOperaArrivals(await file.text())
+      setWarnings(parsed.warnings)
+      setDrafts(parsed.rows.map((row, i) => {
+        const roomId = rooms.find(room => room.active && room.room_number === row.roomNumber)?.id ?? ''
+        return { key: String(i), roomId, guestName: row.guestName, checkIn: operaDateToLocalValue(row.arrivalDate, '15:00'), checkOut: operaDateToLocalValue(row.departureDate, '11:00'), include: Boolean(roomId) }
+      }))
+    } catch (cause) { setError(errorText(cause)) }
+  }
+  function update(key: string, patch: Partial<OperaDraft>) {
+    setDrafts(current => current.map(d => d.key === key ? { ...d, ...patch } : d))
+  }
+  async function importSelected() {
+    setBusy(true); setError(null); setResult(null)
+    let ok = 0; let failed = 0
+    for (const draft of drafts.filter(d => d.include)) {
+      const start = new Date(draft.checkIn)
+      const end = new Date(draft.checkOut)
+      if (!draft.roomId || !draft.guestName.trim() || !Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) { failed++; continue }
+      const response = await hotelDb.from('stays').insert({
+        hotel_id: hotelId, room_id: draft.roomId, guest_last_name: draft.guestName.trim(),
+        check_in_at: start.toISOString(), check_out_at: end.toISOString(),
+      })
+      if (response.error) failed++
+      else ok++
+    }
+    setBusy(false)
+    setResult(`Importati: ${ok}. Non importati: ${failed}.`)
+    if (ok) await onImported().catch(cause => setError(errorText(cause)))
+    setDrafts([])
+  }
+  return <details className="shell-card p-4">
+    <summary className="cursor-pointer font-semibold">Importa soggiorni da Opera</summary>
+    <p>Carica un report arrivi Opera in formato testo delimitato. Controlla camere, ospiti e date prima di importare.</p>
+    <label>Report Opera <input aria-label="Report Opera" type="file" accept=".txt,.csv,text/plain" onChange={e => { void readFile(e.target.files?.[0]) }} /></label>
+    {warnings.length > 0 && <p role="status">{warnings.length} righe del report richiedono attenzione.</p>}
+    {drafts.map(d => <div className="settings-row flex flex-wrap gap-2" key={d.key}>
+      <label><input type="checkbox" checked={d.include} onChange={e => update(d.key, { include: e.target.checked })} /> Importa</label>
+      <select aria-label="Camera Opera" value={d.roomId} onChange={e => update(d.key, { roomId: e.target.value })}>
+        <option value="">Camera non assegnata</option>
+        {rooms.filter(r => r.active).map(r => <option key={r.id} value={r.id}>{r.room_number}</option>)}
+      </select>
+      <input aria-label="Ospite Opera" value={d.guestName} onChange={e => update(d.key, { guestName: e.target.value })} />
+      <input aria-label="Check-in Opera" type="datetime-local" value={d.checkIn} onChange={e => update(d.key, { checkIn: e.target.value })} />
+      <input aria-label="Check-out Opera" type="datetime-local" value={d.checkOut} onChange={e => update(d.key, { checkOut: e.target.value })} />
+    </div>)}
+    {drafts.length > 0 && <button type="button" className="btn btn-primary" disabled={busy || !drafts.some(d => d.include)} onClick={() => { void importSelected() }}>{busy ? 'Importazione…' : 'Conferma importazione'}</button>}
+    {result && <p role="status">{result}</p>}
+    {error && <p role="alert">{error}</p>}
+  </details>
+}
+
 function CoreNavigation() {
   const location = useLocation()
   return (
@@ -104,6 +168,23 @@ export function CoreRoomsPage() {
     finally { setBusy(false) }
   }
 
+  async function deleteRoom(room: Room) {
+    if (!hotelId || !window.confirm(`Eliminare la camera ${room.room_number}? Le camere con soggiorni registrati verranno solo disattivate.`)) return
+    setError(null)
+    try {
+      const result = await hotelDb.from('rooms').delete().eq('hotel_id', hotelId).eq('id', room.id).select('id')
+      if (result.error?.code === '23503') {
+        const disabled = await hotelDb.from('rooms').update({ active: false }).eq('hotel_id', hotelId).eq('id', room.id).select('id').maybeSingle()
+        if (disabled.error) throw disabled.error
+        if (!disabled.data) throw new Error('Camera non aggiornata.')
+      } else {
+        if (result.error) throw result.error
+        if (!result.data?.length) throw new Error('Camera non eliminata.')
+      }
+      await reload()
+    } catch (cause) { setError(errorText(cause)) }
+  }
+
   async function toggleRoom(room: Room) {
     setError(null)
     if (room.active && !window.confirm(`Disattivare la camera ${room.room_number}?`)) return
@@ -137,6 +218,7 @@ export function CoreRoomsPage() {
                 <button type="button" onClick={() => { void toggleRoom(room) }}>
                   {room.active ? 'Disattiva' : 'Attiva'}
                 </button>
+                <button type="button" onClick={() => { void deleteRoom(room) }}>Elimina</button>
               </div>
             ))}
           </div>
@@ -279,6 +361,7 @@ export function CoreStaysPage() {
       {error && <p role="alert">{error}</p>}
       {hotelId && (
         <>
+          <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
           <form onSubmit={(e) => { void addStay(e) }} className="shell-card p-4 grid gap-3">
             <label>Camera
               <select required value={roomId} onChange={e => setRoomId(e.target.value)}>
