@@ -15,6 +15,7 @@ type Stay = {
   id: string
   room_id: string
   guest_last_name: string
+  guest_pin: string
   check_in_at: string
   check_out_at: string
   status: 'active' | 'closed' | 'cancelled'
@@ -28,6 +29,12 @@ function errorText(error: unknown): string {
     if (code === '42501') return 'Non hai i permessi per questa operazione.'
   }
   return error instanceof Error ? error.message : 'Operazione non riuscita.'
+}
+
+function toLocalDatetime(iso: string): string {
+  const date = new Date(iso)
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
 }
 
 function useCoreHotel() {
@@ -146,12 +153,13 @@ export function CoreStaysPage() {
   const [checkOut, setCheckOut] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     if (!hotelId) return
     const [roomsResult, staysResult] = await Promise.all([
       hotelDb.from('rooms').select('id,room_number,active').eq('hotel_id', hotelId).order('room_number'),
-      hotelDb.from('stays').select('id,room_id,guest_last_name,check_in_at,check_out_at,status,rooms(room_number)')
+      hotelDb.from('stays').select('id,room_id,guest_last_name,guest_pin,check_in_at,check_out_at,status,rooms(room_number)')
         .eq('hotel_id', hotelId).eq('status', 'active').order('check_in_at', { ascending: false }),
     ])
     if (roomsResult.error) throw roomsResult.error
@@ -173,15 +181,54 @@ export function CoreStaysPage() {
     }
     setBusy(true); setError(null)
     try {
-      const result = await hotelDb.from('stays').insert({
-        hotel_id: hotelId, room_id: roomId, guest_last_name: guestName.trim(),
+      const payload = {
+        room_id: roomId, guest_last_name: guestName.trim(),
         check_in_at: new Date(checkIn).toISOString(), check_out_at: new Date(checkOut).toISOString(),
-      })
+      }
+      const result = editingId
+        ? await hotelDb.from('stays').update(payload).eq('hotel_id', hotelId).eq('id', editingId).eq('status', 'active').select('id').maybeSingle()
+        : await hotelDb.from('stays').insert({ hotel_id: hotelId, ...payload }).select('id').maybeSingle()
+      if (!result.error && !result.data) throw new Error('Operazione non applicata.')
       if (result.error) throw result.error
-      setGuestName('')
+      resetForm()
       await reload()
     } catch (cause) { setError(errorText(cause)) }
     finally { setBusy(false) }
+  }
+
+  function editStay(stay: Stay) {
+    setEditingId(stay.id)
+    setRoomId(stay.room_id)
+    setGuestName(stay.guest_last_name)
+    setCheckIn(toLocalDatetime(stay.check_in_at))
+    setCheckOut(toLocalDatetime(stay.check_out_at))
+    setError(null)
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setRoomId('')
+    setGuestName('')
+    setCheckIn('')
+    setCheckOut('')
+  }
+
+  async function extendStay(stay: Stay) {
+    const proposed = window.prompt('Nuova data e ora di check-out (AAAA-MM-GGTHH:mm)', toLocalDatetime(stay.check_out_at))
+    if (proposed === null) return
+    const next = new Date(proposed)
+    if (!proposed || Number.isNaN(next.getTime()) || next <= new Date(stay.check_out_at)) {
+      setError('La nuova data di check-out deve essere successiva a quella attuale.')
+      return
+    }
+    setError(null)
+    try {
+      const result = await hotelDb.from('stays').update({ check_out_at: next.toISOString() })
+        .eq('hotel_id', hotelId!).eq('id', stay.id).eq('status', 'active').select('id').maybeSingle()
+      if (result.error) throw result.error
+      if (!result.data) throw new Error('Estensione non applicata.')
+      await reload()
+    } catch (cause) { setError(errorText(cause)) }
   }
 
   async function changeStatus(stay: Stay, status: 'closed' | 'cancelled') {
@@ -215,7 +262,10 @@ export function CoreStaysPage() {
             <label>Cognome ospite <input required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
             <label>Check-in <input type="datetime-local" required value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label>
             <label>Check-out <input type="datetime-local" required value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label>
-            <button className="btn btn-primary" type="submit" disabled={busy}>Attiva soggiorno</button>
+            <div className="flex gap-2">
+              <button className="btn btn-primary" type="submit" disabled={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</button>
+              {editingId && <button type="button" onClick={resetForm}>Annulla modifica</button>}
+            </div>
           </form>
           <div className="settings-list shell-card">
             {stays.length === 0 && <p>Nessun soggiorno attivo.</p>}
@@ -224,8 +274,11 @@ export function CoreStaysPage() {
                 <span className="settings-row-main">
                   <strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
                   <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
+                  <small>PIN ospite: {stay.guest_pin}</small>
                 </span>
                 <div className="flex gap-2">
+                  <button type="button" onClick={() => editStay(stay)}>Modifica</button>
+                  <button type="button" onClick={() => { void extendStay(stay) }}>Estendi</button>
                   <button type="button" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</button>
                   <button type="button" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</button>
                 </div>
