@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Archive, BedDouble, ChartNoAxesColumnIncreasing, ClipboardList, Plug, UsersRound } from 'lucide-react'
 import { PageHeader, Tabs } from '@homisuite/ui'
@@ -35,6 +36,11 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
   const hotelName = useHotelName()
   const location = useLocation()
   const operationalHotelId = hotelId ?? profile.hotel_id
+  useEffect(() => {
+    if (!sharedCoreNavigation) return
+    if (location.pathname.startsWith(`${basePath}/camere`)) navigate('/settings/rooms', { replace: true })
+    else if (location.pathname === basePath || location.pathname === `${basePath}/`) navigate(`${basePath}/menu`, { replace: true })
+  }, [sharedCoreNavigation, location.pathname, basePath, navigate])
   // One list drives both the nav (primary/secondary split below) and
   // which pane is visible -- the nav and the content can't disagree since
   // both read the same match().
