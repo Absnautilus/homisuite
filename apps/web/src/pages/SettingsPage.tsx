@@ -59,15 +59,15 @@ export function SettingsPage() {
     <div className="page-stack settings-page">
       <PageHeader eyebrow="Homisuite" title="Impostazioni" description="Preferenze della struttura, del tuo account e dei moduli." />
 
-      {canManageProperty && (
+      {(canManageProperty || canManageStaff) && (
         <section className="settings-section" data-tour="settings-property">
           <div className="settings-section-title"><Building2 size={18} /><div><h2>Struttura</h2><p>Configurazione condivisa di {propertyName}.</p></div></div>
           <div className="settings-list shell-card">
-            <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={() => setPropertyOpen(true)} />
+            {canManageProperty && <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${runtime.property?.timezone ?? 'Fuso orario non impostato'}`} onClick={() => setPropertyOpen(true)} />}
             <SettingRow title="Camere" detail="Inventario camere condiviso tra tutti i moduli" to="/settings/rooms" />
             <SettingRow title="Soggiorni" detail="Gestione soggiorni indipendente da Housekeeping" to="/settings/stays" />
-            <SettingRow title="Preferenze operative" detail="Fuso orario, formati e impostazioni comuni" status="Non ancora disponibile" muted />
-            <GuestLinkRow />
+            {canManageProperty && <SettingRow title="Preferenze operative" detail="Fuso orario, formati e impostazioni comuni" status="Non ancora disponibile" muted />}
+            {canManageProperty && <GuestLinkRow />}
           </div>
         </section>
       )}
