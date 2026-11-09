@@ -727,6 +727,17 @@ export interface Database {
         Args: { p_guest_request_id: string; p_acting_as_membership_id: string }
         Returns: undefined
       }
+      platform_impersonated_create_stay: {
+        Args: {
+          p_property_id: string
+          p_room_id: string
+          p_guest_last_name: string
+          p_check_in_at: string
+          p_check_out_at: string
+          p_acting_as_membership_id: string
+        }
+        Returns: Json
+      }
       platform_update_team_membership: {
         Args: {
           p_membership_id: string
