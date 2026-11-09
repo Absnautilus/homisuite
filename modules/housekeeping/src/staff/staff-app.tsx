@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Route, Routes, useSearchParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
 import { unlockAudio } from '@/lib/beep'
@@ -22,13 +22,14 @@ interface StaffAppProps {
   // Shell-supplied identity for a viewer with no staff_profiles row of their
   // own (Platform Admin's read-only operational view) -- see HousekeepingModule's
   // own doc comment. Skips fetchMyProfile() entirely; never persisted.
+  sharedCoreNavigation?: boolean
   readOnlyProfile?: StaffProfile
   // Shell-supplied replacement for the queue's own completeRequest(id) --
   // see RequestRow's own doc comment. Omit for every ordinary embedding.
   onCompleteOverride?: (requestId: string) => Promise<void>
 }
 
-export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile, onCompleteOverride }: StaffAppProps = {}) {
+export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile, sharedCoreNavigation = false, onCompleteOverride }: StaffAppProps = {}) {
   const { t } = useLocale()
   const embedded = mode === 'embedded'
   const [loading, setLoading] = useState(true)
@@ -143,9 +144,11 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   // Only embedded routes get the module-wide Richieste/Soggiorni/Gestione
   // switcher below their PageHeader -- standalone mode keeps its own
   // DashboardHeader (a full top bar, logo included) unchanged.
-  const embeddedNav = embedded ? { basePath, staysAllowed, manageAllowed, minimal: isFacchino } : undefined
+  const embeddedNav = embedded ? { basePath, staysAllowed: sharedCoreNavigation ? false : staysAllowed, manageAllowed, minimal: isFacchino } : undefined
   const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} embeddedNav={embeddedNav} onCompleteOverride={onCompleteOverride} />} />
-  const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} />} /> : null
+  const staysRoute = sharedCoreNavigation && embedded && staysAllowed
+    ? <Route path="soggiorni" element={<Navigate to="/settings/stays" replace />} />
+    : staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} />} /> : null
   const adminRoute = manageAllowed ? (
     <Route
       path="admin/*"
@@ -157,6 +160,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
           platformStaffManagement={platformStaffManagement}
           hotelId={expectedHotelId}
           embeddedNav={embeddedNav}
+          sharedCoreNavigation={sharedCoreNavigation}
         />
       )}
     />
