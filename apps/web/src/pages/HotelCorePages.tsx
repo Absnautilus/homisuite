@@ -41,11 +41,13 @@ function useCoreHotel() {
   const runtime = useModuleRuntime()
   const [hotelId, setHotelId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   useEffect(() => {
     let active = true
     setHotelId(null)
     setError(null)
-    if (!runtime.property) return
+    setLoading(true)
+    if (!runtime.property) { setLoading(false); return }
     // This Core RPC checks property permissions without guest_requests.
     void hotelDb.rpc('core_hotel_id_for_property', { p_property_id: runtime.property.id })
       .then(({ data, error: rpcError }) => {
@@ -53,10 +55,11 @@ function useCoreHotel() {
         if (rpcError) setError(rpcError.message)
         else if (typeof data === 'string') setHotelId(data)
         else setError('La struttura non è collegata a un hotel Core o non hai i permessi necessari.')
+        setLoading(false)
       })
     return () => { active = false }
   }, [runtime.property?.id])
-  return { hotelId, error }
+  return { hotelId, error, loading }
 }
 
 function CoreNavigation() {
@@ -71,7 +74,7 @@ function CoreNavigation() {
 }
 
 export function CoreRoomsPage() {
-  const { hotelId, error: accessError } = useCoreHotel()
+  const { hotelId, error: accessError, loading } = useCoreHotel()
   const [rooms, setRooms] = useState<Room[]>([])
   const [number, setNumber] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -118,6 +121,7 @@ export function CoreRoomsPage() {
     <div className="page-stack">
       <PageHeader eyebrow="Hotel Core" title="Camere" description="Inventario condiviso, indipendente dai moduli attivi." />
       <CoreNavigation />
+      {loading && <p role="status">Verifica accesso alla struttura…</p>}
       {accessError && <p role="alert">{accessError}</p>}
       {error && <p role="alert">{error}</p>}
       {hotelId && (
