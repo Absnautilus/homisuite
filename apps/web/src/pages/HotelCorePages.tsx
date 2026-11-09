@@ -193,7 +193,8 @@ export function CoreStaysPage() {
         .eq('hotel_id', hotelId).eq('id', stay.id).eq('status', 'active').maybeSingle()
       if (result.error) throw result.error
       if (!result.data) throw new Error('Soggiorno non disponibile.')
-      setRevealedPins(current => ({ ...current, [stay.id]: String(result.data.guest_pin ?? '') }))
+      const pin = String(result.data.guest_pin ?? '')
+      setRevealedPins(current => ({ ...current, [stay.id]: pin }))
     } catch (cause) { setError(errorText(cause)) }
   }
 
