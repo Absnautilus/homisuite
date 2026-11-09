@@ -1,7 +1,7 @@
 -- Hotel Core inventory must work without the Housekeeping entitlement.
 begin;
 create extension if not exists pgtap;
-select plan(9);
+select plan(12);
 
 insert into hotels (id,name,timezone,active) values
  ('00000092-0000-0000-0000-00000000ff01','Core Only A','Europe/Rome',true),
@@ -57,6 +57,18 @@ select is(
 select is(
  core_hotel_id_for_property(:'core_property_b'::uuid),
  null::uuid, 'Core admin cannot resolve a different organization property');
+
+-- A Core administrator may manage only their own mapped hotel.
+select is(
+ (select count(*)::int from rooms where hotel_id='00000092-0000-0000-0000-00000000ff02'),
+ 0, 'Core admin cannot read another hotel inventory');
+select throws_ok(
+ $insert into rooms(hotel_id,room_number)
+ values('00000092-0000-0000-0000-00000000ff02','CROSS-HOTEL')$,
+ '42501',null,'Core admin cannot insert rooms into another hotel');
+select is(
+ (select count(*)::int from stays where hotel_id='00000092-0000-0000-0000-00000000ff02'),
+ 0, 'Core admin cannot read another hotel stays');
 
 set local request.jwt.claim.sub='00000092-0000-0000-0000-000000000a02';
 select is(
