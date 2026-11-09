@@ -5,6 +5,7 @@ import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
 import { unlockAudio } from '@/lib/beep'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
+import type { Stay } from '@/lib/stays-api'
 import type { HousekeepingCapabilities, PlatformHotelSettings, PlatformStaffManagementLink } from '@/public/HousekeepingModule'
 import { ToastProvider } from '@/components/toast-context'
 import { DashboardHeader } from '@/staff/dashboard-header'
@@ -26,9 +27,10 @@ interface StaffAppProps {
   // Shell-supplied replacement for the queue's own completeRequest(id) --
   // see RequestRow's own doc comment. Omit for every ordinary embedding.
   onCompleteOverride?: (requestId: string) => Promise<void>
+  onCreateStayOverride?: (input: { hotelId: string; roomId: string; guestLastName: string; checkInAt: string; checkOutAt: string }) => Promise<Stay>
 }
 
-export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile, onCompleteOverride }: StaffAppProps = {}) {
+export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/housekeeping', capabilities, platformStaffManagement, hotelSettings, readOnlyProfile, onCompleteOverride, onCreateStayOverride }: StaffAppProps = {}) {
   const { t } = useLocale()
   const embedded = mode === 'embedded'
   const [loading, setLoading] = useState(true)
@@ -145,7 +147,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   // DashboardHeader (a full top bar, logo included) unchanged.
   const embeddedNav = embedded ? { basePath, staysAllowed, manageAllowed, minimal: isFacchino } : undefined
   const queueRoute = <Route index element={<RequestQueue profile={profile} canManageQueue={queueManageAllowed} embeddedNav={embeddedNav} onCompleteOverride={onCompleteOverride} />} />
-  const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} />} /> : null
+  const staysRoute = staysAllowed ? <Route path="soggiorni" element={<StaysPage hotelId={profile.hotel_id} hotelSettings={hotelSettings} profile={profile} embeddedNav={embeddedNav} readOnly={!!readOnlyProfile} onCreateStayOverride={onCreateStayOverride} />} /> : null
   const adminRoute = manageAllowed ? (
     <Route
       path="admin/*"
