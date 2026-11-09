@@ -154,6 +154,7 @@ export function CoreStaysPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [revealedPinIds, setRevealedPinIds] = useState<string[]>([])
 
   const reload = useCallback(async () => {
     if (!hotelId) return
@@ -175,7 +176,7 @@ export function CoreStaysPage() {
   async function addStay(event: FormEvent) {
     event.preventDefault()
     if (!hotelId || !roomId || !guestName.trim() || !checkIn || !checkOut) return
-    if (new Date(checkOut) <= new Date(checkIn)) {
+    if (!Number.isFinite(new Date(checkIn).getTime()) || !Number.isFinite(new Date(checkOut).getTime()) || new Date(checkOut) <= new Date(checkIn)) {
       setError('Il check-out deve essere successivo al check-in.')
       return
     }
@@ -188,8 +189,8 @@ export function CoreStaysPage() {
       const result = editingId
         ? await hotelDb.from('stays').update(payload).eq('hotel_id', hotelId).eq('id', editingId).eq('status', 'active').select('id').maybeSingle()
         : await hotelDb.from('stays').insert({ hotel_id: hotelId, ...payload }).select('id').maybeSingle()
-      if (!result.error && !result.data) throw new Error('Operazione non applicata.')
       if (result.error) throw result.error
+      if (!result.data) throw new Error('Operazione non applicata.')
       resetForm()
       await reload()
     } catch (cause) { setError(errorText(cause)) }
@@ -256,7 +257,7 @@ export function CoreStaysPage() {
             <label>Camera
               <select required value={roomId} onChange={e => setRoomId(e.target.value)}>
                 <option value="">Seleziona camera</option>
-                {rooms.filter(room => room.active).map(room => <option key={room.id} value={room.id}>{room.room_number}</option>)}
+                {rooms.filter(room => room.active || room.id === roomId).map(room => <option key={room.id} value={room.id}>{room.room_number}</option>)}
               </select>
             </label>
             <label>Cognome ospite <input required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
@@ -274,7 +275,7 @@ export function CoreStaysPage() {
                 <span className="settings-row-main">
                   <strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
                   <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
-                  <small>PIN ospite: {stay.guest_pin}</small>
+                  <small>PIN ospite: {revealedPinIds.includes(stay.id) ? stay.guest_pin : '••••'} <button type="button" onClick={() => setRevealedPinIds(ids => ids.includes(stay.id) ? ids.filter(id => id !== stay.id) : [...ids, stay.id])}>{revealedPinIds.includes(stay.id) ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
                 </span>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => editStay(stay)}>Modifica</button>
