@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload } from 'lucide-react'
-import { Button, PageHeader, Tabs } from '@homisuite/ui'
+import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload, Pencil, ChevronsRight, LogOut, Power, History } from 'lucide-react'
+import { Button, DatePicker, TimePicker, PageHeader, Tabs } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { parseOperaArrivals, operaDateToLocalValue } from '../lib/operaImport'
@@ -61,6 +61,21 @@ function useCoreHotel() {
     return () => { active = false }
   }, [runtime.property?.id])
   return { hotelId, error, loading }
+}
+
+function splitDateTime(value: string) {
+  const match = /^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})/.exec(value)
+  return { date: match?.[1] ?? '', time: match?.[2] ?? '' }
+}
+function DateTimeField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const { date, time } = splitDateTime(value)
+  return <div className="flex flex-col gap-2">
+    <span className="text-xs font-bold uppercase tracking-wider text-muted">{label} *</span>
+    <div className="flex flex-wrap gap-2">
+      <DatePicker ariaLabel={label} value={date} onChange={next => onChange(next ? `${next}T${time || '00:00'}` : '')} />
+      <TimePicker ariaLabel={`${label} ora`} value={time} onChange={next => onChange(date ? `${date}T${next}` : '')} />
+    </div>
+  </div>
 }
 
 type OperaDraft = { key: string; roomId: string; guestName: string; checkIn: string; checkOut: string; include: boolean }
@@ -363,40 +378,43 @@ export function CoreStaysPage() {
       {error && <p role="alert">{error}</p>}
       {hotelId && (
         <>
-          <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
-          <form onSubmit={(e) => { void addStay(e) }} className="shell-card rounded-xl p-5 grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-2 text-sm font-medium">Camera
+          <form onSubmit={(e) => { void addStay(e) }} className="shell-card overflow-hidden rounded-xl"><h2 className="border-b border-line px-5 py-4 text-sm font-semibold">Attiva soggiorno</h2><div className="grid gap-4 p-5 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium"><span className="text-xs font-bold uppercase tracking-wider text-muted">Camera *</span>
               <select className="form-input rounded-lg" required value={roomId} onChange={e => setRoomId(e.target.value)}>
                 <option value="">Seleziona camera</option>
                 {rooms.filter(room => room.active || room.id === roomId).map(room => <option key={room.id} value={room.id}>{room.room_number}</option>)}
               </select>
             </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">Cognome ospite <input className="form-input rounded-lg" required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
-            <label className="flex flex-col gap-2 text-sm font-medium">Check-in <input className="form-input rounded-lg" type="datetime-local" required value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label>
-            <label className="flex flex-col gap-2 text-sm font-medium">Check-out <input className="form-input rounded-lg" type="datetime-local" required value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label>
-            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+            <label className="flex flex-col gap-2 text-sm font-medium"><span className="text-xs font-bold uppercase tracking-wider text-muted">Cognome ospite *</span><input className="form-input rounded-lg" required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
+            <DateTimeField label="Check-in" value={checkIn} onChange={setCheckIn} />
+            <DateTimeField label="Check-out" value={checkOut} onChange={setCheckOut} />
+            <div className="flex flex-wrap justify-end gap-2 sm:col-span-2">
               <Button variant="primary" type="submit" loading={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</Button>
               {editingId && <Button variant="secondary" onClick={resetForm}>Annulla modifica</Button>}
-            </div>
+            </div></div>
           </form>
-          <div className="settings-list shell-card">
+          <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
+          <div className="grid gap-3">
             {stays.length === 0 && <p>Nessun soggiorno attivo.</p>}
             {stays.map(stay => (
-              <div key={stay.id} className="settings-row flex-wrap gap-3">
-                <span className="settings-row-main">
-                  <strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
-                  <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
-                  <small>PIN ospite: {revealedPins[stay.id] ?? '••••'} <button type="button" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => editStay(stay)}>Modifica</Button>
-                  <Button variant="secondary" size="sm" onClick={() => { void extendStay(stay) }}>Estendi</Button>
-                  <Button variant="primary" size="sm" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</Button>
-                  <Button variant="danger" size="sm" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</Button>
+              <div key={stay.id} className="shell-card rounded-xl p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</p>
+                    <p className="text-sm text-muted">Check-out: {new Date(stay.check_out_at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })} · PIN: <span className="font-mono font-semibold tracking-widest text-foreground">{revealedPins[stay.id] ?? '••••'}</span>
+                      <Button variant="ghost" size="sm" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi' : 'Mostra'}</Button>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Modifica" title="Modifica" onClick={() => editStay(stay)}><Pencil size={18} /></button>
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Storico" title="Storico" disabled><History size={18} /></button>
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Estendi" title="Estendi" onClick={() => { void extendStay(stay) }}><ChevronsRight size={18} /></button>
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Check-out" title="Check-out" onClick={() => { void changeStatus(stay, 'closed') }}><LogOut size={18} /></button>
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Annulla soggiorno" title="Annulla soggiorno" onClick={() => { void changeStatus(stay, 'cancelled') }}><Power size={18} /></button>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            ))}          </div>
         </>
       )}
     </div>
