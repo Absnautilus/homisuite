@@ -206,6 +206,6 @@ test('organization admin manages Core rooms and stays independently of Housekeep
   await page.getByRole('button', { name: 'Attiva soggiorno' }).click()
   await expect(page.getByText(`Camera ${roomNumber} · CoreTest`)).toBeVisible()
   page.once('dialog', dialog => { void dialog.accept() })
-  await page.getByRole('button', { name: 'Annulla' }).last().click()
+  await page.locator('.settings-row').filter({ hasText: `Camera ${roomNumber} · CoreTest` }).getByRole('button', { name: 'Annulla' }).click()
   await expect(page.getByText(`Camera ${roomNumber} · CoreTest`)).toHaveCount(0)
 })
