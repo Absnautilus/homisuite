@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload, Pencil, ChevronsRight, LogOut, Power, History } from 'lucide-react'
+import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload, Plug, Pencil, ChevronsRight, LogOut, Power, History } from 'lucide-react'
 import { Button, DatePicker, TimePicker, PageHeader, Tabs } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
@@ -148,6 +148,7 @@ function CoreNavigation() {
     { value: '/settings/rooms', label: 'Camere', icon: <BedDouble size={17} /> },
     { value: '/settings/stays', label: 'Soggiorni', icon: <CalendarDays size={17} /> },
     { value: '/team', label: 'Team', icon: <UsersRound size={17} /> },
+    { value: '/settings/integrations', label: 'Integrazioni', icon: <Plug size={17} /> },
     { value: '/settings', label: 'Impostazioni', icon: <Settings2 size={17} /> },
   ]
   return <Tabs items={items} value={location.pathname} onValueChange={navigate} variant="surface" scrollIntoView aria-label="Gestione hotel" />
@@ -419,4 +420,55 @@ export function CoreStaysPage() {
       )}
     </div>
   )
+}
+
+type CorePmsStatus = {
+  mode: string
+  ohip_hotel_code: string | null
+  ohip_enterprise_id: string | null
+  ohip_gateway_url: string | null
+  has_credentials: boolean
+  last_sync_at: string | null
+  last_sync_status: string | null
+  last_sync_error: string | null
+}
+export function CoreIntegrationsPage() {
+  const runtime = useModuleRuntime()
+  const [status, setStatus] = useState<CorePmsStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    let active = true
+    setStatus(null); setError(null); setLoading(true)
+    if (!runtime.property) { setLoading(false); return }
+    void hotelDb.rpc('core_pms_integration_status', { p_property_id: runtime.property.id })
+      .then(({ data, error: rpcError }) => {
+        if (!active) return
+        if (rpcError) setError(rpcError.message)
+        else setStatus((data?.[0] ?? null) as CorePmsStatus | null)
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [runtime.property?.id])
+  return <div className="page-stack">
+    <PageHeader eyebrow="Hotel Core" title="Integrazioni" description="Connessioni PMS condivise dalla struttura e dai moduli." />
+    <CoreNavigation />
+    <section className="shell-card rounded-xl p-5 space-y-4">
+      <div className="flex items-center gap-3"><Plug size={20} /><h2 className="font-semibold">Opera Cloud · OHIP</h2></div>
+      {loading && <p role="status">Caricamento connessione…</p>}
+      {error && <p role="alert">{error}</p>}
+      {!loading && !error && !status && <p>Connessione non disponibile per questa struttura o autorizzazione insufficiente.</p>}
+      {status && <div className="grid gap-3 text-sm sm:grid-cols-2">
+        <p><strong>Modalità:</strong> {status.mode === 'opera' ? 'Opera Cloud' : 'Manuale'}</p>
+        <p><strong>Credenziali:</strong> {status.has_credentials ? 'Configurate' : 'Non configurate'}</p>
+        <p><strong>Hotel code:</strong> {status.ohip_hotel_code ?? '—'}</p>
+        <p><strong>Enterprise:</strong> {status.ohip_enterprise_id ?? '—'}</p>
+        <p className="sm:col-span-2"><strong>Gateway:</strong> {status.ohip_gateway_url ?? '—'}</p>
+        <p><strong>Ultima sincronizzazione:</strong> {status.last_sync_at ? new Date(status.last_sync_at).toLocaleString('it-IT') : 'Mai'}</p>
+        <p><strong>Esito:</strong> {status.last_sync_status ?? '—'}</p>
+        {status.last_sync_error && <p className="text-bad-ink sm:col-span-2" role="alert">{status.last_sync_error}</p>}
+      </div>}
+      <p className="text-sm text-muted">La modifica delle credenziali e la sincronizzazione restano temporaneamente nel pannello PMS di Housekeeping fino alla migrazione sicura delle autorizzazioni. Nessuna credenziale segreta è esposta qui.</p>
+    </section>
+  </div>
 }
