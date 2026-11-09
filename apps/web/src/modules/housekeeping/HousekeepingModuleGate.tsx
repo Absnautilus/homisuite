@@ -126,6 +126,7 @@ export function HousekeepingModuleGate() {
         checkOutTime: typeof settings.checkOutTime === 'string' ? settings.checkOutTime : null,
       }}
       readOnlyProfile={readOnlyProfile}
+      sharedCoreNavigation={!runtime.isPlatformOperationalView}
       onCompleteOverride={onCompleteOverride}
     />
   )
