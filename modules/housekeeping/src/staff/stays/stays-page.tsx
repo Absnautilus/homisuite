@@ -380,9 +380,9 @@ function StayRow({ hotelId, stay, rooms, onChanged, readOnly = false }: { hotelI
                 {t('staff.stays.cancel')}
               </Button>
             </div>
-          ) : !readOnly ? (
+          ) : (
             <div className="flex flex-wrap gap-2">
-              <IconButton tone="neutral" icon={Pencil} label={t('staff.stays.edit')} disabled={pending} onClick={startEditingDetails} />
+              {!readOnly && <IconButton tone="neutral" icon={Pencil} label={t('staff.stays.edit')} disabled={pending} onClick={startEditingDetails} />}
               <IconButton
                 tone="neutral"
                 icon={History}
@@ -390,17 +390,21 @@ function StayRow({ hotelId, stay, rooms, onChanged, readOnly = false }: { hotelI
                 disabled={pending}
                 onClick={toggleHistory}
               />
-              <IconButton tone="neutral" icon={ChevronsRight} label={t('staff.stays.extend')} disabled={pending} onClick={() => setEditingCheckout(true)} />
-              <IconButton
-                tone="neutral"
-                icon={LogOut}
-                label={t('staff.stays.checkoutNow')}
-                disabled={pending}
-                onClick={onCheckoutNow}
-              />
-              <IconButton tone="danger" icon={Power} label={t('staff.stays.deactivate')} disabled={pending} onClick={onDeactivate} />
+              {!readOnly && (
+                <>
+                  <IconButton tone="neutral" icon={ChevronsRight} label={t('staff.stays.extend')} disabled={pending} onClick={() => setEditingCheckout(true)} />
+                  <IconButton
+                    tone="neutral"
+                    icon={LogOut}
+                    label={t('staff.stays.checkoutNow')}
+                    disabled={pending}
+                    onClick={onCheckoutNow}
+                  />
+                  <IconButton tone="danger" icon={Power} label={t('staff.stays.deactivate')} disabled={pending} onClick={onDeactivate} />
+                </>
+              )}
             </div>
-          ) : null}
+          )}
         </div>
         {actionError && <p className="mt-2 text-xs font-semibold text-bad-ink" role="alert">{actionError}</p>}
 
