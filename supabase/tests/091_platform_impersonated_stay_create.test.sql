@@ -2,7 +2,7 @@
 -- All fixtures rolled back; no production data is touched.
 begin;
 create extension if not exists pgtap;
-select plan(16);
+select plan(15);
 
 insert into hotels (id, name, timezone, active) values
   ('00000091-0000-0000-0000-00000000ff01', 'Hotel Test A 091', 'Europe/Rome', true),
