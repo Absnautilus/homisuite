@@ -74,8 +74,8 @@ select is(
 );
 select is(
   (select count(*)::int from rooms where hotel_id = '00000021-0000-0000-0000-00000000ff02'),
-  0,
-  'master does NOT see rooms at a different hotel, despite holding organization_admin on its org too'
+  1,
+  'organization_admin now sees rooms at a managed property through explicit Core property permission (independent of guest_requests)'
 );
 reset role;
 
