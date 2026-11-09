@@ -1,8 +1,14 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PageHeader } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
+
+// The Core SDK schema currently models only Core tables; the existing
+// legacy rooms/stays tables and new bridge RPC are not yet in its type map.
+// Keep this compatibility client local until schema types are regenerated.
+const hotelDb = supabase as unknown as SupabaseClient
 
 type Room = { id: string; room_number: string; active: boolean }
 type Stay = {
@@ -34,7 +40,7 @@ function useCoreHotel() {
     setError(null)
     if (!runtime.property) return
     // This Core RPC checks property permissions without guest_requests.
-    void supabase.rpc('core_hotel_id_for_property', { p_property_id: runtime.property.id })
+    void hotelDb.rpc('core_hotel_id_for_property', { p_property_id: runtime.property.id })
       .then(({ data, error: rpcError }) => {
         if (!active) return
         if (rpcError) setError(rpcError.message)
@@ -66,7 +72,7 @@ export function CoreRoomsPage() {
 
   const reload = useCallback(async () => {
     if (!hotelId) return
-    const result = await supabase.from('rooms').select('id,room_number,active')
+    const result = await hotelDb.from('rooms').select('id,room_number,active')
       .eq('hotel_id', hotelId).order('room_number')
     if (result.error) throw result.error
     setRooms(result.data ?? [])
@@ -81,7 +87,7 @@ export function CoreRoomsPage() {
     if (!hotelId || !number.trim()) return
     setBusy(true); setError(null)
     try {
-      const result = await supabase.from('rooms').insert({ hotel_id: hotelId, room_number: number.trim() })
+      const result = await hotelDb.from('rooms').insert({ hotel_id: hotelId, room_number: number.trim() })
       if (result.error) throw result.error
       setNumber('')
       await reload()
@@ -93,7 +99,7 @@ export function CoreRoomsPage() {
     setError(null)
     if (room.active && !window.confirm(`Disattivare la camera ${room.room_number}?`)) return
     try {
-      const result = await supabase.from('rooms').update({ active: !room.active })
+      const result = await hotelDb.from('rooms').update({ active: !room.active })
         .eq('hotel_id', hotelId!).eq('id', room.id).select('id').maybeSingle()
       if (result.error) throw result.error
       if (!result.data) throw new Error('Aggiornamento non applicato.')
@@ -144,8 +150,8 @@ export function CoreStaysPage() {
   const reload = useCallback(async () => {
     if (!hotelId) return
     const [roomsResult, staysResult] = await Promise.all([
-      supabase.from('rooms').select('id,room_number,active').eq('hotel_id', hotelId).order('room_number'),
-      supabase.from('stays').select('id,room_id,guest_last_name,check_in_at,check_out_at,status,rooms(room_number)')
+      hotelDb.from('rooms').select('id,room_number,active').eq('hotel_id', hotelId).order('room_number'),
+      hotelDb.from('stays').select('id,room_id,guest_last_name,check_in_at,check_out_at,status,rooms(room_number)')
         .eq('hotel_id', hotelId).eq('status', 'active').order('check_in_at', { ascending: false }),
     ])
     if (roomsResult.error) throw roomsResult.error
@@ -167,7 +173,7 @@ export function CoreStaysPage() {
     }
     setBusy(true); setError(null)
     try {
-      const result = await supabase.from('stays').insert({
+      const result = await hotelDb.from('stays').insert({
         hotel_id: hotelId, room_id: roomId, guest_last_name: guestName.trim(),
         check_in_at: new Date(checkIn).toISOString(), check_out_at: new Date(checkOut).toISOString(),
       })
@@ -182,7 +188,7 @@ export function CoreStaysPage() {
     if (!hotelId || !window.confirm(status === 'closed' ? 'Confermare il check-out?' : 'Annullare il soggiorno?')) return
     setError(null)
     try {
-      const result = await supabase.from('stays')
+      const result = await hotelDb.from('stays')
         .update(status === 'closed' ? { status, check_out_at: new Date().toISOString() } : { status })
         .eq('hotel_id', hotelId).eq('id', stay.id).select('id').maybeSingle()
       if (result.error) throw result.error
