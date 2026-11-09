@@ -186,3 +186,26 @@ test('an ordinary client organization_admin is denied access to the Platform Adm
   await expect(page.getByText('Accesso non autorizzato.')).toBeVisible()
   await expect(page.getByText('Organizzazioni')).toHaveCount(0)
 })
+
+test('organization admin manages Core rooms and stays independently of Housekeeping navigation', async ({ page }, testInfo) => {
+  const roomNumber = `CORE-E2E-${testInfo.retry}`
+  await login(page, ORG_ADMIN_EMAIL)
+  await page.goto('/settings')
+  await page.getByRole('link', { name: /Camere.*Inventario camere/ }).click()
+  await expect(page.getByRole('heading', { name: 'Camere' })).toBeVisible()
+  await page.getByLabel('Numero camera').fill(roomNumber)
+  await page.getByRole('button', { name: 'Aggiungi camera' }).click()
+  await expect(page.getByText(`Camera ${roomNumber}`)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Soggiorni', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Soggiorni' })).toBeVisible()
+  await page.getByLabel('Camera', { exact: true }).selectOption({ label: roomNumber })
+  await page.getByLabel('Cognome ospite').fill('CoreTest')
+  await page.getByLabel('Check-in').fill('2030-05-01T14:00')
+  await page.getByLabel('Check-out').fill('2030-05-02T11:00')
+  await page.getByRole('button', { name: 'Attiva soggiorno' }).click()
+  await expect(page.getByText(`Camera ${roomNumber} · CoreTest`)).toBeVisible()
+  page.once('dialog', dialog => { void dialog.accept() })
+  await page.getByRole('button', { name: 'Annulla' }).last().click()
+  await expect(page.getByText(`Camera ${roomNumber} · CoreTest`)).toHaveCount(0)
+})
