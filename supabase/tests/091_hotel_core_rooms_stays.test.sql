@@ -63,8 +63,8 @@ select is(
  (select count(*)::int from rooms where hotel_id='00000092-0000-0000-0000-00000000ff02'),
  0, 'Core admin cannot read another hotel inventory');
 select throws_ok(
- $insert into rooms(hotel_id,room_number)
- values('00000092-0000-0000-0000-00000000ff02','CROSS-HOTEL')$,
+ $rls$insert into rooms(hotel_id,room_number)
+ values('00000092-0000-0000-0000-00000000ff02','CROSS-HOTEL')$rls$,
  '42501',null,'Core admin cannot insert rooms into another hotel');
 select is(
  (select count(*)::int from stays where hotel_id='00000092-0000-0000-0000-00000000ff02'),
