@@ -157,7 +157,7 @@ export function CoreStaysPage() {
     if (roomsResult.error) throw roomsResult.error
     if (staysResult.error) throw staysResult.error
     setRooms(roomsResult.data ?? [])
-    setStays((staysResult.data ?? []) as Stay[])
+    setStays((staysResult.data ?? []).map((stay) => ({ ...stay, rooms: Array.isArray(stay.rooms) ? (stay.rooms[0] ?? null) : stay.rooms })) as Stay[])
   }, [hotelId])
   useEffect(() => {
     setRooms([]); setStays([])
