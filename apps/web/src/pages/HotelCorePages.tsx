@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button, DatePicker, Modal, ModuleNav, TimePicker } from '@homisuite/ui'
-import { BedDouble, ChevronDown, Eye, EyeOff, Pencil, Plus, Power, Trash2, Upload } from 'lucide-react'
+import { BedDouble, ChevronDown, Eye, EyeOff, Pencil, Plus, Power, Trash2, Upload, Users } from 'lucide-react'
 import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
 import { useConfirm } from '../components/ConfirmDialog'
@@ -83,16 +83,18 @@ function useCoreHotel() {
 // bespoke row of links. `items`' values are real routes here, matched
 // against the current URL rather than internal state -- same pattern
 // Housekeeping's own EmbeddedNav uses to drive a ModuleNav with a router.
-function useCoreNav() {
+// Exported so TeamPage renders the exact same tab bar -- Team, Camere and
+// Soggiorni are one section ("Struttura e Team") from the sidebar down,
+// not three independently-headed pages that happen to link to each other.
+export function useStructureNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const items = [
+    { value: '/team', label: 'Team', icon: <Users /> },
     { value: '/settings/rooms', label: 'Camere', icon: <BedDouble /> },
     { value: '/settings/stays', label: 'Soggiorni', icon: <Power /> },
-    { value: '/team', label: 'Team' },
-    { value: '/settings', label: 'Impostazioni' },
   ]
-  const value = items.find((item) => location.pathname === item.value)?.value ?? '/settings/rooms'
+  const value = items.find((item) => location.pathname === item.value)?.value ?? '/team'
   return { items, value, onValueChange: (next: string) => navigate(next) }
 }
 
@@ -206,7 +208,7 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
 
 export function CoreRoomsPage() {
   const runtime = useModuleRuntime()
-  const nav = useCoreNav()
+  const nav = useStructureNav()
   const { hotelId, error: accessError, loading } = useCoreHotel()
   const [rooms, setRooms] = useState<Room[]>([])
   const [number, setNumber] = useState('')
@@ -279,9 +281,9 @@ export function CoreRoomsPage() {
 
   return (
     <div className="page-stack">
-      <ModuleNav propertyName={runtime.property?.name ?? 'Struttura'} moduleName="Hotel Core" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Hotel Core" />
+      <ModuleNav propertyName={runtime.property?.name ?? 'Struttura'} moduleName="Struttura e Team" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Struttura e Team" />
       {loading ? <PageState kind="loading" title="Verifica accesso alla struttura…" /> : null}
-      {accessError ? <PageState kind="error" title="Impossibile accedere a Hotel Core." description={accessError} /> : null}
+      {accessError ? <PageState kind="error" title="Impossibile accedere a Struttura e Team." description={accessError} /> : null}
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
       {hotelId ? (
         <section className="shell-card">
@@ -313,7 +315,7 @@ export function CoreRoomsPage() {
 
 export function CoreStaysPage() {
   const runtime = useModuleRuntime()
-  const nav = useCoreNav()
+  const nav = useStructureNav()
   const { hotelId, error: accessError, loading } = useCoreHotel()
   const [rooms, setRooms] = useState<Room[]>([])
   const [stays, setStays] = useState<Stay[]>([])
@@ -457,9 +459,9 @@ export function CoreStaysPage() {
 
   return (
     <div className="page-stack">
-      <ModuleNav propertyName={runtime.property?.name ?? 'Struttura'} moduleName="Hotel Core" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Hotel Core" />
+      <ModuleNav propertyName={runtime.property?.name ?? 'Struttura'} moduleName="Struttura e Team" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Struttura e Team" />
       {loading ? <PageState kind="loading" title="Verifica accesso alla struttura…" /> : null}
-      {accessError ? <PageState kind="error" title="Impossibile accedere a Hotel Core." description={accessError} /> : null}
+      {accessError ? <PageState kind="error" title="Impossibile accedere a Struttura e Team." description={accessError} /> : null}
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
       {hotelId ? (
         <>

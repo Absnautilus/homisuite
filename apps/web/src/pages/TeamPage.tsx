@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import type { CoreRole, JobTitle, MemberPermissionStatus, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
-import { Button, Modal, PageHeader, Tabs } from '@homisuite/ui'
-import { Boxes, BriefcaseBusiness, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import { Button, Modal, ModuleNav, Tabs } from '@homisuite/ui'
+import { Boxes, BriefcaseBusiness, Building2, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import { GuestLinkRow } from '../components/GuestLinkRow'
 import { PageState } from '../components/PageState'
 import { PasswordField } from '../components/PasswordField'
 import { useConfirm } from '../components/ConfirmDialog'
 import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
-import { core } from '../core/client'
+import { core, supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
+import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { buildTeamMemberUpdateInput } from './teamMemberPayload'
+import { useStructureNav } from './HotelCorePages'
+import { SettingRow } from './SettingsPage'
 
 const suggestedJobs = [
   'Reception', 'Facchino', 'Cameriere/a ai piani', 'Bar', 'Cameriere colazione',
@@ -24,6 +28,7 @@ const UNASSIGNED_JOB_LABEL = 'Da assegnare'
 
 export function TeamPage() {
   const runtime = useModuleRuntime()
+  const nav = useStructureNav()
   const { hasPermission } = runtime
   const property = runtime.property
   const [team, setTeam] = useState<TeamState>(emptyTeam)
@@ -38,6 +43,10 @@ export function TeamPage() {
   const [modulesFor, setModulesFor] = useState<TeamMember | null>(null)
   const [confirmDialog, confirm] = useConfirm()
   const anyModuleEntitled = runtime.entitlements.some((item) => item.enabled)
+  const [canManageProperty, setCanManageProperty] = useState(false)
+  const [propertyOpen, setPropertyOpen] = useState(false)
+
+  useEffect(() => { void hasPermission('core.property.manage').then(setCanManageProperty).catch(() => setCanManageProperty(false)) }, [hasPermission])
 
   // Optimistic, matching the Moduli popup (#41) and Housekeeping's own
   // toggles (#45): flip the row immediately instead of waiting for
@@ -199,7 +208,17 @@ export function TeamPage() {
 
   return (
     <div className="page-stack team-page">
-      <PageHeader eyebrow={propertyName} title="Team" description="Persone, accessi Homisuite e mansioni operative della struttura." actions={team.canManage ? <button className="primary-action" type="button" data-tour="team-add" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : undefined} />
+      <ModuleNav propertyName={propertyName} moduleName="Struttura e Team" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Struttura e Team" />
+
+      {canManageProperty && (
+        <section className="settings-section" data-tour="settings-property">
+          <div className="settings-section-title"><Building2 size={18} /><div><h2>Struttura</h2><p>Configurazione condivisa di {propertyName}.</p></div></div>
+          <div className="settings-list shell-card">
+            <SettingRow title="Informazioni struttura" detail={`${propertyName} · ${property?.timezone ?? 'Fuso orario non impostato'}`} onClick={() => setPropertyOpen(true)} />
+            <GuestLinkRow />
+          </div>
+        </section>
+      )}
 
       <section className="shell-card team-principle-card">
         <div className="icon-tile"><ShieldCheck size={20} /></div>
@@ -211,7 +230,10 @@ export function TeamPage() {
       <section className="shell-card" data-tour="team-table">
         <div className="section-heading split">
           <div><h2>Persone</h2><p>Il team collegato a {propertyName}.</p></div>
-          <span className="status-chip">{loading ? 'Caricamento…' : `${team.members.length} ${team.members.length === 1 ? 'profilo' : 'profili'}`}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="status-chip">{loading ? 'Caricamento…' : `${team.members.length} ${team.members.length === 1 ? 'profilo' : 'profili'}`}</span>
+            {team.canManage ? <button className="primary-action" type="button" data-tour="team-add" onClick={() => setCreateOpen(true)}><UserPlus size={17} /> Crea profilo</button> : null}
+          </span>
         </div>
         <div className="team-table" role="table" aria-label="Team">
           <div className="team-row team-row-head" role="row">
@@ -253,6 +275,7 @@ export function TeamPage() {
       <ResetPasswordModal member={resettingPassword} onClose={() => setResettingPassword(null)} />
       <JobModal job={jobEditor} propertyId={property?.id ?? ''} onClose={() => setJobEditor(null)} onSaved={async () => { setJobEditor(null); await loadTeam({ silent: true }) }} />
       <ModulesModal member={modulesFor} propertyId={property?.id ?? ''} entitlements={runtime.entitlements} onClose={() => { setModulesFor(null); void loadTeam({ silent: true }) }} />
+      <PropertyModal open={propertyOpen} onClose={() => setPropertyOpen(false)} onSaved={async () => { setPropertyOpen(false); await runtime.refresh() }} />
       {confirmDialog}
     </div>
   )
@@ -658,6 +681,186 @@ function SuggestedJobs({ existing, propertyId, onChanged }: { existing: JobTitle
     finally { setSaving(null) }
   }
   return <div className="job-suggestions"><span>Suggerimenti</span><div>{missing.map((job) => <button type="button" key={job} disabled={saving !== null} onClick={() => void activate(job)}><Plus size={13} />{saving === job ? 'Attivazione…' : job}</button>)}</div>{error ? <p className="form-error" role="alert">{error}</p> : null}</div>
+}
+
+const LOGO_BUCKET = 'property-logos'
+const LOGO_MAX_BYTES = 2 * 1024 * 1024
+const DEFAULT_BRAND_COLOR = '#9c4fc7'
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
+
+// Paired with a plain text input (see BrandColorField below) rather than the
+// swatch alone -- input[type=color] has no way to type or paste a known hex
+// value, only to pick one visually.
+function BrandColorField({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+  const [text, setText] = useState(value)
+  useEffect(() => setText(value), [value])
+
+  function onTextChange(next: string) {
+    setText(next)
+    if (HEX_COLOR_RE.test(next)) onChange(next)
+  }
+
+  return (
+    <div className="form-field">
+      <span>Colore del marchio</span>
+      <div className="brand-color-picker">
+        <input
+          type="color"
+          value={HEX_COLOR_RE.test(text) ? text : DEFAULT_BRAND_COLOR}
+          onChange={(e) => onTextChange(e.target.value)}
+          aria-label="Colore del marchio"
+        />
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          maxLength={7}
+          placeholder={DEFAULT_BRAND_COLOR}
+          spellCheck={false}
+        />
+        {value !== DEFAULT_BRAND_COLOR && (
+          <button type="button" className="link-button" onClick={() => onChange(DEFAULT_BRAND_COLOR)}>
+            Ripristina predefinito
+          </button>
+        )}
+      </div>
+      <small>Usato nell'app ospite al posto del viola Homisuite predefinito.</small>
+    </div>
+  )
+}
+
+function PropertyModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
+  const runtime = useModuleRuntime()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [timezone, setTimezone] = useState('Europe/Rome')
+  const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR)
+  const [logoBusy, setLogoBusy] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (!open) return
+    setSaving(false); setError(null); setLogoError(null)
+    setTimezone(runtime.property?.timezone ?? 'Europe/Rome')
+    const savedBrandColor = runtime.property?.settings.brandColor
+    setBrandColor(typeof savedBrandColor === 'string' && HEX_COLOR_RE.test(savedBrandColor) ? savedBrandColor : DEFAULT_BRAND_COLOR)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, runtime.property?.timezone])
+
+  const logoUrl = getPropertyLogoUrl(supabase, runtime.property)
+
+  async function onLogoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (logoInputRef.current) logoInputRef.current.value = ''
+    if (!file || !runtime.property) return
+    if (file.type !== 'image/png') { setLogoError('Il logo deve essere un file PNG.'); return }
+    if (file.size > LOGO_MAX_BYTES) { setLogoError('Il file supera i 2 MB consentiti.'); return }
+    setLogoBusy(true); setLogoError(null)
+    try {
+      const { error: uploadError } = await supabase.storage.from(LOGO_BUCKET)
+        .upload(`${runtime.property.id}/logo.png`, file, { upsert: true, contentType: 'image/png' })
+      if (uploadError) throw uploadError
+      await core.updateProperty(runtime.property.id, {
+        name: runtime.property.name,
+        timezone: runtime.property.timezone,
+        settings: { ...runtime.property.settings, logoUpdatedAt: new Date().toISOString() },
+      })
+      await runtime.refresh()
+    } catch { setLogoError('Non è stato possibile caricare il logo.') } finally { setLogoBusy(false) }
+  }
+
+  async function onLogoRemove() {
+    if (!runtime.property) return
+    setLogoBusy(true); setLogoError(null)
+    try {
+      const { error: removeError } = await supabase.storage.from(LOGO_BUCKET).remove([`${runtime.property.id}/logo.png`])
+      if (removeError) throw removeError
+      const settings = { ...runtime.property.settings }
+      delete settings.logoUpdatedAt
+      await core.updateProperty(runtime.property.id, { name: runtime.property.name, timezone: runtime.property.timezone, settings })
+      await runtime.refresh()
+    } catch { setLogoError('Non è stato possibile rimuovere il logo.') } finally { setLogoBusy(false) }
+  }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!runtime.property) return
+    const form = new FormData(event.currentTarget)
+    setSaving(true); setError(null)
+    try {
+      const checkInTime = String(form.get('checkInTime') ?? '').trim() || null
+      const checkOutTime = String(form.get('checkOutTime') ?? '').trim() || null
+      const address = String(form.get('address') ?? '').trim() || null
+      const phone = String(form.get('phone') ?? '').trim() || null
+      const publicEmail = String(form.get('publicEmail') ?? '').trim() || null
+      const website = String(form.get('website') ?? '').trim() || null
+      const instagram = String(form.get('instagram') ?? '').trim() || null
+      const facebook = String(form.get('facebook') ?? '').trim() || null
+      const wifiNetwork = String(form.get('wifiNetwork') ?? '').trim() || null
+      const wifiPassword = String(form.get('wifiPassword') ?? '').trim() || null
+      const breakfastHours = String(form.get('breakfastHours') ?? '').trim() || null
+      const barHours = String(form.get('barHours') ?? '').trim() || null
+      await core.updateProperty(runtime.property.id, {
+        name: String(form.get('name')),
+        timezone,
+        settings: {
+          ...runtime.property.settings,
+          checkInTime, checkOutTime, address, phone, publicEmail, website, instagram, facebook,
+          wifiNetwork, wifiPassword, breakfastHours, barHours,
+          brandColor: brandColor === DEFAULT_BRAND_COLOR ? null : brandColor,
+        },
+      })
+      await onSaved()
+    } catch { setError('Non è stato possibile aggiornare la struttura.'); setSaving(false) }
+  }
+  const checkInDefault = typeof runtime.property?.settings.checkInTime === 'string' ? runtime.property.settings.checkInTime : ''
+  const checkOutDefault = typeof runtime.property?.settings.checkOutTime === 'string' ? runtime.property.settings.checkOutTime : ''
+  const addressDefault = typeof runtime.property?.settings.address === 'string' ? runtime.property.settings.address : ''
+  const phoneDefault = typeof runtime.property?.settings.phone === 'string' ? runtime.property.settings.phone : ''
+  const publicEmailDefault = typeof runtime.property?.settings.publicEmail === 'string' ? runtime.property.settings.publicEmail : ''
+  const websiteDefault = typeof runtime.property?.settings.website === 'string' ? runtime.property.settings.website : ''
+  const instagramDefault = typeof runtime.property?.settings.instagram === 'string' ? runtime.property.settings.instagram : ''
+  const facebookDefault = typeof runtime.property?.settings.facebook === 'string' ? runtime.property.settings.facebook : ''
+  const wifiNetworkDefault = typeof runtime.property?.settings.wifiNetwork === 'string' ? runtime.property.settings.wifiNetwork : ''
+  const wifiPasswordDefault = typeof runtime.property?.settings.wifiPassword === 'string' ? runtime.property.settings.wifiPassword : ''
+  const breakfastHoursDefault = typeof runtime.property?.settings.breakfastHours === 'string' ? runtime.property.settings.breakfastHours : ''
+  const barHoursDefault = typeof runtime.property?.settings.barHours === 'string' ? runtime.property.settings.barHours : ''
+  return <Modal open={open} title="Informazioni struttura" description="Dati condivisi da tutti i moduli Homisuite." onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="property-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>
+    <form className="modal-form" id="property-form" onSubmit={submit}>
+      <div className="form-field">
+        <span>Logo struttura</span>
+        <div className="logo-picker">
+          {logoUrl ? <img src={logoUrl} alt="" className="logo-picker-preview" /> : <div className="logo-picker-placeholder" aria-hidden="true" />}
+          <div className="logo-picker-actions">
+            <Button variant="secondary" onClick={() => logoInputRef.current?.click()} disabled={logoBusy}>
+              {logoBusy ? 'Attendere…' : logoUrl ? 'Cambia logo' : 'Carica logo'}
+            </Button>
+            {logoUrl ? <button className="link-button" type="button" onClick={onLogoRemove} disabled={logoBusy}>Rimuovi</button> : null}
+            <input ref={logoInputRef} type="file" accept="image/png" hidden onChange={onLogoChange} />
+          </div>
+        </div>
+        <small>PNG, sfondo trasparente consigliato · max 2 MB</small>
+        {logoError ? <p className="form-error" role="alert">{logoError}</p> : null}
+      </div>
+      <label className="form-field"><span>Nome struttura</span><input name="name" required minLength={2} maxLength={120} defaultValue={runtime.property?.name} /></label>
+      <label className="form-field" htmlFor="property-timezone"><span>Fuso orario</span><Select id="property-timezone" name="timezone" value={timezone} onChange={setTimezone}><option value="Europe/Rome">Europa — Roma</option><option value="Europe/London">Europa — Londra</option><option value="Europe/Amsterdam">Europa — Amsterdam</option><option value="America/Mexico_City">America — Città del Messico</option><option value="America/New_York">America — New York</option></Select></label>
+      <label className="form-field"><span>Orario check-in predefinito</span><input name="checkInTime" type="time" defaultValue={checkInDefault} /></label>
+      <label className="form-field"><span>Orario check-out predefinito</span><input name="checkOutTime" type="time" defaultValue={checkOutDefault} /></label>
+      <p className="form-section-title">Contatti pubblici</p>
+      <label className="form-field"><span>Indirizzo</span><input name="address" maxLength={200} defaultValue={addressDefault} placeholder="Via delle Terme, 12 · 30100 Venezia" /></label>
+      <label className="form-field"><span>Telefono</span><input name="phone" type="tel" maxLength={40} defaultValue={phoneDefault} placeholder="+39 041 123 4567" /></label>
+      <label className="form-field"><span>Email pubblica</span><input name="publicEmail" type="email" maxLength={200} defaultValue={publicEmailDefault} placeholder="info@tuohotel.it" /></label>
+      <label className="form-field"><span>Sito web</span><input name="website" type="url" maxLength={200} defaultValue={websiteDefault} placeholder="https://tuohotel.it" /></label>
+      <label className="form-field"><span>Instagram</span><input name="instagram" maxLength={200} defaultValue={instagramDefault} placeholder="@tuohotel" /></label>
+      <label className="form-field"><span>Facebook</span><input name="facebook" maxLength={200} defaultValue={facebookDefault} placeholder="facebook.com/tuohotel" /></label>
+      <p className="form-section-title">Info per gli ospiti</p>
+      <label className="form-field"><span>Rete WiFi</span><input name="wifiNetwork" maxLength={100} defaultValue={wifiNetworkDefault} placeholder="Hotel-Guest" /></label>
+      <label className="form-field"><span>Password WiFi</span><input name="wifiPassword" maxLength={100} defaultValue={wifiPasswordDefault} placeholder="benvenuto2026" /></label>
+      <label className="form-field"><span>Orario colazione</span><input name="breakfastHours" maxLength={100} defaultValue={breakfastHoursDefault} placeholder="7:30 – 10:30" /></label>
+      <label className="form-field"><span>Orario bar</span><input name="barHours" maxLength={100} defaultValue={barHoursDefault} placeholder="11:00 – 23:00" /></label>
+      <BrandColorField value={brandColor} onChange={setBrandColor} />
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
+    </form>
+  </Modal>
 }
 
 function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) { return <label className="form-field" htmlFor={htmlFor}><span>{label}</span>{children}</label> }

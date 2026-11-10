@@ -31,7 +31,7 @@ function helpKeyForPath(pathname: string): string {
   if (pathname.startsWith('/housekeeping')) return 'housekeeping'
   if (pathname.startsWith('/dining')) return 'dining'
   if (pathname.startsWith('/turni')) return 'turni'
-  if (pathname.startsWith('/team')) return 'team'
+  if (pathname.startsWith('/team') || pathname.startsWith('/settings/rooms') || pathname.startsWith('/settings/stays')) return 'team'
   if (pathname.startsWith('/settings')) return 'impostazioni'
   if (pathname.startsWith('/modules')) return 'moduli'
   if (pathname.startsWith('/transfer')) return 'transfer'
@@ -213,11 +213,17 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
         </NavLink>
       ))}
       {platform.length > 0 && <div className="nav-section-label platform">Piattaforma</div>}
-      {platform.map((item) => (
-        <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} key={item.path} to={navPath(item.path)} onClick={() => setDrawerOpen(false)}>
-          <item.icon size={18} /><span>{item.label}</span>
-        </NavLink>
-      ))}
+      {platform.map((item) => {
+        // "Struttura e Team" (/team) also covers Camere and Soggiorni
+        // (/settings/rooms, /settings/stays) -- NavLink's own path-prefix
+        // match can't see that, since neither starts with /team.
+        const structureActive = item.path === '/team' && (location.pathname === '/team' || location.pathname.startsWith('/settings/rooms') || location.pathname.startsWith('/settings/stays'))
+        return (
+          <NavLink className={({ isActive }) => `nav-item${isActive || structureActive ? ' active' : ''}`} key={item.path} to={navPath(item.path)} onClick={() => setDrawerOpen(false)}>
+            <item.icon size={18} /><span>{item.label}</span>
+          </NavLink>
+        )
+      })}
     </>
   )
 

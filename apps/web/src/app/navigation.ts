@@ -1,4 +1,4 @@
-import { Boxes, CalendarDays, Home, Hotel, Mail, Settings, UtensilsCrossed, Users, Wrench } from 'lucide-react'
+import { Boxes, CalendarDays, Home, Hotel, Mail, Settings, Users, UtensilsCrossed, Wrench } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export type ShellNavItem = {
@@ -16,6 +16,9 @@ export const shellNavigation: ShellNavItem[] = [
   { label: 'Transfer', path: '/transfer', icon: Wrench, kind: 'module' },
   { label: 'Smart Inbox', path: '/smart-inbox', icon: Mail, kind: 'module' },
   { label: 'Moduli', path: '/modules', icon: Boxes, kind: 'platform' },
-  { label: 'Team', path: '/team', icon: Users, kind: 'platform' },
+  // Team/Camere/Soggiorni are reached through this one sidebar entry and
+  // its own tab bar (see HotelCorePages' useStructureNav) -- not three
+  // separate sidebar entries.
+  { label: 'Struttura e Team', path: '/team', icon: Users, kind: 'platform' },
   { label: 'Impostazioni', path: '/settings', icon: Settings, kind: 'platform' },
 ]
