@@ -510,6 +510,10 @@ export interface Database {
         Args: { p_property_id: string }
         Returns: boolean
       }
+      set_property_module_enabled: {
+        Args: { p_property_id: string; p_module_id: string; p_enabled: boolean }
+        Returns: undefined
+      }
       has_organization_access: {
         Args: { p_organization_id: string }
         Returns: boolean

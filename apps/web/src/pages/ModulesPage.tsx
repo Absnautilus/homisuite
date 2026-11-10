@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PageHeader } from '@homisuite/ui'
-import { CalendarDays, CarFront, Hotel, Mail, Puzzle, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { Button, Modal, PageHeader, Toggle } from '@homisuite/ui'
+import { CalendarDays, CarFront, Hotel, Mail, Puzzle, Settings, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { PageState } from '../components/PageState'
@@ -17,31 +18,38 @@ type PropertyModuleRow = {
   enabled: boolean
 }
 
-const catalog: Record<string, { title: string; description: string; icon: LucideIcon }> = {
+const catalog: Record<string, { title: string; description: string; icon: LucideIcon; path: string; settingsPath?: string }> = {
   guest_requests: {
     title: 'Housekeeping',
     description: 'Richieste ospiti, assegnazione operativa e gestione delle attività in camera.',
     icon: Hotel,
+    path: '/housekeeping',
   },
   dining: {
     title: 'Ristorazione',
     description: 'Ristoranti, disponibilità e prenotazioni gestite dalla struttura.',
     icon: UtensilsCrossed,
+    path: '/dining',
+    settingsPath: '/dining?tab=impostazioni',
   },
   shifts: {
     title: 'Turni',
     description: 'Pianificazione dei turni, coperture e organizzazione del personale.',
     icon: CalendarDays,
+    path: '/turni',
   },
   transfers: {
     title: 'Transfer',
     description: 'Organizzazione e tracciamento dei transfer e degli spostamenti degli ospiti.',
     icon: CarFront,
+    path: '/transfer',
   },
   smart_inbox: {
     title: 'Smart Inbox',
     description: 'Le email degli ospiti da Outlook, con bozze di risposta preparate dall\'assistente sulle informazioni della struttura.',
     icon: Mail,
+    path: '/smart-inbox',
+    settingsPath: '/smart-inbox?tab=impostazioni',
   },
 }
 
@@ -51,6 +59,14 @@ export function ModulesPage() {
   const [registered, setRegistered] = useState<ModuleRow[]>([])
   const [propertyModules, setPropertyModules] = useState<PropertyModuleRow[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [canManage, setCanManage] = useState(false)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
+  const [purchaseModuleTitle, setPurchaseModuleTitle] = useState<string | null>(null)
+
+  useEffect(() => {
+    void runtime.hasPermission('core.property.manage').then(setCanManage).catch(() => setCanManage(false))
+  }, [runtime])
 
   const load = useCallback(async (propertyIdToLoad: string, isCancelled: () => boolean) => {
     setState('loading')
@@ -85,6 +101,25 @@ export function ModulesPage() {
     [propertyModules],
   )
 
+  async function toggleModule(moduleId: string, nextEnabled: boolean) {
+    if (!propertyId) return
+    setToggleError(null)
+    setSavingId(moduleId)
+    try {
+      const { error } = await supabase.rpc('set_property_module_enabled', {
+        p_property_id: propertyId,
+        p_module_id: moduleId,
+        p_enabled: nextEnabled,
+      })
+      if (error) throw error
+      await Promise.all([load(propertyId, () => false), runtime.refresh()])
+    } catch (cause) {
+      setToggleError(cause instanceof Error ? cause.message : 'Impossibile aggiornare il modulo.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   return (
     <div className="page-stack">
       <PageHeader eyebrow={runtime.property?.name} title="Moduli" description="I moduli disponibili in Homisuite e quelli attivi per questa struttura." />
@@ -99,6 +134,8 @@ export function ModulesPage() {
         />
       )}
 
+      {toggleError ? <div className="shell-alert error" role="alert">{toggleError}</div> : null}
+
       {state === 'ready' && (
         <section className="module-grid" data-tour="modules-list">
           {registered.map((module) => {
@@ -106,6 +143,7 @@ export function ModulesPage() {
               title: module.display_name,
               description: 'Modulo Homisuite.',
               icon: Puzzle,
+              path: '/',
             }
             // Entitlement (this property's own property_modules row) and
             // lifecycle (the module's own rollout stage) are two different
@@ -130,11 +168,44 @@ export function ModulesPage() {
                   <p>{meta.description}</p>
                 </div>
                 <p className={lifecycleClass}>{lifecycleLabel}</p>
+                <div className="module-card-footer">
+                  {canManage ? (
+                    <label className="module-card-toggle">
+                      <Toggle
+                        checked={enabled}
+                        onCheckedChange={(next) => void toggleModule(module.id, next)}
+                        disabled={savingId === module.id}
+                        aria-label={enabled ? `Disattiva ${meta.title}` : `Attiva ${meta.title}`}
+                      />
+                      <span>{enabled ? 'Attivo' : 'Non attivo'}</span>
+                    </label>
+                  ) : !enabled ? (
+                    <Button variant="secondary" onClick={() => setPurchaseModuleTitle(meta.title)}>Acquista</Button>
+                  ) : <span />}
+                  {enabled ? (
+                    <Link
+                      className="module-card-settings"
+                      to={meta.settingsPath ?? meta.path}
+                      aria-label={`Impostazioni ${meta.title}`}
+                      title={`Impostazioni ${meta.title}`}
+                    >
+                      <Settings size={16} />
+                    </Link>
+                  ) : null}
+                </div>
               </article>
             )
           })}
         </section>
       )}
+
+      <Modal
+        open={purchaseModuleTitle !== null}
+        title="Acquista modulo"
+        description={purchaseModuleTitle ? `Per attivare "${purchaseModuleTitle}" su questa struttura, contatta il tuo referente Homisuite.` : undefined}
+        onClose={() => setPurchaseModuleTitle(null)}
+        footer={<Button variant="primary" onClick={() => setPurchaseModuleTitle(null)}>Ho capito</Button>}
+      />
 
       <section className="attention-card">
         <div>

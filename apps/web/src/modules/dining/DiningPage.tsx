@@ -29,7 +29,9 @@ const RESERVATION_SUBTABS = [
 ]
 
 export function DiningPage({ hotelId, hotelName, canManage, staffProfileId, timezone }: DiningPageProps) {
-  const [tab, setTab] = useState('prenotazioni')
+  // Lets the Moduli page's "impostazioni" shortcut (?tab=impostazioni) land
+  // directly on this tab instead of just the module's default landing tab.
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'impostazioni' ? 'impostazioni' : 'prenotazioni')
   const [reservationsView, setReservationsView] = useState<'oggi' | 'tutte'>('oggi')
 
   return (

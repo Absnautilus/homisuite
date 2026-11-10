@@ -393,6 +393,9 @@ a.module-card:focus-visible { box-shadow: var(--shadow-md), var(--focus-ring); }
 .module-card-open { color: var(--accent-text); font-size: 0.88rem; font-weight: 750; }
 .module-card-arrow { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); flex-shrink: 0; transition: transform var(--motion-fast) var(--motion-ease); }
 a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card-arrow { transform: translateX(2px); }
+.module-card-toggle { display: flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.module-card-settings { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; color: var(--muted); flex-shrink: 0; transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+.module-card-settings:hover, .module-card-settings:focus-visible { background: var(--accent-soft); color: var(--accent-text); }
 /* Module lifecycle (Disponibile/Beta/Deprecato) is a different concept from
    the entitlement .status-pill above (Attivo/Non attivo) -- a plain small
    label, not another pill, so the two are never mistaken for each other. */
