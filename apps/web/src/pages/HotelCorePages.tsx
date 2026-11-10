@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button, DatePicker, Modal, ModuleNav, TimePicker } from '@homisuite/ui'
-import { BedDouble, ChevronDown, Eye, EyeOff, Pencil, Plus, Power, Trash2, Upload, Users } from 'lucide-react'
+import { BedDouble, ChevronDown, Eye, EyeOff, Pencil, Plug, Plus, Power, Trash2, Upload, Users } from 'lucide-react'
 import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
 import { useConfirm } from '../components/ConfirmDialog'
@@ -53,7 +53,7 @@ function toLocal(iso: string): string {
   return local.toISOString().slice(0, 16)
 }
 
-function useCoreHotel() {
+export function useCoreHotel() {
   const runtime = useModuleRuntime()
   const [hotelId, setHotelId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -93,6 +93,7 @@ export function useStructureNav() {
     { value: '/team', label: 'Team', icon: <Users /> },
     { value: '/settings/rooms', label: 'Camere', icon: <BedDouble /> },
     { value: '/settings/stays', label: 'Soggiorni', icon: <Power /> },
+    { value: '/settings/pms', label: 'Integrazione PMS', icon: <Plug /> },
   ]
   const value = items.find((item) => location.pathname === item.value)?.value ?? '/team'
   return { items, value, onValueChange: (next: string) => navigate(next) }

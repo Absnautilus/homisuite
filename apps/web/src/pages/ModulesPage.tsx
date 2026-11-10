@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Modal, PageHeader, Toggle } from '@homisuite/ui'
+import { PageHeader, Toggle } from '@homisuite/ui'
 import { CalendarDays, CarFront, Hotel, Mail, Puzzle, Settings, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../core/client'
@@ -59,14 +59,8 @@ export function ModulesPage() {
   const [registered, setRegistered] = useState<ModuleRow[]>([])
   const [propertyModules, setPropertyModules] = useState<PropertyModuleRow[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [canManage, setCanManage] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [toggleError, setToggleError] = useState<string | null>(null)
-  const [purchaseModuleTitle, setPurchaseModuleTitle] = useState<string | null>(null)
-
-  useEffect(() => {
-    void runtime.hasPermission('core.property.manage').then(setCanManage).catch(() => setCanManage(false))
-  }, [runtime])
 
   const load = useCallback(async (propertyIdToLoad: string, isCancelled: () => boolean) => {
     setState('loading')
@@ -169,19 +163,15 @@ export function ModulesPage() {
                 </div>
                 <p className={lifecycleClass}>{lifecycleLabel}</p>
                 <div className="module-card-footer">
-                  {canManage ? (
-                    <label className="module-card-toggle">
-                      <Toggle
-                        checked={enabled}
-                        onCheckedChange={(next) => void toggleModule(module.id, next)}
-                        disabled={savingId === module.id}
-                        aria-label={enabled ? `Disattiva ${meta.title}` : `Attiva ${meta.title}`}
-                      />
-                      <span>{enabled ? 'Attivo' : 'Non attivo'}</span>
-                    </label>
-                  ) : !enabled ? (
-                    <Button variant="secondary" onClick={() => setPurchaseModuleTitle(meta.title)}>Acquista</Button>
-                  ) : <span />}
+                  <label className="module-card-toggle">
+                    <Toggle
+                      checked={enabled}
+                      onCheckedChange={(next) => void toggleModule(module.id, next)}
+                      disabled={savingId === module.id}
+                      aria-label={enabled ? `Disattiva ${meta.title}` : `Attiva ${meta.title}`}
+                    />
+                    <span>{enabled ? 'Attivo' : 'Non attivo'}</span>
+                  </label>
                   {enabled ? (
                     <Link
                       className="module-card-settings"
@@ -198,14 +188,6 @@ export function ModulesPage() {
           })}
         </section>
       )}
-
-      <Modal
-        open={purchaseModuleTitle !== null}
-        title="Acquista modulo"
-        description={purchaseModuleTitle ? `Per attivare "${purchaseModuleTitle}" su questa struttura, contatta il tuo referente Homisuite.` : undefined}
-        onClose={() => setPurchaseModuleTitle(null)}
-        footer={<Button variant="primary" onClick={() => setPurchaseModuleTitle(null)}>Ho capito</Button>}
-      />
 
       <section className="attention-card">
         <div>

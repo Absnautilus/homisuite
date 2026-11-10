@@ -38,6 +38,11 @@ const ShiftPlannerPage = lazy(async () => {
   return { default: module.ShiftPlannerPage }
 })
 
+const CorePmsPage = lazy(async () => {
+  const module = await import('../pages/CorePmsPage')
+  return { default: module.CorePmsPage }
+})
+
 export function App() {
   return (
     <Routes>
@@ -86,6 +91,7 @@ export function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/rooms" element={<CoreRoomsPage />} />
         <Route path="settings/stays" element={<CoreStaysPage />} />
+        <Route path="settings/pms" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Integrazione PMS…" />}><CorePmsPage /></Suspense>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

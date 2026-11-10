@@ -61,12 +61,16 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
     { to: `${basePath}/disponibilita`, label: t('staff.admin.tabAvailability'), match: (p: string) => p.startsWith(`${basePath}/disponibilita`), element: <AvailabilityPage hotelId={operationalHotelId} /> },
     { to: `${basePath}/statistiche`, label: t('staff.admin.tabStats'), match: (p: string) => p.startsWith(`${basePath}/statistiche`), element: <StatsPage hotelId={operationalHotelId} /> },
     { to: `${basePath}/archivio`, label: t('staff.admin.tabArchive'), match: (p: string) => p.startsWith(`${basePath}/archivio`), element: <ArchivePage hotelId={operationalHotelId} /> },
-    { to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> },
+    // Properties on Hotel Core's shared navigation reach PMS integration
+    // from Struttura e Team now (it's structure-wide, not Housekeeping-
+    // specific) -- standalone/legacy-embedded deployments, which have no
+    // Struttura e Team to move it to, keep it here unchanged.
+    ...(!sharedCoreNavigation ? [{ to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> }] : []),
   ]
   const activeTab = tabs.find((tab) => tab.match(location.pathname))
   const selectedTab = activeTab?.to ?? (sharedCoreNavigation ? `${basePath}/menu` : basePath)
   const tabIcons = sharedCoreNavigation
-    ? [<ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
+    ? [<ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />]
     : [<UsersRound />, <BedDouble />, <ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
   const navItems = tabs.map((tab, index) => ({ value: tab.to, label: tab.label, icon: tabIcons[index] }))
 
