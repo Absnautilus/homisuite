@@ -1,7 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { PageHeader } from '@homisuite/ui'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Button, DatePicker, Modal, ModuleNav, TimePicker } from '@homisuite/ui'
+import { BedDouble, ChevronDown, Eye, EyeOff, Pencil, Plus, Power, Trash2, Upload } from 'lucide-react'
+import { Select } from '../components/Select'
+import { Switch } from '../components/Switch'
+import { useConfirm } from '../components/ConfirmDialog'
+import { PageState } from '../components/PageState'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { parseOperaArrivals, operaDateToLocalValue } from '../lib/operaImport'
@@ -31,7 +36,18 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Operazione non riuscita.'
 }
 
-function toLocalDatetime(iso: string): string {
+// "Local wall-clock string" (YYYY-MM-DDTHH:mm) <-> the separate date/time
+// values DatePicker/TimePicker take -- same split/join shape Housekeeping's
+// own Soggiorni already uses, and what operaDateToLocalValue below already
+// produces.
+function splitLocal(value: string): { date: string; time: string } {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value)
+  return match ? { date: match[1]!, time: match[2]! } : { date: '', time: '' }
+}
+function joinLocal(date: string, time: string): string {
+  return date ? `${date}T${time || '00:00'}` : ''
+}
+function toLocal(iso: string): string {
   const date = new Date(iso)
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
   return local.toISOString().slice(0, 16)
@@ -62,14 +78,35 @@ function useCoreHotel() {
   return { hotelId, error, loading }
 }
 
+// Renders ModuleNav the same way every other module does (Dining, Turni,
+// Housekeeping): the suite's one shared top-nav-with-tabs component, not a
+// bespoke row of links. `items`' values are real routes here, matched
+// against the current URL rather than internal state -- same pattern
+// Housekeeping's own EmbeddedNav uses to drive a ModuleNav with a router.
+function useCoreNav() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const items = [
+    { value: '/settings/rooms', label: 'Camere', icon: <BedDouble /> },
+    { value: '/settings/stays', label: 'Soggiorni', icon: <Power /> },
+    { value: '/team', label: 'Team' },
+    { value: '/settings', label: 'Impostazioni' },
+  ]
+  const value = items.find((item) => location.pathname === item.value)?.value ?? '/settings/rooms'
+  return { items, value, onValueChange: (next: string) => navigate(next) }
+}
+
 type OperaDraft = { key: string; roomId: string; guestName: string; checkIn: string; checkOut: string; include: boolean }
 
 function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; rooms: Room[]; onImported: () => Promise<void> }) {
+  const [open, setOpen] = useState(false)
   const [drafts, setDrafts] = useState<OperaDraft[]>([])
   const [warnings, setWarnings] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   async function readFile(file: File | undefined) {
     if (!file) return
     setError(null); setResult(null)
@@ -77,18 +114,18 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
       const parsed = parseOperaArrivals(await file.text())
       setWarnings(parsed.warnings)
       setDrafts(parsed.rows.map((row, i) => {
-        const roomId = rooms.find(room => room.active && room.room_number === row.roomNumber)?.id ?? ''
+        const roomId = rooms.find((room) => room.active && room.room_number === row.roomNumber)?.id ?? ''
         return { key: String(i), roomId, guestName: row.guestName, checkIn: operaDateToLocalValue(row.arrivalDate, '15:00'), checkOut: operaDateToLocalValue(row.departureDate, '11:00'), include: Boolean(roomId) }
       }))
     } catch (cause) { setError(errorText(cause)) }
   }
   function update(key: string, patch: Partial<OperaDraft>) {
-    setDrafts(current => current.map(d => d.key === key ? { ...d, ...patch } : d))
+    setDrafts((current) => current.map((d) => (d.key === key ? { ...d, ...patch } : d)))
   }
   async function importSelected() {
     setBusy(true); setError(null); setResult(null)
     let ok = 0; let failed = 0
-    for (const draft of drafts.filter(d => d.include)) {
+    for (const draft of drafts.filter((d) => d.include)) {
       const start = new Date(draft.checkIn)
       const end = new Date(draft.checkOut)
       if (!draft.roomId || !draft.guestName.trim() || !Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) { failed++; continue }
@@ -101,48 +138,81 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
     }
     setBusy(false)
     setResult(`Importati: ${ok}. Non importati: ${failed}.`)
-    if (ok) await onImported().catch(cause => setError(errorText(cause)))
+    if (ok) await onImported().catch((cause) => setError(errorText(cause)))
     setDrafts([])
   }
-  return <details className="shell-card p-4">
-    <summary className="cursor-pointer font-semibold">Importa soggiorni da Opera</summary>
-    <p>Carica un report arrivi Opera in formato testo delimitato. Controlla camere, ospiti e date prima di importare.</p>
-    <label>Report Opera <input aria-label="Report Opera" type="file" accept=".txt,.csv,text/plain" onChange={e => { void readFile(e.target.files?.[0]) }} /></label>
-    {warnings.length > 0 && <p role="status">{warnings.length} righe del report richiedono attenzione.</p>}
-    {drafts.map(d => <div className="settings-row flex flex-wrap gap-2" key={d.key}>
-      <label><input type="checkbox" checked={d.include} onChange={e => update(d.key, { include: e.target.checked })} /> Importa</label>
-      <select aria-label="Camera Opera" value={d.roomId} onChange={e => update(d.key, { roomId: e.target.value })}>
-        <option value="">Camera non assegnata</option>
-        {rooms.filter(r => r.active).map(r => <option key={r.id} value={r.id}>{r.room_number}</option>)}
-      </select>
-      <input aria-label="Ospite Opera" value={d.guestName} onChange={e => update(d.key, { guestName: e.target.value })} />
-      <input aria-label="Check-in Opera" type="datetime-local" value={d.checkIn} onChange={e => update(d.key, { checkIn: e.target.value })} />
-      <input aria-label="Check-out Opera" type="datetime-local" value={d.checkOut} onChange={e => update(d.key, { checkOut: e.target.value })} />
-    </div>)}
-    {drafts.length > 0 && <button type="button" className="btn btn-primary" disabled={busy || !drafts.some(d => d.include)} onClick={() => { void importSelected() }}>{busy ? 'Importazione…' : 'Conferma importazione'}</button>}
-    {result && <p role="status">{result}</p>}
-    {error && <p role="alert">{error}</p>}
-  </details>
-}
 
-function CoreNavigation() {
-  const location = useLocation()
   return (
-    <nav aria-label="Gestione hotel" className="flex flex-wrap gap-3">
-      <Link to="/settings/rooms" aria-current={location.pathname.endsWith('/rooms') ? 'page' : undefined}>Camere</Link>
-      <Link to="/settings/stays" aria-current={location.pathname.endsWith('/stays') ? 'page' : undefined}>Soggiorni</Link>
-      <Link to="/team">Team</Link>
-      <Link to="/settings">Impostazioni</Link>
-    </nav>
+    <section className="shell-card">
+      <div
+        className="section-heading split"
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((v) => !v) } }}
+      >
+        <div><h2>Importa soggiorni da Opera</h2><p>Carica un report arrivi Opera in formato testo delimitato. Controlla camere, ospiti e date prima di importare.</p></div>
+        <ChevronDown size={18} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .2s' }} aria-hidden="true" />
+      </div>
+      {open ? (
+        <div style={{ padding: '0 20px 20px' }}>
+          <input ref={fileInputRef} aria-label="Report Opera" type="file" accept=".txt,.csv,text/plain" hidden onChange={(e) => { void readFile(e.target.files?.[0]) }} />
+          <Button variant="secondary" onClick={() => fileInputRef.current?.click()}><Upload size={15} /> Carica report</Button>
+          {warnings.length > 0 ? <p className="muted" role="status" style={{ marginTop: 10 }}>{warnings.length} righe del report richiedono attenzione.</p> : null}
+          {drafts.length > 0 ? (
+            <div className="page-stack" style={{ marginTop: 14, gap: 10 }}>
+              {drafts.map((d) => {
+                const checkIn = splitLocal(d.checkIn)
+                const checkOut = splitLocal(d.checkOut)
+                return (
+                  <div className="dining-field-grid" key={d.key} style={{ alignItems: 'end', padding: 12, border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}>
+                    <label className="form-field switch-field"><span>Importa</span><Switch checked={d.include} onChange={() => update(d.key, { include: !d.include })} aria-label={`Importa riga ${d.guestName}`} /></label>
+                    <label className="form-field"><span>Camera</span>
+                      <Select name={`opera-room-${d.key}`} value={d.roomId} onChange={(v) => update(d.key, { roomId: v })}>
+                        <option value="">Non assegnata</option>
+                        {rooms.filter((r) => r.active).map((r) => <option key={r.id} value={r.id}>{r.room_number}</option>)}
+                      </Select>
+                    </label>
+                    <label className="form-field"><span>Ospite</span><input value={d.guestName} onChange={(e) => update(d.key, { guestName: e.target.value })} /></label>
+                    <label className="form-field"><span>Check-in</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <DatePicker value={checkIn.date} onChange={(v) => update(d.key, { checkIn: joinLocal(v, checkIn.time) })} ariaLabel="Data check-in" />
+                        <TimePicker value={checkIn.time} onChange={(v) => update(d.key, { checkIn: joinLocal(checkIn.date, v) })} ariaLabel="Ora check-in" />
+                      </div>
+                    </label>
+                    <label className="form-field"><span>Check-out</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <DatePicker value={checkOut.date} onChange={(v) => update(d.key, { checkOut: joinLocal(v, checkOut.time) })} ariaLabel="Data check-out" />
+                        <TimePicker value={checkOut.time} onChange={(v) => update(d.key, { checkOut: joinLocal(checkOut.date, v) })} ariaLabel="Ora check-out" />
+                      </div>
+                    </label>
+                  </div>
+                )
+              })}
+              <Button variant="primary" disabled={busy || !drafts.some((d) => d.include)} onClick={() => { void importSelected() }} style={{ justifySelf: 'start' }}>
+                {busy ? 'Importazione…' : 'Conferma importazione'}
+              </Button>
+            </div>
+          ) : null}
+          {result ? <p role="status" style={{ marginTop: 10 }}>{result}</p> : null}
+          {error ? <p className="form-error" role="alert">{error}</p> : null}
+        </div>
+      ) : null}
+    </section>
   )
 }
 
 export function CoreRoomsPage() {
+  const runtime = useModuleRuntime()
+  const nav = useCoreNav()
   const { hotelId, error: accessError, loading } = useCoreHotel()
   const [rooms, setRooms] = useState<Room[]>([])
   const [number, setNumber] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirmDialog, confirm] = useConfirm()
 
   const reload = useCallback(async () => {
     if (!hotelId) return
@@ -170,7 +240,13 @@ export function CoreRoomsPage() {
   }
 
   async function deleteRoom(room: Room) {
-    if (!hotelId || !window.confirm(`Eliminare la camera ${room.room_number}? Le camere con soggiorni registrati verranno solo disattivate.`)) return
+    if (!hotelId) return
+    const ok = await confirm({
+      title: `Eliminare la camera ${room.room_number}?`,
+      description: 'Le camere con soggiorni registrati verranno solo disattivate.',
+      confirmLabel: 'Elimina',
+    })
+    if (!ok) return
     setError(null)
     try {
       const result = await hotelDb.from('rooms').delete().eq('hotel_id', hotelId).eq('id', room.id).select('id')
@@ -187,8 +263,11 @@ export function CoreRoomsPage() {
   }
 
   async function toggleRoom(room: Room) {
+    if (room.active) {
+      const ok = await confirm({ title: `Disattivare la camera ${room.room_number}?`, confirmLabel: 'Disattiva' })
+      if (!ok) return
+    }
     setError(null)
-    if (room.active && !window.confirm(`Disattivare la camera ${room.room_number}?`)) return
     try {
       const result = await hotelDb.from('rooms').update({ active: !room.active })
         .eq('hotel_id', hotelId!).eq('id', room.id).select('id').maybeSingle()
@@ -200,36 +279,41 @@ export function CoreRoomsPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Hotel Core" title="Camere" description="Inventario condiviso, indipendente dai moduli attivi." />
-      <CoreNavigation />
-      {loading && <p role="status">Verifica accesso alla struttura…</p>}
-      {accessError && <p role="alert">{accessError}</p>}
-      {error && <p role="alert">{error}</p>}
-      {hotelId && (
-        <>
-          <form onSubmit={(e) => { void addRoom(e) }} className="flex flex-wrap gap-3 items-end">
-            <label>Numero camera <input className="form-input" required value={number} onChange={(e) => setNumber(e.target.value)} /></label>
-            <button className="btn btn-primary" type="submit" disabled={busy}>Aggiungi camera</button>
+      <ModuleNav propertyName={runtime.property?.name ?? 'Struttura'} moduleName="Hotel Core" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Hotel Core" />
+      {loading ? <PageState kind="loading" title="Verifica accesso alla struttura…" /> : null}
+      {accessError ? <PageState kind="error" title="Impossibile accedere a Hotel Core." description={accessError} /> : null}
+      {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
+      {hotelId ? (
+        <section className="shell-card">
+          <div className="section-heading split">
+            <div><h2>Camere</h2><p>Inventario condiviso, indipendente dai moduli attivi.</p></div>
+          </div>
+          <form onSubmit={(e) => { void addRoom(e) }} className="dining-field-grid" style={{ padding: '0 20px 16px', alignItems: 'end' }}>
+            <label className="form-field"><span>Numero camera</span><input required value={number} onChange={(e) => setNumber(e.target.value)} /></label>
+            <Button variant="primary" type="submit" disabled={busy} style={{ justifySelf: 'start' }}><Plus size={15} /> Aggiungi camera</Button>
           </form>
-          <div className="settings-list shell-card">
-            {rooms.length === 0 && <p>Nessuna camera configurata.</p>}
-            {rooms.map(room => (
-              <div key={room.id} className="settings-row">
-                <span className="settings-row-main"><strong>Camera {room.room_number}</strong> · {room.active ? 'Attiva' : 'Disattivata'}</span>
-                <button type="button" onClick={() => { void toggleRoom(room) }}>
-                  {room.active ? 'Disattiva' : 'Attiva'}
-                </button>
-                <button type="button" onClick={() => { void deleteRoom(room) }}>Elimina</button>
+          <div className="settings-list">
+            {rooms.length === 0 ? <PageState kind="empty" icon={BedDouble} title="Nessuna camera configurata." /> : null}
+            {rooms.map((room) => (
+              <div key={room.id} className="settings-row settings-row-static">
+                <span className="settings-row-main"><span className="settings-row-icon"><BedDouble size={17} /></span><span><strong>Camera {room.room_number}</strong><small>{room.active ? 'Attiva' : 'Disattivata'}</small></span></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Switch checked={room.active} onChange={() => { void toggleRoom(room) }} aria-label={`Attiva/disattiva camera ${room.room_number}`} />
+                  <button className="row-action danger" type="button" onClick={() => { void deleteRoom(room) }} aria-label={`Elimina camera ${room.room_number}`} title="Elimina"><Trash2 size={15} /></button>
+                </span>
               </div>
             ))}
           </div>
-        </>
-      )}
+        </section>
+      ) : null}
+      {confirmDialog}
     </div>
   )
 }
 
 export function CoreStaysPage() {
+  const runtime = useModuleRuntime()
+  const nav = useCoreNav()
   const { hotelId, error: accessError, loading } = useCoreHotel()
   const [rooms, setRooms] = useState<Room[]>([])
   const [stays, setStays] = useState<Stay[]>([])
@@ -241,6 +325,10 @@ export function CoreStaysPage() {
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [revealedPins, setRevealedPins] = useState<Record<string, string>>({})
+  const [extending, setExtending] = useState<Stay | null>(null)
+  const [extendValue, setExtendValue] = useState('')
+  const [extendError, setExtendError] = useState<string | null>(null)
+  const [confirmDialog, confirm] = useConfirm()
 
   const reload = useCallback(async () => {
     if (!hotelId) return
@@ -262,7 +350,7 @@ export function CoreStaysPage() {
 
   async function togglePin(stay: Stay) {
     if (revealedPins[stay.id] !== undefined) {
-      setRevealedPins(current => {
+      setRevealedPins((current) => {
         const next = { ...current }
         delete next[stay.id]
         return next
@@ -277,7 +365,7 @@ export function CoreStaysPage() {
       if (result.error) throw result.error
       if (!result.data) throw new Error('Soggiorno non disponibile.')
       const pin = String(result.data.guest_pin ?? '')
-      setRevealedPins(current => ({ ...current, [stay.id]: pin }))
+      setRevealedPins((current) => ({ ...current, [stay.id]: pin }))
     } catch (cause) { setError(errorText(cause)) }
   }
 
@@ -309,8 +397,8 @@ export function CoreStaysPage() {
     setEditingId(stay.id)
     setRoomId(stay.room_id)
     setGuestName(stay.guest_last_name)
-    setCheckIn(toLocalDatetime(stay.check_in_at))
-    setCheckOut(toLocalDatetime(stay.check_out_at))
+    setCheckIn(toLocal(stay.check_in_at))
+    setCheckOut(toLocal(stay.check_out_at))
     setError(null)
   }
 
@@ -322,26 +410,36 @@ export function CoreStaysPage() {
     setCheckOut('')
   }
 
-  async function extendStay(stay: Stay) {
-    const proposed = window.prompt('Nuova data e ora di check-out (AAAA-MM-GGTHH:mm)', toLocalDatetime(stay.check_out_at))
-    if (proposed === null) return
-    const next = new Date(proposed)
-    if (!proposed || Number.isNaN(next.getTime()) || next <= new Date(stay.check_out_at)) {
-      setError('La nuova data di check-out deve essere successiva a quella attuale.')
+  function openExtend(stay: Stay) {
+    setExtending(stay)
+    setExtendValue(toLocal(stay.check_out_at))
+    setExtendError(null)
+  }
+
+  async function confirmExtend() {
+    if (!extending || !hotelId) return
+    const next = new Date(extendValue)
+    if (!extendValue || Number.isNaN(next.getTime()) || next <= new Date(extending.check_out_at)) {
+      setExtendError('La nuova data di check-out deve essere successiva a quella attuale.')
       return
     }
-    setError(null)
     try {
       const result = await hotelDb.from('stays').update({ check_out_at: next.toISOString() })
-        .eq('hotel_id', hotelId!).eq('id', stay.id).eq('status', 'active').select('id').maybeSingle()
+        .eq('hotel_id', hotelId).eq('id', extending.id).eq('status', 'active').select('id').maybeSingle()
       if (result.error) throw result.error
       if (!result.data) throw new Error('Estensione non applicata.')
+      setExtending(null)
       await reload()
-    } catch (cause) { setError(errorText(cause)) }
+    } catch (cause) { setExtendError(errorText(cause)) }
   }
 
   async function changeStatus(stay: Stay, status: 'closed' | 'cancelled') {
-    if (!hotelId || !window.confirm(status === 'closed' ? 'Confermare il check-out?' : 'Annullare il soggiorno?')) return
+    if (!hotelId) return
+    const ok = await confirm({
+      title: status === 'closed' ? 'Confermare il check-out?' : 'Annullare il soggiorno?',
+      confirmLabel: status === 'closed' ? 'Check-out' : 'Annulla soggiorno',
+    })
+    if (!ok) return
     setError(null)
     try {
       const result = await hotelDb.from('stays')
@@ -353,51 +451,96 @@ export function CoreStaysPage() {
     } catch (cause) { setError(errorText(cause)) }
   }
 
+  const checkInSplit = splitLocal(checkIn)
+  const checkOutSplit = splitLocal(checkOut)
+  const extendSplit = splitLocal(extendValue)
+
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Hotel Core" title="Soggiorni" description="Gestione condivisa dei soggiorni, anche senza Housekeeping." />
-      <CoreNavigation />
-      {loading && <p role="status">Verifica accesso alla struttura…</p>}
-      {accessError && <p role="alert">{accessError}</p>}
-      {error && <p role="alert">{error}</p>}
-      {hotelId && (
+      <ModuleNav propertyName={runtime.property?.name ?? 'Struttura'} moduleName="Hotel Core" items={nav.items} value={nav.value} onValueChange={nav.onValueChange} ariaLabel="Hotel Core" />
+      {loading ? <PageState kind="loading" title="Verifica accesso alla struttura…" /> : null}
+      {accessError ? <PageState kind="error" title="Impossibile accedere a Hotel Core." description={accessError} /> : null}
+      {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
+      {hotelId ? (
         <>
           <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
-          <form onSubmit={(e) => { void addStay(e) }} className="shell-card p-4 grid gap-3">
-            <label>Camera
-              <select required value={roomId} onChange={e => setRoomId(e.target.value)}>
-                <option value="">Seleziona camera</option>
-                {rooms.filter(room => room.active || room.id === roomId).map(room => <option key={room.id} value={room.id}>{room.room_number}</option>)}
-              </select>
-            </label>
-            <label>Cognome ospite <input required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
-            <label>Check-in <input type="datetime-local" required value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label>
-            <label>Check-out <input type="datetime-local" required value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label>
-            <div className="flex gap-2">
-              <button className="btn btn-primary" type="submit" disabled={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</button>
-              {editingId && <button type="button" onClick={resetForm}>Annulla modifica</button>}
+          <section className="shell-card">
+            <div className="section-heading split">
+              <div><h2>{editingId ? 'Modifica soggiorno' : 'Attiva soggiorno'}</h2><p>Gestione condivisa dei soggiorni, anche senza Housekeeping.</p></div>
             </div>
-          </form>
-          <div className="settings-list shell-card">
-            {stays.length === 0 && <p>Nessun soggiorno attivo.</p>}
-            {stays.map(stay => (
-              <div key={stay.id} className="settings-row flex-wrap gap-3">
-                <span className="settings-row-main">
-                  <strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
-                  <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
-                  <small>PIN ospite: {revealedPins[stay.id] ?? '••••'} <button type="button" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
-                </span>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => editStay(stay)}>Modifica</button>
-                  <button type="button" onClick={() => { void extendStay(stay) }}>Estendi</button>
-                  <button type="button" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</button>
-                  <button type="button" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</button>
+            <form onSubmit={(e) => { void addStay(e) }} className="dining-field-grid" style={{ padding: '0 20px 20px', alignItems: 'end' }}>
+              <label className="form-field"><span>Camera</span>
+                <Select name="stay-room" value={roomId} onChange={setRoomId} required>
+                  <option value="">Seleziona camera</option>
+                  {rooms.filter((room) => room.active || room.id === roomId).map((room) => <option key={room.id} value={room.id}>{room.room_number}</option>)}
+                </Select>
+              </label>
+              <label className="form-field"><span>Cognome ospite</span><input required value={guestName} onChange={(e) => setGuestName(e.target.value)} /></label>
+              <label className="form-field"><span>Check-in</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <DatePicker value={checkInSplit.date} onChange={(v) => setCheckIn(joinLocal(v, checkInSplit.time))} ariaLabel="Data check-in" />
+                  <TimePicker value={checkInSplit.time} onChange={(v) => setCheckIn(joinLocal(checkInSplit.date, v))} ariaLabel="Ora check-in" />
                 </div>
+              </label>
+              <label className="form-field"><span>Check-out</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <DatePicker value={checkOutSplit.date} onChange={(v) => setCheckOut(joinLocal(v, checkOutSplit.time))} ariaLabel="Data check-out" />
+                  <TimePicker value={checkOutSplit.time} onChange={(v) => setCheckOut(joinLocal(checkOutSplit.date, v))} ariaLabel="Ora check-out" />
+                </div>
+              </label>
+              <div className="span2" style={{ display: 'flex', gap: 10 }}>
+                <Button variant="primary" type="submit" disabled={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</Button>
+                {editingId ? <Button variant="secondary" type="button" onClick={resetForm}>Annulla modifica</Button> : null}
               </div>
-            ))}
-          </div>
+            </form>
+          </section>
+          <section className="shell-card">
+            <div className="section-heading split"><div><h2>Soggiorni attivi</h2></div></div>
+            <div className="settings-list">
+              {stays.length === 0 ? <PageState kind="empty" title="Nessun soggiorno attivo." /> : null}
+              {stays.map((stay) => (
+                <div key={stay.id} className="settings-row settings-row-static" style={{ flexWrap: 'wrap', alignItems: 'flex-start', gap: 10 }}>
+                  <span className="settings-row-main">
+                    <span><strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
+                      <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
+                      <small style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        PIN ospite: <span style={{ fontFamily: 'var(--mono)' }}>{revealedPins[stay.id] ?? '••••'}</span>
+                        <button className="row-action" type="button" onClick={() => { void togglePin(stay) }} aria-label={revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'} title={revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'}>
+                          {revealedPins[stay.id] !== undefined ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </small>
+                    </span>
+                  </span>
+                  <span style={{ display: 'flex', gap: 2 }}>
+                    <button className="row-action" type="button" onClick={() => editStay(stay)} aria-label={`Modifica soggiorno di ${stay.guest_last_name}`} title="Modifica"><Pencil size={15} /></button>
+                    <Button variant="secondary" size="sm" onClick={() => openExtend(stay)}>Estendi</Button>
+                    <Button variant="secondary" size="sm" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</Button>
+                    <Button variant="danger" size="sm" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</Button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
         </>
-      )}
+      ) : null}
+      <Modal
+        open={Boolean(extending)}
+        title={extending ? `Estendi il soggiorno — Camera ${extending.rooms?.room_number ?? ''}` : 'Estendi soggiorno'}
+        description="Imposta la nuova data e ora di check-out."
+        onClose={() => setExtending(null)}
+        footer={<><Button variant="secondary" onClick={() => setExtending(null)}>Annulla</Button><Button variant="primary" onClick={() => { void confirmExtend() }}>Salva</Button></>}
+      >
+        <div className="modal-form">
+          <label className="form-field"><span>Nuovo check-out</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <DatePicker value={extendSplit.date} onChange={(v) => setExtendValue(joinLocal(v, extendSplit.time))} ariaLabel="Nuova data check-out" />
+              <TimePicker value={extendSplit.time} onChange={(v) => setExtendValue(joinLocal(extendSplit.date, v))} ariaLabel="Nuova ora check-out" />
+            </div>
+          </label>
+          {extendError ? <p className="form-error" role="alert">{extendError}</p> : null}
+        </div>
+      </Modal>
+      {confirmDialog}
     </div>
   )
 }
