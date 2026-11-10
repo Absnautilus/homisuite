@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload, Plug, Pencil, ChevronsRight, LogOut, Power, History } from 'lucide-react'
+import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload, Plug, Pencil, ChevronsRight, LogOut, Power } from 'lucide-react'
 import { Button, DatePicker, TimePicker, PageHeader, Tabs } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
@@ -63,6 +63,12 @@ function useCoreHotel() {
   return { hotelId, error, loading }
 }
 
+function defaultStayTime(daysAhead: number, hour: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + daysAhead)
+  date.setHours(hour, 0, 0, 0)
+  return toLocalDatetime(date.toISOString())
+}
 function splitDateTime(value: string) {
   const match = /^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})/.exec(value)
   return { date: match?.[1] ?? '', time: match?.[2] ?? '' }
@@ -252,8 +258,8 @@ export function CoreStaysPage() {
   const [stays, setStays] = useState<Stay[]>([])
   const [roomId, setRoomId] = useState('')
   const [guestName, setGuestName] = useState('')
-  const [checkIn, setCheckIn] = useState('')
-  const [checkOut, setCheckOut] = useState('')
+  const [checkIn, setCheckIn] = useState(() => defaultStayTime(0, 14))
+  const [checkOut, setCheckOut] = useState(() => defaultStayTime(1, 12))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -335,8 +341,8 @@ export function CoreStaysPage() {
     setEditingId(null)
     setRoomId('')
     setGuestName('')
-    setCheckIn('')
-    setCheckOut('')
+    setCheckIn(defaultStayTime(0, 14))
+    setCheckOut(defaultStayTime(1, 12))
   }
 
   async function extendStay(stay: Stay) {
@@ -408,7 +414,7 @@ export function CoreStaysPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Modifica" title="Modifica" onClick={() => editStay(stay)}><Pencil size={18} /></button>
-                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Storico" title="Storico" disabled><History size={18} /></button>
+                    
                     <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Estendi" title="Estendi" onClick={() => { void extendStay(stay) }}><ChevronsRight size={18} /></button>
                     <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Check-out" title="Check-out" onClick={() => { void changeStatus(stay, 'closed') }}><LogOut size={18} /></button>
                     <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Annulla soggiorno" title="Annulla soggiorno" onClick={() => { void changeStatus(stay, 'cancelled') }}><Power size={18} /></button>
