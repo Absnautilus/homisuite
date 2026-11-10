@@ -123,7 +123,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
             secondary={{
               items: [
                 { value: 'new', label: t('staff.queue.tabNew'), attention: pending.length > 0 ? pending.length : false },
-                { value: 'inProgress', label: t('staff.queue.columnInProgress') },
+                { value: 'inProgress', label: t('staff.queue.columnInProgress'), attention: inProgress.length > 0 ? inProgress.length : false },
                 { value: 'done', label: t('staff.queue.tabDone') },
               ],
               value: tab,
