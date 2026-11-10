@@ -4,11 +4,18 @@ import { Button, DatePicker } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import type { ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
+import { todayIso } from './todayIso'
 
 interface TuttePanelProps {
   reservations: ReservationRequest[]
   restaurants: Restaurant[]
   onOpenDetail: (reservationId: string) => void
+  timezone: string
+  // 'upcoming' (the "Tutte" tab) keeps today and everything after it,
+  // earliest first -- "Archivio" keeps everything strictly before today,
+  // most recent first by default. Same list, same component either way;
+  // only the date-range half of the filter and the initial sort differ.
+  mode: 'upcoming' | 'archive'
 }
 
 type SortCol = 'date' | 'time'
@@ -20,20 +27,22 @@ type SortCol = 'date' | 'time'
 // server round-trip (the full list is already in memory from ReservationsTab).
 const PAGE_SIZE = 50
 
-export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePanelProps) {
+export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, mode }: TuttePanelProps) {
   const [search, setSearch] = useState('')
   const [restaurantFilter, setRestaurantFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [sort, setSort] = useState<{ col: SortCol; dir: 1 | -1 }>({ col: 'date', dir: -1 })
+  const [sort, setSort] = useState<{ col: SortCol; dir: 1 | -1 }>({ col: 'date', dir: mode === 'archive' ? -1 : 1 })
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
+  const today = todayIso(timezone)
 
   const filteredSorted = useMemo(() => {
     const q = search.trim().toLowerCase()
     let filtered = reservations.filter((r) => {
+      if (mode === 'upcoming' ? r.reservation_date < today : r.reservation_date >= today) return false
       if (restaurantFilter && r.restaurant_id !== restaurantFilter) return false
       if (statusFilter && r.confirmation_status !== statusFilter) return false
       if (dateFrom && r.reservation_date < dateFrom) return false
@@ -51,7 +60,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
     })
     return filtered
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservations, search, restaurantFilter, statusFilter, dateFrom, dateTo, sort])
+  }, [reservations, search, restaurantFilter, statusFilter, dateFrom, dateTo, sort, mode, today])
 
   // Narrowing the filters (or the underlying list itself) should always
   // re-show from the top of the newly filtered set, not keep whatever

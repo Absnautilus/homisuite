@@ -22,6 +22,15 @@ function formatDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' })
 }
 
+// The footer's quick-action buttons below only cover the guest-request
+// workflow (new -> in_progress -> confirmed/unavailable); a manually-added
+// booking starts at 'scheduled' ("Da prenotare") and had no button at all
+// to move it forward from there. This dropdown covers every status
+// directly, in any direction, as a general fallback alongside those
+// buttons -- 'pending'/'declined' are left out as legacy-only values a
+// person should never newly pick, not because they can't occur.
+const EDITABLE_STATUSES: ConfirmationStatus[] = ['new', 'scheduled', 'in_progress', 'unavailable', 'confirmed', 'cancelled']
+
 export function BookingDetailSlideOver({ reservation, restaurants, canManage, onClose, onChanged }: BookingDetailSlideOverProps) {
   const [alternatives, setAlternativesState] = useState<ReservationAlternative[]>([])
   const [activity, setActivity] = useState<ChangeLogEntry[]>([])
@@ -184,7 +193,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
           {(reservation.confirmation_status === 'new' || reservation.confirmation_status === 'pending') && (
             <Button variant="primary" onClick={() => void setStatus('in_progress')} disabled={saving}>Prendi in carico</Button>
           )}
-          {reservation.confirmation_status === 'in_progress' && (
+          {(reservation.confirmation_status === 'in_progress' || reservation.confirmation_status === 'scheduled') && (
             <>
               <Button variant="primary" onClick={() => void setStatus('confirmed')} disabled={saving}>Segna come confermata</Button>
               <Button variant="danger" onClick={() => void setStatus('unavailable')} disabled={saving}>Non disponibile</Button>
@@ -234,7 +243,15 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
 
       <div className="dining-dp-section">
         <h3>Stato</h3>
-        <span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span>
+        {canManage ? (
+          <Select id="reservation-status" name="status" value={reservation.confirmation_status} onChange={(value) => void setStatus(value as ConfirmationStatus)} disabled={saving}>
+            {(EDITABLE_STATUSES.includes(reservation.confirmation_status) ? EDITABLE_STATUSES : [reservation.confirmation_status, ...EDITABLE_STATUSES]).map((status) => (
+              <option key={status} value={status}>{CONFIRMATION_STATUS_LABELS[status]}</option>
+            ))}
+          </Select>
+        ) : (
+          <span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span>
+        )}
       </div>
 
       {feedback ? (

@@ -14,7 +14,7 @@ interface ReservationsTabProps {
   hotelId: string
   staffProfileId: string | null
   canManage: boolean
-  view: 'oggi' | 'tutte'
+  view: 'oggi' | 'tutte' | 'archivio'
   timezone: string
 }
 
@@ -49,8 +49,11 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
   return (
     <>
       <div className="section-heading split" style={{ marginBottom: 14 }}>
-        <div><h2>Prenotazioni</h2><p>Tutte le richieste di prenotazione, comprese quelle inserite manualmente.</p></div>
-        {canManage && restaurants.length > 0 ? <button className="primary-action" type="button" data-tour="dining-add" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
+        <div>
+          <h2>{view === 'archivio' ? 'Archivio' : 'Prenotazioni'}</h2>
+          <p>{view === 'archivio' ? 'Le prenotazioni di date passate.' : 'Tutte le richieste di prenotazione, comprese quelle inserite manualmente.'}</p>
+        </div>
+        {canManage && restaurants.length > 0 && view !== 'archivio' ? <button className="primary-action" type="button" data-tour="dining-add" onClick={() => setCreateOpen(true)}><Plus size={17} /> Aggiungi prenotazione</button> : null}
       </div>
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
       {!loading && restaurants.length === 0 ? (
@@ -58,7 +61,7 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
       ) : view === 'oggi' ? (
         <OggiPanel reservations={reservations} restaurants={restaurants} timezone={timezone} onOpenDetail={setDetailId} />
       ) : (
-        <TuttePanel reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} />
+        <TuttePanel key={view} reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} timezone={timezone} mode={view === 'archivio' ? 'archive' : 'upcoming'} />
       )}
       <CreateReservationModal
         open={createOpen}
