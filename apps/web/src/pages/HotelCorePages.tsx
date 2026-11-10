@@ -441,8 +441,24 @@ type CorePmsStatus = {
 export function CoreIntegrationsPage() {
   const runtime = useModuleRuntime()
   const [status, setStatus] = useState<CorePmsStatus | null>(null)
+  const [mode, setMode] = useState('manual')
+  const [hotelCode, setHotelCode] = useState('')
+  const [enterpriseId, setEnterpriseId] = useState('')
+  const [gateway, setGateway] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [appKey, setAppKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [canManage, setCanManage] = useState(false)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    let active = true
+    void runtime.hasPermission('core.property.manage').then(allowed => { if (active) setCanManage(allowed) }).catch(() => { if (active) setCanManage(false) })
+    return () => { active = false }
+  }, [runtime.hasPermission, runtime.property?.id])
   useEffect(() => {
     let active = true
     setStatus(null); setError(null); setLoading(true)
@@ -451,11 +467,33 @@ export function CoreIntegrationsPage() {
       .then(({ data, error: rpcError }) => {
         if (!active) return
         if (rpcError) setError(rpcError.message)
-        else setStatus((data?.[0] ?? null) as CorePmsStatus | null)
+        else {
+          const next = (data?.[0] ?? null) as CorePmsStatus | null
+          setStatus(next)
+          if (next) { setMode(next.mode); setHotelCode(next.ohip_hotel_code ?? ''); setEnterpriseId(next.ohip_enterprise_id ?? ''); setGateway(next.ohip_gateway_url ?? '') }
+        }
         setLoading(false)
       })
     return () => { active = false }
   }, [runtime.property?.id])
+  async function saveConnection(event: FormEvent) {
+    event.preventDefault()
+    if (!runtime.property || !canManage) return
+    setSaving(true); setSaved(false); setError(null)
+    try {
+      const { error: saveError } = await hotelDb.rpc('core_save_pms_integration', {
+        p_property_id: runtime.property.id, p_mode: mode,
+        p_ohip_hotel_code: hotelCode, p_ohip_enterprise_id: enterpriseId,
+        p_ohip_gateway_url: gateway, p_ohip_client_id: clientId,
+        p_ohip_client_secret: clientSecret, p_ohip_app_key: appKey,
+      })
+      if (saveError) throw saveError
+      setClientId(''); setClientSecret(''); setAppKey(''); setSaved(true)
+      const result = await hotelDb.rpc('core_pms_integration_status', { p_property_id: runtime.property.id })
+      if (!result.error) setStatus((result.data?.[0] ?? null) as CorePmsStatus | null)
+    } catch (cause) { setError(errorText(cause)) }
+    finally { setSaving(false) }
+  }
   return <div className="page-stack">
     <PageHeader eyebrow="Hotel Core" title="Integrazioni" description="Connessioni PMS condivise dalla struttura e dai moduli." />
     <CoreNavigation />
@@ -474,7 +512,19 @@ export function CoreIntegrationsPage() {
         <p><strong>Esito:</strong> {status.last_sync_status ?? '—'}</p>
         {status.last_sync_error && <p className="text-bad-ink sm:col-span-2" role="alert">{status.last_sync_error}</p>}
       </div>}
-      <p className="text-sm text-muted">La modifica delle credenziali e la sincronizzazione restano temporaneamente nel pannello PMS di Housekeeping fino alla migrazione sicura delle autorizzazioni. Nessuna credenziale segreta è esposta qui.</p>
+      {canManage && status && <form onSubmit={event => { void saveConnection(event) }} className="grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
+        <label className="flex flex-col gap-2 text-sm">Modalità<select className="form-input" value={mode} onChange={event => setMode(event.target.value)}><option value="manual">Manuale</option><option value="opera">Opera Cloud</option></select></label>
+        {mode === 'opera' && <>
+          <label className="flex flex-col gap-2 text-sm">Codice hotel<input className="form-input" required value={hotelCode} onChange={event => setHotelCode(event.target.value)} /></label>
+          <label className="flex flex-col gap-2 text-sm">Enterprise ID<input className="form-input" value={enterpriseId} onChange={event => setEnterpriseId(event.target.value)} /></label>
+          <label className="flex flex-col gap-2 text-sm sm:col-span-2">Gateway OHIP<input className="form-input" required type="url" value={gateway} onChange={event => setGateway(event.target.value)} placeholder="https://...hospitality-api...ocs.oraclecloud.com" /></label>
+          <label className="flex flex-col gap-2 text-sm">Client ID<input className="form-input" value={clientId} required={!status.has_credentials} onChange={event => setClientId(event.target.value)} autoComplete="off" placeholder={status.has_credentials ? 'Già configurato' : ''} /></label>
+          <label className="flex flex-col gap-2 text-sm">Client secret<input className="form-input" type="password" value={clientSecret} required={!status.has_credentials} onChange={event => setClientSecret(event.target.value)} autoComplete="new-password" placeholder={status.has_credentials ? 'Già configurato' : ''} /></label>
+          <label className="flex flex-col gap-2 text-sm">App key<input className="form-input" type="password" value={appKey} onChange={event => setAppKey(event.target.value)} autoComplete="new-password" /></label>
+        </>}
+        <div className="sm:col-span-2 flex justify-end gap-3 items-center">{saved && <span role="status">Configurazione salvata.</span>}<Button variant="primary" type="submit" loading={saving}>Salva configurazione</Button></div>
+      </form>}
+      <p className="text-sm text-muted">La sincronizzazione OHIP continua attraverso il servizio esistente durante la migrazione. Le credenziali salvate non sono mai restituite al browser.</p>
     </section>
   </div>
 }
