@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { PageHeader } from '@homisuite/ui'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { BedDouble, CalendarDays, Settings2, UsersRound, Plus, Upload, Plug, Pencil, ChevronsRight, LogOut, Power } from 'lucide-react'
+import { Button, DatePicker, TimePicker, PageHeader, Tabs } from '@homisuite/ui'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { parseOperaArrivals, operaDateToLocalValue } from '../lib/operaImport'
@@ -62,6 +63,27 @@ function useCoreHotel() {
   return { hotelId, error, loading }
 }
 
+function defaultStayTime(daysAhead: number, hour: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + daysAhead)
+  date.setHours(hour, 0, 0, 0)
+  return toLocalDatetime(date.toISOString())
+}
+function splitDateTime(value: string) {
+  const match = /^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})/.exec(value)
+  return { date: match?.[1] ?? '', time: match?.[2] ?? '' }
+}
+function DateTimeField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const { date, time } = splitDateTime(value)
+  return <div className="flex flex-col gap-2">
+    <span className="text-xs font-bold uppercase tracking-wider text-muted">{label} *</span>
+    <div className="flex flex-wrap gap-2">
+      <DatePicker ariaLabel={label} value={date} onChange={next => onChange(next ? `${next}T${time || '00:00'}` : '')} />
+      <TimePicker ariaLabel={`${label} ora`} value={time} onChange={next => onChange(date ? `${date}T${next}` : '')} />
+    </div>
+  </div>
+}
+
 type OperaDraft = { key: string; roomId: string; guestName: string; checkIn: string; checkOut: string; include: boolean }
 
 function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; rooms: Room[]; onImported: () => Promise<void> }) {
@@ -104,12 +126,12 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
     if (ok) await onImported().catch(cause => setError(errorText(cause)))
     setDrafts([])
   }
-  return <details className="shell-card p-4">
-    <summary className="cursor-pointer font-semibold">Importa soggiorni da Opera</summary>
+  return <details className="shell-card rounded-xl p-5">
+    <summary className="cursor-pointer font-semibold flex items-center gap-2"><Upload size={17} /> Importa soggiorni da Opera</summary>
     <p>Carica un report arrivi Opera in formato testo delimitato. Controlla camere, ospiti e date prima di importare.</p>
     <label>Report Opera <input aria-label="Report Opera" type="file" accept=".txt,.csv,text/plain" onChange={e => { void readFile(e.target.files?.[0]) }} /></label>
     {warnings.length > 0 && <p role="status">{warnings.length} righe del report richiedono attenzione.</p>}
-    {drafts.map(d => <div className="settings-row flex flex-wrap gap-2" key={d.key}>
+    {drafts.map(d => <div className="settings-row flex flex-wrap items-center gap-3" key={d.key}>
       <label><input type="checkbox" checked={d.include} onChange={e => update(d.key, { include: e.target.checked })} /> Importa</label>
       <select aria-label="Camera Opera" value={d.roomId} onChange={e => update(d.key, { roomId: e.target.value })}>
         <option value="">Camera non assegnata</option>
@@ -119,7 +141,7 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
       <input aria-label="Check-in Opera" type="datetime-local" value={d.checkIn} onChange={e => update(d.key, { checkIn: e.target.value })} />
       <input aria-label="Check-out Opera" type="datetime-local" value={d.checkOut} onChange={e => update(d.key, { checkOut: e.target.value })} />
     </div>)}
-    {drafts.length > 0 && <button type="button" className="btn btn-primary" disabled={busy || !drafts.some(d => d.include)} onClick={() => { void importSelected() }}>{busy ? 'Importazione…' : 'Conferma importazione'}</button>}
+    {drafts.length > 0 && <Button variant="primary" loading={busy} disabled={!drafts.some(d => d.include)} onClick={() => { void importSelected() }}>{busy ? 'Importazione…' : 'Conferma importazione'}</Button>}
     {result && <p role="status">{result}</p>}
     {error && <p role="alert">{error}</p>}
   </details>
@@ -127,14 +149,15 @@ function CoreOperaImport({ hotelId, rooms, onImported }: { hotelId: string; room
 
 function CoreNavigation() {
   const location = useLocation()
-  return (
-    <nav aria-label="Gestione hotel" className="flex flex-wrap gap-3">
-      <Link to="/settings/rooms" aria-current={location.pathname.endsWith('/rooms') ? 'page' : undefined}>Camere</Link>
-      <Link to="/settings/stays" aria-current={location.pathname.endsWith('/stays') ? 'page' : undefined}>Soggiorni</Link>
-      <Link to="/team">Team</Link>
-      <Link to="/settings">Impostazioni</Link>
-    </nav>
-  )
+  const navigate = useNavigate()
+  const items = [
+    { value: '/settings/rooms', label: 'Camere', icon: <BedDouble size={17} /> },
+    { value: '/settings/stays', label: 'Soggiorni', icon: <CalendarDays size={17} /> },
+    { value: '/team', label: 'Team', icon: <UsersRound size={17} /> },
+    { value: '/settings/integrations', label: 'Integrazioni', icon: <Plug size={17} /> },
+    { value: '/settings', label: 'Impostazioni', icon: <Settings2 size={17} /> },
+  ]
+  return <Tabs items={items} value={location.pathname} onValueChange={navigate} variant="surface" scrollIntoView aria-label="Gestione hotel" />
 }
 
 export function CoreRoomsPage() {
@@ -207,19 +230,19 @@ export function CoreRoomsPage() {
       {error && <p role="alert">{error}</p>}
       {hotelId && (
         <>
-          <form onSubmit={(e) => { void addRoom(e) }} className="flex flex-wrap gap-3 items-end">
-            <label>Numero camera <input className="form-input" required value={number} onChange={(e) => setNumber(e.target.value)} /></label>
-            <button className="btn btn-primary" type="submit" disabled={busy}>Aggiungi camera</button>
+          <form onSubmit={(e) => { void addRoom(e) }} className="shell-card rounded-xl p-5 flex flex-wrap gap-4 items-end">
+            <label className="flex flex-col gap-2 text-sm font-medium text-foreground">Numero camera <input className="form-input min-w-48 rounded-lg" required value={number} onChange={(e) => setNumber(e.target.value)} /></label>
+            <Button variant="primary" type="submit" loading={busy}><Plus size={16} /> Aggiungi camera</Button>
           </form>
           <div className="settings-list shell-card">
             {rooms.length === 0 && <p>Nessuna camera configurata.</p>}
             {rooms.map(room => (
               <div key={room.id} className="settings-row">
-                <span className="settings-row-main"><strong>Camera {room.room_number}</strong> · {room.active ? 'Attiva' : 'Disattivata'}</span>
-                <button type="button" onClick={() => { void toggleRoom(room) }}>
+                <span className="settings-row-main"><span className="settings-row-icon"><BedDouble size={17} /></span><span><strong>Camera {room.room_number}</strong><small>{room.active ? 'Attiva' : 'Disattivata'}</small></span></span>
+                <Button variant="secondary" size="sm" onClick={() => { void toggleRoom(room) }}>
                   {room.active ? 'Disattiva' : 'Attiva'}
-                </button>
-                <button type="button" onClick={() => { void deleteRoom(room) }}>Elimina</button>
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => { void deleteRoom(room) }}>Elimina</Button>
               </div>
             ))}
           </div>
@@ -235,8 +258,8 @@ export function CoreStaysPage() {
   const [stays, setStays] = useState<Stay[]>([])
   const [roomId, setRoomId] = useState('')
   const [guestName, setGuestName] = useState('')
-  const [checkIn, setCheckIn] = useState('')
-  const [checkOut, setCheckOut] = useState('')
+  const [checkIn, setCheckIn] = useState(() => defaultStayTime(0, 14))
+  const [checkOut, setCheckOut] = useState(() => defaultStayTime(1, 12))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -318,8 +341,8 @@ export function CoreStaysPage() {
     setEditingId(null)
     setRoomId('')
     setGuestName('')
-    setCheckIn('')
-    setCheckOut('')
+    setCheckIn(defaultStayTime(0, 14))
+    setCheckOut(defaultStayTime(1, 12))
   }
 
   async function extendStay(stay: Stay) {
@@ -362,42 +385,146 @@ export function CoreStaysPage() {
       {error && <p role="alert">{error}</p>}
       {hotelId && (
         <>
-          <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
-          <form onSubmit={(e) => { void addStay(e) }} className="shell-card p-4 grid gap-3">
-            <label>Camera
-              <select required value={roomId} onChange={e => setRoomId(e.target.value)}>
+          <form onSubmit={(e) => { void addStay(e) }} className="shell-card overflow-hidden rounded-xl"><h2 className="border-b border-line px-5 py-4 text-sm font-semibold">Attiva soggiorno</h2><div className="grid gap-4 p-5 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium"><span className="text-xs font-bold uppercase tracking-wider text-muted">Camera *</span>
+              <select className="form-input rounded-lg" required value={roomId} onChange={e => setRoomId(e.target.value)}>
                 <option value="">Seleziona camera</option>
                 {rooms.filter(room => room.active || room.id === roomId).map(room => <option key={room.id} value={room.id}>{room.room_number}</option>)}
               </select>
             </label>
-            <label>Cognome ospite <input required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
-            <label>Check-in <input type="datetime-local" required value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label>
-            <label>Check-out <input type="datetime-local" required value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label>
-            <div className="flex gap-2">
-              <button className="btn btn-primary" type="submit" disabled={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</button>
-              {editingId && <button type="button" onClick={resetForm}>Annulla modifica</button>}
-            </div>
+            <label className="flex flex-col gap-2 text-sm font-medium"><span className="text-xs font-bold uppercase tracking-wider text-muted">Cognome ospite *</span><input className="form-input rounded-lg" required value={guestName} onChange={e => setGuestName(e.target.value)} /></label>
+            <DateTimeField label="Check-in" value={checkIn} onChange={setCheckIn} />
+            <DateTimeField label="Check-out" value={checkOut} onChange={setCheckOut} />
+            <div className="flex flex-wrap justify-end gap-2 sm:col-span-2">
+              <Button variant="primary" type="submit" loading={busy}>{editingId ? 'Salva soggiorno' : 'Attiva soggiorno'}</Button>
+              {editingId && <Button variant="secondary" onClick={resetForm}>Annulla modifica</Button>}
+            </div></div>
           </form>
-          <div className="settings-list shell-card">
+          <CoreOperaImport hotelId={hotelId} rooms={rooms} onImported={reload} />
+          <div className="grid gap-3">
             {stays.length === 0 && <p>Nessun soggiorno attivo.</p>}
             {stays.map(stay => (
-              <div key={stay.id} className="settings-row flex-wrap gap-3">
-                <span className="settings-row-main">
-                  <strong>Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</strong>
-                  <small>{new Date(stay.check_in_at).toLocaleString('it-IT')} – {new Date(stay.check_out_at).toLocaleString('it-IT')}</small>
-                  <small>PIN ospite: {revealedPins[stay.id] ?? '••••'} <button type="button" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi PIN' : 'Mostra PIN'}</button></small>
-                </span>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => editStay(stay)}>Modifica</button>
-                  <button type="button" onClick={() => { void extendStay(stay) }}>Estendi</button>
-                  <button type="button" onClick={() => { void changeStatus(stay, 'closed') }}>Check-out</button>
-                  <button type="button" onClick={() => { void changeStatus(stay, 'cancelled') }}>Annulla</button>
+              <div key={stay.id} className="shell-card rounded-xl p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">Camera {stay.rooms?.room_number ?? '—'} · {stay.guest_last_name}</p>
+                    <p className="text-sm text-muted">Check-out: {new Date(stay.check_out_at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })} · PIN: <span className="font-mono font-semibold tracking-widest text-foreground">{revealedPins[stay.id] ?? '••••'}</span>
+                      <Button variant="ghost" size="sm" onClick={() => { void togglePin(stay) }}>{revealedPins[stay.id] !== undefined ? 'Nascondi' : 'Mostra'}</Button>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Modifica" title="Modifica" onClick={() => editStay(stay)}><Pencil size={18} /></button>
+                    
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Estendi" title="Estendi" onClick={() => { void extendStay(stay) }}><ChevronsRight size={18} /></button>
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Check-out" title="Check-out" onClick={() => { void changeStatus(stay, 'closed') }}><LogOut size={18} /></button>
+                    <button className="rounded-lg p-2 text-muted hover:bg-surface-2" aria-label="Annulla soggiorno" title="Annulla soggiorno" onClick={() => { void changeStatus(stay, 'cancelled') }}><Power size={18} /></button>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            ))}          </div>
         </>
       )}
     </div>
   )
+}
+
+type CorePmsStatus = {
+  mode: string
+  ohip_hotel_code: string | null
+  ohip_enterprise_id: string | null
+  ohip_gateway_url: string | null
+  has_credentials: boolean
+  last_sync_at: string | null
+  last_sync_status: string | null
+  last_sync_error: string | null
+}
+export function CoreIntegrationsPage() {
+  const runtime = useModuleRuntime()
+  const [status, setStatus] = useState<CorePmsStatus | null>(null)
+  const [mode, setMode] = useState('manual')
+  const [hotelCode, setHotelCode] = useState('')
+  const [enterpriseId, setEnterpriseId] = useState('')
+  const [gateway, setGateway] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [appKey, setAppKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [canManage, setCanManage] = useState(false)
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    let active = true
+    void runtime.hasPermission('core.property.manage').then(allowed => { if (active) setCanManage(allowed) }).catch(() => { if (active) setCanManage(false) })
+    return () => { active = false }
+  }, [runtime.hasPermission, runtime.property?.id])
+  useEffect(() => {
+    let active = true
+    setStatus(null); setError(null); setLoading(true)
+    if (!runtime.property) { setLoading(false); return }
+    void hotelDb.rpc('core_pms_integration_status', { p_property_id: runtime.property.id })
+      .then(({ data, error: rpcError }) => {
+        if (!active) return
+        if (rpcError) setError(rpcError.message)
+        else {
+          const next = (data?.[0] ?? null) as CorePmsStatus | null
+          setStatus(next)
+          if (next) { setMode(next.mode); setHotelCode(next.ohip_hotel_code ?? ''); setEnterpriseId(next.ohip_enterprise_id ?? ''); setGateway(next.ohip_gateway_url ?? '') }
+        }
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [runtime.property?.id])
+  async function saveConnection(event: FormEvent) {
+    event.preventDefault()
+    if (!runtime.property || !canManage) return
+    setSaving(true); setSaved(false); setError(null)
+    try {
+      const { error: saveError } = await hotelDb.rpc('core_save_pms_integration', {
+        p_property_id: runtime.property.id, p_mode: mode,
+        p_ohip_hotel_code: hotelCode, p_ohip_enterprise_id: enterpriseId,
+        p_ohip_gateway_url: gateway, p_ohip_client_id: clientId,
+        p_ohip_client_secret: clientSecret, p_ohip_app_key: appKey,
+      })
+      if (saveError) throw saveError
+      setClientId(''); setClientSecret(''); setAppKey(''); setSaved(true)
+      const result = await hotelDb.rpc('core_pms_integration_status', { p_property_id: runtime.property.id })
+      if (!result.error) setStatus((result.data?.[0] ?? null) as CorePmsStatus | null)
+    } catch (cause) { setError(errorText(cause)) }
+    finally { setSaving(false) }
+  }
+  return <div className="page-stack">
+    <PageHeader eyebrow="Hotel Core" title="Integrazioni" description="Connessioni PMS condivise dalla struttura e dai moduli." />
+    <CoreNavigation />
+    <section className="shell-card rounded-xl p-5 space-y-4">
+      <div className="flex items-center gap-3"><Plug size={20} /><h2 className="font-semibold">Opera Cloud · OHIP</h2></div>
+      {loading && <p role="status">Caricamento connessione…</p>}
+      {error && <p role="alert">{error}</p>}
+      {!loading && !error && !status && <p>Connessione non disponibile per questa struttura o autorizzazione insufficiente.</p>}
+      {status && <div className="grid gap-3 text-sm sm:grid-cols-2">
+        <p><strong>Modalità:</strong> {status.mode === 'opera' ? 'Opera Cloud' : 'Manuale'}</p>
+        <p><strong>Credenziali:</strong> {status.has_credentials ? 'Configurate' : 'Non configurate'}</p>
+        <p><strong>Hotel code:</strong> {status.ohip_hotel_code ?? '—'}</p>
+        <p><strong>Enterprise:</strong> {status.ohip_enterprise_id ?? '—'}</p>
+        <p className="sm:col-span-2"><strong>Gateway:</strong> {status.ohip_gateway_url ?? '—'}</p>
+        <p><strong>Ultima sincronizzazione:</strong> {status.last_sync_at ? new Date(status.last_sync_at).toLocaleString('it-IT') : 'Mai'}</p>
+        <p><strong>Esito:</strong> {status.last_sync_status ?? '—'}</p>
+        {status.last_sync_error && <p className="text-bad-ink sm:col-span-2" role="alert">{status.last_sync_error}</p>}
+      </div>}
+      {canManage && status && <form onSubmit={event => { void saveConnection(event) }} className="grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
+        <label className="flex flex-col gap-2 text-sm">Modalità<select className="form-input" value={mode} onChange={event => setMode(event.target.value)}><option value="manual">Manuale</option><option value="opera">Opera Cloud</option></select></label>
+        {mode === 'opera' && <>
+          <label className="flex flex-col gap-2 text-sm">Codice hotel<input className="form-input" required value={hotelCode} onChange={event => setHotelCode(event.target.value)} /></label>
+          <label className="flex flex-col gap-2 text-sm">Enterprise ID<input className="form-input" value={enterpriseId} onChange={event => setEnterpriseId(event.target.value)} /></label>
+          <label className="flex flex-col gap-2 text-sm sm:col-span-2">Gateway OHIP<input className="form-input" required type="url" value={gateway} onChange={event => setGateway(event.target.value)} placeholder="https://...hospitality-api...ocs.oraclecloud.com" /></label>
+          <label className="flex flex-col gap-2 text-sm">Client ID<input className="form-input" value={clientId} required={!status.has_credentials} onChange={event => setClientId(event.target.value)} autoComplete="off" placeholder={status.has_credentials ? 'Già configurato' : ''} /></label>
+          <label className="flex flex-col gap-2 text-sm">Client secret<input className="form-input" type="password" value={clientSecret} required={!status.has_credentials} onChange={event => setClientSecret(event.target.value)} autoComplete="new-password" placeholder={status.has_credentials ? 'Già configurato' : ''} /></label>
+          <label className="flex flex-col gap-2 text-sm">App key<input className="form-input" type="password" value={appKey} onChange={event => setAppKey(event.target.value)} autoComplete="new-password" /></label>
+        </>}
+        <div className="sm:col-span-2 flex justify-end gap-3 items-center">{saved && <span role="status">Configurazione salvata.</span>}<Button variant="primary" type="submit" loading={saving}>Salva configurazione</Button></div>
+      </form>}
+      <p className="text-sm text-muted">La sincronizzazione OHIP continua attraverso il servizio esistente durante la migrazione. Le credenziali salvate non sono mai restituite al browser.</p>
+    </section>
+  </div>
 }
