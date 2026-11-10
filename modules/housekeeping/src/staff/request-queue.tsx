@@ -166,77 +166,89 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
         </div>
       ) : queue === null ? (
         <p className="text-sm text-muted">{t('staff.queue.loading')}</p>
-      ) : tab === 'new' ? (
-        pending.length === 0 ? (
-          <EmptyState
-            icon={<IconInboxEmpty className="h-6 w-6" />}
-            title={t('staff.queue.emptyActiveTitle')}
-            description={t('staff.queue.emptyActiveDesc')}
-            className="rounded-none border-0 bg-transparent py-10 shadow-none"
-          />
-        ) : (
-          <ReorderableColumn
-            items={pending}
-            now={now}
-            staffId={profile.id}
-            canReorder={canReorder}
-            canFlagUrgent={managesFrontDesk}
-            canManageRequest={managesFrontDesk}
-            jobTitles={jobTitles}
-            onReordered={reload}
-            onCompleteOverride={onCompleteOverride}
-          />
-        )
-      ) : tab === 'inProgress' ? (
-        inProgress.length === 0 ? (
-          <EmptyState
-            icon={<IconInboxEmpty className="h-6 w-6" />}
-            title={t('staff.queue.emptyInProgressTitle')}
-            description={t('staff.queue.emptyInProgressDesc')}
-            className="rounded-none border-0 bg-transparent py-10 shadow-none"
-          />
-        ) : (
-          <ReorderableColumn
-            items={inProgress}
-            now={now}
-            staffId={profile.id}
-            canReorder={canReorder}
-            canFlagUrgent={managesFrontDesk}
-            canManageRequest={managesFrontDesk}
-            jobTitles={jobTitles}
-            onReordered={reload}
-            onCompleteOverride={onCompleteOverride}
-          />
-        )
-      ) : done.length === 0 ? (
-        <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} className="rounded-none border-0 bg-transparent py-10 shadow-none" />
       ) : (
-        <div className="space-y-3">
-          {donePageItems.map((request) => (
-            <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="done" canManageRequest={managesFrontDesk} jobTitles={jobTitles} />
-          ))}
-          {doneTotalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                disabled={clampedDonePage === 0}
-                onClick={() => setDonePage((p) => Math.max(0, p - 1))}
-                className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {t('staff.queue.donePagePrev')}
-              </button>
-              <span className="text-xs text-muted">{t('staff.queue.donePageLabel', { page: clampedDonePage + 1, total: doneTotalPages })}</span>
-              <button
-                type="button"
-                disabled={clampedDonePage >= doneTotalPages - 1}
-                onClick={() => setDonePage((p) => Math.min(doneTotalPages - 1, p + 1))}
-                className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {t('staff.queue.donePageNext')}
-              </button>
-            </div>
-          )}
-        </div>
+        // All three tabs stay mounted, only visibility toggles -- switching
+        // the tab used to unmount/remount a whole ReorderableColumn (every
+        // RequestRow in it, fresh DOM and effects each time), which is what
+        // read as a lag on every tab switch.
+        <>
+          <div hidden={tab !== 'new'}>
+            {pending.length === 0 ? (
+              <EmptyState
+                icon={<IconInboxEmpty className="h-6 w-6" />}
+                title={t('staff.queue.emptyActiveTitle')}
+                description={t('staff.queue.emptyActiveDesc')}
+                className="rounded-none border-0 bg-transparent py-10 shadow-none"
+              />
+            ) : (
+              <ReorderableColumn
+                items={pending}
+                now={now}
+                staffId={profile.id}
+                canReorder={canReorder}
+                canFlagUrgent={managesFrontDesk}
+                canManageRequest={managesFrontDesk}
+                jobTitles={jobTitles}
+                onReordered={reload}
+                onCompleteOverride={onCompleteOverride}
+              />
+            )}
+          </div>
+          <div hidden={tab !== 'inProgress'}>
+            {inProgress.length === 0 ? (
+              <EmptyState
+                icon={<IconInboxEmpty className="h-6 w-6" />}
+                title={t('staff.queue.emptyInProgressTitle')}
+                description={t('staff.queue.emptyInProgressDesc')}
+                className="rounded-none border-0 bg-transparent py-10 shadow-none"
+              />
+            ) : (
+              <ReorderableColumn
+                items={inProgress}
+                now={now}
+                staffId={profile.id}
+                canReorder={canReorder}
+                canFlagUrgent={managesFrontDesk}
+                canManageRequest={managesFrontDesk}
+                jobTitles={jobTitles}
+                onReordered={reload}
+                onCompleteOverride={onCompleteOverride}
+              />
+            )}
+          </div>
+          <div hidden={tab !== 'done'}>
+            {done.length === 0 ? (
+              <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} className="rounded-none border-0 bg-transparent py-10 shadow-none" />
+            ) : (
+              <div className="space-y-3">
+                {donePageItems.map((request) => (
+                  <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="done" canManageRequest={managesFrontDesk} jobTitles={jobTitles} />
+                ))}
+                {doneTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      disabled={clampedDonePage === 0}
+                      onClick={() => setDonePage((p) => Math.max(0, p - 1))}
+                      className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {t('staff.queue.donePagePrev')}
+                    </button>
+                    <span className="text-xs text-muted">{t('staff.queue.donePageLabel', { page: clampedDonePage + 1, total: doneTotalPages })}</span>
+                    <button
+                      type="button"
+                      disabled={clampedDonePage >= doneTotalPages - 1}
+                      onClick={() => setDonePage((p) => Math.min(doneTotalPages - 1, p + 1))}
+                      className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {t('staff.queue.donePageNext')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
       )}
         </div>
       </section>
