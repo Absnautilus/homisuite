@@ -28,7 +28,7 @@ begin
   if p_mode = 'opera' and (
     nullif(btrim(p_ohip_hotel_code), '') is null or v_gateway is null
   ) then raise exception 'OHIP hotel code and gateway required'; end if;
-  if v_gateway is not null and v_gateway !~* '^https://[a-z0-9-]+\\.hospitality-api\\.[a-z0-9-]+\\.ocs\\.oraclecloud\\.com/?$'
+  if v_gateway is not null and v_gateway !~* '^https://[a-z0-9-]+\.hospitality-api\.[a-z0-9-]+\.ocs\.oraclecloud\.com/?$'
   then raise exception 'unsupported OHIP gateway'; end if;
   insert into public.pms_integrations (
     hotel_id, mode, ohip_hotel_code, ohip_enterprise_id, ohip_gateway_url,
