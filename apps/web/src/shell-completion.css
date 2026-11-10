@@ -251,11 +251,17 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .dining-hours-form input[type="time"] { min-height: 42px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); }
 
 .dining-empty-hint { margin: 0; padding: 0 20px 20px; }
-.dining-reservations-table { border-top: 1px solid var(--line); overflow-x: auto; }
-.dining-reservations-row { display: grid; grid-template-columns: 96px 110px 76px 140px 64px 150px 50px 130px minmax(170px,1fr) minmax(170px,1fr); gap: 10px; align-items: center; min-height: 54px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 12px; min-width: 1340px; }
-.dining-reservations-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.dining-reservations-row.cancelled { background: var(--red-bg); color: var(--red-ink); }
-.dining-reservations-row.cancelled .select-trigger { background: transparent; border-color: rgba(178,58,58,.22); color: inherit; }
+/* A cancelled row inside TuttePanel's real <table> -- deliberately NOT
+   `display: grid` (that was a leftover from this panel's previous,
+   non-table layout; applied to a <tr> it breaks out of table-row display,
+   which desyncs that row's column widths from every other row's and was
+   quietly corrupting the whole table's layout). Also softer than the old
+   solid --red-bg wash: a full-row fill at that saturation read as an
+   alarm, not "this one's cancelled" -- a light tint over the row's own
+   surface keeps the hint without raising it to that level, closer to how
+   the cancelled status pill itself already reads (muted, not red).  */
+.dining-row-cancelled { background: color-mix(in srgb, var(--red-ink) 12%, var(--surface)); color: var(--ink-2); }
+.dining-row-cancelled .select-trigger { background: transparent; border-color: color-mix(in srgb, var(--red-ink) 22%, transparent); color: inherit; }
 .dining-reservations-empty { padding: 24px 20px; text-align: center; }
 
 .dining-change-log { border-top: 1px solid var(--line); overflow-x: auto; }

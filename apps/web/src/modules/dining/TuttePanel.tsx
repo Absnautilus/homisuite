@@ -98,7 +98,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
             {rows.map((reservation) => (
               <tr
                 key={reservation.id}
-                className={reservation.confirmation_status === 'cancelled' ? 'dining-reservations-row cancelled' : undefined}
+                className={reservation.confirmation_status === 'cancelled' ? 'dining-row-cancelled' : undefined}
                 onClick={() => onOpenDetail(reservation.id)}
               >
                 <td>{new Date(`${reservation.reservation_date}T00:00:00`).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}</td>
