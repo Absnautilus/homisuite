@@ -6,7 +6,7 @@ import { supabase } from '../../core/client'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { getFeedback, listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
 import type { ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS } from './types'
+import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
 import { readableDiningError } from './readableDiningError'
 import { SlideOver } from './SlideOver'
 
@@ -39,7 +39,8 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   const [editSpecialRequests, setEditSpecialRequests] = useState('')
   const [confirmDialog, confirm] = useConfirm()
 
-  const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
+  const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
+  const alternativeRestaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
 
   // Same stale-response guard as RestaurantManagementSlideOver: a slow
   // fetch for a reservation the staff member already closed (opened
@@ -87,7 +88,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     if (status === 'cancelled') {
       const ok = await confirm({
         title: 'Annullare questa prenotazione?',
-        description: `${reservation.guest_name} · ${restaurantName(reservation.restaurant_id)}, ${formatDate(reservation.reservation_date)} alle ${reservation.reservation_time.slice(0, 5)}.`,
+        description: `${reservation.guest_name} · ${restaurantName(reservation)}, ${formatDate(reservation.reservation_date)} alle ${reservation.reservation_time.slice(0, 5)}.`,
         confirmLabel: 'Annulla prenotazione',
       })
       if (!ok) return
@@ -176,7 +177,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     <SlideOver
       open={Boolean(reservation)}
       onClose={onClose}
-      title={restaurantName(reservation.restaurant_id)}
+      title={restaurantName(reservation)}
       description={`${formatDate(reservation.reservation_date)} · ${reservation.reservation_time.slice(0, 5)} · ${reservation.party_size} persone`}
       footer={canManage ? (
         <>
@@ -264,7 +265,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
           <ol className="dining-alt-list">
             {alternatives.map((alt) => (
               <li key={alt.id}>
-                <span style={{ flex: 1 }}>{restaurantName(alt.restaurant_id)}</span>
+                <span style={{ flex: 1 }}>{alternativeRestaurantName(alt.restaurant_id)}</span>
                 {canManage ? <button type="button" className="icon-button" aria-label="Rimuovi" onClick={() => void removeAlternative(alt.restaurant_id)}><Trash2 size={13} /></button> : null}
               </li>
             ))}

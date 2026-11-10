@@ -3,7 +3,7 @@ import { Search } from 'lucide-react'
 import { Button, DatePicker } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import type { ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS } from './types'
+import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
 
 interface TuttePanelProps {
   reservations: ReservationRequest[]
@@ -29,7 +29,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
   const [sort, setSort] = useState<{ col: SortCol; dir: 1 | -1 }>({ col: 'date', dir: -1 })
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
+  const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
 
   const filteredSorted = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -39,7 +39,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
       if (dateFrom && r.reservation_date < dateFrom) return false
       if (dateTo && r.reservation_date > dateTo) return false
       if (q) {
-        const haystack = [r.guest_name, r.room_number ?? '', r.booking_reference ?? '', restaurantName(r.restaurant_id), r.special_requests ?? '', r.staff_notes ?? ''].join(' ').toLowerCase()
+        const haystack = [r.guest_name, r.room_number ?? '', r.booking_reference ?? '', restaurantName(r), r.special_requests ?? '', r.staff_notes ?? ''].join(' ').toLowerCase()
         if (!haystack.includes(q)) return false
       }
       return true
@@ -106,7 +106,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail }: TuttePan
                 <td>{reservation.room_number ?? '—'}</td>
                 <td>{reservation.guest_name}</td>
                 <td>{reservation.booking_reference ?? '—'}</td>
-                <td>{restaurantName(reservation.restaurant_id)}</td>
+                <td>{restaurantName(reservation)}</td>
                 <td>{reservation.party_size}</td>
                 <td><span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span></td>
                 <td>{reservation.guest_preference_tags.join(', ') || reservation.special_requests || '—'}</td>

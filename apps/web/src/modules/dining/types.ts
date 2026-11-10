@@ -90,7 +90,10 @@ export type ConfirmationStatus =
 export interface ReservationRequest {
   id: string
   hotel_id: string
-  restaurant_id: string
+  // Exactly one of the two is set -- a restaurant not on this hotel's own
+  // list leaves restaurant_id null and names itself here instead.
+  restaurant_id: string | null
+  custom_restaurant_name: string | null
   stay_id: string | null
   room_number: string | null
   guest_name: string
@@ -163,4 +166,18 @@ export interface ChangeLogEntry {
   actor_name: string
   summary: string
   created_at: string
+}
+
+// The one place that turns a reservation's restaurant_id/custom_restaurant_name
+// pair into a display string -- every list/detail view that shows a
+// reservation's restaurant calls this instead of re-deriving the same
+// null-handling logic.
+export function resolveRestaurantName(
+  reservation: { restaurant_id: string | null; custom_restaurant_name: string | null },
+  restaurants: Restaurant[],
+): string {
+  if (reservation.restaurant_id) {
+    return restaurants.find((r) => r.id === reservation.restaurant_id)?.name ?? '—'
+  }
+  return reservation.custom_restaurant_name ? `Altro (${reservation.custom_restaurant_name})` : '—'
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, DatePicker, Modal, TimePicker } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
-import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { createReservation, listGuestTags, listReservations, listRestaurants, type CreateReservationInput } from './api'
 import type { GuestTag, ReservationRequest, Restaurant } from './types'
@@ -9,6 +8,7 @@ import { readableDiningError } from './readableDiningError'
 import { OggiPanel } from './OggiPanel'
 import { TuttePanel } from './TuttePanel'
 import { BookingDetailSlideOver } from './BookingDetailSlideOver'
+import { RestaurantField } from './RestaurantField'
 
 interface ReservationsTabProps {
   hotelId: string
@@ -89,7 +89,7 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
 }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [restaurantId, setRestaurantId] = useState('')
+  const [restaurantText, setRestaurantText] = useState('')
   const [reservationDate, setReservationDate] = useState('')
   const [reservationTime, setReservationTime] = useState('')
   const [guestTags, setGuestTags] = useState<GuestTag[]>([])
@@ -99,13 +99,13 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
     if (open) {
       setSaving(false)
       setError(null)
-      setRestaurantId(restaurants[0]?.id ?? '')
+      setRestaurantText('')
       setReservationDate('')
       setReservationTime('')
       setSelectedTags([])
       void listGuestTags(supabase, hotelId).then((tags) => setGuestTags(tags.filter((tag) => tag.active)))
     }
-  }, [open, restaurants, hotelId])
+  }, [open, hotelId])
 
   function toggleTag(label: string) {
     setSelectedTags((current) => current.includes(label) ? current.filter((item) => item !== label) : [...current, label])
@@ -113,6 +113,10 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!restaurantText.trim()) {
+      setError('Indica il ristorante.')
+      return
+    }
     if (!reservationDate || !reservationTime) {
       setError('Indica data e ora della prenotazione.')
       return
@@ -121,8 +125,13 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
     setError(null)
     try {
       const form = new FormData(event.currentTarget)
+      // A name that matches one of this hotel's own restaurants (regardless
+      // of case) resolves to it; anything else is kept as a one-off name --
+      // not every booking is for a restaurant already on the list.
+      const matched = restaurants.find((r) => r.name.trim().toLowerCase() === restaurantText.trim().toLowerCase())
       const input: CreateReservationInput = {
-        restaurant_id: restaurantId,
+        restaurant_id: matched?.id ?? null,
+        custom_restaurant_name: matched ? null : restaurantText.trim(),
         room_number: String(form.get('room_number') || '') || null,
         guest_name: String(form.get('guest_name')),
         party_size: Number(form.get('party_size')),
@@ -160,17 +169,15 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
       )}
     >
       <form className="modal-form" id="reservation-form" onSubmit={submit}>
-        <label className="form-field"><span>Ristorante</span>
-          <Select id="reservation-restaurant" name="restaurant" value={restaurantId} onChange={setRestaurantId}>
-            {restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}
-          </Select>
+        <label className="form-field"><span>Ristorante *</span>
+          <RestaurantField id="reservation-restaurant" value={restaurantText} onChange={setRestaurantText} restaurants={restaurants} />
         </label>
         <label className="form-field"><span>Nome ospite</span><input name="guest_name" required minLength={1} maxLength={120} /></label>
+        <label className="form-field"><span>N. prenotazione</span><input name="booking_reference" maxLength={40} placeholder="Numero prenotazione dell'ospite" /></label>
         <label className="form-field"><span>Camera</span><input name="room_number" maxLength={20} /></label>
         <label className="form-field"><span>Data</span><DatePicker value={reservationDate} onChange={setReservationDate} ariaLabel="Data prenotazione" /></label>
         <label className="form-field"><span>Ora</span><TimePicker value={reservationTime} onChange={setReservationTime} ariaLabel="Ora prenotazione" /></label>
         <label className="form-field"><span>Numero persone</span><input name="party_size" type="number" min={1} max={50} required defaultValue={2} /></label>
-        <label className="form-field"><span>N. prenotazione</span><input name="booking_reference" maxLength={40} /></label>
         {guestTags.length > 0 ? (
           <div className="form-field">
             <span>Preferenze ospite</span>

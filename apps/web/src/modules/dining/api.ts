@@ -114,7 +114,11 @@ export async function listReservations(client: SupabaseClient, hotelId: string):
 }
 
 export interface CreateReservationInput {
-  restaurant_id: string
+  // Exactly one of the two -- see the restaurant_reservation_requests_restaurant_xor_custom
+  // check constraint. A restaurant not on this hotel's own list (custom_restaurant_name set)
+  // leaves restaurant_id null.
+  restaurant_id: string | null
+  custom_restaurant_name: string | null
   room_number: string | null
   guest_name: string
   party_size: number

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { AlertTriangle, Clock3, Inbox } from 'lucide-react'
 import { Button } from '@homisuite/ui'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS } from './types'
+import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
 import { todayIso } from './todayIso'
 
 interface OggiPanelProps {
@@ -32,7 +32,7 @@ const KIND_BY_TONE: Record<'urgent' | 'waiting' | 'new', string> = { urgent: 'un
 
 export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }: OggiPanelProps) {
   const [statusFilter, setStatusFilter] = useState<ConfirmationStatus | 'tutte'>('tutte')
-  const restaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
+  const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
   const today = todayIso(timezone)
 
   const queueGroups = useMemo(
@@ -92,7 +92,7 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
                     onKeyDown={(event) => { if (event.key === 'Enter') onOpenDetail(reservation.id) }}
                   >
                     <div className="dining-q-main">
-                      <strong>{restaurantName(reservation.restaurant_id)}</strong>
+                      <strong>{restaurantName(reservation)}</strong>
                       <span className="q-time">
                         {reservation.reservation_date !== today ? `${formatQueueDate(reservation.reservation_date)} · ` : ''}
                         {reservation.reservation_time.slice(0, 5)} · {reservation.party_size} pax
@@ -140,7 +140,7 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
                   <td>{reservation.reservation_time.slice(0, 5)}</td>
                   <td>{reservation.room_number ?? '—'}</td>
                   <td>{reservation.guest_name}</td>
-                  <td>{restaurantName(reservation.restaurant_id)}</td>
+                  <td>{restaurantName(reservation)}</td>
                   <td>{reservation.party_size}</td>
                   <td><span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span></td>
                 </tr>
