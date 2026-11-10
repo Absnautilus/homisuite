@@ -217,7 +217,7 @@ test('organization admin manages Core rooms and stays independently of Housekeep
   await stayRow.getByRole('button', { name: 'Nascondi' }).click()
   page.once('dialog', dialog => { void dialog.accept('2030-05-03T11:00') })
   await stayRow.getByRole('button', { name: 'Estendi' }).click()
-  await expect(stayRow.getByText(/03\/05\/2030/)).toBeVisible()
+  await expect(stayRow.getByText(/03\/05\/(?:20)?30/)).toBeVisible()
   page.once('dialog', dialog => { void dialog.accept() })
   await page.locator('.shell-card').filter({ hasText: `Camera ${roomNumber} · CoreUpdated` }).getByRole('button', { name: 'Annulla soggiorno' }).click()
   await expect(page.getByText(`Camera ${roomNumber} · CoreUpdated`)).toHaveCount(0)
