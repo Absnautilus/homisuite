@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Button, DatePicker, Modal, ModuleNav, TimePicker } from '@homisuite/ui'
+import { Button, DatePicker, Modal, ModuleNav, TimePicker, useRememberedState } from '@homisuite/ui'
 import { BedDouble, ChevronDown, Eye, EyeOff, Pencil, Plug, Plus, Power, Trash2, Upload, Users } from 'lucide-react'
 import { Select } from '../components/Select'
 import { Switch } from '../components/Switch'
@@ -328,9 +328,25 @@ export function CoreStaysPage() {
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [revealedPins, setRevealedPins] = useState<Record<string, string>>({})
-  const [extending, setExtending] = useState<Stay | null>(null)
+  // Remembers just the id, not the Stay object (which could be stale across
+  // a remount) -- extending is re-derived from the freshly reloaded stays
+  // list, and the effect below (re)populates the date field from it either
+  // way, whether the modal was just opened or restored on return to the page.
+  const [extendingId, setExtendingId] = useRememberedState<string | null>('coreStays.extendingId', null)
+  const extending = stays.find((stay) => stay.id === extendingId) ?? null
   const [extendValue, setExtendValue] = useState('')
   const [extendError, setExtendError] = useState<string | null>(null)
+  useEffect(() => {
+    if (extending) {
+      setExtendValue(toLocal(extending.check_out_at))
+      setExtendError(null)
+    }
+    // Only the id, deliberately -- a reload() while this modal is already
+    // open (e.g. from an unrelated action elsewhere on the page) gives
+    // `extending` a new object reference for the same stay, and that must
+    // not clobber whatever the person has already typed into the field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extending?.id])
   const [confirmDialog, confirm] = useConfirm()
 
   const reload = useCallback(async () => {
@@ -414,9 +430,7 @@ export function CoreStaysPage() {
   }
 
   function openExtend(stay: Stay) {
-    setExtending(stay)
-    setExtendValue(toLocal(stay.check_out_at))
-    setExtendError(null)
+    setExtendingId(stay.id)
   }
 
   async function confirmExtend() {
@@ -431,7 +445,7 @@ export function CoreStaysPage() {
         .eq('hotel_id', hotelId).eq('id', extending.id).eq('status', 'active').select('id').maybeSingle()
       if (result.error) throw result.error
       if (!result.data) throw new Error('Estensione non applicata.')
-      setExtending(null)
+      setExtendingId(null)
       await reload()
     } catch (cause) { setExtendError(errorText(cause)) }
   }
@@ -530,8 +544,8 @@ export function CoreStaysPage() {
         open={Boolean(extending)}
         title={extending ? `Estendi il soggiorno — Camera ${extending.rooms?.room_number ?? ''}` : 'Estendi soggiorno'}
         description="Imposta la nuova data e ora di check-out."
-        onClose={() => setExtending(null)}
-        footer={<><Button variant="secondary" onClick={() => setExtending(null)}>Annulla</Button><Button variant="primary" onClick={() => { void confirmExtend() }}>Salva</Button></>}
+        onClose={() => setExtendingId(null)}
+        footer={<><Button variant="secondary" onClick={() => setExtendingId(null)}>Annulla</Button><Button variant="primary" onClick={() => { void confirmExtend() }}>Salva</Button></>}
       >
         <div className="modal-form">
           <label className="form-field"><span>Nuovo check-out</span>

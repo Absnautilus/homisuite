@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import type { CoreRole, JobTitle, MemberPermissionStatus, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
-import { Button, Modal, ModuleNav, Tabs } from '@homisuite/ui'
+import { Button, Modal, ModuleNav, Tabs, useRememberedState } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, Building2, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { GuestLinkRow } from '../components/GuestLinkRow'
 import { PageState } from '../components/PageState'
@@ -34,17 +34,30 @@ export function TeamPage() {
   const [team, setTeam] = useState<TeamState>(emptyTeam)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editing, setEditing] = useState<TeamMember | null>(null)
-  const [resettingPassword, setResettingPassword] = useState<TeamMember | null>(null)
-  const [jobEditor, setJobEditor] = useState<JobTitle | 'new' | null>(null)
+  const [createOpen, setCreateOpen] = useRememberedState('team.createOpen', false)
+  // Modals remember just the record's id, not the TeamMember/JobTitle
+  // object itself -- the object held across a remount could be stale, so
+  // the actual modal prop is always re-derived below from the freshly
+  // (re)loaded team.members/team.jobTitles.
+  const [editingId, setEditingId] = useRememberedState<string | null>('team.editingMemberId', null)
+  const [resettingPasswordId, setResettingPasswordId] = useRememberedState<string | null>('team.resettingPasswordMemberId', null)
+  const [jobEditorKey, setJobEditorKey] = useRememberedState<string | null>('team.jobEditorKey', null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
-  const [modulesFor, setModulesFor] = useState<TeamMember | null>(null)
+  const [modulesForId, setModulesForId] = useRememberedState<string | null>('team.modulesForMemberId', null)
   const [confirmDialog, confirm] = useConfirm()
   const anyModuleEntitled = runtime.entitlements.some((item) => item.enabled)
   const [canManageProperty, setCanManageProperty] = useState(false)
-  const [propertyOpen, setPropertyOpen] = useState(false)
+  const [propertyOpen, setPropertyOpen] = useRememberedState('team.propertyOpen', false)
+
+  const editing = team.members.find((member) => member.membership.id === editingId) ?? null
+  const resettingPassword = team.members.find((member) => member.membership.id === resettingPasswordId) ?? null
+  const jobEditor = jobEditorKey === 'new' ? 'new' : team.jobTitles.find((job) => job.id === jobEditorKey) ?? null
+  const modulesFor = team.members.find((member) => member.membership.id === modulesForId) ?? null
+  function setEditing(member: TeamMember | null) { setEditingId(member?.membership.id ?? null) }
+  function setResettingPassword(member: TeamMember | null) { setResettingPasswordId(member?.membership.id ?? null) }
+  function setJobEditor(job: JobTitle | 'new' | null) { setJobEditorKey(job === 'new' ? 'new' : job?.id ?? null) }
+  function setModulesFor(member: TeamMember | null) { setModulesForId(member?.membership.id ?? null) }
 
   useEffect(() => { void hasPermission('core.property.manage').then(setCanManageProperty).catch(() => setCanManageProperty(false)) }, [hasPermission])
 

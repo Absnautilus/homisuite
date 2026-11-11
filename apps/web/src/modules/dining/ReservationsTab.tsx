@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Button, DatePicker, Modal, TimePicker } from '@homisuite/ui'
+import { Button, DatePicker, Modal, TimePicker, useRememberedState } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
 import { supabase } from '../../core/client'
 import { createReservation, listGuestTags, listReservations, listRestaurants, type CreateReservationInput } from './api'
@@ -23,8 +23,8 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [detailId, setDetailId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useRememberedState('dining.createReservationOpen', false)
+  const [detailId, setDetailId] = useRememberedState<string | null>('dining.detailReservationId', null)
 
   const load = useCallback(async () => {
     try {

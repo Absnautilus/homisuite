@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Button, Modal, PageHeader, Tabs, useRememberedTab } from '@homisuite/ui'
+import { Button, Modal, PageHeader, Tabs, useRememberedState, useRememberedTab } from '@homisuite/ui'
 import { Bell, ChevronRight, Globe2, LockKeyhole, SunMoon, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
@@ -25,8 +25,8 @@ export function SettingsPage() {
   const [tab, setTab] = useRememberedTab('settings.tab', 'account')
   const [language, setLanguage] = useState(() => localStorage.getItem('homisuite.language') === 'en' ? 'en' : 'it')
   const [theme, setTheme] = useState(() => resolveTheme(readStoredThemePreference()))
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [securityOpen, setSecurityOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useRememberedState('settings.profileOpen', false)
+  const [securityOpen, setSecurityOpen] = useRememberedState('settings.securityOpen', false)
 
   useEffect(() => {
     function syncLanguage(event: Event) {
