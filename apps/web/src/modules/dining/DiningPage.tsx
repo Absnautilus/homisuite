@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { ModuleNav } from '@homisuite/ui'
+import { ModuleNav, useRememberedTab } from '@homisuite/ui'
 import { BookOpenText, CalendarDays, ListTree, Settings, UtensilsCrossed } from 'lucide-react'
 import { CategoriesTab } from './CategoriesTab'
 import { RestaurantsTab } from './RestaurantsTab'
@@ -31,9 +30,11 @@ const RESERVATION_SUBTABS = [
 
 export function DiningPage({ hotelId, hotelName, canManage, staffProfileId, timezone }: DiningPageProps) {
   // Lets the Moduli page's "impostazioni" shortcut (?tab=impostazioni) land
-  // directly on this tab instead of just the module's default landing tab.
-  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'impostazioni' ? 'impostazioni' : 'prenotazioni')
-  const [reservationsView, setReservationsView] = useState<'oggi' | 'tutte' | 'archivio'>('oggi')
+  // directly on this tab instead of just the module's default landing tab,
+  // or wherever this module was left on last (see useRememberedTab).
+  const queryTab = new URLSearchParams(window.location.search).get('tab')
+  const [tab, setTab] = useRememberedTab('dining.tab', 'prenotazioni', queryTab === 'impostazioni' ? 'impostazioni' : null)
+  const [reservationsView, setReservationsView] = useRememberedTab('dining.reservationsView', 'oggi')
 
   return (
     <div className="page-stack dining-page">
@@ -58,7 +59,7 @@ export function DiningPage({ hotelId, hotelName, canManage, staffProfileId, time
           whatever the person had open or typed there, e.g. the "Aggiungi
           prenotazione" modal closing and losing its draft when they
           switched to another tab to check something. */}
-      <div hidden={tab !== 'prenotazioni'}><ReservationsTab hotelId={hotelId} staffProfileId={staffProfileId} canManage={canManage} view={reservationsView} timezone={timezone} /></div>
+      <div hidden={tab !== 'prenotazioni'}><ReservationsTab hotelId={hotelId} staffProfileId={staffProfileId} canManage={canManage} view={reservationsView as 'oggi' | 'tutte' | 'archivio'} timezone={timezone} /></div>
       <div hidden={tab !== 'ristoranti'}><RestaurantsTab hotelId={hotelId} canManage={canManage} /></div>
       <div hidden={tab !== 'categorie'}><CategoriesTab hotelId={hotelId} canManage={canManage} /></div>
       <div hidden={tab !== 'registro'}><ChangeLogTab hotelId={hotelId} /></div>

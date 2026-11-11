@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Button, Modal, PageHeader, Tabs } from '@homisuite/ui'
+import { Button, Modal, PageHeader, Tabs, useRememberedTab } from '@homisuite/ui'
 import { Bell, ChevronRight, Globe2, LockKeyhole, SunMoon, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
@@ -22,7 +22,7 @@ const THEME_LABELS = { light: 'Chiaro', dark: 'Scuro' } as const
 export function SettingsPage() {
   const runtime = useModuleRuntime()
   const profileName = runtime.profile?.fullName ?? 'Utente Homisuite'
-  const [tab, setTab] = useState<'account' | 'piani'>('account')
+  const [tab, setTab] = useRememberedTab('settings.tab', 'account')
   const [language, setLanguage] = useState(() => localStorage.getItem('homisuite.language') === 'en' ? 'en' : 'it')
   const [theme, setTheme] = useState(() => resolveTheme(readStoredThemePreference()))
   const [profileOpen, setProfileOpen] = useState(false)

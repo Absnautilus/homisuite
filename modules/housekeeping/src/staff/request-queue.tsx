@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PageHeader, Tabs } from '@homisuite/ui'
+import { PageHeader, Tabs, useRememberedTab } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { MinimalTopBar } from '@/staff/minimal-top-bar'
 import { useToast } from '@/components/toast-context'
@@ -29,7 +29,8 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
   const hotelName = useHotelName()
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('new')
+  const [tab, setTabRaw] = useRememberedTab('housekeeping.queue.tab', 'new')
+  const setTab = setTabRaw as (next: Tab) => void
   const [donePage, setDonePage] = useState(0)
   const [jobTitles, setJobTitles] = useState<QueueJobTitle[]>([])
   const [now, setNow] = useState(() => new Date())

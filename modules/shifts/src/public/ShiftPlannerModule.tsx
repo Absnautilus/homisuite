@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Badge, Building2, CalendarDays, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Eye, ListChecks, MoreHorizontal, Palmtree, Repeat2, Settings2, ShieldCheck, SlidersHorizontal, UserRound, UsersRound, Workflow } from 'lucide-react'
-import { BottomActionBar, Button, Modal, ModuleNav, Toast } from '@homisuite/ui'
+import { BottomActionBar, Button, Modal, ModuleNav, Toast, useRememberedTab } from '@homisuite/ui'
 import type { ShiftCode } from '../preview/fixtures'
 import { shiftPreviewProperties, type ShiftPreviewProperty } from '../preview/fixtures'
 import type { AssignmentConflict } from '../domain/assignment'
@@ -100,8 +100,8 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
   const initialProperty = previewProperties.find((property) => property.id === initialPropertyId) ?? previewProperties[0]
   const [propertyId, setPropertyId] = useState(initialProperty?.id ?? '')
   const [unitId, setUnitId] = useState(initialProperty?.units.find((candidate) => candidate.status !== 'inactive')?.id ?? initialProperty?.units[0]?.id ?? '')
-  const [tab, setTab] = useState<ModuleTab>('calendar')
-  const [navGroup, setNavGroup] = useState<NavGroup>('operativo')
+  const [tab, setTab] = useRememberedTab('shifts.tab', 'calendar')
+  const [navGroup, setNavGroup] = useRememberedTab('shifts.navGroup', 'operativo')
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const [readOnlyDemo, setReadOnlyDemo] = useState(false)
   const [draftProperties, setDraftProperties] = useState(() => applyPendingChanges(previewProperties, preview ? [] : loadStoredPendingChanges(initialPropertyId)))

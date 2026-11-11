@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ModuleNav } from '@homisuite/ui'
+import { ModuleNav, useRememberedTab } from '@homisuite/ui'
 import { BookOpenText, ClipboardPaste, FileText, Inbox, Settings } from 'lucide-react'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
@@ -42,8 +42,13 @@ export function SmartInboxPage() {
   const propertyId = runtime.property?.id ?? null
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'smart_inbox')
   const [access, setAccess] = useState<Access>({ status: 'loading' })
-  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).has('outlook') ? 'impostazioni' : 'posta'))
-  const [view, setView] = useState<InboxView>('todo')
+  // Both the post-Outlook-auth redirect (?outlook) and the Moduli page's
+  // "impostazioni" shortcut (?tab=impostazioni) must always land here
+  // regardless of where this module was left on last (see useRememberedTab).
+  const query = new URLSearchParams(window.location.search)
+  const settingsDeepLink = query.has('outlook') || query.get('tab') === 'impostazioni'
+  const [tab, setTab] = useRememberedTab('smartInbox.tab', 'posta', settingsDeepLink ? 'impostazioni' : null)
+  const [view, setView] = useRememberedTab('smartInbox.view', 'todo')
   const [settings, setSettings] = useState<InboxSettings>(DEFAULT_SETTINGS)
   const [signature, setSignature] = useState<SignatureInfo | null>(null)
   const propertyName = runtime.property?.name ?? 'Struttura'
@@ -124,7 +129,7 @@ export function SmartInboxPage() {
           client={supabase}
           propertyId={propertyId}
           currentProfileId={runtime.profile?.id ?? null}
-          view={view}
+          view={view as InboxView}
           active={tab === 'posta'}
           signature={signature}
           showTranslation={settings.show_translation}
