@@ -7,6 +7,18 @@ import { readStoredThemePreference, resolveTheme, setThemePreference, subscribeT
 import { usePlatformAdminSelf } from '../platform/usePlatformAdminSelf'
 import { LanguageToggle } from './LanguageToggle'
 
+// The resting row shows "Matteo V." rather than the full name -- initial
+// of the word right after the first name (not necessarily the last word:
+// a compound surname like "Visonà dalla Costa" would otherwise shorten to
+// "Costa"'s initial, losing the part that actually identifies the person
+// day to day). The full name still shows in the popover head below.
+function shortName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return parts[0] ?? ''
+  const initial = parts[1]!
+  return `${parts[0]} ${initial[0]!.toUpperCase()}.`
+}
+
 export function AccountMenu({ name }: { name: string }) {
   const [open, setOpen] = useState(false)
   const { state, mounted } = useDropdownTransition(open)
@@ -48,18 +60,38 @@ export function AccountMenu({ name }: { name: string }) {
 
   return (
     <div className="account-menu" ref={rootRef}>
-      <button
-        className="account-trigger"
-        type="button"
-        aria-label={`Menu account di ${name}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span className="account-avatar">{initials}</span>
-        <span className="account-name">{name}</span>
-        <ChevronDown size={15} />
-      </button>
+      <div className="account-row">
+        <button
+          className="account-trigger"
+          type="button"
+          aria-label={`Menu account di ${name}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="account-avatar">{initials}</span>
+          <span className="account-name">{shortName(name)}</span>
+          <ChevronDown size={15} />
+        </button>
+        {/* A separate button, deliberately outside account-trigger -- the
+            popover opens only from the name/avatar/chevron side of the row;
+            this one always just flips light/dark immediately, in place,
+            the same single click either way. The icon shown is the
+            *destination* theme, not the current one (Moon while light is
+            active means "switch to dark"), matching common dark-mode
+            toggle conventions. Full Light/Dark/System control stays in
+            Settings' ThemeToggle for anyone who wants that level of
+            control. */}
+        <button
+          className="account-theme-icon"
+          type="button"
+          aria-label={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+          title={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+          onClick={toggleTheme}
+        >
+          {resolvedTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+      </div>
       {mounted && (
         <div className={dropdownTransitionClassName(state, 'account-popover')} data-origin="bottom-right" role="menu">
           <div className="account-popover-head">
@@ -74,33 +106,11 @@ export function AccountMenu({ name }: { name: string }) {
             <span><Languages size={16} /> Lingua</span>
             <LanguageToggle />
           </div>
+          <button className="account-menu-row account-menu-row-logout" type="button" onClick={() => void supabase.auth.signOut()}>
+            <LogOut size={16} /><span>Esci</span>
+          </button>
         </div>
       )}
-      {/* Always visible, not tucked inside the popover above: the theme is
-          changed often enough during the day (natural light, evening use)
-          to deserve a direct, single-click affordance, the same reasoning
-          already applied to "Esci" below -- unlike Lingua, which stays in
-          the popover as a rarely-touched choice. The icon shown is the
-          *destination* theme, not the current one (Moon while light is
-          active means "switch to dark"), matching common dark-mode toggle
-          conventions. Full Light/Dark/System control stays in Settings'
-          ThemeToggle for anyone who wants that level of control. */}
-      <button
-        className="account-theme-toggle"
-        type="button"
-        aria-label={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
-        title={resolvedTheme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
-        onClick={toggleTheme}
-      >
-        {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-        <span>{resolvedTheme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}</span>
-      </button>
-      {/* Always visible, not tucked inside the popover above: signing out is
-          common enough on a shared front-desk device to deserve its own
-          permanent affordance, not a click to reveal it first. */}
-      <button className="account-logout" type="button" onClick={() => void supabase.auth.signOut()}>
-        <LogOut size={16} /><span>Esci</span>
-      </button>
     </div>
   )
 }

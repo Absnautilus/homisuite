@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { Button, Modal } from '@homisuite/ui'
 import { BookOpenText, HelpCircle, Pencil, Plus, Search } from 'lucide-react'
 import { PageState } from '../../components/PageState'
+import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { createKnowledge, deleteKnowledge, listKnowledge, loadGaps, updateKnowledge } from './api'
@@ -186,15 +187,18 @@ function KnowledgeModal({ entry, onClose, onSave, onDelete }: {
   const [error, setError] = useState<string | null>(null)
   const existing = entry && 'id' in entry && entry.id ? entry as KnowledgeEntry : null
   const initial = entry ?? {}
+  const [category, setCategory] = useState<KnowledgeCategory>(initial.category ?? 'servizi')
 
-  useEffect(() => { if (entry) { setSaving(false); setError(null) } }, [entry])
+  // initial is derived from entry every render, so entry alone is the right
+  // dependency -- initial.category only ever changes when entry does.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (entry) { setSaving(false); setError(null); setCategory(initial.category ?? 'servizi') } }, [entry])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
     const title = String(data.get('title') ?? '').trim()
     const content = String(data.get('content') ?? '').trim()
-    const category = String(data.get('category') ?? 'servizi') as KnowledgeCategory
     const assistantNote = String(data.get('assistant_note') ?? '').trim()
     if (!title || !content) {
       setError('Titolo e testo sono obbligatori.')
@@ -232,9 +236,9 @@ function KnowledgeModal({ entry, onClose, onSave, onDelete }: {
         </label>
         <label className="form-field">
           <span>Categoria</span>
-          <select name="category" defaultValue={initial.category ?? 'servizi'}>
+          <Select name="category" value={category} onChange={(value) => setCategory(value as KnowledgeCategory)}>
             {CATEGORIES.map((value) => <option key={value} value={value}>{KNOWLEDGE_CATEGORY_LABELS[value]}</option>)}
-          </select>
+          </Select>
         </label>
         <label className="form-field">
           <span>Informazioni</span>

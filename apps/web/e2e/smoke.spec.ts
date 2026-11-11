@@ -94,7 +94,9 @@ test('organization admin reaches shared Core stays from legacy Housekeeping deep
   await expect(page.getByRole('tab', { name: 'Soggiorni', exact: true })).toHaveCount(0)
   await page.goto('/housekeeping/soggiorni')
   await expect(page).toHaveURL(/\/settings\/stays$/)
-  await expect(page.getByRole('heading', { name: 'Soggiorni' })).toBeVisible()
+  // Soggiorni is a tab of Struttura e Team now, not a page with its own title.
+  await expect(page.getByRole('tab', { name: 'Soggiorni', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading', { name: 'Soggiorni attivi' })).toBeVisible()
   await expect(page.getByText(/Rossi/)).toBeVisible()
 })
 
@@ -191,24 +193,33 @@ test('an ordinary client organization_admin is denied access to the Platform Adm
 test('organization admin manages Core rooms and stays independently of Housekeeping navigation', async ({ page }, testInfo) => {
   const roomNumber = `CORE-E2E-${testInfo.retry}`
   await login(page, ORG_ADMIN_EMAIL)
-  await page.goto('/settings')
-  await page.getByRole('link', { name: /Camere.*Inventario camere/ }).click()
-  await expect(page.getByRole('heading', { name: 'Camere' })).toBeVisible()
+  // Camere and Soggiorni are tabs of Struttura e Team (/team).
+  await page.goto('/team')
+  await page.getByRole('tab', { name: 'Camere', exact: true }).click()
+  await expect(page).toHaveURL(/\/settings\/rooms$/)
+  await expect(page.getByRole('heading', { name: 'Camere', exact: true })).toBeVisible()
   await page.getByLabel('Numero camera').fill(roomNumber)
   await page.getByRole('button', { name: 'Aggiungi camera' }).click()
   await expect(page.getByText(`Camera ${roomNumber}`)).toBeVisible()
 
-  await page.getByRole('link', { name: 'Soggiorni', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Soggiorni' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Soggiorni', exact: true }).click()
+  await expect(page).toHaveURL(/\/settings\/stays$/)
   await expect(page.getByRole('button', { name: 'Attiva soggiorno' })).toBeVisible({ timeout: 10000 })
-  await expect(page.getByRole('option', { name: roomNumber })).toBeAttached({ timeout: 10000 })
-  await page.getByRole('combobox').selectOption({ label: roomNumber })
+  // Camera is the shared Select (button + listbox), dates/times the shared
+  // DatePicker/TimePicker popovers -- relative dates keep the test valid.
+  await page.locator('form .select-trigger').first().click()
+  await page.getByRole('option', { name: roomNumber, exact: true }).click()
   await page.getByLabel('Cognome ospite').fill('CoreTest')
-  await page.getByLabel('Check-in').fill('2030-05-01T14:00')
-  await page.getByLabel('Check-out').fill('2030-05-02T11:00')
+  await page.getByRole('button', { name: 'Data check-in' }).click()
+  await page.getByRole('dialog', { name: 'Data check-in' }).getByRole('button', { name: 'Oggi' }).click()
+  await page.getByRole('button', { name: 'Data check-out' }).click()
+  const checkOutPicker = page.getByRole('dialog', { name: 'Data check-out' })
+  await checkOutPicker.getByRole('button', { name: 'Mese successivo' }).click()
+  await checkOutPicker.locator('.ui-date-grid button:not(.is-outside)', { hasText: /^15$/ }).click()
   await page.getByRole('button', { name: 'Attiva soggiorno' }).click()
   await expect(page.getByText(`Camera ${roomNumber} · CoreTest`)).toBeVisible()
-  await page.locator('.settings-row').filter({ hasText: `Camera ${roomNumber} · CoreTest` }).getByRole('button', { name: 'Modifica' }).click()
+
+  await page.locator('.settings-row').filter({ hasText: `Camera ${roomNumber} · CoreTest` }).getByRole('button', { name: 'Modifica soggiorno di CoreTest' }).click()
   await page.getByLabel('Cognome ospite').fill('CoreUpdated')
   await page.getByRole('button', { name: 'Salva soggiorno' }).click()
   await expect(page.getByText(`Camera ${roomNumber} · CoreUpdated`)).toBeVisible()
@@ -217,10 +228,18 @@ test('organization admin manages Core rooms and stays independently of Housekeep
   await stayRow.getByRole('button', { name: 'Mostra PIN' }).click()
   await expect(stayRow.getByRole('button', { name: 'Nascondi PIN' })).toBeVisible()
   await stayRow.getByRole('button', { name: 'Nascondi PIN' }).click()
-  page.once('dialog', dialog => { void dialog.accept('2030-05-03T11:00') })
+
+  // Extend: new check-out on the 20th of the month after next.
   await stayRow.getByRole('button', { name: 'Estendi' }).click()
-  await expect(stayRow.getByText(/03\/05\/2030/)).toBeVisible()
-  page.once('dialog', dialog => { void dialog.accept() })
-  await page.locator('.settings-row').filter({ hasText: `Camera ${roomNumber} · CoreUpdated` }).getByRole('button', { name: 'Annulla' }).click()
+  const extendDialog = page.getByRole('dialog', { name: /Estendi il soggiorno/ })
+  await extendDialog.getByRole('button', { name: 'Nuova data check-out' }).click()
+  const extendPicker = page.getByRole('dialog', { name: 'Nuova data check-out' })
+  await extendPicker.getByRole('button', { name: 'Mese successivo' }).click()
+  await extendPicker.locator('.ui-date-grid button:not(.is-outside)', { hasText: /^20$/ }).click()
+  await extendDialog.getByRole('button', { name: 'Salva' }).click()
+  await expect(stayRow.getByText(/\b20\/\d{2}\/\d{4}/)).toBeVisible()
+
+  await stayRow.getByRole('button', { name: 'Annulla', exact: true }).click()
+  await page.getByRole('button', { name: 'Annulla soggiorno' }).click()
   await expect(page.getByText(`Camera ${roomNumber} · CoreUpdated`)).toHaveCount(0)
 })
