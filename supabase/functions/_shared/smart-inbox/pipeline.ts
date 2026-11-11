@@ -1,15 +1,16 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
-import { AiRefusalError, draftReply, type DraftRequest, type DraftResult, type DraftUsage, type HistoryEntry } from './ai.ts'
-import { headerMap, ignoreReason } from './filters.ts'
-import { createReplyDraft, deleteMessage, getMessage, textToHtml } from './graph.ts'
-import { getAccessToken, loadMailbox, ReauthRequiredError } from './mailbox.ts'
+import { AiRefusalError, type AgentStyle, draftReply, type DraftRequest, type DraftResult, type DraftUsage, type HistoryEntry } from './ai.ts'
+import { ignoreReason, relaySource } from './filters.ts'
+import { ReauthRequiredError } from './mailbox.ts'
+import { MailboxUnavailableError, openMailbox } from './provider.ts'
 import type { SmartInboxConfig } from './runtime.ts'
 import { appendSignature, signatureFor } from './signature.ts'
 
 // One guest message, end to end:
-//   Outlook:  claim -> read from Graph -> filter -> Claude -> store draft
-//             (+ signed Outlook reply draft) -> account usage.
+//   Email:    claim -> read from the mailbox (Outlook or Gmail) -> filter ->
+//             Claude -> store draft
+//             (+ signed reply draft in the mailbox) -> account usage.
 //   Pasted:   staff paste a message from Booking/WhatsApp/... -> Claude ->
 //             store draft for them to copy back into that channel.
 //   Revision: staff ask to change a draft ("più breve") -> Claude -> store.
@@ -50,6 +51,9 @@ const MESSAGE_COLUMNS = 'id, property_id, mailbox_id, graph_message_id, thread_i
 export interface ProcessOptions {
   // Staff explicitly asked for a (new) draft: bypasses auto_draft = false.
   force?: boolean
+  // Who asked for it: their personal style shapes the draft. Defaults to
+  // the guest's agent.
+  actorId?: string | null
 }
 
 async function claim(admin: SupabaseClient, messageId: string, force: boolean): Promise<MessageRow | null> {
@@ -313,8 +317,26 @@ function statusFor(result: DraftResult): MessageStatus {
   return result.needs_human || !result.reply.trim() ? 'needs_attention' : 'draft_ready'
 }
 
-function baseRequest(context: PropertyContext, conversation: ConversationContext | null): Pick<DraftRequest, 'hotelName' | 'tone' | 'knowledge' | 'templates' | 'guestNotes'> {
+// The personal style of whoever will send the reply: the person asking
+// (compose, revise, regenerate) or the guest's agent (automatic drafts).
+async function loadAgentStyle(admin: SupabaseClient, propertyId: string, profileId: string | null): Promise<AgentStyle | null> {
+  if (!profileId) return null
+  const { data, error } = await admin
+    .from('smart_inbox_agent_preferences')
+    .select('tone, instructions')
+    .eq('property_id', propertyId)
+    .eq('profile_id', profileId)
+    .maybeSingle()
+  if (error) {
+    console.error('smart-inbox: agent style not loaded', error)
+    return null
+  }
+  return (data as AgentStyle | null) ?? null
+}
+
+function baseRequest(context: PropertyContext, conversation: ConversationContext | null, agentStyle: AgentStyle | null = null): Pick<DraftRequest, 'hotelName' | 'tone' | 'knowledge' | 'templates' | 'guestNotes' | 'agentStyle'> {
   return {
+    agentStyle,
     hotelName: context.hotelName,
     tone: context.tone,
     knowledge: context.knowledge,
@@ -324,7 +346,7 @@ function baseRequest(context: PropertyContext, conversation: ConversationContext
 }
 
 // ---------------------------------------------------------------------------
-// Outlook messages (and regenerating any message)
+// Email messages, Outlook or Gmail (and regenerating any message)
 // ---------------------------------------------------------------------------
 export async function processMessage(deps: PipelineDeps, messageId: string, options: ProcessOptions = {}): Promise<MessageStatus | null> {
   const { admin, config } = deps
@@ -332,40 +354,46 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
   if (!message) return null
 
   try {
-    if (message.source !== 'outlook') return await draftPasted(deps, message)
+    // No mailbox: pasted in Componi risposta. With a mailbox it arrived by
+    // email -- including Booking/Expedia/Airbnb messages relayed by email.
+    if (!message.mailbox_id) return await draftPasted(deps, message, options.actorId ?? null)
 
-    const { mailbox, secret } = await loadMailbox(admin, message.mailbox_id as string)
-    if (mailbox.status === 'disconnected' || !secret) {
+    let client
+    try {
+      client = await openMailbox(admin, config, message.mailbox_id as string)
+    } catch (error) {
+      if (!(error instanceof MailboxUnavailableError)) throw error
       await finish(admin, message.id, { status: 'failed', error: 'mailbox_disconnected' })
       return 'failed'
     }
-
-    const accessToken = await getAccessToken(admin, config, secret)
-    const email = await getMessage(accessToken, message.graph_message_id as string)
-    const fromAddress = email.from?.emailAddress?.address?.toLowerCase() ?? null
-    const bodyText = (email.uniqueBody?.content ?? email.body?.content ?? '').trim()
+    const { mailbox } = client
+    const email = await client.read(message.graph_message_id as string)
+    const fromAddress = email.fromAddress
+    const bodyText = email.bodyText
+    const channel = relaySource(fromAddress) ?? (client.provider === 'google' ? 'gmail' : 'outlook')
 
     await finish(admin, message.id, {
+      source: channel,
       conversation_id: email.conversationId,
       from_address: fromAddress,
-      from_name: email.from?.emailAddress?.name ?? null,
+      from_name: email.fromName,
       subject: email.subject,
       body_preview: email.bodyPreview,
       body_text: bodyText.slice(0, MAX_BODY_CHARS),
-      received_at: email.receivedDateTime,
+      received_at: email.receivedAt,
     })
 
     const threadId = fromAddress
-      ? await attachToConversation(admin, message.property_id, message.id, fromAddress, email.from?.emailAddress?.name ?? null, email.receivedDateTime)
+      ? await attachToConversation(admin, message.property_id, message.id, fromAddress, email.fromName, email.receivedAt)
       : null
 
     const context = await loadPropertyContext(admin, message.property_id)
 
     if (!options.force) {
-      const reason = email.isDraft
+      const reason = email.isOwn
         ? 'own_mailbox'
         : ignoreReason(
-          { fromAddress, subject: email.subject, headers: headerMap(email.internetMessageHeaders) },
+          { fromAddress, subject: email.subject, headers: email.headers },
           { mailboxAddress: mailbox.email_address, ignoredSenders: context.ignoredSenders },
         )
       if (reason) {
@@ -387,17 +415,18 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
       return 'needs_attention'
     }
 
-    const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedDateTime) : []
+    const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedAt) : []
     const conversation = await loadConversation(admin, threadId)
 
+    const agentStyle = await loadAgentStyle(admin, message.property_id, options.actorId ?? conversation?.assigned_to ?? null)
     const drafted = await runAi(deps, message, {
-      ...baseRequest(context, conversation),
-      channel: 'outlook',
+      ...baseRequest(context, conversation, agentStyle),
+      channel,
       email: {
-        fromName: email.from?.emailAddress?.name ?? null,
+        fromName: email.fromName,
         fromAddress,
         subject: email.subject,
-        receivedAt: email.receivedDateTime,
+        receivedAt: email.receivedAt,
         body: bodyText || email.bodyPreview || '',
       },
       history,
@@ -412,16 +441,16 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
     if (reply) {
       const existing = await existingDraft(admin, message.id)
       if (!existing || existing.status !== 'sent') {
-        // Mirror the proposal into Outlook's Drafts folder, signed by the
+        // Mirror the proposal into the mailbox Drafts folder, signed by the
         // guest's agent (or the property while nobody owns the guest).
         // Best effort: the draft in homisuite is the source of truth.
         let graphDraftId: string | null = null
         try {
-          if (existing?.graph_draft_id) await deleteMessage(accessToken, existing.graph_draft_id)
+          if (existing?.graph_draft_id) await client.deleteDraft(existing.graph_draft_id)
           const signature = await signatureFor(admin, message.property_id, conversation?.assigned_to ?? null, conversation?.assigned_to ? 'agent' : 'property')
-          graphDraftId = (await createReplyDraft(accessToken, message.graph_message_id as string, textToHtml(appendSignature(reply, signature.text)))).id
+          graphDraftId = await client.createReplyDraft(message.graph_message_id as string, appendSignature(reply, signature.text))
         } catch (error) {
-          console.warn('smart-inbox: Outlook draft not updated', error)
+          console.warn('smart-inbox: mailbox draft not updated', error)
         }
         await saveDraft(admin, message, { ...draftFields(result, usage, reply), graph_draft_id: graphDraftId }, existing)
       }
@@ -444,16 +473,17 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
 // ---------------------------------------------------------------------------
 // Pasted messages ("Componi risposta")
 // ---------------------------------------------------------------------------
-async function draftPasted(deps: PipelineDeps, message: MessageRow): Promise<MessageStatus> {
+async function draftPasted(deps: PipelineDeps, message: MessageRow, actorId: string | null): Promise<MessageStatus> {
   const { admin } = deps
   const body = (message.body_text ?? '').trim()
   let threadId = message.thread_id
   const context = await loadPropertyContext(admin, message.property_id)
   const history = threadId ? await loadHistory(admin, threadId, message.id, message.received_at) : []
   let conversation = await loadConversation(admin, threadId)
+  const agentStyle = await loadAgentStyle(admin, message.property_id, actorId ?? conversation?.assigned_to ?? null)
 
   const drafted = await runAi(deps, message, {
-    ...baseRequest(context, conversation),
+    ...baseRequest(context, conversation, agentStyle),
     channel: message.source,
     email: { fromName: message.from_name, fromAddress: null, subject: null, receivedAt: message.received_at, body },
     history,
@@ -535,7 +565,7 @@ export async function composePasted(deps: PipelineDeps, input: ComposeInput): Pr
 
   let status: MessageStatus
   try {
-    status = await draftPasted(deps, message)
+    status = await draftPasted(deps, message, input.userId)
   } catch (cause) {
     console.error('smart-inbox: compose failed', message.id, cause)
     await finish(admin, message.id, { status: 'failed', error: cause instanceof Error ? cause.message.slice(0, 300) : 'unknown_error' }).catch(() => {})
@@ -557,7 +587,7 @@ export async function composePasted(deps: PipelineDeps, input: ComposeInput): Pr
 // ---------------------------------------------------------------------------
 // Revising a draft on request ("più breve", "aggiungi che...")
 // ---------------------------------------------------------------------------
-export async function reviseDraft(deps: PipelineDeps, draftId: string, instruction: string, currentBody: string): Promise<'revised' | 'refused' | 'not_pending'> {
+export async function reviseDraft(deps: PipelineDeps, draftId: string, instruction: string, currentBody: string, actorId: string | null = null): Promise<'revised' | 'refused' | 'not_pending'> {
   const { admin } = deps
   const { data: draftRow, error } = await admin
     .from('smart_inbox_drafts')
@@ -581,7 +611,7 @@ export async function reviseDraft(deps: PipelineDeps, draftId: string, instructi
   const history = message.thread_id ? await loadHistory(admin, message.thread_id, message.id, message.received_at) : []
 
   const drafted = await runAi(deps, message, {
-    ...baseRequest(context, conversation),
+    ...baseRequest(context, conversation, await loadAgentStyle(admin, message.property_id, actorId ?? conversation?.assigned_to ?? null)),
     channel: message.source,
     email: {
       fromName: message.from_name,
@@ -598,7 +628,7 @@ export async function reviseDraft(deps: PipelineDeps, draftId: string, instructi
   const reply = result.reply.trim()
   if (!reply) return 'refused'
 
-  // A revision replaces the proposal: the Outlook mirror (if any) is stale
+  // A revision replaces the proposal: the mailbox draft (if any) is stale
   // and is rebuilt from the approved text when sending.
   const { error: updateError } = await admin
     .from('smart_inbox_drafts')

@@ -1,11 +1,13 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 import { decryptSecret, encryptSecret, randomToken, sha256Hex } from './crypto.ts'
+import { GmailError, googleRefresh } from './gmail.ts'
 import { createSubscription, deleteSubscription, GraphError, refreshTokens, renewSubscription } from './graph.ts'
-import type { SmartInboxConfig } from './runtime.ts'
+import { requireGoogle, requireMicrosoft, type SmartInboxConfig } from './runtime.ts'
 
 export interface MailboxRow {
   id: string
   property_id: string
+  provider: 'microsoft' | 'google'
   email_address: string
   display_name: string | null
   status: 'connected' | 'error' | 'disconnected'
@@ -17,6 +19,8 @@ export interface MailboxSecretRow {
   refresh_token_ciphertext: string
   graph_subscription_id: string | null
   client_state_hash: string | null
+  // Gmail only: last mailbox history id read by the poll.
+  history_id?: string | null
 }
 
 export class ReauthRequiredError extends Error {
@@ -40,15 +44,25 @@ export async function markMailboxError(admin: SupabaseClient, mailboxId: string,
   await admin.from('smart_inbox_mailboxes').update({ status: 'error', last_error: code }).eq('id', mailboxId)
 }
 
-// Short-lived Graph access token for a mailbox. Microsoft may rotate the
-// refresh token on every use; the new one is re-encrypted and stored.
-export async function getAccessToken(admin: SupabaseClient, config: SmartInboxConfig, secret: MailboxSecretRow): Promise<string> {
+// Short-lived access token for a mailbox (Microsoft Graph or Gmail). A
+// provider may rotate the refresh token on use; the new one is re-encrypted
+// and stored.
+export async function getAccessToken(
+  admin: SupabaseClient,
+  config: SmartInboxConfig,
+  secret: MailboxSecretRow,
+  provider: MailboxRow['provider'] = 'microsoft',
+): Promise<string> {
   const refreshToken = await decryptSecret(secret.refresh_token_ciphertext, config.tokenKey)
   let tokens
   try {
-    tokens = await refreshTokens(config.microsoft, refreshToken)
+    tokens = provider === 'google'
+      ? await googleRefresh(requireGoogle(config), refreshToken)
+      : await refreshTokens(requireMicrosoft(config), refreshToken)
   } catch (error) {
-    if (error instanceof GraphError && (error.code === 'invalid_grant' || error.code === 'interaction_required')) {
+    const expired = (error instanceof GraphError && (error.code === 'invalid_grant' || error.code === 'interaction_required'))
+      || (error instanceof GmailError && error.code === 'invalid_grant')
+    if (expired) {
       await markMailboxError(admin, secret.mailbox_id, 'reauth_required')
       throw new ReauthRequiredError()
     }
@@ -90,6 +104,8 @@ export async function subscribe(admin: SupabaseClient, config: SmartInboxConfig,
 
 // Extends the subscription, or recreates it if Microsoft already dropped it.
 export async function renewOrResubscribe(admin: SupabaseClient, config: SmartInboxConfig, mailbox: MailboxRow, secret: MailboxSecretRow): Promise<void> {
+  // Gmail has no subscription: its poll keeps it current.
+  if (mailbox.provider === 'google') return
   const accessToken = await getAccessToken(admin, config, secret)
   if (secret.graph_subscription_id) {
     try {
@@ -108,7 +124,7 @@ export async function renewOrResubscribe(admin: SupabaseClient, config: SmartInb
 }
 
 export async function disconnect(admin: SupabaseClient, config: SmartInboxConfig, mailbox: MailboxRow, secret: MailboxSecretRow | null): Promise<void> {
-  if (secret?.graph_subscription_id) {
+  if (mailbox.provider === 'microsoft' && secret?.graph_subscription_id) {
     try {
       const accessToken = await getAccessToken(admin, config, secret)
       await deleteSubscription(accessToken, secret.graph_subscription_id)

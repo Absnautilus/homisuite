@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Button } from '@homisuite/ui'
 import { BookOpenText, CircleAlert, ClipboardCheck, Copy, FileText, Languages, PenLine, Send, Wand2 } from 'lucide-react'
+import { useReadsLanguage } from './agentContext'
 import { refineDraft, saveDraftBody, sendReply, SmartInboxActionError } from './api'
 import {
   ACTION_LABELS,
   actionErrorLabel,
   appendSignature,
+  deliveryOf,
   fillTemplate,
   insertTemplateText,
   languageName,
@@ -73,7 +75,9 @@ export function ReplyComposer({ client, message, draft, guestName, templates, si
   // click or type in it (then templates go where they were working).
   const cursorRef = useRef<{ start: number; end: number } | null>(null)
   const dirty = body !== draft.body
-  const pasted = message.source !== 'outlook'
+  // Pasted in Componi risposta: nothing is sent, staff copy the reply.
+  const pasted = deliveryOf(message) === 'pasted'
+  const readsLanguage = useReadsLanguage()
 
   // A regenerated or revised draft arrives through a reload: adopt it
   // unless the person had edited the previous one (a revision they asked
@@ -204,7 +208,7 @@ export function ReplyComposer({ client, message, draft, guestName, templates, si
         </div>
       ) : null}
 
-      {showTranslation && draft.translation ? (
+      {showTranslation && draft.translation && !readsLanguage(message.language) ? (
         <details className="smart-inbox-translation" open>
           <summary><Languages size={14} aria-hidden="true" /> Traduzione per te (italiano){translationCurrent ? '' : ' · della bozza originale'}</summary>
           <p>{draft.translation}</p>
@@ -277,7 +281,7 @@ export function ReplyComposer({ client, message, draft, guestName, templates, si
           </>
         ) : (
           <Button variant="primary" onClick={finish} disabled={busy !== null || !body.trim()}>
-            <Send size={15} /> {busy === 'send' ? 'Invio…' : 'Invia risposta'}
+            <Send size={15} /> {busy === 'send' ? 'Invio…' : message.whatsapp_account_id ? 'Invia su WhatsApp' : 'Invia risposta'}
           </Button>
         )}
         {dirty && body.trim() ? (

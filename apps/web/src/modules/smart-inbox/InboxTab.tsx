@@ -30,6 +30,9 @@ import {
   simpleState,
   SOURCE_LABELS,
   sourceBadge,
+  deliveryOf,
+  isMailboxSource,
+  isOpenView,
   statusesForView,
   type ConversationGroup,
   type InboxView,
@@ -53,6 +56,7 @@ function readableError(cause: unknown): string {
 const EMPTY_TITLES: Record<InboxView, string> = {
   todo: 'Nessun ospite da rispondere. Ottimo lavoro!',
   mine: 'Nessun ospite assegnato a te da rispondere.',
+  unassigned: 'Nessun ospite da assegnare: ognuno ha già il suo agent.',
   replied: 'Nessuna risposta inviata.',
   archived: 'Nessuna email archiviata.',
 }
@@ -92,6 +96,7 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
   const [month, setMonth] = useState('')
   const [channel, setChannel] = useState<'' | MessageSource>('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState<string | null>(null)
   const loadToken = useRef(0)
 
   const load = useCallback(async () => {
@@ -154,9 +159,27 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
     return agents.find((agent) => agent.profile_id === profileId)?.full_name ?? 'Collega'
   }, [agents, currentProfileId])
 
+  // One click from the list: the guest becomes yours and opens.
+  const claim = useCallback(async (group: ConversationGroup<InboxMessage>) => {
+    if (!currentProfileId || !group.threadId) return
+    setClaiming(group.key)
+    try {
+      await assignConversation(client, group.threadId, currentProfileId)
+      setSelectedKey(group.key)
+      setNotice(`${group.guestName} ora lo segui tu.`)
+      await load()
+    } catch (cause) {
+      setNotice(readableError(cause))
+    } finally {
+      setClaiming(null)
+    }
+  }, [client, currentProfileId, load])
+
   const allGroups = useMemo(() => {
     const all = groupByConversation(messages ?? [])
-    return view === 'mine' ? all.filter((group) => group.assignedTo && group.assignedTo === currentProfileId) : all
+    if (view === 'mine') return all.filter((group) => group.assignedTo && group.assignedTo === currentProfileId)
+    if (view === 'unassigned') return all.filter((group) => !group.assignedTo)
+    return all
   }, [messages, view, currentProfileId])
 
   const channels = useMemo(() => [...new Set(allGroups.map((group) => group.latest.source))].sort(), [allGroups])
@@ -174,7 +197,7 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
       (!onlyUrgent || group.isUrgent)
       && (!channel || group.messages.some((message) => message.source === channel))
       && (!month || (month === NO_MONTH ? !group.stayMonth : group.stayMonth === month)))
-    if (view !== 'todo' && view !== 'mine') return filtered
+    if (!isOpenView(view)) return filtered
     return [...filtered].sort((a, b) => {
       if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1
       return a.latest.received_at < b.latest.received_at ? -1 : 1
@@ -186,7 +209,7 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
   // After a reply, go straight to the next guest waiting, so nobody has to
   // decide "what now?".
   const handleSent = useCallback((sentKey: string, stillOpen: boolean, done: string) => {
-    if (stillOpen || (view !== 'todo' && view !== 'mine')) {
+    if (stillOpen || !isOpenView(view)) {
       setNotice(`${done}.`)
       return
     }
@@ -262,8 +285,9 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
               {groups.map((group) => {
                 const assignee = agentName(group.assignedTo)
                 const stay = monthLabel(group.stayMonth)
+                const canClaim = Boolean(currentProfileId && group.threadId && !group.assignedTo && group.openCount > 0)
                 return (
-                  <li key={group.key}>
+                  <li key={group.key} className={canClaim ? 'has-claim' : undefined}>
                     <button
                       type="button"
                       className={`smart-inbox-item${group.key === selectedKey ? ' selected' : ''}${group.isUrgent ? ' urgent' : ''}`}
@@ -280,10 +304,10 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
                       <span className="smart-inbox-item-tags">
                         <StateBadge status={group.latest.status} />
                         {group.isUrgent ? <span className="smart-inbox-urgent-badge"><AlertTriangle size={12} aria-hidden="true" /> Urgente</span> : null}
-                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source)}</span>
+                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source, deliveryOf(group.latest))}</span>
                         {group.openCount > 1 ? <span className="status-chip">{group.openCount} email</span> : null}
                       </span>
-                      {group.latest.source === 'outlook' ? <span className="smart-inbox-item-subject">{group.latest.subject || '(senza oggetto)'}</span> : null}
+                      {group.latest.mailbox_id ? <span className="smart-inbox-item-subject">{group.latest.subject || '(senza oggetto)'}</span> : null}
                       <span className="smart-inbox-item-summary">{group.latest.summary || group.latest.body_preview || ''}</span>
                       <span className="smart-inbox-item-tags">
                         {stay ? <span className="smart-inbox-month-chip"><CalendarDays size={12} aria-hidden="true" /> {stay}</span> : null}
@@ -292,6 +316,16 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
                         </span>
                       </span>
                     </button>
+                    {canClaim ? (
+                      <button
+                        type="button"
+                        className="smart-inbox-claim"
+                        disabled={claiming === group.key}
+                        onClick={() => void claim(group)}
+                      >
+                        <UserCheck size={13} aria-hidden="true" /> {claiming === group.key ? 'Un attimo…' : 'Prendi in carico'}
+                      </button>
+                    ) : null}
                   </li>
                 )
               })}
@@ -397,7 +431,6 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
   }
 
   const assignedTo = group.assignedTo
-  const assignedToOther = assignedTo && assignedTo !== currentProfileId
   const threadId = group.threadId
 
   return (
@@ -408,8 +441,11 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
           <span className="smart-inbox-avatar large" aria-hidden="true">{initials(group.guestName)}</span>
           <div>
             <h2>{group.guestName}</h2>
-            {group.guestAddress && group.latest.source === 'outlook' ? <p className="muted">{group.guestAddress}</p> : null}
-            {group.latest.source !== 'outlook' ? (
+            {group.guestAddress && isMailboxSource(group.latest.source) ? <p className="muted">{group.guestAddress}</p> : null}
+            {!isMailboxSource(group.latest.source) && group.latest.mailbox_id ? (
+              <p className="muted">Messaggio da {SOURCE_LABELS[group.latest.source]}, arrivato via email: la risposta torna all'ospite su {SOURCE_LABELS[group.latest.source]}.</p>
+            ) : null}
+            {deliveryOf(group.latest) === 'pasted' ? (
               <p className="muted">
                 <ClipboardPaste size={12} aria-hidden="true" /> Messaggio da {SOURCE_LABELS[group.latest.source]}
                 {group.latest.created_by ? `, incollato da ${agentName(group.latest.created_by) === 'Tu' ? 'te' : agentName(group.latest.created_by)}` : ''}
@@ -417,6 +453,29 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
             ) : null}
           </div>
         </div>
+
+        {threadId ? (
+          <div className={`smart-inbox-owner ${assignedTo ? (assignedTo === currentProfileId ? 'mine' : 'other') : 'none'}`} role="status">
+            <UserCheck size={16} aria-hidden="true" />
+            <p>
+              {!assignedTo
+                ? <><strong>Nessuno segue ancora questo ospite.</strong> Chi lo prende in carico, o gli risponde per primo, diventa il suo agent: le prossime email arriveranno a lui.</>
+                : assignedTo === currentProfileId
+                  ? <><strong>Lo segui tu.</strong> Le sue prossime email arriveranno in "Assegnate a me".</>
+                  : <><strong>Lo segue {agentName(assignedTo)}.</strong> Puoi comunque rispondere, o prenderlo in carico tu.</>}
+            </p>
+            {currentProfileId && assignedTo !== currentProfileId ? (
+              <Button variant={assignedTo ? 'secondary' : 'primary'} onClick={() => void change(() => assignConversation(client, threadId, currentProfileId))} disabled={busy}>
+                <UserCheck size={15} /> Prendi in carico
+              </Button>
+            ) : null}
+            {assignedTo && assignedTo === currentProfileId ? (
+              <Button variant="secondary" onClick={() => void change(() => assignConversation(client, threadId, null))} disabled={busy}>
+                Lascia
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
 
         {threadId ? (
           <div className="smart-inbox-triage">
@@ -439,7 +498,7 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
               />
             </label>
             <label className="form-field smart-inbox-agent-field">
-              <span>Agent</span>
+              <span>Assegna a</span>
               <select value={assignedTo ?? ''} onChange={(event) => void change(() => assignConversation(client, threadId, event.target.value || null))} disabled={busy}>
                 <option value="">Non assegnata</option>
                 {agents.map((agent) => (
@@ -449,18 +508,7 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
                 ))}
               </select>
             </label>
-            {currentProfileId && assignedTo !== currentProfileId ? (
-              <Button variant="secondary" onClick={() => void change(() => assignConversation(client, threadId, currentProfileId))} disabled={busy}>
-                <UserCheck size={15} /> Prendi in carico
-              </Button>
-            ) : null}
           </div>
-        ) : null}
-
-        {assignedToOther ? (
-          <p className="smart-inbox-owner-note" role="status">
-            <UserCheck size={14} aria-hidden="true" /> Questo ospite lo segue {agentName(assignedTo)}. Puoi comunque rispondere.
-          </p>
         ) : null}
 
         {threadId ? (
@@ -541,13 +589,13 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
   const guestText = message.body_text || message.body_preview || 'Contenuto non ancora disponibile.'
   const sentReply = draft?.status === 'sent' ? draft : null
   const sentBy = sentReply?.sent_by ? agentName(sentReply.sent_by) : null
-  const pasted = message.source !== 'outlook'
+  const pasted = deliveryOf(message) === 'pasted'
 
   return (
     <article className={`smart-inbox-message${actionable ? ' open' : ''}`}>
       <header className="smart-inbox-message-head">
         <div>
-          <strong>{pasted ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
+          <strong>{!isMailboxSource(message.source) ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
           <time dateTime={message.received_at}>{formatWhen(message.received_at)}</time>
         </div>
         <div className="smart-inbox-meta">
@@ -570,7 +618,7 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
       {sentReply ? (
         <div className="smart-inbox-reply">
           <p className="smart-inbox-reply-head">
-            <CheckCircle2 size={13} aria-hidden="true" /> {pasted ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
+            <CheckCircle2 size={13} aria-hidden="true" /> {!isMailboxSource(message.source) ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
           </p>
           <div className="smart-inbox-reply-body">{sentReply.body}</div>
         </div>

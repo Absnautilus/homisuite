@@ -1,15 +1,24 @@
-import type { GuestDetails, KnowledgeCategory, MessageCategory, MessageSource, MessageStatus, MessageUrgency, PastedSource, SuggestedAction, TemplateCategory, UsageRow } from './types'
+import type { GuestDetails, Tone, KnowledgeCategory, MessageCategory, MessageSource, MessageStatus, MessageUrgency, PastedSource, SuggestedAction, TemplateCategory, UsageRow } from './types'
 
 // Pure presentation helpers, kept free of React/Supabase so they can be
 // unit-tested with node --test (see labels.test.mjs).
 
-export type InboxView = 'todo' | 'mine' | 'replied' | 'archived'
+export type InboxView = 'todo' | 'mine' | 'unassigned' | 'replied' | 'archived'
+
+const OPEN_STATUSES: MessageStatus[] = ['draft_ready', 'needs_attention', 'failed', 'pending', 'processing']
 
 const VIEW_STATUSES: Record<InboxView, MessageStatus[]> = {
-  todo: ['draft_ready', 'needs_attention', 'failed', 'pending', 'processing'],
-  mine: ['draft_ready', 'needs_attention', 'failed', 'pending', 'processing'],
+  todo: OPEN_STATUSES,
+  mine: OPEN_STATUSES,
+  unassigned: OPEN_STATUSES,
   replied: ['replied'],
   archived: ['dismissed', 'ignored'],
+}
+
+// Views of guests still waiting for an answer (sorted urgent first, then
+// longest waiting).
+export function isOpenView(view: InboxView): boolean {
+  return view === 'todo' || view === 'mine' || view === 'unassigned'
 }
 
 export function statusesForView(view: InboxView): MessageStatus[] {
@@ -212,8 +221,8 @@ export function ignoreReasonLabel(reason: string | null): string | null {
 }
 
 const ERROR_LABELS: Record<string, string> = {
-  reauth_required: 'Microsoft ha chiesto di ricollegare la casella Outlook (Impostazioni).',
-  mailbox_disconnected: 'La casella Outlook non è collegata.',
+  reauth_required: 'Bisogna ricollegare la casella email (Impostazioni).',
+  mailbox_disconnected: 'La casella email non è collegata.',
   ai_refused: 'L\'assistente non ha generato una bozza per questo messaggio: va gestito a mano.',
   email_too_long: 'Email troppo lunga per una bozza automatica: va gestita a mano.',
   missing_sender: 'Mittente mancante.',
@@ -231,8 +240,13 @@ const ACTION_ERROR_LABELS: Record<string, string> = {
   forbidden: 'Non hai i permessi per questa operazione.',
   invalid_session: 'La sessione è scaduta: accedi di nuovo.',
   already_sent: 'Questa risposta è già stata inviata.',
-  reauth_required: 'Microsoft ha chiesto di ricollegare la casella Outlook: vai in Impostazioni.',
-  mailbox_disconnected: 'Collega prima una casella Outlook in Impostazioni.',
+  reauth_required: 'Bisogna ricollegare la casella email: vai in Impostazioni.',
+  mailbox_disconnected: 'Collega prima una casella email (Outlook o Gmail) in Impostazioni.',
+  provider_not_configured: 'Questo collegamento non è ancora configurato sul server.',
+  whatsapp_window_closed: 'Sono passate più di 24 ore dall\'ultimo messaggio dell\'ospite: WhatsApp accetta solo modelli approvati da Meta. Rispondi dal telefono, o aspetta che l\'ospite scriva di nuovo.',
+  whatsapp_disconnected: 'Il numero WhatsApp non è più collegato (Impostazioni).',
+  whatsapp_invalid_number: 'Meta non riconosce questo numero con questo token: controlla Phone number ID e token.',
+  whatsapp_subscribe_failed: 'Il numero è valido, ma Meta non ha attivato le notifiche: controlla il WhatsApp Business Account ID e i permessi del token.',
   send_failed: 'Invio non riuscito: riprova tra qualche istante.',
   not_allowed: 'Operazione non disponibile per questo messaggio.',
   busy: 'Il messaggio è già in elaborazione: riprova tra poco.',
@@ -305,6 +319,7 @@ export function formatSender(message: { from_name: string | null; from_address: 
 // ---------------------------------------------------------------------------
 export const SOURCE_LABELS: Record<MessageSource, string> = {
   outlook: 'Outlook',
+  gmail: 'Gmail',
   booking: 'Booking.com',
   expedia: 'Expedia',
   airbnb: 'Airbnb',
@@ -316,9 +331,27 @@ export const SOURCE_LABELS: Record<MessageSource, string> = {
 export const PASTED_SOURCES: PastedSource[] = ['booking', 'expedia', 'airbnb', 'whatsapp', 'phone', 'other']
 
 // "Booking.com · incollato" in the list, so it's clear the reply has to be
-// pasted back there.
-export function sourceBadge(source: MessageSource): string {
-  return source === 'outlook' ? SOURCE_LABELS.outlook : `${SOURCE_LABELS[source]} · incollato`
+// pasted back there; "Booking.com · via email" when it arrived (and the
+// reply goes back) through the connected mailbox.
+// The connected mailbox itself (as opposed to a portal or pasted channel).
+export function isMailboxSource(source: MessageSource): boolean {
+  return source === 'outlook' || source === 'gmail'
+}
+
+// How a message reached Smart Inbox, which is also where the reply goes.
+// "Booking.com · via email" / "· incollato" tell staff where the reply
+// will end up; WhatsApp from the linked number is just "WhatsApp".
+export type Delivery = 'mailbox' | 'whatsapp' | 'pasted'
+
+export function deliveryOf(message: { mailbox_id: string | null; whatsapp_account_id?: string | null }): Delivery {
+  if (message.mailbox_id) return 'mailbox'
+  if (message.whatsapp_account_id) return 'whatsapp'
+  return 'pasted'
+}
+
+export function sourceBadge(source: MessageSource, delivery: Delivery = isMailboxSource(source) ? 'mailbox' : 'pasted'): string {
+  if (isMailboxSource(source) || delivery === 'whatsapp') return SOURCE_LABELS[source]
+  return `${SOURCE_LABELS[source]} · ${delivery === 'mailbox' ? 'via email' : 'incollato'}`
 }
 
 // ---------------------------------------------------------------------------
@@ -455,3 +488,48 @@ export const QUICK_REFINEMENTS: Array<{ label: string; instruction: string }> = 
   { label: 'Più formale', instruction: 'Rendi il tono più formale.' },
   { label: 'Più calorosa', instruction: 'Rendi il tono più caloroso e accogliente.' },
 ]
+
+// ---------------------------------------------------------------------------
+// Per-agent preferences
+// ---------------------------------------------------------------------------
+export const TONE_LABELS: Record<Tone, string> = {
+  cordiale: 'Cordiale',
+  formale: 'Formale',
+  essenziale: 'Essenziale',
+}
+
+// Must stay within the list allowed by smart_inbox_agent_preferences.
+export const AGENT_LANGUAGES: Array<{ code: string; label: string }> = [
+  { code: 'it', label: 'Italiano' },
+  { code: 'en', label: 'Inglese' },
+  { code: 'de', label: 'Tedesco' },
+  { code: 'fr', label: 'Francese' },
+  { code: 'es', label: 'Spagnolo' },
+  { code: 'pt', label: 'Portoghese' },
+  { code: 'nl', label: 'Olandese' },
+  { code: 'ru', label: 'Russo' },
+  { code: 'zh', label: 'Cinese' },
+  { code: 'ja', label: 'Giapponese' },
+]
+
+// ---------------------------------------------------------------------------
+// Statistics
+// ---------------------------------------------------------------------------
+// 75 -> "1 h 15 min", 2900 -> "2 g 0 h"
+export function formatMinutes(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined || !Number.isFinite(minutes)) return '—'
+  const value = Math.max(0, Math.round(minutes))
+  if (value < 60) return `${value} min`
+  if (value < 60 * 24) {
+    const hours = Math.floor(value / 60)
+    const rest = value % 60
+    return rest ? `${hours} h ${rest} min` : `${hours} h`
+  }
+  const days = Math.floor(value / (60 * 24))
+  return `${days} g ${Math.floor((value % (60 * 24)) / 60)} h`
+}
+
+export function percent(part: number, total: number): string {
+  if (!total) return '—'
+  return `${Math.round((part / total) * 100)}%`
+}

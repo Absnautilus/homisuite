@@ -14,9 +14,11 @@ export type MessageStatus =
 export type MessageCategory = 'information' | 'request' | 'booking' | 'complaint' | 'other'
 export type MessageUrgency = 'low' | 'normal' | 'high'
 export type Tone = 'cordiale' | 'formale' | 'essenziale'
-// 'outlook' arrives by itself; the others are pasted in "Componi risposta".
-export type MessageSource = 'outlook' | 'booking' | 'expedia' | 'airbnb' | 'whatsapp' | 'phone' | 'other'
-export type PastedSource = Exclude<MessageSource, 'outlook'>
+// 'outlook'/'gmail' arrive by themselves from the connected mailbox; the
+// others are pasted in "Componi risposta" (or relayed by email, see
+// mailbox_id on the message).
+export type MessageSource = 'outlook' | 'gmail' | 'booking' | 'expedia' | 'airbnb' | 'whatsapp' | 'phone' | 'other'
+export type PastedSource = Exclude<MessageSource, 'outlook' | 'gmail'>
 export type SignAs = 'agent' | 'property'
 export type TemplateCategory = 'prima_arrivo' | 'prenotazioni' | 'soggiorno' | 'dopo' | 'altro'
 export type KnowledgeCategory = 'arrivo_partenza' | 'servizi' | 'regole_prezzi' | 'altro'
@@ -83,6 +85,10 @@ export interface InboxMessage {
   id: string
   thread_id: string | null
   conversation: ConversationRef | null
+  // Set when the message arrived by email (and the reply goes back that way).
+  mailbox_id: string | null
+  // Set when it arrived on the property's WhatsApp Business number.
+  whatsapp_account_id: string | null
   source: MessageSource
   created_by: string | null
   guest_details: GuestDetails
@@ -135,13 +141,25 @@ export interface SignatureInfo {
   name: string | null
 }
 
+export type MailProvider = 'microsoft' | 'google'
+
 export interface Mailbox {
   id: string
+  provider: MailProvider
   email_address: string
   display_name: string | null
   status: 'connected' | 'error' | 'disconnected'
   last_error: string | null
   subscription_expires_at: string | null
+}
+
+export interface WhatsAppAccount {
+  id: string
+  phone_number_id: string
+  display_phone_number: string | null
+  verified_name: string | null
+  status: 'connected' | 'error' | 'disconnected'
+  last_error: string | null
 }
 
 export interface UsageRow {
@@ -155,4 +173,25 @@ export interface UsageRow {
 export interface Agent {
   profile_id: string
   full_name: string
+}
+
+// The current agent's own preferences (smart_inbox_agent_preferences).
+export interface AgentPreferences {
+  tone: Tone | null
+  instructions: string
+  languages: string[]
+}
+
+export interface InboxStats {
+  days: number
+  received: number
+  replied: number
+  unchanged: number
+  avg_response_minutes: number | null
+  median_response_minutes: number | null
+  open_now: number
+  by_day: Array<{ day: string; received: number; replied: number }>
+  by_channel: Array<{ source: MessageSource; received: number; replied: number }>
+  by_agent: Array<{ profile_id: string; full_name: string | null; replied: number; unchanged: number; avg_response_minutes: number | null }>
+  agents_visible: 'all' | 'self'
 }

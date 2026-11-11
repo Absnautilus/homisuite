@@ -107,7 +107,7 @@ jobs:
       # the directory holding the deno.json that disables node_modules
       # resolution, never from the npm workspace root.
       - working-directory: supabase/functions/_shared/smart-inbox
-        run: deno check ../../smart-inbox-connect/index.ts ../../smart-inbox-oauth-callback/index.ts ../../smart-inbox-webhook/index.ts ../../smart-inbox-actions/index.ts ../../smart-inbox-maintenance/index.ts
+        run: deno check ../../smart-inbox-connect/index.ts ../../smart-inbox-oauth-callback/index.ts ../../smart-inbox-webhook/index.ts ../../smart-inbox-actions/index.ts ../../smart-inbox-maintenance/index.ts ../../smart-inbox-whatsapp/index.ts
       - working-directory: supabase/functions/_shared/smart-inbox
         run: deno test --allow-env .
 

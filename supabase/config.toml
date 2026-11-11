@@ -51,5 +51,8 @@ verify_jwt = false
 [functions.smart-inbox-webhook]
 verify_jwt = false
 
+[functions.smart-inbox-whatsapp]
+verify_jwt = false
+
 [functions.smart-inbox-maintenance]
 verify_jwt = false
