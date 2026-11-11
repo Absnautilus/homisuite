@@ -12,6 +12,11 @@ export function NotificationsToggle() {
   // without this, the row looks like an ordinary off toggle until the
   // person clicks it and only then learns it's blocked.
   const [blocked, setBlocked] = useState(false)
+  // Registering the service worker and subscribing to Web Push (turnOn) can
+  // take a visible moment with nothing on screen to show for it -- without
+  // this, the switch looks unresponsive and people click it again mid-flight,
+  // firing a second, redundant subscribe/unsubscribe on top of the first.
+  const [pending, setPending] = useState(false)
 
   useEffect(() => {
     if (!DEVICE_PUSH_SUPPORTED) {
@@ -45,17 +50,21 @@ export function NotificationsToggle() {
     // the browser level here would silently break that unrelated feature.
     const previous = subscribed
     setSubscribed(false)
+    setPending(true)
     try {
       const subscription = await getExistingPushSubscription()
       if (subscription) await core.deleteDevicePushSubscription(subscription.endpoint)
     } catch {
       setSubscribed(previous)
       setError('Non è stato possibile disattivare le notifiche.')
+    } finally {
+      setPending(false)
     }
   }
 
   async function turnOn() {
     setError(null)
+    setPending(true)
     try {
       const subscription = await subscribeDevicePush()
       await core.saveDevicePushSubscription(toSubscriptionKeys(subscription))
@@ -67,6 +76,8 @@ export function NotificationsToggle() {
       } else {
         setError('Non è stato possibile attivare le notifiche.')
       }
+    } finally {
+      setPending(false)
     }
   }
 
@@ -79,7 +90,7 @@ export function NotificationsToggle() {
       <Switch
         checked={Boolean(subscribed)}
         onChange={() => void (subscribed ? turnOff() : turnOn())}
-        disabled={subscribed === null || blocked}
+        disabled={subscribed === null || blocked || pending}
         aria-label="Notifiche push su questo dispositivo"
       />
       {blocked ? (

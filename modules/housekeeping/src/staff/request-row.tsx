@@ -276,10 +276,6 @@ export function RequestRow({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {request.accepted_by_staff && <Avatar name={request.accepted_by_staff.name} />}
           <StatusBadge status={request.status} label={t(`statusLabel.${request.status}` as const)} />
-          {request.assigned_job_title_ids.map((jobTitleId) => {
-            const jobTitle = jobTitles.find((item) => item.id === jobTitleId)
-            return jobTitle ? <Badge key={jobTitleId}>{jobTitle.name}</Badge> : null
-          })}
           {request.urgent && (
             <Badge className="border border-bad-ink/25 bg-bad-bg text-bad-ink">
               <AlertTriangle className="mr-1 h-3 w-3" />

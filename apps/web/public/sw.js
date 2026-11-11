@@ -2,15 +2,15 @@
 // "Ignora" / "Accetta" actions for brand-new requests.
 //
 // Visual layout is controlled by the browser/OS; we can reliably control
-// title, body, icon, badge and action labels. New-request notifications are
-// intentionally non-persistent and are closed after roughly three seconds
-// on platforms that keep the service worker alive for the push event.
+// title, body, icon, badge and action labels. New-request notifications stay
+// on screen (requireInteraction) until the person acts on them -- Accetta,
+// Ignora, or the OS's own dismiss -- instead of vanishing on their own after
+// a few seconds, which meant a request could go unnoticed if nobody happened
+// to be looking right then.
 //
 // All navigation stays inside Homisuite. Accepting opens the embedded
 // Housekeeping module with ?claim=<id>; ignoring only closes the native
 // notification and never changes the request status.
-
-const NEW_REQUEST_AUTO_CLOSE_MS = 3_000
 
 // Without this, a new deploy's service worker sits "waiting" until every tab
 // a client controls is closed -- fine for a desktop browser tab someone
@@ -41,28 +41,20 @@ self.addEventListener('push', (event) => {
   const actionableNewRequest = isNewRequest && Boolean(requestId)
 
   event.waitUntil(
-    (async () => {
-      await self.registration.showNotification(data.title, {
-        body: data.body,
-        icon: '/icon-192.png',
-        badge: '/favicon-48x48.png',
-        data: data.data,
-        tag,
-        actions: actionableNewRequest
-          ? [
-              { action: 'ignore', title: 'Ignora' },
-              { action: 'accept', title: 'Accetta' },
-            ]
-          : [],
-        requireInteraction: false,
-      })
-
-      if (!actionableNewRequest || !tag) return
-
-      await new Promise((resolve) => setTimeout(resolve, NEW_REQUEST_AUTO_CLOSE_MS))
-      const notifications = await self.registration.getNotifications({ tag })
-      for (const notification of notifications) notification.close()
-    })(),
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/favicon-48x48.png',
+      data: data.data,
+      tag,
+      actions: actionableNewRequest
+        ? [
+            { action: 'ignore', title: 'Ignora' },
+            { action: 'accept', title: 'Accetta' },
+          ]
+        : [],
+      requireInteraction: actionableNewRequest,
+    }),
   )
 })
 
