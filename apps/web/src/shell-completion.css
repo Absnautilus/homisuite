@@ -409,6 +409,11 @@ table.dining-dense th.sortable.is-sorted .arrow { opacity: 1; color: var(--accen
 .dining-class-table { border-top: 1px solid var(--line); overflow-x: auto; }
 .dining-class-row { display: grid; grid-template-columns: 1fr 90px 90px 90px; gap: 10px; align-items: center; min-height: 48px; padding: 8px 20px; border-bottom: 1px solid var(--line); font-size: 13px; min-width: 480px; }
 .dining-class-head { min-height: 38px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+/* Same look as .form-field input, just sized for this table cell instead of
+   a full-width labeled field -- the column header above already names it. */
+.dining-priority-input { width: 60px; min-height: 32px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+.dining-priority-input:disabled { background: var(--surface-2); color: var(--muted); }
+.dining-priority-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 .dining-tag-chip-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px; }
 .dining-tag-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
 .dining-tag-chip button { border: 0; background: var(--surface); color: var(--muted); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }

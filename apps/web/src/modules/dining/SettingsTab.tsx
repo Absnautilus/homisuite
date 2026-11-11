@@ -105,7 +105,7 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
               <span>{restaurant.name}</span>
               <span><Switch checked={restaurant.is_recommended} onChange={() => void toggleField(restaurant, 'is_recommended')} aria-label={`Consigliato — ${restaurant.name}`} disabled={!canManage} /></span>
               <span><Switch checked={restaurant.active} onChange={() => void toggleField(restaurant, 'active')} aria-label={`Visibile — ${restaurant.name}`} disabled={!canManage} /></span>
-              <span><input type="number" value={restaurant.sort_order} disabled={!canManage} style={{ width: 60, height: 32, padding: '0 8px' }} onChange={(e) => void setPriority(restaurant, Number(e.target.value))} /></span>
+              <span><input type="number" className="dining-priority-input" value={restaurant.sort_order} disabled={!canManage} onChange={(e) => void setPriority(restaurant, Number(e.target.value))} aria-label={`Priorità — ${restaurant.name}`} /></span>
             </div>
           ))}
           {!loading && sortedRestaurants.length === 0 ? <p className="muted dining-empty-hint">Nessun ristorante creato.</p> : null}
