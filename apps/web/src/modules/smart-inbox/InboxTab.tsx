@@ -30,6 +30,7 @@ import {
   simpleState,
   SOURCE_LABELS,
   sourceBadge,
+  deliveryOf,
   isMailboxSource,
   isOpenView,
   statusesForView,
@@ -303,7 +304,7 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
                       <span className="smart-inbox-item-tags">
                         <StateBadge status={group.latest.status} />
                         {group.isUrgent ? <span className="smart-inbox-urgent-badge"><AlertTriangle size={12} aria-hidden="true" /> Urgente</span> : null}
-                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source, Boolean(group.latest.mailbox_id))}</span>
+                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source, deliveryOf(group.latest))}</span>
                         {group.openCount > 1 ? <span className="status-chip">{group.openCount} email</span> : null}
                       </span>
                       {group.latest.mailbox_id ? <span className="smart-inbox-item-subject">{group.latest.subject || '(senza oggetto)'}</span> : null}
@@ -444,7 +445,7 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
             {!isMailboxSource(group.latest.source) && group.latest.mailbox_id ? (
               <p className="muted">Messaggio da {SOURCE_LABELS[group.latest.source]}, arrivato via email: la risposta torna all'ospite su {SOURCE_LABELS[group.latest.source]}.</p>
             ) : null}
-            {!group.latest.mailbox_id ? (
+            {deliveryOf(group.latest) === 'pasted' ? (
               <p className="muted">
                 <ClipboardPaste size={12} aria-hidden="true" /> Messaggio da {SOURCE_LABELS[group.latest.source]}
                 {group.latest.created_by ? `, incollato da ${agentName(group.latest.created_by) === 'Tu' ? 'te' : agentName(group.latest.created_by)}` : ''}
@@ -588,7 +589,7 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
   const guestText = message.body_text || message.body_preview || 'Contenuto non ancora disponibile.'
   const sentReply = draft?.status === 'sent' ? draft : null
   const sentBy = sentReply?.sent_by ? agentName(sentReply.sent_by) : null
-  const pasted = !message.mailbox_id
+  const pasted = deliveryOf(message) === 'pasted'
 
   return (
     <article className={`smart-inbox-message${actionable ? ' open' : ''}`}>

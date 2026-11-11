@@ -25,6 +25,7 @@ on:
           - smart-inbox-webhook
           - smart-inbox-actions
           - smart-inbox-maintenance
+          - smart-inbox-whatsapp
           - all
       confirm_project_ref:
         description: "Type the target Supabase project ref to confirm (must match the SUPABASE_PROJECT_REF repo variable exactly)"

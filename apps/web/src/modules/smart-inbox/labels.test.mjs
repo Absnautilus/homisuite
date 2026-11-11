@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { formatMinutes, isOpenView, percent, appendSignature, DEFAULT_AGENT_SIGNATURE, languageName, previewTemplate, renderSignature, sourceBadge, templateLanguages, topicCounts, actionErrorLabel, draftHint, fillTemplate, groupByConversation, insertTemplateText, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
+import { deliveryOf, formatMinutes, isOpenView, percent, appendSignature, DEFAULT_AGENT_SIGNATURE, languageName, previewTemplate, renderSignature, sourceBadge, templateLanguages, topicCounts, actionErrorLabel, draftHint, fillTemplate, groupByConversation, insertTemplateText, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
 
 describe('Smart Inbox labels', () => {
   it('splits messages into the three inbox views without overlap', () => {
@@ -139,9 +139,14 @@ describe('Smart Inbox labels', () => {
   })
 
   it('tells email-relayed portal messages from pasted ones', () => {
-    assert.equal(sourceBadge('booking', true), 'Booking.com · via email')
-    assert.equal(sourceBadge('booking', false), 'Booking.com · incollato')
-    assert.equal(sourceBadge('outlook', true), 'Outlook')
+    assert.equal(sourceBadge('booking', 'mailbox'), 'Booking.com · via email')
+    assert.equal(sourceBadge('booking', 'pasted'), 'Booking.com · incollato')
+    assert.equal(sourceBadge('outlook', 'mailbox'), 'Outlook')
+    assert.equal(sourceBadge('whatsapp', 'whatsapp'), 'WhatsApp')
+    assert.equal(sourceBadge('whatsapp', 'pasted'), 'WhatsApp · incollato')
+    assert.equal(deliveryOf({ mailbox_id: null, whatsapp_account_id: 'w1' }), 'whatsapp')
+    assert.equal(deliveryOf({ mailbox_id: 'm1', whatsapp_account_id: null }), 'mailbox')
+    assert.equal(deliveryOf({ mailbox_id: null }), 'pasted')
   })
 
   it('treats "Da assegnare" as a view of guests still waiting', () => {

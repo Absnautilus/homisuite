@@ -87,6 +87,8 @@ export interface InboxMessage {
   conversation: ConversationRef | null
   // Set when the message arrived by email (and the reply goes back that way).
   mailbox_id: string | null
+  // Set when it arrived on the property's WhatsApp Business number.
+  whatsapp_account_id: string | null
   source: MessageSource
   created_by: string | null
   guest_details: GuestDetails
@@ -149,6 +151,15 @@ export interface Mailbox {
   status: 'connected' | 'error' | 'disconnected'
   last_error: string | null
   subscription_expires_at: string | null
+}
+
+export interface WhatsAppAccount {
+  id: string
+  phone_number_id: string
+  display_phone_number: string | null
+  verified_name: string | null
+  status: 'connected' | 'error' | 'disconnected'
+  last_error: string | null
 }
 
 export interface UsageRow {
