@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertNotEquals, assertRejects, assertStringIncludes, assertThrows } from 'jsr:@std/assert@1.0.13'
 import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { decryptSecret, encryptSecret, sha256Hex, signState, toBase64, verifyState } from './crypto.ts'
-import { ignoreReason } from './filters.ts'
+import { ignoreReason, relaySource } from './filters.ts'
 import { textToHtml } from './graph.ts'
 import { AiRefusalError, buildEmailMessage, buildKnowledgeBlock, buildSystemPrompt, draftReply, HISTORY_ENTRY_CHARS, parseResult, supportsServerFallback, type DraftRequest } from './ai.ts'
 import { readConfig } from './runtime.ts'
@@ -296,4 +296,28 @@ Deno.test('the signature goes under the closing formula written by the AI', () =
 Deno.test('pasted guests get one conversation per channel and name', () => {
   assertEquals(pastedGuestKey('booking', '  Lukas   Weber '), 'booking:lukas weber')
   assert(pastedGuestKey('whatsapp', 'Lukas Weber') !== pastedGuestKey('booking', 'Lukas Weber'))
+})
+
+// ---------------------------------------------------------------------------
+// OTA messages relayed by email, sender style
+// ---------------------------------------------------------------------------
+Deno.test('guest messages relayed by Booking/Expedia/Airbnb are recognised, notifications are not', () => {
+  assertEquals(relaySource('4f2a91@guest.booking.com'), 'booking')
+  assertEquals(relaySource('Lukas.Weber@M.ExpediaPartnerCentral.com'), 'expedia')
+  assertEquals(relaySource('abc@reply.airbnb.com'), 'airbnb')
+  assertEquals(relaySource('noreply@booking.com'), null)
+  assertEquals(relaySource('guest@gmail.com'), null)
+  assertEquals(relaySource(null), null)
+  // A relayed guest message is not dropped as a portal notification.
+  assertEquals(ignoreReason({ fromAddress: '4f2a91@guest.booking.com', subject: 'Messaggio', headers: {} }, { mailboxAddress: 'info@hotel.it', ignoredSenders: [] }), null)
+})
+
+Deno.test('the sender\'s personal style goes with the message, never in the cached prompt', () => {
+  const style = { tone: 'formale' as const, instructions: 'Do sempre del lei.' }
+  const message = buildEmailMessage(request.email, [], '', 'outlook', undefined, style)
+  assertStringIncludes(message, '<sender_style>')
+  assertStringIncludes(message, 'Preferences: Do sempre del lei.')
+  assert(message.indexOf('<sender_style>') < message.indexOf('<guest_message'))
+  assert(!buildEmailMessage(request.email, [], '', 'outlook', undefined, { tone: null, instructions: '  ' }).includes('sender_style'))
+  assert(!buildSystemPrompt('Hotel Laguna', 'cordiale').includes('Do sempre del lei'))
 })

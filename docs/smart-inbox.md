@@ -35,6 +35,51 @@ diventa l'agent dell'ospite se non ne ha già uno.
 Funziona anche **senza Outlook collegato**: per questa parte servono solo
 `ANTHROPIC_API_KEY` e i secret di base (non quelli Microsoft).
 
+## Booking.com, Expedia e Airbnb via email
+
+I portali inoltrano i messaggi degli ospiti alla casella dell'hotel da un
+indirizzo intermediario per prenotazione (es. `…@guest.booking.com`);
+rispondendo a quell'indirizzo, la risposta arriva all'ospite sul portale.
+Se quelle email arrivano nella casella collegata, Smart Inbox le riconosce
+(`OTA_RELAY_DOMAINS` in `_shared/smart-inbox/filters.ts`), le mostra con il
+canale del portale ("Booking.com · via email") e la risposta parte dalla
+casella come per le altre email. Le notifiche automatiche dei portali
+(`noreply@booking.com`…) restano escluse.
+
+Il dominio di Booking.com è quello documentato; quelli di Expedia
+(`m.expediapartnercentral.com`) e Airbnb (`reply.airbnb.com`) vanno
+verificati sulle prime email reali di ogni struttura.
+
+## Assegnazione
+
+Ogni ospite ha al massimo un agent. In Posta:
+- **Da assegnare**: gli ospiti che nessuno segue ancora, con **Prendi in
+  carico** direttamente nella lista;
+- nel dettaglio, un riquadro dice chi lo segue (nessuno / tu / un collega),
+  con *Prendi in carico* o *Lascia*; *Assegna a* lo passa a un collega;
+- chi risponde per primo a un ospite senza agent (o incolla il suo messaggio
+  in Componi risposta) ne diventa l'agent; le email successive dello stesso
+  ospite arrivano in "Assegnate a me".
+
+## Il mio stile (per agent)
+
+In Impostazioni ogni agent ha una sezione personale, che vede e modifica solo
+lui (`smart_inbox_agent_preferences`):
+- **tono** (o quello della struttura) e **indicazioni** brevi per
+  l'assistente ("do sempre del lei"), usati nelle bozze che invia lui e in
+  quelle degli ospiti che segue. Vanno nel messaggio, non nel prompt di
+  sistema in cache, e non superano le regole della struttura;
+- **lingue che legge**: sotto le bozze in quelle lingue non compare la
+  traduzione italiana.
+
+## Statistiche
+
+Scheda **Statistiche** (`smart_inbox_stats()`): messaggi ricevuti, risposte
+inviate, tempo di risposta (mediana e media), quota di bozze inviate senza
+modifiche, ospiti da rispondere, andamento per giorno, per canale e per
+agent. Ogni agent vede i totali e i propri numeri; i responsabili vedono
+anche i colleghi.
+
 ## Firma dell'agent
 
 Ogni risposta è firmata da chi la invia. In Impostazioni il responsabile

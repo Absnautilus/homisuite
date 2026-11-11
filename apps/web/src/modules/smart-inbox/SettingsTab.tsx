@@ -7,7 +7,8 @@ import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { disconnectOutlook, loadMailbox, loadMonthUsage, loadSettings, saveSettings, SmartInboxActionError, startOutlookConnection } from './api'
 import { actionErrorLabel, appendSignature, DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, PASTED_SOURCES, parseSenderList, renderSignature, SOURCE_LABELS, summarizeUsage, type UsageSummary } from './labels'
-import type { InboxSettings, Mailbox, PastedSource, Tone } from './types'
+import { MyStyleCard } from './MyStyleCard'
+import type { AgentPreferences, InboxSettings, Mailbox, PastedSource, Tone } from './types'
 
 const OUTLOOK_RESULTS: Record<string, { ok: boolean; text: string }> = {
   connected: { ok: true, text: 'Casella Outlook collegata. Le nuove email arriveranno in Posta.' },
@@ -34,12 +35,15 @@ function readOutlookResult(): string | null {
   return result
 }
 
-export function SettingsTab({ client, propertyId, propertyName, canManage, onSaved }: {
+export function SettingsTab({ client, propertyId, propertyName, canManage, onSaved, profileId, preferences, onPreferencesSaved }: {
   client: SupabaseClient
   propertyId: string
   propertyName: string
   canManage: boolean
   onSaved: () => Promise<void> | void
+  profileId: string | null
+  preferences: AgentPreferences
+  onPreferencesSaved: (next: AgentPreferences) => void
 }) {
   const [mailbox, setMailbox] = useState<Mailbox | null>(null)
   const [settings, setSettings] = useState<InboxSettings | null>(null)
@@ -145,10 +149,20 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
       {result ? <div className={`shell-alert${result.ok ? '' : ' error'}`} role="status">{result.text}</div> : null}
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
 
+      <MyStyleCard
+        client={client}
+        propertyId={propertyId}
+        profileId={profileId}
+        propertyTone={settings.tone}
+        preferences={preferences}
+        onSaved={onPreferencesSaved}
+      />
+
+
       <section className="shell-card">
         <div className="section-heading">
           <h2>Casella Outlook</h2>
-          <p>Le email arrivano da sole con una bozza pronta. Booking.com, WhatsApp e gli altri canali si incollano in Componi risposta.</p>
+          <p>Le email arrivano da sole con una bozza pronta. Anche i messaggi degli ospiti di Booking.com, Expedia e Airbnb che arrivano in questa casella vengono riconosciuti, e la risposta torna all'ospite sul portale. Gli altri canali si incollano in Componi risposta.</p>
         </div>
         <div className="smart-inbox-mailbox">
           <span className="icon-tile"><Mail size={17} /></span>

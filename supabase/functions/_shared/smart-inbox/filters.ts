@@ -19,6 +19,29 @@ export interface FilterOptions {
 // on the exact domain only -- guest messages relayed by the same OTAs come
 // from subdomains (e.g. ...@guest.booking.com, ...@m.expediapartnercentral.com)
 // and are real conversations a guest expects an answer to, so they pass.
+// Booking.com, Expedia and Airbnb forward a guest's message to the hotel
+// from a per-reservation relay address; a reply to that address reaches
+// the guest in the portal. Those messages are guest messages (not portal
+// notifications): they are drafted like any email and shown with the
+// portal as their channel. Matched on the whole domain or a subdomain.
+// Booking.com's domain is the documented one; Expedia's and Airbnb's are
+// the ones their relay emails use today -- check them against real
+// messages when a property starts using this.
+export const OTA_RELAY_DOMAINS: Record<string, 'booking' | 'expedia' | 'airbnb'> = {
+  'guest.booking.com': 'booking',
+  'm.expediapartnercentral.com': 'expedia',
+  'reply.airbnb.com': 'airbnb',
+}
+
+export function relaySource(address: string | null): 'booking' | 'expedia' | 'airbnb' | null {
+  if (!address) return null
+  const domain = senderDomain(address.toLowerCase())
+  for (const [relay, source] of Object.entries(OTA_RELAY_DOMAINS)) {
+    if (domain === relay || domain.endsWith(`.${relay}`)) return source
+  }
+  return null
+}
+
 export const OTA_NOTIFICATION_DOMAINS = [
   'booking.com',
   'expedia.com',

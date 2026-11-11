@@ -83,6 +83,8 @@ export interface InboxMessage {
   id: string
   thread_id: string | null
   conversation: ConversationRef | null
+  // Set when the message arrived by email (and the reply goes back that way).
+  mailbox_id: string | null
   source: MessageSource
   created_by: string | null
   guest_details: GuestDetails
@@ -155,4 +157,25 @@ export interface UsageRow {
 export interface Agent {
   profile_id: string
   full_name: string
+}
+
+// The current agent's own preferences (smart_inbox_agent_preferences).
+export interface AgentPreferences {
+  tone: Tone | null
+  instructions: string
+  languages: string[]
+}
+
+export interface InboxStats {
+  days: number
+  received: number
+  replied: number
+  unchanged: number
+  avg_response_minutes: number | null
+  median_response_minutes: number | null
+  open_now: number
+  by_day: Array<{ day: string; received: number; replied: number }>
+  by_channel: Array<{ source: MessageSource; received: number; replied: number }>
+  by_agent: Array<{ profile_id: string; full_name: string | null; replied: number; unchanged: number; avg_response_minutes: number | null }>
+  agents_visible: 'all' | 'self'
 }

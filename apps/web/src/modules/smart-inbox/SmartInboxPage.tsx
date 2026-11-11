@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ModuleNav, useRememberedTab } from '@homisuite/ui'
-import { BookOpenText, ClipboardPaste, FileText, Inbox, Settings } from 'lucide-react'
+import { BarChart3, BookOpenText, ClipboardPaste, FileText, Inbox, Settings } from 'lucide-react'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
-import { DEFAULT_SETTINGS, loadSettings, loadSignature } from './api'
+import { DEFAULT_AGENT_PREFERENCES, DEFAULT_SETTINGS, loadMyPreferences, loadSettings, loadSignature } from './api'
+import { MyLanguagesContext } from './agentContext'
 import { ComposeTab } from './ComposeTab'
+import { StatsTab } from './StatsTab'
 import { InboxTab } from './InboxTab'
 import { KnowledgeTab } from './KnowledgeTab'
 import { SettingsTab } from './SettingsTab'
 import { TemplatesTab } from './TemplatesTab'
 import type { InboxView } from './labels'
-import type { InboxSettings, SignatureInfo } from './types'
+import type { AgentPreferences, InboxSettings, SignatureInfo } from './types'
 import './smart-inbox.css'
 
 const TABS = [
@@ -19,12 +21,14 @@ const TABS = [
   { value: 'componi', label: 'Componi risposta', icon: <ClipboardPaste /> },
   { value: 'modelli', label: 'Modelli', icon: <FileText /> },
   { value: 'informazioni', label: 'Informazioni hotel', icon: <BookOpenText /> },
+  { value: 'statistiche', label: 'Statistiche', icon: <BarChart3 /> },
   { value: 'impostazioni', label: 'Impostazioni', icon: <Settings /> },
 ]
 
 const INBOX_VIEWS = [
   { value: 'todo', label: 'Da rispondere' },
   { value: 'mine', label: 'Assegnate a me' },
+  { value: 'unassigned', label: 'Da assegnare' },
   { value: 'replied', label: 'Risposto' },
   { value: 'archived', label: 'Archiviate' },
 ]
@@ -51,6 +55,7 @@ export function SmartInboxPage() {
   const [view, setView] = useRememberedTab('smartInbox.view', 'todo')
   const [settings, setSettings] = useState<InboxSettings>(DEFAULT_SETTINGS)
   const [signature, setSignature] = useState<SignatureInfo | null>(null)
+  const [preferences, setPreferences] = useState<AgentPreferences>(DEFAULT_AGENT_PREFERENCES)
   const propertyName = runtime.property?.name ?? 'Struttura'
   const ready = access.status === 'ready'
 
@@ -62,6 +67,7 @@ export function SmartInboxPage() {
       const next = await loadSettings(supabase, propertyId)
       setSettings(next)
       setSignature(await loadSignature(supabase, propertyId, propertyName, next))
+      setPreferences(await loadMyPreferences(supabase, propertyId))
     } catch (cause) {
       console.error('Smart Inbox: reply settings not loaded', cause)
     }
@@ -107,6 +113,7 @@ export function SmartInboxPage() {
   }
 
   return (
+    <MyLanguagesContext.Provider value={preferences.languages}>
     <div className="page-stack smart-inbox-page">
       <ModuleNav
         propertyName={propertyName}
@@ -148,7 +155,9 @@ export function SmartInboxPage() {
       </div>
       <div hidden={tab !== 'informazioni'}><KnowledgeTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
       <div hidden={tab !== 'modelli'}><TemplatesTab client={supabase} propertyId={propertyId} canManage={access.canManage} /></div>
-      <div hidden={tab !== 'impostazioni'}><SettingsTab client={supabase} propertyId={propertyId} propertyName={propertyName} canManage={access.canManage} onSaved={loadReplySettings} /></div>
+      <div hidden={tab !== 'impostazioni'}><SettingsTab client={supabase} propertyId={propertyId} propertyName={propertyName} canManage={access.canManage} onSaved={loadReplySettings} profileId={runtime.profile?.id ?? null} preferences={preferences} onPreferencesSaved={setPreferences} /></div>
+      <div hidden={tab !== 'statistiche'}><StatsTab client={supabase} propertyId={propertyId} active={tab === 'statistiche'} /></div>
     </div>
+    </MyLanguagesContext.Provider>
   )
 }

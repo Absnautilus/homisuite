@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { appendSignature, DEFAULT_AGENT_SIGNATURE, languageName, previewTemplate, renderSignature, sourceBadge, templateLanguages, topicCounts, actionErrorLabel, draftHint, fillTemplate, groupByConversation, insertTemplateText, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
+import { formatMinutes, isOpenView, percent, appendSignature, DEFAULT_AGENT_SIGNATURE, languageName, previewTemplate, renderSignature, sourceBadge, templateLanguages, topicCounts, actionErrorLabel, draftHint, fillTemplate, groupByConversation, insertTemplateText, monthFromInput, monthInputValue, monthLabel, simpleState, ignoreReasonLabel, initials, isActionable, messageErrorLabel, parseSenderList, statusesForView, statusTone, summarizeUsage } from './labels.ts'
 
 describe('Smart Inbox labels', () => {
   it('splits messages into the three inbox views without overlap', () => {
@@ -136,5 +136,27 @@ describe('Smart Inbox labels', () => {
       { topic: 'Animali ammessi?', count: 2 },
       { topic: 'Deposito bagagli', count: 1 },
     ])
+  })
+
+  it('tells email-relayed portal messages from pasted ones', () => {
+    assert.equal(sourceBadge('booking', true), 'Booking.com · via email')
+    assert.equal(sourceBadge('booking', false), 'Booking.com · incollato')
+    assert.equal(sourceBadge('outlook', true), 'Outlook')
+  })
+
+  it('treats "Da assegnare" as a view of guests still waiting', () => {
+    assert.ok(isOpenView('unassigned'))
+    assert.ok(!isOpenView('replied'))
+    assert.deepEqual(statusesForView('unassigned'), statusesForView('todo'))
+  })
+
+  it('formats response times and shares for the statistics', () => {
+    assert.equal(formatMinutes(null), '—')
+    assert.equal(formatMinutes(42), '42 min')
+    assert.equal(formatMinutes(75), '1 h 15 min')
+    assert.equal(formatMinutes(120), '2 h')
+    assert.equal(formatMinutes(60 * 24 * 2 + 90), '2 g 1 h')
+    assert.equal(percent(1, 3), '33%')
+    assert.equal(percent(0, 0), '—')
   })
 })

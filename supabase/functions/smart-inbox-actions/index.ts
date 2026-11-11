@@ -8,7 +8,8 @@ import { appendSignature, type SignAs, signatureFor } from '../_shared/smart-inb
 //
 //   { action: 'send', draftId, body, signAs? } -> sign `body` (the text staff
 //        approved) as the caller ('agent', default) or as the property, then
-//        - Outlook message: reply from the connected mailbox;
+//        - message that arrived by email (Outlook, or Booking/Expedia/Airbnb
+//          relayed by email): reply from the connected mailbox;
 //        - pasted message: just record it (staff paste the returned `text`
 //          back into Booking/WhatsApp/...).
 //        Marks the draft sent and the message replied.
@@ -99,7 +100,9 @@ Deno.serve(async (request: Request) => {
       if (messageError) throw messageError
       const target = message as { id: string; source: string; mailbox_id: string | null; graph_message_id: string | null; thread_id: string | null }
 
-      if (target.source === 'outlook') {
+      // Arrived by email (Outlook, or Booking/Expedia/Airbnb relayed by
+      // email): reply from the mailbox. Pasted: nothing to send.
+      if (target.mailbox_id && target.graph_message_id) {
         try {
           const { secret } = await loadMailbox(admin, target.mailbox_id as string)
           if (!secret) throw new Error('mailbox_disconnected')
@@ -163,7 +166,7 @@ Deno.serve(async (request: Request) => {
       if (auth instanceof Response) return auth
       if (message.status === 'replied' || message.status === 'processing') return json({ error: 'not_allowed' }, 409)
 
-      const status = await processMessage(deps(), message.id, { force: true })
+      const status = await processMessage(deps(), message.id, { force: true, actorId: auth.userId })
       if (!status) return json({ error: 'busy' }, 409)
       return json({ status })
     }
@@ -205,7 +208,7 @@ Deno.serve(async (request: Request) => {
       const auth = await requirePermission(caller, draft.property_id, 'smart_inbox.view')
       if (auth instanceof Response) return auth
 
-      const outcome = await reviseDraft(deps(), draft.id, instruction, current)
+      const outcome = await reviseDraft(deps(), draft.id, instruction, current, auth.userId)
       if (outcome === 'not_pending') return json({ error: 'already_sent' }, 409)
       if (outcome === 'refused') return json({ error: 'ai_refused' }, 422)
       return json({ ok: true })

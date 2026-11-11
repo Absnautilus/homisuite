@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Agent, InboxDraft, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
+import type { Agent, AgentPreferences, InboxDraft, InboxStats, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
 import { DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, renderSignature, topicCounts } from './labels'
 
 // Untyped SupabaseClient, same as Dining: the shared Database type
@@ -29,7 +29,7 @@ async function invoke<T>(client: SupabaseClient, name: string, body: Record<stri
   return data as T
 }
 
-const MESSAGE_COLUMNS = 'id, thread_id, source, created_by, guest_details, missing_info, template_gap, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
+const MESSAGE_COLUMNS = 'id, thread_id, mailbox_id, source, created_by, guest_details, missing_info, template_gap, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
 const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_by, sent_at, updated_at, templates_used, info_used, missing_fields, translation, signed_as'
 const CONVERSATION_COLUMNS = 'id, guest_address, guest_name, assigned_to, assigned_at, is_urgent, stay_month, notes'
 const SELECT = `${MESSAGE_COLUMNS}, conversation:smart_inbox_conversations(${CONVERSATION_COLUMNS}), smart_inbox_drafts(${DRAFT_COLUMNS})`
@@ -318,4 +318,29 @@ export async function loadMonthUsage(client: SupabaseClient, propertyId: string,
     .limit(10000)
   if (error) throw error
   return (data ?? []) as UsageRow[]
+}
+
+export const DEFAULT_AGENT_PREFERENCES: AgentPreferences = { tone: null, instructions: '', languages: ['it'] }
+
+export async function loadMyPreferences(client: SupabaseClient, propertyId: string): Promise<AgentPreferences> {
+  const { data, error } = await client
+    .from('smart_inbox_agent_preferences')
+    .select('tone, instructions, languages')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (error) throw error
+  return (data as AgentPreferences | null) ?? DEFAULT_AGENT_PREFERENCES
+}
+
+export async function saveMyPreferences(client: SupabaseClient, propertyId: string, profileId: string, preferences: AgentPreferences): Promise<void> {
+  const { error } = await client
+    .from('smart_inbox_agent_preferences')
+    .upsert({ property_id: propertyId, profile_id: profileId, ...preferences }, { onConflict: 'property_id,profile_id' })
+  if (error) throw error
+}
+
+export async function loadStats(client: SupabaseClient, propertyId: string, days: number): Promise<InboxStats> {
+  const { data, error } = await client.rpc('smart_inbox_stats', { p_property_id: propertyId, p_days: days })
+  if (error) throw error
+  return data as InboxStats
 }
