@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { LocaleProvider } from '@/lib/i18n/locale-context'
 import { UiScaleProvider } from '@/lib/ui-scale-context'
+import { SimpleModeProvider } from '@/lib/simple-mode-context'
 import { HotelBrandingProvider } from '@/lib/hotel-branding-context'
 import { configureSupabaseClient } from '@/lib/supabase'
 import { StaffApp } from '@/staff/staff-app'
@@ -101,19 +102,21 @@ export function HousekeepingModule({
     <div className="hk-root hk-root--embedded">
       <LocaleProvider>
         <UiScaleProvider>
-          <HotelBrandingProvider hotelName={hotelName}>
-            <StaffApp
-              mode="embedded"
-              expectedHotelId={hotelId}
-              basePath={basePath}
-              capabilities={capabilities}
-              platformStaffManagement={platformStaffManagement}
-              hotelSettings={hotelSettings}
-              readOnlyProfile={readOnlyProfile}
-              sharedCoreNavigation={sharedCoreNavigation}
-              onCompleteOverride={onCompleteOverride}
-            />
-          </HotelBrandingProvider>
+          <SimpleModeProvider>
+            <HotelBrandingProvider hotelName={hotelName}>
+              <StaffApp
+                mode="embedded"
+                expectedHotelId={hotelId}
+                basePath={basePath}
+                capabilities={capabilities}
+                platformStaffManagement={platformStaffManagement}
+                hotelSettings={hotelSettings}
+                readOnlyProfile={readOnlyProfile}
+                sharedCoreNavigation={sharedCoreNavigation}
+                onCompleteOverride={onCompleteOverride}
+              />
+            </HotelBrandingProvider>
+          </SimpleModeProvider>
         </UiScaleProvider>
       </LocaleProvider>
     </div>

@@ -4,6 +4,7 @@ import { BedDouble, Inbox, Settings2 } from 'lucide-react'
 import { LanguageToggle } from '@/components/language-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
+import { SimpleModeToggle } from '@/components/simple-mode-toggle'
 import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
@@ -59,6 +60,7 @@ export function EmbeddedNav({ profile, basePath, staysAllowed, manageAllowed, se
       actions={
         <>
           <span className="hk-module-duty-desktop"><OnDutyToggle profile={profile} dark={false} /></span>
+          <SimpleModeToggle />
           <NotificationSettingsToggle align="right" />
           <TextSizeToggle align="right" />
           <LanguageToggle align="right" />

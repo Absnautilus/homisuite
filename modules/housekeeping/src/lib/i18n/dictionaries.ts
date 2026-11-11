@@ -55,6 +55,8 @@ export const dictionaries = {
     'role.admin': 'Admin',
     'role.operatore': 'Operatore',
 
+    'simpleMode.label': 'Modalità semplice',
+    'simpleMode.backHome': 'Torna alla Home',
     'uiScale.label': 'Dimensione testo',
     'staff.notifSettings.label': 'Notifiche audio',
     'staff.notifSettings.volume': 'Volume',
@@ -463,6 +465,8 @@ export const dictionaries = {
     'role.admin': 'Admin',
     'role.operatore': 'Operator',
 
+    'simpleMode.label': 'Simple mode',
+    'simpleMode.backHome': 'Back to Home',
     'uiScale.label': 'Text size',
     'staff.notifSettings.label': 'Sound notifications',
     'staff.notifSettings.volume': 'Volume',
@@ -871,6 +875,8 @@ export const dictionaries = {
     'role.admin': 'Admin',
     'role.operatore': 'Opérateur',
 
+    'simpleMode.label': 'Mode simplifié',
+    'simpleMode.backHome': "Retour à l'accueil",
     'uiScale.label': 'Taille du texte',
     'staff.notifSettings.label': 'Notifications sonores',
     'staff.notifSettings.volume': 'Volume',
@@ -1279,6 +1285,8 @@ export const dictionaries = {
     'role.admin': 'Admin',
     'role.operatore': 'Mitarbeiter',
 
+    'simpleMode.label': 'Einfacher Modus',
+    'simpleMode.backHome': 'Zurück zur Startseite',
     'uiScale.label': 'Textgröße',
     'staff.notifSettings.label': 'Ton-Benachrichtigungen',
     'staff.notifSettings.volume': 'Lautstärke',
@@ -1687,6 +1695,8 @@ export const dictionaries = {
     'role.admin': 'Admin',
     'role.operatore': 'Operador',
 
+    'simpleMode.label': 'Modo simple',
+    'simpleMode.backHome': 'Volver al inicio',
     'uiScale.label': 'Tamaño del texto',
     'staff.notifSettings.label': 'Notificaciones de sonido',
     'staff.notifSettings.volume': 'Volumen',
@@ -2095,6 +2105,8 @@ export const dictionaries = {
     'role.admin': 'Admin',
     'role.operatore': 'Operador',
 
+    'simpleMode.label': 'Modo simples',
+    'simpleMode.backHome': 'Voltar ao início',
     'uiScale.label': 'Tamanho do texto',
     'staff.notifSettings.label': 'Notificações sonoras',
     'staff.notifSettings.volume': 'Volume',
@@ -2503,6 +2515,8 @@ export const dictionaries = {
     'role.admin': '管理者',
     'role.operatore': 'オペレーター',
 
+    'simpleMode.label': 'シンプルモード',
+    'simpleMode.backHome': 'ホームに戻る',
     'uiScale.label': '文字サイズ',
     'staff.notifSettings.label': '通知音',
     'staff.notifSettings.volume': '音量',
@@ -2911,6 +2925,8 @@ export const dictionaries = {
     'role.admin': 'অ্যাডমিন',
     'role.operatore': 'অপারেটর',
 
+    'simpleMode.label': 'সহজ মোড',
+    'simpleMode.backHome': 'হোমে ফিরে যান',
     'uiScale.label': 'লেখার আকার',
     'staff.notifSettings.label': 'শব্দ বিজ্ঞপ্তি',
     'staff.notifSettings.volume': 'ভলিউম',
@@ -3319,6 +3335,8 @@ export const dictionaries = {
     'role.admin': 'एडमिन',
     'role.operatore': 'ऑपरेटर',
 
+    'simpleMode.label': 'सरल मोड',
+    'simpleMode.backHome': 'होम पर वापस जाएं',
     'uiScale.label': 'टेक्स्ट आकार',
     'staff.notifSettings.label': 'ध्वनि सूचनाएं',
     'staff.notifSettings.volume': 'वॉल्यूम',
@@ -3727,6 +3745,8 @@ export const dictionaries = {
     'role.admin': 'مسؤول',
     'role.operatore': 'موظف تشغيل',
 
+    'simpleMode.label': 'الوضع البسيط',
+    'simpleMode.backHome': 'العودة إلى الرئيسية',
     'uiScale.label': 'حجم النص',
     'staff.notifSettings.label': 'إشعارات صوتية',
     'staff.notifSettings.volume': 'مستوى الصوت',
@@ -4135,6 +4155,8 @@ export const dictionaries = {
     'role.admin': '管理员',
     'role.operatore': '操作员',
 
+    'simpleMode.label': '简易模式',
+    'simpleMode.backHome': '返回首页',
     'uiScale.label': '文字大小',
     'staff.notifSettings.label': '声音通知',
     'staff.notifSettings.volume': '音量',
@@ -4543,6 +4565,8 @@ export const dictionaries = {
     'role.admin': 'Администратор',
     'role.operatore': 'Оператор',
 
+    'simpleMode.label': 'Простой режим',
+    'simpleMode.backHome': 'Вернуться на главную',
     'uiScale.label': 'Размер текста',
     'staff.notifSettings.label': 'Звуковые уведомления',
     'staff.notifSettings.volume': 'Громкость',

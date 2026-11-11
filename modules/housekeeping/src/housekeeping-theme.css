@@ -258,6 +258,29 @@
 .hk-root .admin-panel-title {
   margin: 0 0 18px;
 }
+
+/* Simple mode's one persistent way out -- the actual complaint behind
+   simple mode is the shell<->module handoff itself, not just the queue's
+   own text density, so this sits above the module nav, not inside it. */
+.hk-root .hk-simple-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  min-height: 48px;
+}
+.hk-root .hk-simple-back:hover {
+  background: var(--accent-ink);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
 .hk-root .admin-panel-title h2 {
   margin: 0 0 4px;
   font-size: 22px;

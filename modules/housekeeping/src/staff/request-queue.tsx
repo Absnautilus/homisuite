@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { PageHeader, Tabs, useRememberedTab } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { MinimalTopBar } from '@/staff/minimal-top-bar'
+import { SimpleQueueTiles } from '@/staff/simple-queue-tiles'
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { cancelRequest, claimRequest, fetchQueue, listQueueJobTitles, subscribeToQueue } from '@/lib/staff-api'
@@ -12,6 +15,7 @@ import { ReorderableColumn } from '@/staff/reorderable-column'
 import { NewRequestForm } from '@/staff/new-request-form'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
+import { useSimpleMode } from '@/lib/simple-mode-context'
 import { getErrorMessage } from '@/lib/errors'
 import type { QueueJobTitle, QueuedRequest, StaffProfile } from '@/lib/staff-types'
 
@@ -27,6 +31,11 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
 }) {
   const { t } = useLocale()
   const hotelName = useHotelName()
+  const { enabled: simpleModeEnabled } = useSimpleMode()
+  // Only where there's an actual shell to simplify the way back to --
+  // standalone/legacy deployments and the already-bare facchino tier
+  // (embeddedNav.minimal) are unaffected either way.
+  const showSimpleHome = Boolean(embeddedNav) && !embeddedNav?.minimal && simpleModeEnabled
   const [queue, setQueue] = useState<QueuedRequest[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [tab, setTabRaw] = useRememberedTab('housekeeping.queue.tab', 'new')
@@ -116,12 +125,18 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
         <MinimalTopBar profile={profile} />
       ) : embeddedNav ? (
         <div data-tour="hk-nav">
+          {showSimpleHome && (
+            <Link to="/" className="hk-simple-back" aria-label={t('simpleMode.backHome')}>
+              <ArrowLeft className="h-6 w-6" aria-hidden="true" />
+              <span>{t('simpleMode.backHome')}</span>
+            </Link>
+          )}
           <EmbeddedNav
             profile={profile}
             basePath={embeddedNav.basePath}
             staysAllowed={embeddedNav.staysAllowed}
             manageAllowed={embeddedNav.manageAllowed}
-            secondary={{
+            secondary={showSimpleHome ? undefined : {
               items: [
                 { value: 'new', label: t('staff.queue.tabNew'), attention: pending.length > 0 ? pending.length : false },
                 { value: 'inProgress', label: t('staff.queue.columnInProgress'), attention: inProgress.length > 0 ? inProgress.length : false },
@@ -157,6 +172,16 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
               onValueChange={(value) => setTab(value as Tab)}
               variant="surface"
               aria-label={t('staff.queue.title')}
+            />
+          </div>
+        ) : showSimpleHome ? (
+          <div className="border-b border-line bg-surface p-4 sm:p-5" data-tour="hk-tabs">
+            <SimpleQueueTiles
+              tab={tab as Tab}
+              onSelect={setTab}
+              newCount={pending.length}
+              inProgressCount={inProgress.length}
+              doneCount={done.length}
             />
           </div>
         ) : null}
