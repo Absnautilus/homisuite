@@ -1,12 +1,15 @@
 import { signState } from '../_shared/smart-inbox/crypto.ts'
+import { googleAuthorizeUrl } from '../_shared/smart-inbox/gmail.ts'
 import { authorizeUrl } from '../_shared/smart-inbox/graph.ts'
 import { disconnect, loadMailbox } from '../_shared/smart-inbox/mailbox.ts'
 import { adminClient, callerClient, corsHeaders, json, readConfig, readUuid, requirePermission } from '../_shared/smart-inbox/runtime.ts'
 
-// Staff-facing (JWT required): start connecting a property's Outlook
-// mailbox, or disconnect it. Both need smart_inbox.manage on the property.
+// Staff-facing (JWT required): start connecting a property's mailbox
+// (Outlook or Gmail), or disconnect it. Both need smart_inbox.manage.
 //
-//   POST { action: 'start', propertyId }      -> { url }   (open in browser)
+//   POST { action: 'start', propertyId, provider? }  -> { url }   (open in browser)
+//        provider: 'microsoft' (default) | 'google'
+//   POST { action: 'providers', propertyId }         -> { microsoft, google }
 //   POST { action: 'disconnect', propertyId } -> { ok: true }
 
 const STATE_TTL_SECONDS = 10 * 60
@@ -35,10 +38,20 @@ Deno.serve(async (request: Request) => {
   if (auth instanceof Response) return auth
 
   try {
+    if (body.action === 'providers') {
+      return json({ microsoft: Boolean(config.microsoft), google: Boolean(config.google) })
+    }
+
     if (body.action === 'start') {
+      const provider = body.provider === 'google' ? 'google' : 'microsoft'
       // The callback trusts only this signed, 10-minute state: which
-      // property, and which staff member started the connection.
-      const state = await signState({ p: propertyId, u: auth.userId }, config.stateSecret, STATE_TTL_SECONDS)
+      // property, which provider, and which staff member started it.
+      const state = await signState({ p: propertyId, u: auth.userId, v: provider }, config.stateSecret, STATE_TTL_SECONDS)
+      if (provider === 'google') {
+        if (!config.google) return json({ error: 'provider_not_configured' }, 400)
+        return json({ url: googleAuthorizeUrl(config.google, state) })
+      }
+      if (!config.microsoft) return json({ error: 'provider_not_configured' }, 400)
       return json({ url: authorizeUrl(config.microsoft, state) })
     }
 

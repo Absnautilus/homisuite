@@ -5,19 +5,21 @@ import { CircleAlert, Mail, Unplug } from 'lucide-react'
 import { PageState } from '../../components/PageState'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
-import { disconnectOutlook, loadMailbox, loadMonthUsage, loadSettings, saveSettings, SmartInboxActionError, startOutlookConnection } from './api'
+import { disconnectOutlook, loadMailbox, loadMailProviders, loadMonthUsage, loadSettings, saveSettings, SmartInboxActionError, startMailboxConnection } from './api'
 import { actionErrorLabel, appendSignature, DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, PASTED_SOURCES, parseSenderList, renderSignature, SOURCE_LABELS, summarizeUsage, type UsageSummary } from './labels'
 import { MyStyleCard } from './MyStyleCard'
-import type { AgentPreferences, InboxSettings, Mailbox, PastedSource, Tone } from './types'
+import type { AgentPreferences, InboxSettings, Mailbox, MailProvider, PastedSource, Tone } from './types'
 
 const OUTLOOK_RESULTS: Record<string, { ok: boolean; text: string }> = {
-  connected: { ok: true, text: 'Casella Outlook collegata. Le nuove email arriveranno in Posta.' },
-  denied: { ok: false, text: 'Collegamento annullato su Microsoft.' },
+  connected: { ok: true, text: 'Casella collegata. Le nuove email arriveranno in Posta.' },
+  denied: { ok: false, text: 'Collegamento annullato.' },
   invalid_state: { ok: false, text: 'Il collegamento è scaduto. Riprova.' },
-  no_offline_access: { ok: false, text: 'Microsoft non ha concesso l\'accesso permanente alla casella. Riprova e accetta tutte le autorizzazioni.' },
+  no_offline_access: { ok: false, text: 'Non è stato concesso l\'accesso permanente alla casella. Riprova e accetta tutte le autorizzazioni.' },
   invalid_request: { ok: false, text: 'Collegamento non riuscito. Riprova.' },
   error: { ok: false, text: 'Collegamento non riuscito. Riprova; se il problema continua, contatta l\'assistenza.' },
 }
+
+const PROVIDER_LABELS: Record<MailProvider, string> = { microsoft: 'Outlook', google: 'Gmail' }
 
 const TONES: Array<{ value: Tone; label: string }> = [
   { value: 'cordiale', label: 'Cordiale' },
@@ -46,6 +48,7 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
   onPreferencesSaved: (next: AgentPreferences) => void
 }) {
   const [mailbox, setMailbox] = useState<Mailbox | null>(null)
+  const [providers, setProviders] = useState<Record<MailProvider, boolean> | null>(null)
   const [settings, setSettings] = useState<InboxSettings | null>(null)
   const [sendersText, setSendersText] = useState('')
   const [usage, setUsage] = useState<UsageSummary | null>(null)
@@ -76,11 +79,20 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
 
   useEffect(() => { void load() }, [load])
 
-  async function connect() {
+  useEffect(() => {
+    if (!canManage) return
+    let cancelled = false
+    loadMailProviders(client, propertyId)
+      .then((next) => { if (!cancelled) setProviders(next) })
+      .catch(() => { if (!cancelled) setProviders({ microsoft: true, google: false }) })
+    return () => { cancelled = true }
+  }, [client, propertyId, canManage])
+
+  async function connect(provider: MailProvider) {
     setBusy('connect')
     setError(null)
     try {
-      const { url } = await startOutlookConnection(client, propertyId)
+      const { url } = await startMailboxConnection(client, propertyId, provider)
       window.location.assign(url)
     } catch (cause) {
       setError(actionErrorLabel(cause instanceof SmartInboxActionError ? cause.code : null))
@@ -90,7 +102,7 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
 
   async function disconnect() {
     const confirmed = await confirm({
-      title: 'Scollegare la casella Outlook?',
+      title: 'Scollegare la casella email?',
       description: 'Le nuove email non arriveranno più in Smart Inbox. Le email e le bozze già presenti restano consultabili.',
       confirmLabel: 'Scollega',
     })
@@ -161,7 +173,7 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
 
       <section className="shell-card">
         <div className="section-heading">
-          <h2>Casella Outlook</h2>
+          <h2>Casella email</h2>
           <p>Le email arrivano da sole con una bozza pronta. Anche i messaggi degli ospiti di Booking.com, Expedia e Airbnb che arrivano in questa casella vengono riconosciuti, e la risposta torna all'ospite sul portale. Gli altri canali si incollano in Componi risposta.</p>
         </div>
         <div className="smart-inbox-mailbox">
@@ -172,24 +184,29 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
                 <strong>{mailbox.email_address}</strong>
                 <span className={needsReconnect ? 'smart-inbox-warn' : 'muted'}>
                   {needsReconnect
-                    ? <><CircleAlert size={13} aria-hidden="true" /> Microsoft chiede di ricollegare la casella.</>
-                    : 'Collegata'}
+                    ? <><CircleAlert size={13} aria-hidden="true" /> {mailbox.provider === 'google' ? 'Google' : 'Microsoft'} chiede di ricollegare la casella.</>
+                    : `${PROVIDER_LABELS[mailbox.provider ?? 'microsoft']} · Collegata`}
                 </span>
               </>
             ) : (
               <>
                 <strong>Nessuna casella collegata</strong>
-                <span className="muted">Accedi con l'account Microsoft 365 della casella da gestire (es. info@ o reservations@).</span>
+                <span className="muted">Accedi con l'account Microsoft 365 o Google della casella da gestire (es. info@ o reservations@).</span>
               </>
             )}
           </div>
           {canManage ? (
             <div className="smart-inbox-mailbox-actions">
-              {(!connected || needsReconnect) ? (
-                <Button variant="primary" onClick={() => void connect()} disabled={busy !== null}>
-                  {busy === 'connect' ? 'Apertura Microsoft…' : needsReconnect ? 'Ricollega Outlook' : 'Collega Outlook'}
+              {needsReconnect && mailbox ? (
+                <Button variant="primary" onClick={() => void connect(mailbox.provider ?? 'microsoft')} disabled={busy !== null}>
+                  {busy === 'connect' ? 'Apertura…' : `Ricollega ${PROVIDER_LABELS[mailbox.provider ?? 'microsoft']}`}
                 </Button>
               ) : null}
+              {!connected ? (['microsoft', 'google'] as MailProvider[]).filter((provider) => providers?.[provider] ?? provider === 'microsoft').map((provider) => (
+                <Button key={provider} variant={provider === 'microsoft' ? 'primary' : 'secondary'} onClick={() => void connect(provider)} disabled={busy !== null}>
+                  {busy === 'connect' ? 'Apertura…' : `Collega ${PROVIDER_LABELS[provider]}`}
+                </Button>
+              )) : null}
               {connected ? (
                 <Button variant="secondary" onClick={() => void disconnect()} disabled={busy !== null}>
                   <Unplug size={15} /> {busy === 'disconnect' ? 'Scollegamento…' : 'Scollega'}

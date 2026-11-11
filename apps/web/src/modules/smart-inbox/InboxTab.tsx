@@ -30,6 +30,7 @@ import {
   simpleState,
   SOURCE_LABELS,
   sourceBadge,
+  isMailboxSource,
   isOpenView,
   statusesForView,
   type ConversationGroup,
@@ -439,8 +440,8 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
           <span className="smart-inbox-avatar large" aria-hidden="true">{initials(group.guestName)}</span>
           <div>
             <h2>{group.guestName}</h2>
-            {group.guestAddress && group.latest.source === 'outlook' ? <p className="muted">{group.guestAddress}</p> : null}
-            {group.latest.source !== 'outlook' && group.latest.mailbox_id ? (
+            {group.guestAddress && isMailboxSource(group.latest.source) ? <p className="muted">{group.guestAddress}</p> : null}
+            {!isMailboxSource(group.latest.source) && group.latest.mailbox_id ? (
               <p className="muted">Messaggio da {SOURCE_LABELS[group.latest.source]}, arrivato via email: la risposta torna all'ospite su {SOURCE_LABELS[group.latest.source]}.</p>
             ) : null}
             {!group.latest.mailbox_id ? (
@@ -593,7 +594,7 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
     <article className={`smart-inbox-message${actionable ? ' open' : ''}`}>
       <header className="smart-inbox-message-head">
         <div>
-          <strong>{message.source !== 'outlook' ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
+          <strong>{!isMailboxSource(message.source) ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
           <time dateTime={message.received_at}>{formatWhen(message.received_at)}</time>
         </div>
         <div className="smart-inbox-meta">
@@ -616,7 +617,7 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
       {sentReply ? (
         <div className="smart-inbox-reply">
           <p className="smart-inbox-reply-head">
-            <CheckCircle2 size={13} aria-hidden="true" /> {message.source !== 'outlook' ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
+            <CheckCircle2 size={13} aria-hidden="true" /> {!isMailboxSource(message.source) ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
           </p>
           <div className="smart-inbox-reply-body">{sentReply.body}</div>
         </div>

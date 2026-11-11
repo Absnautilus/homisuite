@@ -221,8 +221,8 @@ export function ignoreReasonLabel(reason: string | null): string | null {
 }
 
 const ERROR_LABELS: Record<string, string> = {
-  reauth_required: 'Microsoft ha chiesto di ricollegare la casella Outlook (Impostazioni).',
-  mailbox_disconnected: 'La casella Outlook non è collegata.',
+  reauth_required: 'Bisogna ricollegare la casella email (Impostazioni).',
+  mailbox_disconnected: 'La casella email non è collegata.',
   ai_refused: 'L\'assistente non ha generato una bozza per questo messaggio: va gestito a mano.',
   email_too_long: 'Email troppo lunga per una bozza automatica: va gestita a mano.',
   missing_sender: 'Mittente mancante.',
@@ -240,8 +240,9 @@ const ACTION_ERROR_LABELS: Record<string, string> = {
   forbidden: 'Non hai i permessi per questa operazione.',
   invalid_session: 'La sessione è scaduta: accedi di nuovo.',
   already_sent: 'Questa risposta è già stata inviata.',
-  reauth_required: 'Microsoft ha chiesto di ricollegare la casella Outlook: vai in Impostazioni.',
-  mailbox_disconnected: 'Collega prima una casella Outlook in Impostazioni.',
+  reauth_required: 'Bisogna ricollegare la casella email: vai in Impostazioni.',
+  mailbox_disconnected: 'Collega prima una casella email (Outlook o Gmail) in Impostazioni.',
+  provider_not_configured: 'Questo tipo di casella non è ancora configurato sul server.',
   send_failed: 'Invio non riuscito: riprova tra qualche istante.',
   not_allowed: 'Operazione non disponibile per questo messaggio.',
   busy: 'Il messaggio è già in elaborazione: riprova tra poco.',
@@ -314,6 +315,7 @@ export function formatSender(message: { from_name: string | null; from_address: 
 // ---------------------------------------------------------------------------
 export const SOURCE_LABELS: Record<MessageSource, string> = {
   outlook: 'Outlook',
+  gmail: 'Gmail',
   booking: 'Booking.com',
   expedia: 'Expedia',
   airbnb: 'Airbnb',
@@ -327,8 +329,13 @@ export const PASTED_SOURCES: PastedSource[] = ['booking', 'expedia', 'airbnb', '
 // "Booking.com · incollato" in the list, so it's clear the reply has to be
 // pasted back there; "Booking.com · via email" when it arrived (and the
 // reply goes back) through the connected mailbox.
-export function sourceBadge(source: MessageSource, viaEmail = source === 'outlook'): string {
-  if (source === 'outlook') return SOURCE_LABELS.outlook
+// The connected mailbox itself (as opposed to a portal or pasted channel).
+export function isMailboxSource(source: MessageSource): boolean {
+  return source === 'outlook' || source === 'gmail'
+}
+
+export function sourceBadge(source: MessageSource, viaEmail = isMailboxSource(source)): string {
+  if (isMailboxSource(source)) return SOURCE_LABELS[source]
   return `${SOURCE_LABELS[source]} · ${viaEmail ? 'via email' : 'incollato'}`
 }
 

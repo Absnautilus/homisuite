@@ -14,9 +14,11 @@ export type MessageStatus =
 export type MessageCategory = 'information' | 'request' | 'booking' | 'complaint' | 'other'
 export type MessageUrgency = 'low' | 'normal' | 'high'
 export type Tone = 'cordiale' | 'formale' | 'essenziale'
-// 'outlook' arrives by itself; the others are pasted in "Componi risposta".
-export type MessageSource = 'outlook' | 'booking' | 'expedia' | 'airbnb' | 'whatsapp' | 'phone' | 'other'
-export type PastedSource = Exclude<MessageSource, 'outlook'>
+// 'outlook'/'gmail' arrive by themselves from the connected mailbox; the
+// others are pasted in "Componi risposta" (or relayed by email, see
+// mailbox_id on the message).
+export type MessageSource = 'outlook' | 'gmail' | 'booking' | 'expedia' | 'airbnb' | 'whatsapp' | 'phone' | 'other'
+export type PastedSource = Exclude<MessageSource, 'outlook' | 'gmail'>
 export type SignAs = 'agent' | 'property'
 export type TemplateCategory = 'prima_arrivo' | 'prenotazioni' | 'soggiorno' | 'dopo' | 'altro'
 export type KnowledgeCategory = 'arrivo_partenza' | 'servizi' | 'regole_prezzi' | 'altro'
@@ -137,8 +139,11 @@ export interface SignatureInfo {
   name: string | null
 }
 
+export type MailProvider = 'microsoft' | 'google'
+
 export interface Mailbox {
   id: string
+  provider: MailProvider
   email_address: string
   display_name: string | null
   status: 'connected' | 'error' | 'disconnected'

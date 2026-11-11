@@ -39,6 +39,7 @@ export interface ReplyTemplate {
 
 export const CHANNEL_LABELS: Record<string, string> = {
   outlook: 'email',
+  gmail: 'email',
   booking: 'the Booking.com extranet',
   expedia: 'the Expedia partner central',
   airbnb: 'Airbnb messages',

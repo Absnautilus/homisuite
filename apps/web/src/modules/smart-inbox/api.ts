@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Agent, AgentPreferences, InboxDraft, InboxStats, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
+import type { Agent, AgentPreferences, InboxDraft, MailProvider, InboxStats, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
 import { DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, renderSignature, topicCounts } from './labels'
 
 // Untyped SupabaseClient, same as Dining: the shared Database type
@@ -293,15 +293,20 @@ export async function saveSettings(client: SupabaseClient, propertyId: string, s
 export async function loadMailbox(client: SupabaseClient, propertyId: string): Promise<Mailbox | null> {
   const { data, error } = await client
     .from('smart_inbox_mailboxes')
-    .select('id, email_address, display_name, status, last_error, subscription_expires_at')
+    .select('id, provider, email_address, display_name, status, last_error, subscription_expires_at')
     .eq('property_id', propertyId)
     .maybeSingle()
   if (error) throw error
   return data as Mailbox | null
 }
 
-export function startOutlookConnection(client: SupabaseClient, propertyId: string): Promise<{ url: string }> {
-  return invoke(client, 'smart-inbox-connect', { action: 'start', propertyId })
+export function startMailboxConnection(client: SupabaseClient, propertyId: string, provider: MailProvider): Promise<{ url: string }> {
+  return invoke(client, 'smart-inbox-connect', { action: 'start', propertyId, provider })
+}
+
+// Which mailbox providers the server has an OAuth app for.
+export function loadMailProviders(client: SupabaseClient, propertyId: string): Promise<Record<MailProvider, boolean>> {
+  return invoke(client, 'smart-inbox-connect', { action: 'providers', propertyId })
 }
 
 export function disconnectOutlook(client: SupabaseClient, propertyId: string): Promise<{ ok: true }> {

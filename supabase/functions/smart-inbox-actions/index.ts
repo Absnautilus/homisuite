@@ -1,5 +1,5 @@
-import { deleteMessage, replyWithComment, textToHtml } from '../_shared/smart-inbox/graph.ts'
-import { getAccessToken, loadMailbox, ReauthRequiredError } from '../_shared/smart-inbox/mailbox.ts'
+import { ReauthRequiredError } from '../_shared/smart-inbox/mailbox.ts'
+import { MailboxUnavailableError, openMailbox } from '../_shared/smart-inbox/provider.ts'
 import { ComposeError, composePasted, PASTED_SOURCES, type PastedSource, processMessage, reviseDraft } from '../_shared/smart-inbox/pipeline.ts'
 import { adminClient, anthropicClient, callerClient, corsHeaders, json, readConfig, readUuid, requirePermission } from '../_shared/smart-inbox/runtime.ts'
 import { appendSignature, type SignAs, signatureFor } from '../_shared/smart-inbox/signature.ts'
@@ -40,7 +40,7 @@ Deno.serve(async (request: Request) => {
   const authorization = request.headers.get('Authorization')
   if (!authorization) return json({ error: 'missing_authorization' }, 401)
 
-  const config = readConfig(Deno.env, { requireMicrosoft: false })
+  const config = readConfig()
   if (!config) return json({ error: 'server_not_configured' }, 500)
 
   let body: Record<string, unknown>
@@ -104,18 +104,16 @@ Deno.serve(async (request: Request) => {
       // email): reply from the mailbox. Pasted: nothing to send.
       if (target.mailbox_id && target.graph_message_id) {
         try {
-          const { secret } = await loadMailbox(admin, target.mailbox_id as string)
-          if (!secret) throw new Error('mailbox_disconnected')
-          const accessToken = await getAccessToken(admin, config, secret)
-          // Always reply with the approved, signed text: the Outlook draft
+          const client = await openMailbox(admin, config, target.mailbox_id as string)
+          // Always reply with the approved, signed text: the mailbox draft
           // was signed for whoever owned the guest at the time and may not
           // be the person sending now. The stale draft is then removed.
-          await replyWithComment(accessToken, target.graph_message_id as string, textToHtml(signed))
-          if (sent.graph_draft_id) await deleteMessage(accessToken, sent.graph_draft_id).catch(() => {})
+          await client.reply(target.graph_message_id as string, signed)
+          if (sent.graph_draft_id) await client.deleteDraft(sent.graph_draft_id).catch(() => {})
         } catch (error) {
           await admin.from('smart_inbox_drafts').update({ status: 'pending', body: text, signed_as: null, sent_by: null, sent_at: null }).eq('id', sent.id)
           console.error('smart-inbox-actions: send failed', error)
-          const code = error instanceof ReauthRequiredError ? 'reauth_required' : error instanceof Error && error.message === 'mailbox_disconnected' ? 'mailbox_disconnected' : 'send_failed'
+          const code = error instanceof ReauthRequiredError ? 'reauth_required' : error instanceof MailboxUnavailableError ? 'mailbox_disconnected' : 'send_failed'
           return json({ error: code }, 502)
         }
       }
