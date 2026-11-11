@@ -8,6 +8,7 @@ import { useConfirm } from '../../components/ConfirmDialog'
 import { disconnectOutlook, loadMailbox, loadMailProviders, loadMonthUsage, loadSettings, saveSettings, SmartInboxActionError, startMailboxConnection } from './api'
 import { actionErrorLabel, appendSignature, DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, PASTED_SOURCES, parseSenderList, renderSignature, SOURCE_LABELS, summarizeUsage, type UsageSummary } from './labels'
 import { MyStyleCard } from './MyStyleCard'
+import { WhatsAppCard } from './WhatsAppCard'
 import type { AgentPreferences, InboxSettings, Mailbox, MailProvider, PastedSource, Tone } from './types'
 
 const OUTLOOK_RESULTS: Record<string, { ok: boolean; text: string }> = {
@@ -48,7 +49,7 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
   onPreferencesSaved: (next: AgentPreferences) => void
 }) {
   const [mailbox, setMailbox] = useState<Mailbox | null>(null)
-  const [providers, setProviders] = useState<Record<MailProvider, boolean> | null>(null)
+  const [providers, setProviders] = useState<Record<MailProvider | 'whatsapp', boolean> | null>(null)
   const [settings, setSettings] = useState<InboxSettings | null>(null)
   const [sendersText, setSendersText] = useState('')
   const [usage, setUsage] = useState<UsageSummary | null>(null)
@@ -84,7 +85,7 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
     let cancelled = false
     loadMailProviders(client, propertyId)
       .then((next) => { if (!cancelled) setProviders(next) })
-      .catch(() => { if (!cancelled) setProviders({ microsoft: true, google: false }) })
+      .catch(() => { if (!cancelled) setProviders({ microsoft: true, google: false, whatsapp: false }) })
     return () => { cancelled = true }
   }, [client, propertyId, canManage])
 
@@ -217,6 +218,8 @@ export function SettingsTab({ client, propertyId, propertyName, canManage, onSav
         </div>
         {!canManage ? <p className="muted smart-inbox-note">Solo un responsabile può collegare o scollegare la casella.</p> : null}
       </section>
+
+      <WhatsAppCard client={client} propertyId={propertyId} canManage={canManage} available={providers?.whatsapp ?? false} />
 
       <form className="page-stack" onSubmit={submit}>
         <section className="shell-card">

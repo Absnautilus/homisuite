@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Agent, AgentPreferences, InboxDraft, MailProvider, InboxStats, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
+import type { Agent, AgentPreferences, InboxDraft, MailProvider, WhatsAppAccount, InboxStats, InboxMessage, InboxSettings, KnowledgeEntry, Mailbox, MessageStatus, PastedSource, ReplyTemplate, SignAs, SignatureInfo, UsageRow } from './types'
 import { DEFAULT_AGENT_SIGNATURE, DEFAULT_PROPERTY_SIGNATURE, renderSignature, topicCounts } from './labels'
 
 // Untyped SupabaseClient, same as Dining: the shared Database type
@@ -29,7 +29,7 @@ async function invoke<T>(client: SupabaseClient, name: string, body: Record<stri
   return data as T
 }
 
-const MESSAGE_COLUMNS = 'id, thread_id, mailbox_id, source, created_by, guest_details, missing_info, template_gap, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
+const MESSAGE_COLUMNS = 'id, thread_id, mailbox_id, whatsapp_account_id, source, created_by, guest_details, missing_info, template_gap, from_address, from_name, subject, body_preview, body_text, received_at, language, category, urgency, summary, status, ignore_reason, error'
 const DRAFT_COLUMNS = 'id, message_id, body, ai_body, suggested_actions, model, status, sent_by, sent_at, updated_at, templates_used, info_used, missing_fields, translation, signed_as'
 const CONVERSATION_COLUMNS = 'id, guest_address, guest_name, assigned_to, assigned_at, is_urgent, stay_month, notes'
 const SELECT = `${MESSAGE_COLUMNS}, conversation:smart_inbox_conversations(${CONVERSATION_COLUMNS}), smart_inbox_drafts(${DRAFT_COLUMNS})`
@@ -305,12 +305,32 @@ export function startMailboxConnection(client: SupabaseClient, propertyId: strin
 }
 
 // Which mailbox providers the server has an OAuth app for.
-export function loadMailProviders(client: SupabaseClient, propertyId: string): Promise<Record<MailProvider, boolean>> {
+export function loadMailProviders(client: SupabaseClient, propertyId: string): Promise<Record<MailProvider | 'whatsapp', boolean>> {
   return invoke(client, 'smart-inbox-connect', { action: 'providers', propertyId })
 }
 
 export function disconnectOutlook(client: SupabaseClient, propertyId: string): Promise<{ ok: true }> {
   return invoke(client, 'smart-inbox-connect', { action: 'disconnect', propertyId })
+}
+
+export async function loadWhatsAppAccount(client: SupabaseClient, propertyId: string): Promise<WhatsAppAccount | null> {
+  const { data, error } = await client
+    .from('smart_inbox_whatsapp_accounts')
+    .select('id, phone_number_id, display_phone_number, verified_name, status, last_error')
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (error) throw error
+  return data as WhatsAppAccount | null
+}
+
+// The token goes only to the Edge Function, which checks it with Meta and
+// stores it encrypted; the app never reads it back.
+export function linkWhatsApp(client: SupabaseClient, propertyId: string, input: { phoneNumberId: string; wabaId: string; accessToken: string }): Promise<{ display_phone_number: string | null; verified_name: string | null }> {
+  return invoke(client, 'smart-inbox-connect', { action: 'whatsapp_link', propertyId, ...input })
+}
+
+export function unlinkWhatsApp(client: SupabaseClient, propertyId: string): Promise<{ ok: true }> {
+  return invoke(client, 'smart-inbox-connect', { action: 'whatsapp_unlink', propertyId })
 }
 
 export async function loadMonthUsage(client: SupabaseClient, propertyId: string, now = new Date()): Promise<UsageRow[]> {

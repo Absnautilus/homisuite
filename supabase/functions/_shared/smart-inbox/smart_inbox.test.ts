@@ -3,6 +3,7 @@ import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { decryptSecret, encryptSecret, sha256Hex, signState, toBase64, verifyState } from './crypto.ts'
 import { ignoreReason, relaySource } from './filters.ts'
 import { buildReplyMime, googleAuthorizeUrl, parseGmailMessage, stripQuotedReply } from './gmail.ts'
+import { isWindowClosed, parseWebhook, signBody, verifySignature, WhatsAppError, whatsappGuestKey } from './whatsapp.ts'
 import { textToHtml } from './graph.ts'
 import { AiRefusalError, buildEmailMessage, buildKnowledgeBlock, buildSystemPrompt, draftReply, HISTORY_ENTRY_CHARS, parseResult, supportsServerFallback, type DraftRequest } from './ai.ts'
 import { readConfig } from './runtime.ts'
@@ -397,4 +398,54 @@ Deno.test('a Gmail reply is threaded, answers Reply-To and encodes non-ASCII tex
   const text = new TextDecoder().decode(Uint8Array.from(atob(body.replace(/\r\n/g, '')), (c) => c.charCodeAt(0)))
   assertEquals(text, 'Lieber Lukas,\r\nkein Problem.\r\nMit freundlichen Grüßen,')
   assert(!buildReplyMime({ from: 'a@b.c', to: 'd@e.f', subject: 'Re: hi', inReplyTo: null, references: null }, 'x').includes('Re: Re:'))
+})
+
+// ---------------------------------------------------------------------------
+// WhatsApp
+// ---------------------------------------------------------------------------
+const waDelivery = {
+  object: 'whatsapp_business_account',
+  entry: [{
+    id: 'WABA',
+    changes: [{
+      field: 'messages',
+      value: {
+        messaging_product: 'whatsapp',
+        metadata: { display_phone_number: '39041000000', phone_number_id: '109876543210' },
+        contacts: [{ wa_id: '4915112345678', profile: { name: 'Lukas Weber' } }],
+        messages: [
+          { from: '4915112345678', id: 'wamid.A', timestamp: '1794300000', type: 'text', text: { body: '  Hallo, gibt es Parkplätze?  ' } },
+          { from: '4915112345678', id: 'wamid.B', timestamp: '1794300060', type: 'image', image: { caption: 'Unser Auto' } },
+          { from: '4915112345678', id: 'wamid.C', timestamp: '1794300070', type: 'reaction', reaction: { emoji: '👍' } },
+        ],
+        statuses: [{ id: 'wamid.OUT', status: 'delivered' }],
+      },
+    }],
+  }],
+}
+
+Deno.test('WhatsApp deliveries are accepted only with Meta\'s signature over the exact body', async () => {
+  const body = JSON.stringify(waDelivery)
+  const header = await signBody(body, 'app-secret')
+  assert(await verifySignature(body, header, 'app-secret'))
+  assert(!(await verifySignature(body + ' ', header, 'app-secret')), 'any change to the body breaks it')
+  assert(!(await verifySignature(body, header, 'other-secret')))
+  assert(!(await verifySignature(body, null, 'app-secret')))
+  assert(!(await verifySignature(body, header.replace('sha256=', 'sha1='), 'app-secret')))
+})
+
+Deno.test('guest WhatsApp messages are read from a delivery; reactions and statuses are not', () => {
+  const messages = parseWebhook(waDelivery)
+  assertEquals(messages.length, 2)
+  assertEquals(messages[0], { phoneNumberId: '109876543210', messageId: 'wamid.A', from: '4915112345678', name: 'Lukas Weber', receivedAt: new Date(1794300000 * 1000).toISOString(), text: 'Hallo, gibt es Parkplätze?' })
+  assertEquals(messages[1].text, '[Immagine] Unser Auto')
+  assertEquals(parseWebhook({ entry: [{ changes: [{ field: 'statuses', value: {} }] }] }), [])
+  assertEquals(parseWebhook(null), [])
+  assertEquals(whatsappGuestKey('49 151 12345678'), 'whatsapp:+4915112345678')
+})
+
+Deno.test('a closed 24-hour window is told apart from other send errors', () => {
+  assert(isWindowClosed(new WhatsAppError(400, 131047, 'x')))
+  assert(!isWindowClosed(new WhatsAppError(400, 131051, 'x')))
+  assert(!isWindowClosed(new Error('x')))
 })

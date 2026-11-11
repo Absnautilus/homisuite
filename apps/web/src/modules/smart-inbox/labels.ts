@@ -242,7 +242,11 @@ const ACTION_ERROR_LABELS: Record<string, string> = {
   already_sent: 'Questa risposta è già stata inviata.',
   reauth_required: 'Bisogna ricollegare la casella email: vai in Impostazioni.',
   mailbox_disconnected: 'Collega prima una casella email (Outlook o Gmail) in Impostazioni.',
-  provider_not_configured: 'Questo tipo di casella non è ancora configurato sul server.',
+  provider_not_configured: 'Questo collegamento non è ancora configurato sul server.',
+  whatsapp_window_closed: 'Sono passate più di 24 ore dall\'ultimo messaggio dell\'ospite: WhatsApp accetta solo modelli approvati da Meta. Rispondi dal telefono, o aspetta che l\'ospite scriva di nuovo.',
+  whatsapp_disconnected: 'Il numero WhatsApp non è più collegato (Impostazioni).',
+  whatsapp_invalid_number: 'Meta non riconosce questo numero con questo token: controlla Phone number ID e token.',
+  whatsapp_subscribe_failed: 'Il numero è valido, ma Meta non ha attivato le notifiche: controlla il WhatsApp Business Account ID e i permessi del token.',
   send_failed: 'Invio non riuscito: riprova tra qualche istante.',
   not_allowed: 'Operazione non disponibile per questo messaggio.',
   busy: 'Il messaggio è già in elaborazione: riprova tra poco.',
@@ -334,9 +338,20 @@ export function isMailboxSource(source: MessageSource): boolean {
   return source === 'outlook' || source === 'gmail'
 }
 
-export function sourceBadge(source: MessageSource, viaEmail = isMailboxSource(source)): string {
-  if (isMailboxSource(source)) return SOURCE_LABELS[source]
-  return `${SOURCE_LABELS[source]} · ${viaEmail ? 'via email' : 'incollato'}`
+// How a message reached Smart Inbox, which is also where the reply goes.
+// "Booking.com · via email" / "· incollato" tell staff where the reply
+// will end up; WhatsApp from the linked number is just "WhatsApp".
+export type Delivery = 'mailbox' | 'whatsapp' | 'pasted'
+
+export function deliveryOf(message: { mailbox_id: string | null; whatsapp_account_id?: string | null }): Delivery {
+  if (message.mailbox_id) return 'mailbox'
+  if (message.whatsapp_account_id) return 'whatsapp'
+  return 'pasted'
+}
+
+export function sourceBadge(source: MessageSource, delivery: Delivery = isMailboxSource(source) ? 'mailbox' : 'pasted'): string {
+  if (isMailboxSource(source) || delivery === 'whatsapp') return SOURCE_LABELS[source]
+  return `${SOURCE_LABELS[source]} · ${delivery === 'mailbox' ? 'via email' : 'incollato'}`
 }
 
 // ---------------------------------------------------------------------------

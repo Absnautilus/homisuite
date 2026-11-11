@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.1
 import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import type { GoogleConfig } from './gmail.ts'
 import type { MicrosoftConfig } from './graph.ts'
+import { DEFAULT_WA_GRAPH_VERSION, type WhatsAppConfig } from './whatsapp.ts'
 import { DEFAULT_EFFORT, DEFAULT_MODEL, type Effort } from './ai.ts'
 
 // Everything the Smart Inbox functions need from the environment, read and
@@ -24,6 +25,7 @@ export interface SmartInboxConfig {
   // risposta) before any mailbox app exists, and use either provider.
   microsoft: MicrosoftConfig | null
   google: GoogleConfig | null
+  whatsapp: WhatsAppConfig | null
 }
 
 export class ProviderNotConfiguredError extends Error {
@@ -55,6 +57,8 @@ export function readConfig(env: Pick<typeof Deno.env, 'get'> = Deno.env): SmartI
   const clientSecret = env.get('SMART_INBOX_MS_CLIENT_SECRET')
   const googleClientId = env.get('SMART_INBOX_GOOGLE_CLIENT_ID')
   const googleClientSecret = env.get('SMART_INBOX_GOOGLE_CLIENT_SECRET')
+  const waAppSecret = env.get('SMART_INBOX_WA_APP_SECRET')
+  const waVerifyToken = env.get('SMART_INBOX_WA_VERIFY_TOKEN')
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !appUrl || !tokenKey || !stateSecret || !anthropicApiKey) return null
   const functionsUrl = (env.get('SMART_INBOX_FUNCTIONS_URL') ?? `${supabaseUrl}/functions/v1`).replace(/\/+$/, '')
   const effort = env.get('SMART_INBOX_EFFORT')
@@ -81,6 +85,9 @@ export function readConfig(env: Pick<typeof Deno.env, 'get'> = Deno.env): SmartI
     // Same callback as Microsoft: the signed state says which provider.
     google: googleClientId && googleClientSecret
       ? { clientId: googleClientId, clientSecret: googleClientSecret, redirectUri: `${functionsUrl}/smart-inbox-oauth-callback` }
+      : null,
+    whatsapp: waAppSecret && waVerifyToken
+      ? { appSecret: waAppSecret, verifyToken: waVerifyToken, graphVersion: env.get('SMART_INBOX_WA_GRAPH_VERSION') || DEFAULT_WA_GRAPH_VERSION }
       : null,
   }
 }
