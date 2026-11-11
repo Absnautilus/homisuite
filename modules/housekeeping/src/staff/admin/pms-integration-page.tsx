@@ -159,6 +159,17 @@ function PmsIntegrationForm({ hotelId }: { hotelId?: string }) {
     return <p className="text-sm text-muted">{t('staff.pms.loading')}</p>
   }
 
+  // The RPC refuses accounts without guest_requests.pms.manage: say so
+  // plainly instead of a generic load error over a form whose Save would
+  // be refused the same way.
+  if (loadError && /not authorized/i.test(loadError)) {
+    return (
+      <div className="rounded-lg border border-line bg-surface p-4 text-sm text-muted" role="status">
+        {t('staff.pms.notAuthorized')}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {loadError && (
