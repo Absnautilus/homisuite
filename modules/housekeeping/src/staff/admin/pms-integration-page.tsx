@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Tabs } from '@homisuite/ui'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Select } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/cn'
 import {
   getPmsIntegrationStatus,
   listHotels,
@@ -168,14 +168,15 @@ function PmsIntegrationForm({ hotelId }: { hotelId?: string }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">{t('staff.pms.modeTitle')}</h2>
-          <div className="flex gap-1 rounded-md bg-surface-2 p-1">
-            <ModeButton active={mode === 'manual'} onClick={() => setMode('manual')}>
-              {t('staff.pms.modeManual')}
-            </ModeButton>
-            <ModeButton active={mode === 'opera'} onClick={() => setMode('opera')}>
-              {t('staff.pms.modeOpera')}
-            </ModeButton>
-          </div>
+          <Tabs
+            aria-label={t('staff.pms.modeTitle')}
+            items={[
+              { value: 'manual', label: t('staff.pms.modeManual') },
+              { value: 'opera', label: t('staff.pms.modeOpera') },
+            ]}
+            value={mode}
+            onValueChange={(value) => setMode(value as PmsMode)}
+          />
         </div>
       </CardHeader>
       <CardBody>
@@ -280,20 +281,5 @@ function PmsIntegrationForm({ hotelId }: { hotelId?: string }) {
       </CardBody>
       </Card>
     </div>
-  )
-}
-
-function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors',
-        active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
-      )}
-    >
-      {children}
-    </button>
   )
 }
