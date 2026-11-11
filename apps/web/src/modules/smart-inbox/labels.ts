@@ -221,8 +221,8 @@ export function ignoreReasonLabel(reason: string | null): string | null {
 }
 
 const ERROR_LABELS: Record<string, string> = {
-  reauth_required: 'Microsoft ha chiesto di ricollegare la casella Outlook (Impostazioni).',
-  mailbox_disconnected: 'La casella Outlook non è collegata.',
+  reauth_required: 'Bisogna ricollegare la casella email (Impostazioni).',
+  mailbox_disconnected: 'La casella email non è collegata.',
   ai_refused: 'L\'assistente non ha generato una bozza per questo messaggio: va gestito a mano.',
   email_too_long: 'Email troppo lunga per una bozza automatica: va gestita a mano.',
   missing_sender: 'Mittente mancante.',
@@ -240,8 +240,13 @@ const ACTION_ERROR_LABELS: Record<string, string> = {
   forbidden: 'Non hai i permessi per questa operazione.',
   invalid_session: 'La sessione è scaduta: accedi di nuovo.',
   already_sent: 'Questa risposta è già stata inviata.',
-  reauth_required: 'Microsoft ha chiesto di ricollegare la casella Outlook: vai in Impostazioni.',
-  mailbox_disconnected: 'Collega prima una casella Outlook in Impostazioni.',
+  reauth_required: 'Bisogna ricollegare la casella email: vai in Impostazioni.',
+  mailbox_disconnected: 'Collega prima una casella email (Outlook o Gmail) in Impostazioni.',
+  provider_not_configured: 'Questo collegamento non è ancora configurato sul server.',
+  whatsapp_window_closed: 'Sono passate più di 24 ore dall\'ultimo messaggio dell\'ospite: WhatsApp accetta solo modelli approvati da Meta. Rispondi dal telefono, o aspetta che l\'ospite scriva di nuovo.',
+  whatsapp_disconnected: 'Il numero WhatsApp non è più collegato (Impostazioni).',
+  whatsapp_invalid_number: 'Meta non riconosce questo numero con questo token: controlla Phone number ID e token.',
+  whatsapp_subscribe_failed: 'Il numero è valido, ma Meta non ha attivato le notifiche: controlla il WhatsApp Business Account ID e i permessi del token.',
   send_failed: 'Invio non riuscito: riprova tra qualche istante.',
   not_allowed: 'Operazione non disponibile per questo messaggio.',
   busy: 'Il messaggio è già in elaborazione: riprova tra poco.',
@@ -314,6 +319,7 @@ export function formatSender(message: { from_name: string | null; from_address: 
 // ---------------------------------------------------------------------------
 export const SOURCE_LABELS: Record<MessageSource, string> = {
   outlook: 'Outlook',
+  gmail: 'Gmail',
   booking: 'Booking.com',
   expedia: 'Expedia',
   airbnb: 'Airbnb',
@@ -327,9 +333,25 @@ export const PASTED_SOURCES: PastedSource[] = ['booking', 'expedia', 'airbnb', '
 // "Booking.com · incollato" in the list, so it's clear the reply has to be
 // pasted back there; "Booking.com · via email" when it arrived (and the
 // reply goes back) through the connected mailbox.
-export function sourceBadge(source: MessageSource, viaEmail = source === 'outlook'): string {
-  if (source === 'outlook') return SOURCE_LABELS.outlook
-  return `${SOURCE_LABELS[source]} · ${viaEmail ? 'via email' : 'incollato'}`
+// The connected mailbox itself (as opposed to a portal or pasted channel).
+export function isMailboxSource(source: MessageSource): boolean {
+  return source === 'outlook' || source === 'gmail'
+}
+
+// How a message reached Smart Inbox, which is also where the reply goes.
+// "Booking.com · via email" / "· incollato" tell staff where the reply
+// will end up; WhatsApp from the linked number is just "WhatsApp".
+export type Delivery = 'mailbox' | 'whatsapp' | 'pasted'
+
+export function deliveryOf(message: { mailbox_id: string | null; whatsapp_account_id?: string | null }): Delivery {
+  if (message.mailbox_id) return 'mailbox'
+  if (message.whatsapp_account_id) return 'whatsapp'
+  return 'pasted'
+}
+
+export function sourceBadge(source: MessageSource, delivery: Delivery = isMailboxSource(source) ? 'mailbox' : 'pasted'): string {
+  if (isMailboxSource(source) || delivery === 'whatsapp') return SOURCE_LABELS[source]
+  return `${SOURCE_LABELS[source]} · ${delivery === 'mailbox' ? 'via email' : 'incollato'}`
 }
 
 // ---------------------------------------------------------------------------

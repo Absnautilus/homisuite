@@ -8,6 +8,7 @@ import {
   ACTION_LABELS,
   actionErrorLabel,
   appendSignature,
+  deliveryOf,
   fillTemplate,
   insertTemplateText,
   languageName,
@@ -75,7 +76,7 @@ export function ReplyComposer({ client, message, draft, guestName, templates, si
   const cursorRef = useRef<{ start: number; end: number } | null>(null)
   const dirty = body !== draft.body
   // Pasted in Componi risposta: nothing is sent, staff copy the reply.
-  const pasted = !message.mailbox_id
+  const pasted = deliveryOf(message) === 'pasted'
   const readsLanguage = useReadsLanguage()
 
   // A regenerated or revised draft arrives through a reload: adopt it
@@ -280,7 +281,7 @@ export function ReplyComposer({ client, message, draft, guestName, templates, si
           </>
         ) : (
           <Button variant="primary" onClick={finish} disabled={busy !== null || !body.trim()}>
-            <Send size={15} /> {busy === 'send' ? 'Invio…' : 'Invia risposta'}
+            <Send size={15} /> {busy === 'send' ? 'Invio…' : message.whatsapp_account_id ? 'Invia su WhatsApp' : 'Invia risposta'}
           </Button>
         )}
         {dirty && body.trim() ? (

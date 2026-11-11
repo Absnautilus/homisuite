@@ -1,10 +1,15 @@
+import { pollGmailMailboxes } from '../_shared/smart-inbox/gmailPoll.ts'
 import { loadMailbox, renewOrResubscribe } from '../_shared/smart-inbox/mailbox.ts'
 import { MAX_ATTEMPTS, processMessage } from '../_shared/smart-inbox/pipeline.ts'
 import { adminClient, anthropicClient, json, readConfig } from '../_shared/smart-inbox/runtime.ts'
 
 // Periodic upkeep, called by a scheduler (verify_jwt = false) with the
-// header `x-smart-inbox-cron: <SMART_INBOX_CRON_SECRET>`. Suggested cadence:
-// every 30 minutes. It:
+// header `x-smart-inbox-cron: <SMART_INBOX_CRON_SECRET>`.
+//
+// `?task=poll` (every 1-2 minutes when a Gmail mailbox is connected) only
+// reads new Gmail mail and drafts replies for it. Without it (every 30
+// minutes) it does everything below, the Gmail poll included:
+//   0. reads new mail from connected Gmail mailboxes;
 //   1. renews Graph subscriptions that expire within 24 hours (Microsoft
 //      drops mail subscriptions after ~3 days unless renewed);
 //   2. turns messages stuck in `processing` for 15+ minutes into `failed`;
@@ -35,7 +40,23 @@ Deno.serve(async (request: Request) => {
   if (!(await timingSafeEqual(provided, config.cronSecret))) return json({ error: 'forbidden' }, 403)
 
   const admin = adminClient(config)
-  const report = { renewed: 0, renewFailed: 0, unstuck: 0, retried: 0 }
+  const report = { polled: 0, pollFailed: 0, renewed: 0, renewFailed: 0, unstuck: 0, retried: 0 }
+  const deps = { admin, config, anthropic: anthropicClient(config) }
+
+  // 0. Gmail
+  try {
+    const { newMessageIds, failed } = await pollGmailMailboxes(admin, config)
+    report.pollFailed = failed
+    // A burst of mail is handled RETRY_BATCH at a time; the rest stays
+    // `pending` and is picked up by the next run's retries.
+    for (const id of newMessageIds.slice(0, RETRY_BATCH)) {
+      if (await processMessage(deps, id)) report.polled++
+    }
+  } catch (error) {
+    report.pollFailed++
+    console.error('smart-inbox-maintenance: Gmail poll failed', error)
+  }
+  if (new URL(request.url).searchParams.get('task') === 'poll') return json(report)
 
   // 1. Subscriptions
   const renewBefore = new Date(Date.now() + 24 * 60 * 60_000).toISOString()
@@ -77,7 +98,6 @@ Deno.serve(async (request: Request) => {
     .gte('received_at', since)
     .order('received_at')
     .limit(RETRY_BATCH)
-  const deps = { admin, config, anthropic: anthropicClient(config) }
   for (const { id } of (retry ?? []) as Array<{ id: string }>) {
     if (await processMessage(deps, id)) report.retried++
   }

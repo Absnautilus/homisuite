@@ -220,6 +220,80 @@ Una volta sola per tutta la piattaforma, da un tenant Microsoft di homisuite:
 Alcuni tenant degli hotel richiedono il consenso di un amministratore per le
 app esterne: in quel caso il loro IT approva l'app al primo collegamento.
 
+### 1b. App Google (Gmail), facoltativa
+
+Per collegare caselle Gmail / Google Workspace, una volta sola:
+
+1. console.cloud.google.com → nuovo progetto (es. "homisuite-smart-inbox").
+2. **API e servizi → Libreria** → abilitare **Gmail API**.
+3. **Schermata consenso OAuth**: nome app, email di supporto, dominio
+   dell'app; ambito `https://www.googleapis.com/auth/gmail.modify`.
+4. **Credenziali → Crea credenziali → ID client OAuth** → *Applicazione web*,
+   URI di reindirizzamento autorizzato:
+   `https://<project-ref>.supabase.co/functions/v1/smart-inbox-oauth-callback`
+   (lo stesso di Microsoft).
+5. Secret: `SMART_INBOX_GOOGLE_CLIENT_ID` e `SMART_INBOX_GOOGLE_CLIENT_SECRET`.
+6. Pianificare il controllo rapido (sezione 4).
+
+Tipo di app, da sapere prima di partire:
+- **Interna** (solo se il progetto Google Cloud è nella stessa
+  organizzazione Google Workspace della casella): nessuna verifica, i
+  collegamenti non scadono.
+- **Esterna, in test** (Gmail personali o Workspace di altre organizzazioni):
+  fino a 100 utenti di test indicati a mano, ma Google **fa scadere il
+  collegamento dopo 7 giorni**: va ricollegato ogni settimana.
+- **Esterna, in produzione**: `gmail.modify` è un ambito "riservato", Google
+  richiede la verifica dell'app e una valutazione di sicurezza esterna
+  (a pagamento, settimane) prima di toglierle il limite.
+
+Gmail non avvisa da solo dei nuovi messaggi senza Google Pub/Sub: Smart
+Inbox li legge con il controllo ogni 2 minuti (cronologia della casella,
+nessun messaggio perso); la risposta parte da Gmail nella stessa
+conversazione e la bozza compare anche nelle Bozze di Gmail.
+
+### 1c. WhatsApp Business Platform, facoltativa
+
+Per ricevere e rispondere ai messaggi WhatsApp direttamente da Smart Inbox
+(Cloud API di Meta). Una volta per tutta la piattaforma:
+
+1. developers.facebook.com → **Crea app** → tipo *Business* → aggiungere il
+   prodotto **WhatsApp**.
+2. **Impostazioni app → Di base**: copiare la **chiave segreta dell'app** →
+   secret `SMART_INBOX_WA_APP_SECRET`.
+3. Scegliere una stringa casuale per la verifica → secret
+   `SMART_INBOX_WA_VERIFY_TOKEN`.
+4. **WhatsApp → Configurazione → Webhook**: URL
+   `https://<project-ref>.supabase.co/functions/v1/smart-inbox-whatsapp`,
+   token di verifica = `SMART_INBOX_WA_VERIFY_TOKEN`; iscriversi al campo
+   **messages**.
+5. Pubblicare l'app (modalità Live) dopo la verifica dell'azienda su Meta
+   Business.
+
+Per ogni struttura (in Smart Inbox → Impostazioni → WhatsApp Business, da un
+responsabile):
+- un **numero dedicato** registrato su WhatsApp Business Platform nel suo
+  Meta Business Account (un numero già usato nell'app WhatsApp del telefono
+  va migrato o usato con la funzione "coexistence" se disponibile);
+- **Phone number ID** e **WhatsApp Business Account ID** (WhatsApp Manager);
+- un **token permanente** di un *utente di sistema* con i permessi
+  `whatsapp_business_messaging` e `whatsapp_business_management` sul
+  numero. Smart Inbox lo verifica con Meta, iscrive l'app al webhook
+  dell'account e lo salva cifrato (`smart_inbox_whatsapp_secrets`, solo
+  service role).
+
+Regole di WhatsApp da sapere:
+- si risponde liberamente **entro 24 ore** dall'ultimo messaggio
+  dell'ospite; dopo, Meta accetta solo modelli approvati (Smart Inbox lo
+  dice chiaramente e la bozza resta da inviare);
+- Meta fa pagare le conversazioni secondo il suo listino (le risposte
+  dentro le 24 ore a un messaggio dell'ospite sono in genere gratuite o
+  molto economiche: verificare sul sito Meta);
+- foto, vocali e documenti arrivano come "[Immagine]" / "[Messaggio
+  vocale]" con la didascalia: si guardano sul telefono.
+
+Versione API Graph: `v24.0`, modificabile con `SMART_INBOX_WA_GRAPH_VERSION`
+quando Meta la ritira.
+
 ### 2. Secret delle Edge Functions
 
 ```bash
@@ -234,7 +308,9 @@ supabase secrets set \
   --project-ref <project-ref>
 ```
 
-Facoltativi: `SMART_INBOX_MS_TENANT` (default `organizations`),
+Facoltativi: `SMART_INBOX_GOOGLE_CLIENT_ID` / `SMART_INBOX_GOOGLE_CLIENT_SECRET`
+(Gmail, vedi 1b), `SMART_INBOX_WA_APP_SECRET` / `SMART_INBOX_WA_VERIFY_TOKEN`
+/ `SMART_INBOX_WA_GRAPH_VERSION` (WhatsApp, vedi 1c), `SMART_INBOX_MS_TENANT` (default `organizations`),
 `SMART_INBOX_MODEL`, `SMART_INBOX_EFFORT` (`low`/`medium`/`high`),
 `SMART_INBOX_FUNCTIONS_URL` (se le funzioni sono dietro un dominio diverso da
 `SUPABASE_URL/functions/v1`).
@@ -262,6 +338,20 @@ select cron.schedule(
   '*/30 * * * *',
   $$ select net.http_post(
        url := 'https://<project-ref>.supabase.co/functions/v1/smart-inbox-maintenance',
+       headers := jsonb_build_object('x-smart-inbox-cron', '<SMART_INBOX_CRON_SECRET>')
+     ) $$
+);
+```
+
+Con una casella **Gmail** collegata, aggiungere il controllo rapido ogni
+2 minuti (`?task=poll` legge solo la posta nuova di Gmail e prepara le bozze):
+
+```sql
+select cron.schedule(
+  'smart-inbox-gmail-poll',
+  '*/2 * * * *',
+  $$ select net.http_post(
+       url := 'https://<project-ref>.supabase.co/functions/v1/smart-inbox-maintenance?task=poll',
        headers := jsonb_build_object('x-smart-inbox-cron', '<SMART_INBOX_CRON_SECRET>')
      ) $$
 );
@@ -313,5 +403,5 @@ Poi, in homisuite → Smart Inbox:
   indicate allo staff: Smart Inbox non scrive nelle tabelle di altri moduli
   (`docs/module-integration.md`). Un contratto esplicito verso Transfer /
   Ristorazione / Housekeeping è il passo successivo.
-- WhatsApp, Booking.com e gli altri canali sono gestiti incollando i messaggi
-  (Componi risposta): non c'è ancora un collegamento diretto.
+- Booking.com, Expedia e Airbnb arrivano via email (casella collegata) o si
+  incollano; WhatsApp può essere collegato (Cloud API) o incollato.

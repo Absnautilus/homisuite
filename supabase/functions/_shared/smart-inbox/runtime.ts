@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
+import type { GoogleConfig } from './gmail.ts'
 import type { MicrosoftConfig } from './graph.ts'
+import { DEFAULT_WA_GRAPH_VERSION, type WhatsAppConfig } from './whatsapp.ts'
 import { DEFAULT_EFFORT, DEFAULT_MODEL, type Effort } from './ai.ts'
 
 // Everything the Smart Inbox functions need from the environment, read and
@@ -19,17 +21,31 @@ export interface SmartInboxConfig {
   anthropicApiKey: string
   model: string
   effort: Effort
-  microsoft: MicrosoftConfig
+  // Each mail provider is optional: a property can paste messages (Componi
+  // risposta) before any mailbox app exists, and use either provider.
+  microsoft: MicrosoftConfig | null
+  google: GoogleConfig | null
+  whatsapp: WhatsAppConfig | null
 }
 
-// `requireMicrosoft: false` is for the staff actions: "Componi risposta"
-// (pasted messages) works before the Microsoft app exists; Outlook calls
-// then fail with mailbox errors instead of the whole function refusing.
-export function readConfig(
-  env: Pick<typeof Deno.env, 'get'> = Deno.env,
-  options: { requireMicrosoft?: boolean } = {},
-): SmartInboxConfig | null {
-  const requireMicrosoft = options.requireMicrosoft ?? true
+export class ProviderNotConfiguredError extends Error {
+  constructor(readonly provider: 'microsoft' | 'google') {
+    super('provider_not_configured')
+    this.name = 'ProviderNotConfiguredError'
+  }
+}
+
+export function requireMicrosoft(config: SmartInboxConfig): MicrosoftConfig {
+  if (!config.microsoft) throw new ProviderNotConfiguredError('microsoft')
+  return config.microsoft
+}
+
+export function requireGoogle(config: SmartInboxConfig): GoogleConfig {
+  if (!config.google) throw new ProviderNotConfiguredError('google')
+  return config.google
+}
+
+export function readConfig(env: Pick<typeof Deno.env, 'get'> = Deno.env): SmartInboxConfig | null {
   const supabaseUrl = env.get('SUPABASE_URL')
   const anonKey = env.get('SUPABASE_ANON_KEY')
   const serviceRoleKey = env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -39,10 +55,11 @@ export function readConfig(
   const anthropicApiKey = env.get('ANTHROPIC_API_KEY')
   const clientId = env.get('SMART_INBOX_MS_CLIENT_ID')
   const clientSecret = env.get('SMART_INBOX_MS_CLIENT_SECRET')
+  const googleClientId = env.get('SMART_INBOX_GOOGLE_CLIENT_ID')
+  const googleClientSecret = env.get('SMART_INBOX_GOOGLE_CLIENT_SECRET')
+  const waAppSecret = env.get('SMART_INBOX_WA_APP_SECRET')
+  const waVerifyToken = env.get('SMART_INBOX_WA_VERIFY_TOKEN')
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !appUrl || !tokenKey || !stateSecret || !anthropicApiKey) return null
-  if (requireMicrosoft && (!clientId || !clientSecret)) {
-    return null
-  }
   const functionsUrl = (env.get('SMART_INBOX_FUNCTIONS_URL') ?? `${supabaseUrl}/functions/v1`).replace(/\/+$/, '')
   const effort = env.get('SMART_INBOX_EFFORT')
   return {
@@ -57,12 +74,21 @@ export function readConfig(
     anthropicApiKey,
     model: env.get('SMART_INBOX_MODEL') || DEFAULT_MODEL,
     effort: effort === 'low' || effort === 'medium' || effort === 'high' ? effort : DEFAULT_EFFORT,
-    microsoft: {
-      clientId: clientId ?? '',
-      clientSecret: clientSecret ?? '',
-      tenant: env.get('SMART_INBOX_MS_TENANT') || 'organizations',
-      redirectUri: `${functionsUrl}/smart-inbox-oauth-callback`,
-    },
+    microsoft: clientId && clientSecret
+      ? {
+        clientId,
+        clientSecret,
+        tenant: env.get('SMART_INBOX_MS_TENANT') || 'organizations',
+        redirectUri: `${functionsUrl}/smart-inbox-oauth-callback`,
+      }
+      : null,
+    // Same callback as Microsoft: the signed state says which provider.
+    google: googleClientId && googleClientSecret
+      ? { clientId: googleClientId, clientSecret: googleClientSecret, redirectUri: `${functionsUrl}/smart-inbox-oauth-callback` }
+      : null,
+    whatsapp: waAppSecret && waVerifyToken
+      ? { appSecret: waAppSecret, verifyToken: waVerifyToken, graphVersion: env.get('SMART_INBOX_WA_GRAPH_VERSION') || DEFAULT_WA_GRAPH_VERSION }
+      : null,
   }
 }
 

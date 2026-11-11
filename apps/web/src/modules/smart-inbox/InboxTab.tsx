@@ -30,6 +30,8 @@ import {
   simpleState,
   SOURCE_LABELS,
   sourceBadge,
+  deliveryOf,
+  isMailboxSource,
   isOpenView,
   statusesForView,
   type ConversationGroup,
@@ -302,7 +304,7 @@ export function InboxTab({ client, propertyId, currentProfileId, view, active, s
                       <span className="smart-inbox-item-tags">
                         <StateBadge status={group.latest.status} />
                         {group.isUrgent ? <span className="smart-inbox-urgent-badge"><AlertTriangle size={12} aria-hidden="true" /> Urgente</span> : null}
-                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source, Boolean(group.latest.mailbox_id))}</span>
+                        <span className={`smart-inbox-source-chip source-${group.latest.source}`}>{sourceBadge(group.latest.source, deliveryOf(group.latest))}</span>
                         {group.openCount > 1 ? <span className="status-chip">{group.openCount} email</span> : null}
                       </span>
                       {group.latest.mailbox_id ? <span className="smart-inbox-item-subject">{group.latest.subject || '(senza oggetto)'}</span> : null}
@@ -439,11 +441,11 @@ function ConversationDetail({ client, group, agents, templates, currentProfileId
           <span className="smart-inbox-avatar large" aria-hidden="true">{initials(group.guestName)}</span>
           <div>
             <h2>{group.guestName}</h2>
-            {group.guestAddress && group.latest.source === 'outlook' ? <p className="muted">{group.guestAddress}</p> : null}
-            {group.latest.source !== 'outlook' && group.latest.mailbox_id ? (
+            {group.guestAddress && isMailboxSource(group.latest.source) ? <p className="muted">{group.guestAddress}</p> : null}
+            {!isMailboxSource(group.latest.source) && group.latest.mailbox_id ? (
               <p className="muted">Messaggio da {SOURCE_LABELS[group.latest.source]}, arrivato via email: la risposta torna all'ospite su {SOURCE_LABELS[group.latest.source]}.</p>
             ) : null}
-            {!group.latest.mailbox_id ? (
+            {deliveryOf(group.latest) === 'pasted' ? (
               <p className="muted">
                 <ClipboardPaste size={12} aria-hidden="true" /> Messaggio da {SOURCE_LABELS[group.latest.source]}
                 {group.latest.created_by ? `, incollato da ${agentName(group.latest.created_by) === 'Tu' ? 'te' : agentName(group.latest.created_by)}` : ''}
@@ -587,13 +589,13 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
   const guestText = message.body_text || message.body_preview || 'Contenuto non ancora disponibile.'
   const sentReply = draft?.status === 'sent' ? draft : null
   const sentBy = sentReply?.sent_by ? agentName(sentReply.sent_by) : null
-  const pasted = !message.mailbox_id
+  const pasted = deliveryOf(message) === 'pasted'
 
   return (
     <article className={`smart-inbox-message${actionable ? ' open' : ''}`}>
       <header className="smart-inbox-message-head">
         <div>
-          <strong>{message.source !== 'outlook' ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
+          <strong>{!isMailboxSource(message.source) ? `Da ${SOURCE_LABELS[message.source]}` : message.subject || '(senza oggetto)'}</strong>
           <time dateTime={message.received_at}>{formatWhen(message.received_at)}</time>
         </div>
         <div className="smart-inbox-meta">
@@ -616,7 +618,7 @@ function MessageCard({ client, message, guestName, templates, agentName, signatu
       {sentReply ? (
         <div className="smart-inbox-reply">
           <p className="smart-inbox-reply-head">
-            <CheckCircle2 size={13} aria-hidden="true" /> {message.source !== 'outlook' ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
+            <CheckCircle2 size={13} aria-hidden="true" /> {!isMailboxSource(message.source) ? `Risposto su ${SOURCE_LABELS[message.source]}` : 'Risposto'}{sentBy ? ` da ${sentBy === 'Tu' ? 'te' : sentBy}` : ''}{sentReply.sent_at ? ` · ${formatWhen(sentReply.sent_at)}` : ''}
           </p>
           <div className="smart-inbox-reply-body">{sentReply.body}</div>
         </div>

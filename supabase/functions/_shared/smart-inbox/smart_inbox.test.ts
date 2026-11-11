@@ -2,6 +2,8 @@ import { assert, assertEquals, assertNotEquals, assertRejects, assertStringInclu
 import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { decryptSecret, encryptSecret, sha256Hex, signState, toBase64, verifyState } from './crypto.ts'
 import { ignoreReason, relaySource } from './filters.ts'
+import { buildReplyMime, googleAuthorizeUrl, parseGmailMessage, stripQuotedReply } from './gmail.ts'
+import { isWindowClosed, parseWebhook, signBody, verifySignature, WhatsAppError, whatsappGuestKey } from './whatsapp.ts'
 import { textToHtml } from './graph.ts'
 import { AiRefusalError, buildEmailMessage, buildKnowledgeBlock, buildSystemPrompt, draftReply, HISTORY_ENTRY_CHARS, parseResult, supportsServerFallback, type DraftRequest } from './ai.ts'
 import { readConfig } from './runtime.ts'
@@ -270,12 +272,14 @@ Deno.test('configuration fails closed when a secret is missing, and defaults sen
   assertEquals(config?.model, 'claude-opus-5-5')
   assertEquals(config?.effort, 'medium')
   assertEquals(config?.appUrl, 'https://app.example')
-  assertEquals(config?.microsoft.tenant, 'organizations')
-  assertEquals(config?.microsoft.redirectUri, 'https://ref.supabase.co/functions/v1/smart-inbox-oauth-callback')
+  assertEquals(config?.microsoft?.tenant, 'organizations')
+  assertEquals(config?.microsoft?.redirectUri, 'https://ref.supabase.co/functions/v1/smart-inbox-oauth-callback')
   assertEquals(readConfig(env({ ANTHROPIC_API_KEY: undefined })), null)
   assertEquals(readConfig(env({ SMART_INBOX_EFFORT: 'max' }))?.effort, 'medium')
-  assertEquals(readConfig(env({ SMART_INBOX_MS_CLIENT_ID: undefined })), null)
-  assertEquals(readConfig(env({ SMART_INBOX_MS_CLIENT_ID: undefined }), { requireMicrosoft: false })?.microsoft.clientId, '', 'pasting works before the Microsoft app exists')
+  assertEquals(readConfig(env({ SMART_INBOX_MS_CLIENT_ID: undefined }))?.microsoft, null, 'pasting works before the Microsoft app exists')
+  assertEquals(config?.google, null, 'Gmail is off until its OAuth client is configured')
+  const withGoogle = readConfig(env({ SMART_INBOX_GOOGLE_CLIENT_ID: 'g-id', SMART_INBOX_GOOGLE_CLIENT_SECRET: 'g-secret' }))
+  assertEquals(withGoogle?.google?.redirectUri, 'https://ref.supabase.co/functions/v1/smart-inbox-oauth-callback')
 })
 
 // ---------------------------------------------------------------------------
@@ -320,4 +324,128 @@ Deno.test('the sender\'s personal style goes with the message, never in the cach
   assert(message.indexOf('<sender_style>') < message.indexOf('<guest_message'))
   assert(!buildEmailMessage(request.email, [], '', 'outlook', undefined, { tone: null, instructions: '  ' }).includes('sender_style'))
   assert(!buildSystemPrompt('Hotel Laguna', 'cordiale').includes('Do sempre del lei'))
+})
+
+// ---------------------------------------------------------------------------
+// Gmail
+// ---------------------------------------------------------------------------
+const b64url = (text: string) => toBase64(new TextEncoder().encode(text)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+Deno.test('the Google sign-in asks for offline access with consent and carries the state', () => {
+  const url = new URL(googleAuthorizeUrl({ clientId: 'id', clientSecret: 's', redirectUri: 'https://x/cb' }, 'signed-state'))
+  assertEquals(url.searchParams.get('access_type'), 'offline')
+  assertEquals(url.searchParams.get('prompt'), 'consent')
+  assertEquals(url.searchParams.get('scope'), 'https://www.googleapis.com/auth/gmail.modify')
+  assertEquals(url.searchParams.get('state'), 'signed-state')
+  assertEquals(url.searchParams.get('redirect_uri'), 'https://x/cb')
+})
+
+Deno.test('a Gmail message is read as plain text without the quoted thread', () => {
+  const parsed = parseGmailMessage({
+    id: 'm1',
+    threadId: 't1',
+    labelIds: ['INBOX', 'UNREAD'],
+    snippet: 'Hallo, wir kommen später',
+    internalDate: String(Date.UTC(2026, 10, 11, 9, 30)),
+    payload: {
+      mimeType: 'multipart/alternative',
+      headers: [
+        { name: 'From', value: '"Lukas Weber" <Lukas.Weber@web.de>' },
+        { name: 'Subject', value: 'Anreise' },
+        { name: 'Message-ID', value: '<abc@web.de>' },
+        { name: 'References', value: '<root@hotel.it>' },
+        { name: 'List-Unsubscribe', value: '<mailto:x>' },
+      ],
+      parts: [
+        { mimeType: 'text/plain', body: { data: b64url('Hallo, wir kommen später an.\n\nAm Mo., 10. Nov. schrieb Hotel <info@hotel.it>:\n> Gerne!') } },
+        { mimeType: 'text/html', body: { data: b64url('<p>ignored</p>') } },
+      ],
+    },
+  })
+  assertEquals(parsed.bodyText, 'Hallo, wir kommen später an.')
+  assertEquals(parsed.from, { name: 'Lukas Weber', address: 'lukas.weber@web.de' })
+  assertEquals(parsed.threadId, 't1')
+  assertEquals(parsed.messageIdHeader, '<abc@web.de>')
+  assertEquals(parsed.receivedAt, '2026-11-11T09:30:00.000Z')
+  assertEquals(parsed.isDraft, false)
+  assertEquals(parsed.headers['list-unsubscribe'], '<mailto:x>')
+})
+
+Deno.test('HTML-only Gmail messages are converted to text; sent and draft messages are the hotel\'s own', () => {
+  const parsed = parseGmailMessage({
+    id: 'm2',
+    threadId: 't2',
+    labelIds: ['SENT'],
+    payload: { mimeType: 'text/html', headers: [{ name: 'From', value: 'info@hotel.it' }], parts: [{ mimeType: 'text/html', body: { data: b64url('<div>Ciao&nbsp;Marco<br>a presto &amp; grazie</div>') } }] },
+  })
+  assertEquals(parsed.bodyText, 'Ciao Marco\na presto & grazie')
+  assertEquals(parsed.isDraft, true)
+  assertEquals(stripQuotedReply('Grazie!\n\nIl giorno lun 10 nov 2026, Hotel ha scritto:\n> testo'), 'Grazie!')
+})
+
+Deno.test('a Gmail reply is threaded, answers Reply-To and encodes non-ASCII text', () => {
+  const mime = buildReplyMime(
+    { from: 'Hotel Laguna <info@hotel.it>', to: 'guest@web.de', subject: 'Anfrage für Dezember', inReplyTo: '<abc@web.de>', references: '<root@hotel.it>' },
+    'Lieber Lukas,\nkein Problem.\nMit freundlichen Grüßen,',
+  )
+  const [head, body] = mime.split('\r\n\r\n')
+  assertStringIncludes(head, 'To: guest@web.de')
+  assertStringIncludes(head, 'In-Reply-To: <abc@web.de>')
+  assertStringIncludes(head, 'References: <root@hotel.it> <abc@web.de>')
+  assertStringIncludes(head, 'Subject: =?UTF-8?B?')
+  const subject = /Subject: =\?UTF-8\?B\?([^?]+)\?=/.exec(head)![1]
+  assertEquals(new TextDecoder().decode(Uint8Array.from(atob(subject), (c) => c.charCodeAt(0))), 'Re: Anfrage für Dezember')
+  const text = new TextDecoder().decode(Uint8Array.from(atob(body.replace(/\r\n/g, '')), (c) => c.charCodeAt(0)))
+  assertEquals(text, 'Lieber Lukas,\r\nkein Problem.\r\nMit freundlichen Grüßen,')
+  assert(!buildReplyMime({ from: 'a@b.c', to: 'd@e.f', subject: 'Re: hi', inReplyTo: null, references: null }, 'x').includes('Re: Re:'))
+})
+
+// ---------------------------------------------------------------------------
+// WhatsApp
+// ---------------------------------------------------------------------------
+const waDelivery = {
+  object: 'whatsapp_business_account',
+  entry: [{
+    id: 'WABA',
+    changes: [{
+      field: 'messages',
+      value: {
+        messaging_product: 'whatsapp',
+        metadata: { display_phone_number: '39041000000', phone_number_id: '109876543210' },
+        contacts: [{ wa_id: '4915112345678', profile: { name: 'Lukas Weber' } }],
+        messages: [
+          { from: '4915112345678', id: 'wamid.A', timestamp: '1794300000', type: 'text', text: { body: '  Hallo, gibt es Parkplätze?  ' } },
+          { from: '4915112345678', id: 'wamid.B', timestamp: '1794300060', type: 'image', image: { caption: 'Unser Auto' } },
+          { from: '4915112345678', id: 'wamid.C', timestamp: '1794300070', type: 'reaction', reaction: { emoji: '👍' } },
+        ],
+        statuses: [{ id: 'wamid.OUT', status: 'delivered' }],
+      },
+    }],
+  }],
+}
+
+Deno.test('WhatsApp deliveries are accepted only with Meta\'s signature over the exact body', async () => {
+  const body = JSON.stringify(waDelivery)
+  const header = await signBody(body, 'app-secret')
+  assert(await verifySignature(body, header, 'app-secret'))
+  assert(!(await verifySignature(body + ' ', header, 'app-secret')), 'any change to the body breaks it')
+  assert(!(await verifySignature(body, header, 'other-secret')))
+  assert(!(await verifySignature(body, null, 'app-secret')))
+  assert(!(await verifySignature(body, header.replace('sha256=', 'sha1='), 'app-secret')))
+})
+
+Deno.test('guest WhatsApp messages are read from a delivery; reactions and statuses are not', () => {
+  const messages = parseWebhook(waDelivery)
+  assertEquals(messages.length, 2)
+  assertEquals(messages[0], { phoneNumberId: '109876543210', messageId: 'wamid.A', from: '4915112345678', name: 'Lukas Weber', receivedAt: new Date(1794300000 * 1000).toISOString(), text: 'Hallo, gibt es Parkplätze?' })
+  assertEquals(messages[1].text, '[Immagine] Unser Auto')
+  assertEquals(parseWebhook({ entry: [{ changes: [{ field: 'statuses', value: {} }] }] }), [])
+  assertEquals(parseWebhook(null), [])
+  assertEquals(whatsappGuestKey('49 151 12345678'), 'whatsapp:+4915112345678')
+})
+
+Deno.test('a closed 24-hour window is told apart from other send errors', () => {
+  assert(isWindowClosed(new WhatsAppError(400, 131047, 'x')))
+  assert(!isWindowClosed(new WhatsAppError(400, 131051, 'x')))
+  assert(!isWindowClosed(new Error('x')))
 })

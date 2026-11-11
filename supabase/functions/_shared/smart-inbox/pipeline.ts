@@ -1,15 +1,16 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 import type Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { AiRefusalError, type AgentStyle, draftReply, type DraftRequest, type DraftResult, type DraftUsage, type HistoryEntry } from './ai.ts'
-import { headerMap, ignoreReason, relaySource } from './filters.ts'
-import { createReplyDraft, deleteMessage, getMessage, textToHtml } from './graph.ts'
-import { getAccessToken, loadMailbox, ReauthRequiredError } from './mailbox.ts'
+import { ignoreReason, relaySource } from './filters.ts'
+import { ReauthRequiredError } from './mailbox.ts'
+import { MailboxUnavailableError, openMailbox } from './provider.ts'
 import type { SmartInboxConfig } from './runtime.ts'
 import { appendSignature, signatureFor } from './signature.ts'
 
 // One guest message, end to end:
-//   Outlook:  claim -> read from Graph -> filter -> Claude -> store draft
-//             (+ signed Outlook reply draft) -> account usage.
+//   Email:    claim -> read from the mailbox (Outlook or Gmail) -> filter ->
+//             Claude -> store draft
+//             (+ signed reply draft in the mailbox) -> account usage.
 //   Pasted:   staff paste a message from Booking/WhatsApp/... -> Claude ->
 //             store draft for them to copy back into that channel.
 //   Revision: staff ask to change a draft ("più breve") -> Claude -> store.
@@ -345,7 +346,7 @@ function baseRequest(context: PropertyContext, conversation: ConversationContext
 }
 
 // ---------------------------------------------------------------------------
-// Outlook messages (and regenerating any message)
+// Email messages, Outlook or Gmail (and regenerating any message)
 // ---------------------------------------------------------------------------
 export async function processMessage(deps: PipelineDeps, messageId: string, options: ProcessOptions = {}): Promise<MessageStatus | null> {
   const { admin, config } = deps
@@ -357,40 +358,42 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
     // email -- including Booking/Expedia/Airbnb messages relayed by email.
     if (!message.mailbox_id) return await draftPasted(deps, message, options.actorId ?? null)
 
-    const { mailbox, secret } = await loadMailbox(admin, message.mailbox_id as string)
-    if (mailbox.status === 'disconnected' || !secret) {
+    let client
+    try {
+      client = await openMailbox(admin, config, message.mailbox_id as string)
+    } catch (error) {
+      if (!(error instanceof MailboxUnavailableError)) throw error
       await finish(admin, message.id, { status: 'failed', error: 'mailbox_disconnected' })
       return 'failed'
     }
-
-    const accessToken = await getAccessToken(admin, config, secret)
-    const email = await getMessage(accessToken, message.graph_message_id as string)
-    const fromAddress = email.from?.emailAddress?.address?.toLowerCase() ?? null
-    const bodyText = (email.uniqueBody?.content ?? email.body?.content ?? '').trim()
-    const channel = relaySource(fromAddress) ?? 'outlook'
+    const { mailbox } = client
+    const email = await client.read(message.graph_message_id as string)
+    const fromAddress = email.fromAddress
+    const bodyText = email.bodyText
+    const channel = relaySource(fromAddress) ?? (client.provider === 'google' ? 'gmail' : 'outlook')
 
     await finish(admin, message.id, {
       source: channel,
       conversation_id: email.conversationId,
       from_address: fromAddress,
-      from_name: email.from?.emailAddress?.name ?? null,
+      from_name: email.fromName,
       subject: email.subject,
       body_preview: email.bodyPreview,
       body_text: bodyText.slice(0, MAX_BODY_CHARS),
-      received_at: email.receivedDateTime,
+      received_at: email.receivedAt,
     })
 
     const threadId = fromAddress
-      ? await attachToConversation(admin, message.property_id, message.id, fromAddress, email.from?.emailAddress?.name ?? null, email.receivedDateTime)
+      ? await attachToConversation(admin, message.property_id, message.id, fromAddress, email.fromName, email.receivedAt)
       : null
 
     const context = await loadPropertyContext(admin, message.property_id)
 
     if (!options.force) {
-      const reason = email.isDraft
+      const reason = email.isOwn
         ? 'own_mailbox'
         : ignoreReason(
-          { fromAddress, subject: email.subject, headers: headerMap(email.internetMessageHeaders) },
+          { fromAddress, subject: email.subject, headers: email.headers },
           { mailboxAddress: mailbox.email_address, ignoredSenders: context.ignoredSenders },
         )
       if (reason) {
@@ -412,7 +415,7 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
       return 'needs_attention'
     }
 
-    const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedDateTime) : []
+    const history = threadId ? await loadHistory(admin, threadId, message.id, email.receivedAt) : []
     const conversation = await loadConversation(admin, threadId)
 
     const agentStyle = await loadAgentStyle(admin, message.property_id, options.actorId ?? conversation?.assigned_to ?? null)
@@ -420,10 +423,10 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
       ...baseRequest(context, conversation, agentStyle),
       channel,
       email: {
-        fromName: email.from?.emailAddress?.name ?? null,
+        fromName: email.fromName,
         fromAddress,
         subject: email.subject,
-        receivedAt: email.receivedDateTime,
+        receivedAt: email.receivedAt,
         body: bodyText || email.bodyPreview || '',
       },
       history,
@@ -438,16 +441,16 @@ export async function processMessage(deps: PipelineDeps, messageId: string, opti
     if (reply) {
       const existing = await existingDraft(admin, message.id)
       if (!existing || existing.status !== 'sent') {
-        // Mirror the proposal into Outlook's Drafts folder, signed by the
+        // Mirror the proposal into the mailbox Drafts folder, signed by the
         // guest's agent (or the property while nobody owns the guest).
         // Best effort: the draft in homisuite is the source of truth.
         let graphDraftId: string | null = null
         try {
-          if (existing?.graph_draft_id) await deleteMessage(accessToken, existing.graph_draft_id)
+          if (existing?.graph_draft_id) await client.deleteDraft(existing.graph_draft_id)
           const signature = await signatureFor(admin, message.property_id, conversation?.assigned_to ?? null, conversation?.assigned_to ? 'agent' : 'property')
-          graphDraftId = (await createReplyDraft(accessToken, message.graph_message_id as string, textToHtml(appendSignature(reply, signature.text)))).id
+          graphDraftId = await client.createReplyDraft(message.graph_message_id as string, appendSignature(reply, signature.text))
         } catch (error) {
-          console.warn('smart-inbox: Outlook draft not updated', error)
+          console.warn('smart-inbox: mailbox draft not updated', error)
         }
         await saveDraft(admin, message, { ...draftFields(result, usage, reply), graph_draft_id: graphDraftId }, existing)
       }
@@ -625,7 +628,7 @@ export async function reviseDraft(deps: PipelineDeps, draftId: string, instructi
   const reply = result.reply.trim()
   if (!reply) return 'refused'
 
-  // A revision replaces the proposal: the Outlook mirror (if any) is stale
+  // A revision replaces the proposal: the mailbox draft (if any) is stale
   // and is rebuilt from the approved text when sending.
   const { error: updateError } = await admin
     .from('smart_inbox_drafts')
