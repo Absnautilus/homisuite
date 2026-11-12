@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ArrowLeft, LogOut } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '@/components/language-toggle'
@@ -7,6 +8,20 @@ import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { signOut } from '@/lib/staff-api'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
+
+// Identity + the one way out share the top row, uncontested -- a name never
+// has to fight an icon row for space. Everything else is "how do I want
+// this device to behave right now", grouped into its own labeled row below
+// (same icon-over-label grammar as the shell's own mobile tab bar) instead
+// of competing icons squeezed next to the name.
+function BarAction({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-1">
+      {children}
+      <span className="px-0.5 text-center text-[10px] leading-tight font-bold text-muted">{label}</span>
+    </div>
+  )
+}
 
 // The facchino tier (no manage, no queue-management capability) gets the
 // bare minimum of shell around the queue -- no module switcher, no
@@ -22,33 +37,45 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
   const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 sm:px-5">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <Link
-          to="/"
-          aria-label={t('simpleMode.backHome')}
-          title={t('simpleMode.backHome')}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{initials}</span>
-        <span className="truncate text-sm font-bold text-foreground">{profile.name}</span>
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <OnDutyToggle profile={profile} dark={false} />
-        {simpleModeToggle && <SimpleModeToggle />}
-        <NotificationSettingsToggle align="right" />
-        <LanguageToggle align="right" />
+    <div className="border-b border-line bg-surface">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Link
+            to="/"
+            aria-label={t('simpleMode.backHome')}
+            title={t('simpleMode.backHome')}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{initials}</span>
+          <span className="truncate text-sm font-bold text-foreground">{profile.name}</span>
+        </div>
         <button
           type="button"
           onClick={() => void signOut()}
           title={t('staff.nav.logout')}
           aria-label={t('staff.nav.logout')}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
         >
           <LogOut className="h-4.5 w-4.5" />
         </button>
+      </div>
+      <div className="grid auto-cols-fr grid-flow-col gap-1 border-t border-line px-2 py-1.5">
+        <BarAction label={t('staff.onDuty.label')}>
+          <OnDutyToggle profile={profile} dark={false} />
+        </BarAction>
+        {simpleModeToggle && (
+          <BarAction label={t('simpleMode.label')}>
+            <SimpleModeToggle />
+          </BarAction>
+        )}
+        <BarAction label={t('staff.notifSettings.label')}>
+          <NotificationSettingsToggle align="center" />
+        </BarAction>
+        <BarAction label={t('staff.language.label')}>
+          <LanguageToggle align="center" />
+        </BarAction>
       </div>
     </div>
   )
