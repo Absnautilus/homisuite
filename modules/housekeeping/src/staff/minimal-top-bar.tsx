@@ -41,7 +41,7 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
   return (
     <div className="border-b border-line bg-surface">
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex items-center gap-2.5">
           <Link
             to="/"
             aria-label={t('simpleMode.backHome')}
@@ -50,8 +50,14 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{initials}</span>
-          <span className="truncate text-sm font-bold text-foreground">{profile.name}</span>
+          <span
+            role="img"
+            aria-label={profile.name}
+            title={profile.name}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent"
+          >
+            {initials}
+          </span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {simpleModeToggle && <SimpleModeToggle />}

@@ -37,7 +37,7 @@ function markSeen(key: string, version: number) {
 // starts it on demand. The one tour that still launches on its own is the
 // Home one, the very first time this browser ever sees a 'ready' shell --
 // a one-time welcome, not something this button triggers afterward.
-export function HelpButton({ moduleKey }: { moduleKey: string }) {
+export function HelpButton({ moduleKey, dock }: { moduleKey: string; dock?: 'facchino' | 'simple' }) {
   const [open, setOpen] = useState(false)
   const [activeTourKey, setActiveTourKey] = useState<string | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
@@ -111,7 +111,12 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
         ref={triggerRef}
         type="button"
         data-tour="help-fab"
-        className={`help-fab${hasUpdate ? ' has-update' : ''}`}
+        className={[
+          'help-fab',
+          hasUpdate && 'has-update',
+          dock === 'facchino' && 'help-fab-docked',
+          dock === 'simple' && 'help-fab-docked-wide',
+        ].filter(Boolean).join(' ')}
         aria-label={hasUpdate ? 'Guida di questa sezione (aggiornata)' : 'Guida di questa sezione'}
         onClick={onFabClick}
       >

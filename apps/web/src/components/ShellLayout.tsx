@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Menu, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useDropdownTransition } from '@homisuite/ui'
+import { isSimpleModeEnabled, SIMPLE_MODE_CHANGE_EVENT } from '@homisuite/housekeeping-module'
 import { shellNavigation } from '../app/navigation'
 import { GENERAL_HELP_KEY } from '../content/helpContent'
 import { HelpButton } from './HelpButton'
@@ -109,6 +110,28 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   const isHousekeepingRoute = effectivePathname === '/housekeeping' || effectivePathname.startsWith('/housekeeping/')
   const isFacchino = isHousekeepingRoute && housekeepingCapabilities !== null
     && !housekeepingCapabilities.manage && !housekeepingCapabilities.queueManage
+  // "Modalità semplice" is a per-device flag the Housekeeping module owns
+  // (localStorage, toggled from inside its own minimal bar) -- this shell
+  // sits above that module's React tree, so it can't read it as a normal
+  // context and instead just re-checks the same storage key, live, via the
+  // custom event that module fires whenever it changes.
+  const [simpleModeOn, setSimpleModeOn] = useState(() => isSimpleModeEnabled())
+  useEffect(() => {
+    function onChange() {
+      setSimpleModeOn(isSimpleModeEnabled())
+    }
+    window.addEventListener(SIMPLE_MODE_CHANGE_EVENT, onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener(SIMPLE_MODE_CHANGE_EVENT, onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [])
+  // Both tiers show the same bare bar (MinimalTopBar) with its own way
+  // out already in it -- the floating "?" docks next to it instead of
+  // floating over the content, "-wide" only for the opted-in case, which
+  // also shows the Modalità semplice toggle right there next to Esci.
+  const helpDock = isFacchino ? 'facchino' : isHousekeepingRoute && simpleModeOn ? 'simple' : undefined
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -192,7 +215,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
     return (
       <div className="app-shell app-shell-minimal">
         <main className="page-content"><Outlet /></main>
-        <HelpButton moduleKey="housekeeping" />
+        <HelpButton moduleKey="housekeeping" dock="facchino" />
       </div>
     )
   }
@@ -285,7 +308,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
         </div>
       )}
 
-      <HelpButton moduleKey={helpKeyForPath(effectivePathname)} />
+      <HelpButton moduleKey={helpKeyForPath(effectivePathname)} dock={helpDock} />
     </div>
   )
 }

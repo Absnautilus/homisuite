@@ -6,12 +6,25 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 // person's login across devices.
 const STORAGE_KEY = 'roomcall_simple_mode'
 
+// Fired on `window` whenever the flag changes, same tab included (the
+// native `storage` event only reaches *other* tabs) -- lets a shell-level
+// component outside this module's own React tree (ShellLayout, which
+// mounts above it, not below) react live, e.g. to relocate its own
+// floating help button while this bar is showing. Read with
+// `isSimpleModeEnabled()` below rather than the React context, which only
+// resolves inside a `SimpleModeProvider`.
+export const SIMPLE_MODE_CHANGE_EVENT = 'homisuite:simple-mode-change'
+
 function readStored(): boolean {
   try {
     return localStorage.getItem(STORAGE_KEY) === '1'
   } catch {
     return false
   }
+}
+
+export function isSimpleModeEnabled(): boolean {
+  return readStored()
 }
 
 interface SimpleModeContextValue {
@@ -31,6 +44,7 @@ export function SimpleModeProvider({ children }: { children: ReactNode }) {
     } catch {
       // per-device convenience only -- fine if it doesn't persist
     }
+    window.dispatchEvent(new Event(SIMPLE_MODE_CHANGE_EVENT))
   }
 
   const value = useMemo<SimpleModeContextValue>(() => ({ enabled, setEnabled }), [enabled])

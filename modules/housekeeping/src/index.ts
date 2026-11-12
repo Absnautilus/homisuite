@@ -17,3 +17,8 @@ export { LocaleProvider } from './lib/i18n/locale-context'
 // it, the module's internal client falls back to its own env vars, which a
 // library package never has, and throws on first use.
 export { configureSupabaseClient } from './lib/supabase'
+// Lets the shell (ShellLayout, mounted above this module -- a React context
+// here can't reach it) know whether "Modalità semplice" is on for this
+// device, e.g. to relocate its own floating help button while the queue's
+// minimal bar is showing instead of floating over it.
+export { isSimpleModeEnabled, SIMPLE_MODE_CHANGE_EVENT } from './lib/simple-mode-context'
