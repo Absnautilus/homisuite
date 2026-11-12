@@ -107,6 +107,35 @@ button.job-role-chip:hover { border-color: var(--accent); }
 .shell-alert.error { border-color: rgba(178,58,58,.22); color: var(--red-ink); background: var(--red-bg); }
 .shell-alert button { border: 0; background: transparent; color: inherit; font-weight: 800; cursor: pointer; }
 
+/* Fixed, not inside the route tree's own scroll/layout, so it reaches a
+   tablet left open on any screen -- login included -- and survives a
+   route change instead of being an ordinary page alert. */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 10px 10px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+  max-width: calc(100vw - 32px);
+}
+.update-banner-text { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.update-banner-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.update-banner-reload { border: 0; border-radius: 999px; background: var(--accent-ink); color: var(--accent); font-weight: 800; font-size: 13px; min-height: 36px; padding: 0 14px; cursor: pointer; white-space: nowrap; }
+.update-banner-dismiss { border: 0; background: transparent; color: var(--accent-ink); width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; cursor: pointer; opacity: .8; }
+.update-banner-dismiss:hover { opacity: 1; background: rgba(255, 255, 255, .15); }
+@media (max-width: 480px) {
+  .update-banner { left: 16px; right: 16px; transform: none; max-width: none; }
+  .update-banner-text { white-space: normal; }
+}
+
 /* The modal shell itself (backdrop/panel/header/body/footer, focus trap,
    the morph-from-trigger transition) is @homisuite/ui's Modal now -- what's
    left here is content-side styling that every caller supplies itself. */
