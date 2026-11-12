@@ -58,6 +58,13 @@ export function HelpButton({ moduleKey }: { moduleKey: string }) {
   useEffect(() => {
     if (autoShown.current) return
     autoShown.current = true
+    // The full-screen spotlight walkthrough assumes room to scroll a target
+    // into view under a floating card -- cramped and easy to lose track of
+    // on a phone-width screen. Mobile's first-time guidance stays to the
+    // manually-opened "?" guide below, never this auto-launch (not marked
+    // seen either, so a later visit from a wide-enough viewport still gets
+    // the real tour once).
+    if (window.matchMedia('(max-width: 920px)').matches) return
     let seen = true
     try {
       seen = localStorage.getItem(SEEN_STORAGE_KEY) === '1'

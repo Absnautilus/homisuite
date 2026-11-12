@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
 import { useDiningAccess } from '../modules/dining/useDiningAccess'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const moduleCatalog = [
   { slug: 'guest_requests', title: 'Housekeeping', description: 'Richieste ospiti e operatività camere.', path: '/housekeeping', icon: Hotel },
@@ -35,6 +36,7 @@ export function HomePage() {
     return true
   })
   const today = useMemo(() => formatTodayItalian(new Date()), [])
+  const isMobile = useIsMobile()
   // moduleCatalog's paths are absolute ('/housekeeping', ...), correct for
   // this page's real, root-mounted usage. Mounted under Admin Master's
   // operational view instead (App.tsx renders this same HomePage at
@@ -56,7 +58,7 @@ export function HomePage() {
       <PageHeader
         eyebrow={runtime.property?.name}
         title="Home"
-        description="Accesso rapido ai moduli disponibili per questa struttura."
+        description={isMobile ? undefined : 'Accesso rapido ai moduli disponibili per questa struttura.'}
         actions={
           <div className="home-today">
             <p className="home-today-date">{today}</p>
