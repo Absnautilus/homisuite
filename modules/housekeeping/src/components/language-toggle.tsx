@@ -5,7 +5,11 @@ import { useLocale } from '@/lib/i18n/locale-context'
 import { FlagIcon } from '@/components/flag-icon'
 import { cn } from '@/lib/cn'
 
-export function LanguageToggle({ dark = false, align = 'center' }: { dark?: boolean; align?: 'center' | 'right' } = {}) {
+export function LanguageToggle({
+  dark = false,
+  align = 'center',
+  menuClassName,
+}: { dark?: boolean; align?: 'center' | 'right'; menuClassName?: string } = {}) {
   const { locale, setLocale } = useLocale()
   const [open, setOpen] = useState(false)
   const { state, mounted } = useDropdownTransition(open)
@@ -49,6 +53,7 @@ export function LanguageToggle({ dark = false, align = 'center' }: { dark?: bool
             cn(
               'absolute z-10 mt-2 flex w-56 flex-wrap gap-1.5 rounded-2xl border border-line bg-surface p-2 shadow-lg',
               align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+              menuClassName,
             ),
           )}
         >

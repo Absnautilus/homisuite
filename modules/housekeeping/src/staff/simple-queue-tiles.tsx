@@ -25,11 +25,11 @@ export function SimpleQueueTiles({
 }) {
   const { t } = useLocale()
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-tour="hk-simple-tiles">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3" data-tour="hk-simple-tiles">
       <Tile
         active={tab === 'new'}
         tone="bg-wait-ink"
-        icon={<Inbox className="h-7 w-7" />}
+        icon={<Inbox className="h-5 w-5 sm:h-7 sm:w-7" />}
         count={newCount}
         label={t('staff.queue.tabNew')}
         onClick={() => onSelect('new')}
@@ -37,7 +37,7 @@ export function SimpleQueueTiles({
       <Tile
         active={tab === 'inProgress'}
         tone="bg-prog-ink"
-        icon={<Clock className="h-7 w-7" />}
+        icon={<Clock className="h-5 w-5 sm:h-7 sm:w-7" />}
         count={inProgressCount}
         label={t('staff.queue.columnInProgress')}
         onClick={() => onSelect('inProgress')}
@@ -45,7 +45,7 @@ export function SimpleQueueTiles({
       <Tile
         active={tab === 'done'}
         tone="bg-done-ink"
-        icon={<Check className="h-7 w-7" />}
+        icon={<Check className="h-5 w-5 sm:h-7 sm:w-7" />}
         count={doneCount}
         label={t('staff.queue.tabDone')}
         onClick={() => onSelect('done')}
@@ -75,15 +75,18 @@ function Tile({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'flex cursor-pointer items-center gap-4 rounded-2xl px-5 py-5 text-left text-white transition-opacity',
+        // Stacked and centered in the narrow 3-up grid a phone gets, back to
+        // the roomier icon-left/text-right layout once there's a sm: column
+        // wide enough for it.
+        'flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-center text-white transition-opacity sm:flex-row sm:gap-4 sm:px-5 sm:py-5 sm:text-left',
         tone,
         active ? 'ring-4 ring-offset-2 ring-foreground/30' : 'opacity-85 hover:opacity-100',
       )}
     >
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20">{icon}</span>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 sm:h-14 sm:w-14 sm:rounded-xl">{icon}</span>
       <span className="min-w-0">
-        <span className="block text-3xl leading-none font-extrabold">{count}</span>
-        <span className="block text-base leading-tight font-bold">{label}</span>
+        <span className="block text-xl leading-none font-extrabold sm:text-3xl">{count}</span>
+        <span className="block text-[11px] leading-tight font-bold sm:text-base">{label}</span>
       </span>
     </button>
   )

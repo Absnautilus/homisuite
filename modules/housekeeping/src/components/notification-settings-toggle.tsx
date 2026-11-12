@@ -4,7 +4,11 @@ import { getAlertVolume, playAlertSound, setAlertVolume, unlockAudio } from '@/l
 import { useLocale } from '@/lib/i18n/locale-context'
 import { cn } from '@/lib/cn'
 
-export function NotificationSettingsToggle({ dark = false, align = 'center' }: { dark?: boolean; align?: 'center' | 'right' } = {}) {
+export function NotificationSettingsToggle({
+  dark = false,
+  align = 'center',
+  menuClassName,
+}: { dark?: boolean; align?: 'center' | 'right'; menuClassName?: string } = {}) {
   const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const { state, mounted } = useDropdownTransition(open)
@@ -58,6 +62,7 @@ export function NotificationSettingsToggle({ dark = false, align = 'center' }: {
             cn(
               'absolute z-10 mt-2 w-56 rounded-2xl border border-line bg-surface p-3 text-foreground shadow-lg',
               align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+              menuClassName,
             ),
           )}
         >

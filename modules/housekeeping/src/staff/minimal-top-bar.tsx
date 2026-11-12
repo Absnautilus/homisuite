@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { LanguageToggle } from '@/components/language-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
 import { SimpleModeToggle } from '@/components/simple-mode-toggle'
+import { TextSizeToggle } from '@/components/text-size-toggle'
 import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { signOut } from '@/lib/staff-api'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -26,12 +27,13 @@ function BarAction({ label, children }: { label: string; children: ReactNode }) 
 // The facchino tier (no manage, no queue-management capability) gets the
 // bare minimum of shell around the queue -- no module switcher, no
 // breadcrumb, just who's on shift, the controls that matter while working
-// (on duty, notification volume, language) and a way out. ShellLayout
-// strips its own chrome for the same tier; this is the module's half of
-// that same "minimo indispensabile" shell. Also reused, with
-// `simpleModeToggle`, as "Modalità semplice"'s own bar for roles that
-// opted into it -- same bare-minimum look, but with the toggle itself so
-// they can switch back.
+// (on duty, notification volume, language, text size) and a way out.
+// ShellLayout strips its own chrome for the same tier; this is the
+// module's half of that same "minimo indispensabile" shell. Also reused,
+// with `simpleModeToggle`, as "Modalità semplice"'s own bar for roles that
+// opted into it -- same bare-minimum look, with the toggle itself next to
+// Esci (a mode switch, not a day-to-day comfort setting) so they can
+// switch back.
 export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: StaffProfile; simpleModeToggle?: boolean }) {
   const { t } = useLocale()
   const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()
@@ -51,30 +53,35 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{initials}</span>
           <span className="truncate text-sm font-bold text-foreground">{profile.name}</span>
         </div>
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          title={t('staff.nav.logout')}
-          aria-label={t('staff.nav.logout')}
-          className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-        >
-          <LogOut className="h-4.5 w-4.5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {simpleModeToggle && <SimpleModeToggle />}
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            title={t('staff.nav.logout')}
+            aria-label={t('staff.nav.logout')}
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            <LogOut className="h-4.5 w-4.5" />
+          </button>
+        </div>
       </div>
       <div className="grid auto-cols-fr grid-flow-col gap-1 border-t border-line px-2 py-1.5">
         <BarAction label={t('staff.onDuty.label')}>
           <OnDutyToggle profile={profile} dark={false} />
         </BarAction>
-        {simpleModeToggle && (
-          <BarAction label={t('simpleMode.label')}>
-            <SimpleModeToggle />
-          </BarAction>
-        )}
         <BarAction label={t('staff.notifSettings.label')}>
-          <NotificationSettingsToggle align="center" />
+          <NotificationSettingsToggle align="center" menuClassName="mt-10" />
         </BarAction>
         <BarAction label={t('staff.language.label')}>
-          <LanguageToggle align="center" />
+          <LanguageToggle align="center" menuClassName="mt-10" />
+        </BarAction>
+        <BarAction label={t('uiScale.label')}>
+          {/* Last column, close to the right edge -- centering the menu
+              under it would run it off-screen; anchor its right edge to
+              the trigger's instead, same as the account menus already do
+              for a control near the edge. */}
+          <TextSizeToggle align="right" menuClassName="mt-10" />
         </BarAction>
       </div>
     </div>

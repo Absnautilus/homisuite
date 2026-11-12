@@ -15,7 +15,11 @@ const SAMPLE_SIZE: Record<UiScale, string> = {
   large: 'text-xl',
 }
 
-export function TextSizeToggle({ dark = false, align = 'center' }: { dark?: boolean; align?: 'center' | 'right' } = {}) {
+export function TextSizeToggle({
+  dark = false,
+  align = 'center',
+  menuClassName,
+}: { dark?: boolean; align?: 'center' | 'right'; menuClassName?: string } = {}) {
   const { t } = useLocale()
   const { scale, setScale } = useUiScale()
   const [open, setOpen] = useState(false)
@@ -57,6 +61,7 @@ export function TextSizeToggle({ dark = false, align = 'center' }: { dark?: bool
           className={cn(
             'absolute z-10 mt-2 flex items-end gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-lg',
             align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2',
+            menuClassName,
           )}
         >
           {UI_SCALES.map((s) => (
