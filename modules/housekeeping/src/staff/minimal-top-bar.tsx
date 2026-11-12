@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, LogOut } from 'lucide-react'
+import { ArrowLeft, LogOut, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '@/components/language-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
@@ -61,6 +61,23 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {simpleModeToggle && <SimpleModeToggle />}
+          {/* HelpButton (apps/web, outside this module entirely) portals
+              its trigger in here when docked, so the "?" is a real flex
+              sibling of Impostazioni/Esci -- see HELP_SLOT_ID in
+              HelpButton.tsx. `contents` keeps this wrapper itself out of
+              the box model so the portaled button isn't nested a level
+              deeper than its neighbors. Empty (no fallback rendered) for
+              any other consumer of this bar, since only the shell's own
+              HelpButton ever targets this id. */}
+          <span id="hk-minimal-bar-help-slot" className="contents" />
+          <Link
+            to="/settings"
+            aria-label={t('staff.nav.settings')}
+            title={t('staff.nav.settings')}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            <Settings className="h-4.5 w-4.5" />
+          </Link>
           <button
             type="button"
             onClick={() => void signOut()}
@@ -72,22 +89,30 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
           </button>
         </div>
       </div>
-      <div className="grid auto-cols-fr grid-flow-col gap-1 border-t border-line px-2 py-1.5">
+      {/* Pinned to the viewport bottom, like the shell's own mobile tab bar
+          -- the actions it holds (turno, notifiche, lingua, dimensione
+          testo) are things to reach at any scroll position, not a header
+          that scrolls away with the top identity row. Each menu now opens
+          *upward* (menuClassName) since there's no room below it. */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col gap-1 border-t border-line bg-surface px-2 pt-1.5"
+        style={{ paddingBottom: 'max(6px, env(safe-area-inset-bottom))' }}
+      >
         <BarAction label={t('staff.onDuty.label')}>
           <OnDutyToggle profile={profile} dark={false} />
         </BarAction>
         <BarAction label={t('staff.notifSettings.label')}>
-          <NotificationSettingsToggle align="center" menuClassName="mt-10" />
+          <NotificationSettingsToggle align="center" menuClassName="mt-0 mb-2 bottom-full" />
         </BarAction>
         <BarAction label={t('staff.language.label')}>
-          <LanguageToggle align="center" menuClassName="mt-10" />
+          <LanguageToggle align="center" menuClassName="mt-0 mb-2 bottom-full" />
         </BarAction>
         <BarAction label={t('uiScale.label')}>
           {/* Last column, close to the right edge -- centering the menu
               under it would run it off-screen; anchor its right edge to
               the trigger's instead, same as the account menus already do
               for a control near the edge. */}
-          <TextSizeToggle align="right" menuClassName="mt-10" />
+          <TextSizeToggle align="right" menuClassName="mt-0 mb-2 bottom-full" />
         </BarAction>
       </div>
     </div>

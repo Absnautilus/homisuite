@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CircleHelp, Compass } from 'lucide-react'
 import { Button, Modal } from '@homisuite/ui'
 import { helpTopicFor, moduleTours } from '../content/helpContent'
@@ -6,6 +7,15 @@ import { TourOverlay } from './TourOverlay'
 
 const SEEN_STORAGE_KEY = 'homisuite.onboarding.seen.v1'
 const SEEN_VERSIONS_KEY = 'homisuite.help.seenVersions.v1'
+
+// Housekeeping's minimal bar (facchino tier, or "Modalità semplice" opted
+// into) renders an empty slot with this id, in its own flex row right next
+// to Esci, whenever it wants this button docked there instead of floating.
+// A portal -- not fixed-position pixel offsets -- is the only way to make
+// it a *real* flex sibling (same baseline, same gap, reflows with that row
+// instead of needing hand-tuned coordinates) across a module boundary this
+// component can't otherwise see across.
+const HELP_SLOT_ID = 'hk-minimal-bar-help-slot'
 
 function readSeenVersions(): Record<string, number> {
   try {
@@ -37,15 +47,34 @@ function markSeen(key: string, version: number) {
 // starts it on demand. The one tour that still launches on its own is the
 // Home one, the very first time this browser ever sees a 'ready' shell --
 // a one-time welcome, not something this button triggers afterward.
-export function HelpButton({ moduleKey, dock }: { moduleKey: string; dock?: 'facchino' | 'simple' }) {
+export function HelpButton({ moduleKey, dock = false }: { moduleKey: string; dock?: boolean }) {
   const [open, setOpen] = useState(false)
   const [activeTourKey, setActiveTourKey] = useState<string | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
   const [hasUpdate, setHasUpdate] = useState(false)
+  const [helpSlot, setHelpSlot] = useState<HTMLElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const autoShown = useRef(false)
   const topic = helpTopicFor(moduleKey)
   const tour = moduleTours[moduleKey]
+
+  // The slot can appear after this effect runs (Housekeeping is
+  // lazy-loaded) or disappear (leaving the minimal bar) -- a
+  // MutationObserver catches both without polling or a magic retry count.
+  useEffect(() => {
+    if (!dock) {
+      setHelpSlot(null)
+      return
+    }
+    const existing = document.getElementById(HELP_SLOT_ID)
+    if (existing) setHelpSlot(existing)
+    const observer = new MutationObserver(() => {
+      const found = document.getElementById(HELP_SLOT_ID)
+      setHelpSlot((current) => (found === current ? current : found))
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [dock])
 
   // Re-checks whenever the open screen changes (navigating to a different
   // module) or the guide closes (closing marks whatever was just viewed as
@@ -105,24 +134,23 @@ export function HelpButton({ moduleKey, dock }: { moduleKey: string; dock?: 'fac
   const section = topic.sections[stepIndex]!
   const Icon = section.icon
 
+  const trigger = (
+    <button
+      ref={triggerRef}
+      type="button"
+      data-tour="help-fab"
+      className={helpSlot ? ['help-fab-inline', hasUpdate && 'has-update'].filter(Boolean).join(' ') : `help-fab${hasUpdate ? ' has-update' : ''}`}
+      aria-label={hasUpdate ? 'Guida di questa sezione (aggiornata)' : 'Guida di questa sezione'}
+      onClick={onFabClick}
+    >
+      <CircleHelp size={helpSlot ? 18 : 22} />
+      {hasUpdate ? <span className="help-fab-dot" aria-hidden="true" /> : null}
+    </button>
+  )
+
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        data-tour="help-fab"
-        className={[
-          'help-fab',
-          hasUpdate && 'has-update',
-          dock === 'facchino' && 'help-fab-docked',
-          dock === 'simple' && 'help-fab-docked-wide',
-        ].filter(Boolean).join(' ')}
-        aria-label={hasUpdate ? 'Guida di questa sezione (aggiornata)' : 'Guida di questa sezione'}
-        onClick={onFabClick}
-      >
-        <CircleHelp size={22} />
-        {hasUpdate ? <span className="help-fab-dot" aria-hidden="true" /> : null}
-      </button>
+      {dock ? (helpSlot ? createPortal(trigger, helpSlot) : null) : trigger}
 
       {activeTourSteps ? <TourOverlay steps={activeTourSteps} onFinish={() => setActiveTourKey(null)} /> : null}
 

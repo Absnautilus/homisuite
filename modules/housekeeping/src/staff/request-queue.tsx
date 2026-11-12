@@ -117,9 +117,15 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
   const onAlert = useCallback((message: string, tone: 'info' | 'warning') => push(message, tone), [push])
   useRequestAlerts(active, onAlert)
 
+  const showMinimalBar = Boolean(embeddedNav?.minimal) || showSimpleHome
+
   return (
-    <div className="space-y-4">
-      {embeddedNav?.minimal || showSimpleHome ? (
+    // MinimalTopBar's own action row is fixed to the viewport bottom in
+    // that case -- this bottom padding keeps it from covering whatever's
+    // last in the queue, the same clearance ShellLayout's own bottom nav
+    // already gets its page content.
+    <div className={showMinimalBar ? 'space-y-4 pb-24' : 'space-y-4'}>
+      {showMinimalBar ? (
         <MinimalTopBar profile={profile} simpleModeToggle={!embeddedNav?.minimal} />
       ) : embeddedNav ? (
         <div data-tour="hk-nav">

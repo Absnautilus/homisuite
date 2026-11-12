@@ -475,24 +475,17 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
 /* Housekeeping's minimal bar (facchino tier, or "Modalità semplice" opted
    into) has its own top row with a way out already in it -- a second,
    bottom-right floating "?" there reads as a stray control rather than
-   part of that bar. Docked variants park it next to Esci instead: same
-   small icon-button look as that row's own controls, not the usual big
-   accent circle. Pixel offsets, not measured live -- tuned to that row's
-   own layout (px-4 padding, 40px controls, 4px gap), so they only need
-   revisiting if that row's own spacing changes. "-wide" clears the extra
-   "Modalità semplice" toggle next to Esci that the facchino tier doesn't
-   have. */
-/* Compound selectors (not just .help-fab-docked) so this always outranks
-   the plain .help-fab media-query rule below, regardless of source
-   order -- the one place this still has to win is narrow screens, which
-   is exactly what that rule targets. */
-.help-fab.help-fab-docked, .help-fab.help-fab-docked-wide {
-  width: 40px; height: 40px; top: 12px; bottom: auto;
-  border: 0; box-shadow: none; background: transparent; color: var(--muted);
+   part of that bar. HelpButton portals the trigger into that row's own
+   slot instead (see HELP_SLOT_ID in HelpButton.tsx), so this is a real
+   flex sibling there, not a fixed-position guess -- just needs the same
+   small icon-button look as that row's own controls (Esci, Impostazioni)
+   rather than the big accent circle. */
+.help-fab-inline {
+  position: relative; width: 40px; height: 40px; border-radius: 999px; border: 0;
+  background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
-.help-fab.help-fab-docked { right: 64px; }
-.help-fab.help-fab-docked-wide { right: 108px; }
-.help-fab.help-fab-docked:hover, .help-fab.help-fab-docked-wide:hover { filter: none; transform: none; background: var(--surface-2); color: var(--foreground); }
+.help-fab-inline:hover { background: var(--surface-2); color: var(--foreground); }
 .help-fab-dot {
   position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; border-radius: 999px;
   background: var(--red-ink); border: 2px solid var(--surface);

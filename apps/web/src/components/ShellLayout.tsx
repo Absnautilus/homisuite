@@ -127,11 +127,11 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       window.removeEventListener('storage', onChange)
     }
   }, [])
-  // Both tiers show the same bare bar (MinimalTopBar) with its own way
-  // out already in it -- the floating "?" docks next to it instead of
-  // floating over the content, "-wide" only for the opted-in case, which
-  // also shows the Modalità semplice toggle right there next to Esci.
-  const helpDock = isFacchino ? 'facchino' : isHousekeepingRoute && simpleModeOn ? 'simple' : undefined
+  // Both tiers show the same bare bar (MinimalTopBar), which renders its
+  // own slot for this -- see HELP_SLOT_ID in HelpButton.tsx -- so the
+  // floating "?" docks there as a real flex sibling instead of floating
+  // over the content.
+  const helpDock = isFacchino || (isHousekeepingRoute && simpleModeOn)
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -215,7 +215,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
     return (
       <div className="app-shell app-shell-minimal">
         <main className="page-content"><Outlet /></main>
-        <HelpButton moduleKey="housekeeping" dock="facchino" />
+        <HelpButton moduleKey="housekeeping" dock />
       </div>
     )
   }
