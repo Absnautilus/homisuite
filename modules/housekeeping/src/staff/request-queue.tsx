@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import { PageHeader, Tabs, useRememberedTab } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { MinimalTopBar } from '@/staff/minimal-top-bar'
@@ -121,22 +119,16 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
 
   return (
     <div className="space-y-4">
-      {embeddedNav?.minimal ? (
-        <MinimalTopBar profile={profile} />
+      {embeddedNav?.minimal || showSimpleHome ? (
+        <MinimalTopBar profile={profile} simpleModeToggle={!embeddedNav?.minimal} />
       ) : embeddedNav ? (
         <div data-tour="hk-nav">
-          {showSimpleHome && (
-            <Link to="/" className="hk-simple-back" aria-label={t('simpleMode.backHome')}>
-              <ArrowLeft className="h-6 w-6" aria-hidden="true" />
-              <span>{t('simpleMode.backHome')}</span>
-            </Link>
-          )}
           <EmbeddedNav
             profile={profile}
             basePath={embeddedNav.basePath}
             staysAllowed={embeddedNav.staysAllowed}
             manageAllowed={embeddedNav.manageAllowed}
-            secondary={showSimpleHome ? undefined : {
+            secondary={{
               items: [
                 { value: 'new', label: t('staff.queue.tabNew'), attention: pending.length > 0 ? pending.length : false },
                 { value: 'inProgress', label: t('staff.queue.columnInProgress'), attention: inProgress.length > 0 ? inProgress.length : false },
@@ -160,7 +152,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
       )}
 
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm" data-tour="hk-queue">
-        {!embeddedNav || embeddedNav.minimal ? (
+        {!embeddedNav ? (
           <div className="border-b border-line bg-surface px-4 py-3 sm:px-5" data-tour="hk-tabs">
             <Tabs
               items={[
@@ -174,7 +166,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
               aria-label={t('staff.queue.title')}
             />
           </div>
-        ) : showSimpleHome ? (
+        ) : embeddedNav.minimal || showSimpleHome ? (
           <div className="border-b border-line bg-surface p-4 sm:p-5" data-tour="hk-tabs">
             <SimpleQueueTiles
               tab={tab as Tab}

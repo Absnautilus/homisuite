@@ -1,6 +1,8 @@
-import { LogOut } from 'lucide-react'
+import { ArrowLeft, LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { LanguageToggle } from '@/components/language-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
+import { SimpleModeToggle } from '@/components/simple-mode-toggle'
 import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { signOut } from '@/lib/staff-api'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -11,19 +13,31 @@ import type { StaffProfile } from '@/lib/staff-types'
 // breadcrumb, just who's on shift, the controls that matter while working
 // (on duty, notification volume, language) and a way out. ShellLayout
 // strips its own chrome for the same tier; this is the module's half of
-// that same "minimo indispensabile" shell.
-export function MinimalTopBar({ profile }: { profile: StaffProfile }) {
+// that same "minimo indispensabile" shell. Also reused, with
+// `simpleModeToggle`, as "Modalità semplice"'s own bar for roles that
+// opted into it -- same bare-minimum look, but with the toggle itself so
+// they can switch back.
+export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: StaffProfile; simpleModeToggle?: boolean }) {
   const { t } = useLocale()
   const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div className="flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 sm:px-5">
       <div className="flex min-w-0 items-center gap-2.5">
+        <Link
+          to="/"
+          aria-label={t('simpleMode.backHome')}
+          title={t('simpleMode.backHome')}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{initials}</span>
         <span className="truncate text-sm font-bold text-foreground">{profile.name}</span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <OnDutyToggle profile={profile} dark={false} />
+        {simpleModeToggle && <SimpleModeToggle />}
         <NotificationSettingsToggle align="right" />
         <LanguageToggle align="right" />
         <button
