@@ -20,10 +20,17 @@ const SETTINGS_SLOT_ID = 'hk-minimal-bar-settings-slot'
 // someone through the shell to the real Settings page -- the whole point of
 // "Modalità semplice" is staying on this one screen. Deliberately a narrower
 // slice of that page: only what a shared-device queue worker ever needs to
-// touch (their own name, their password, and the two mode switches), reusing
-// its own Profilo/Sicurezza modals unchanged so this never drifts from how
-// the real page does the same two things.
-export function SimplifiedSettingsButton({ dock }: { dock: boolean }) {
+// touch (their own name, their password, and the mode switches), reusing its
+// own Profilo/Sicurezza modals unchanged so this never drifts from how the
+// real page does the same two things.
+//
+// canToggleSimpleMode hides the "Modalità semplice" row for the true
+// facchino tier (no manage, no queue-management capability) -- there, the
+// bare bar is a permission, not this per-device flag, so turning the switch
+// off wouldn't change anything on Housekeeping itself. Mirrors the same
+// exclusion already on the minimal bar's own top-row toggle (see
+// `simpleModeToggle` in minimal-top-bar.tsx).
+export function SimplifiedSettingsButton({ dock, canToggleSimpleMode }: { dock: boolean; canToggleSimpleMode: boolean }) {
   const runtime = useModuleRuntime()
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -73,21 +80,23 @@ export function SimplifiedSettingsButton({ dock }: { dock: boolean }) {
         <div className="settings-list">
           <SettingRow title="Profilo" detail={profileName} onClick={() => setProfileOpen(true)} />
           <SettingRow title="Sicurezza" detail="Cambia la password del tuo account" onClick={() => setSecurityOpen(true)} />
-          <div className="settings-row settings-row-control">
-            <span className="settings-row-main">
-              <span className="settings-row-icon"><Sparkles size={17} /></span>
-              <span><strong>Modalità semplice</strong><small>Schermata richieste, senza il resto del menu</small></span>
-            </span>
-            <Switch
-              checked={simpleMode}
-              onChange={() => {
-                const next = !simpleMode
-                setSimpleMode(next)
-                setSimpleModeEnabled(next)
-              }}
-              aria-label="Modalità semplice"
-            />
-          </div>
+          {canToggleSimpleMode && (
+            <div className="settings-row settings-row-control">
+              <span className="settings-row-main">
+                <span className="settings-row-icon"><Sparkles size={17} /></span>
+                <span><strong>Modalità semplice</strong><small>Schermata richieste, senza il resto del menu</small></span>
+              </span>
+              <Switch
+                checked={simpleMode}
+                onChange={() => {
+                  const next = !simpleMode
+                  setSimpleMode(next)
+                  setSimpleModeEnabled(next)
+                }}
+                aria-label="Modalità semplice"
+              />
+            </div>
+          )}
           <div className="settings-row settings-row-control">
             <span className="settings-row-main">
               <span className="settings-row-icon"><Bell size={17} /></span>

@@ -217,7 +217,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       <div className="app-shell app-shell-minimal">
         <main className="page-content"><Outlet /></main>
         <HelpButton moduleKey="housekeeping" dock />
-        <SimplifiedSettingsButton dock />
+        <SimplifiedSettingsButton dock canToggleSimpleMode={false} />
       </div>
     )
   }
@@ -311,7 +311,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       )}
 
       <HelpButton moduleKey={helpKeyForPath(effectivePathname)} dock={helpDock} />
-      <SimplifiedSettingsButton dock={helpDock} />
+      <SimplifiedSettingsButton dock={helpDock} canToggleSimpleMode={!isFacchino} />
     </div>
   )
 }
