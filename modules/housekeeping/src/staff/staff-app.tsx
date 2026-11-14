@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
@@ -35,6 +35,12 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<StaffProfile | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+  // Set inside loadStandalone below, the one place that actually checks
+  // the session -- read by the onAuthStateChange handler to tell a real
+  // sign-in/out transition from Supabase just re-announcing the same
+  // session (a rotated token, the tab regaining focus, ...). null until
+  // the first loadStandalone() resolves.
+  const hasSessionRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -65,6 +71,7 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
 
     async function loadStandalone() {
       const { data } = await supabase.auth.getSession()
+      hasSessionRef.current = data.session !== null
       if (!data.session) {
         if (!cancelled) {
           setProfile(null)
@@ -76,7 +83,15 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     }
 
     void loadStandalone()
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Same reasoning as apps/web's ModuleRuntimeContext: this fires for
+      // far more than an actual sign-in/out (a rotated token, the tab
+      // regaining focus, ...), and reloading for every one of those flashed
+      // this screen back to its own loading state on nothing that actually
+      // changed. Only reload when a session actually appears or disappears.
+      const hadSession = hasSessionRef.current
+      const hasSession = nextSession !== null
+      if (hadSession === hasSession) return
       setLoading(true)
       void loadStandalone()
     })
