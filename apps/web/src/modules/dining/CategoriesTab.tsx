@@ -3,7 +3,7 @@ import { Button, Modal } from '@homisuite/ui'
 import { Pencil, Plus, UtensilsCrossed } from 'lucide-react'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { createCategory, deleteCategory, listCategories, updateCategory } from './api'
+import { createCategory, deleteCategory, listCategories, subscribeToCategories, updateCategory } from './api'
 import type { DiningCategory } from './types'
 import { readableDiningError } from './readableDiningError'
 
@@ -31,6 +31,13 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
   }, [hotelId])
 
   useEffect(() => { void load() }, [load])
+
+  // Same reasoning as RestaurantsTab's own subscription -- another staff
+  // member's edit here would otherwise only show up on this session's next
+  // manual page reload.
+  useEffect(() => {
+    return subscribeToCategories(supabase, hotelId, () => void load())
+  }, [hotelId, load])
 
   async function onDelete(category: DiningCategory) {
     const confirmed = await confirm({

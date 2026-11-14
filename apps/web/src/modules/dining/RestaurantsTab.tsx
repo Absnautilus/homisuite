@@ -5,7 +5,7 @@ import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, lookupMapsPlace, MapsLookupError, updateRestaurant, type MapsImportedHour, type RestaurantInput } from './api'
+import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, lookupMapsPlace, MapsLookupError, subscribeToCategories, subscribeToRestaurants, updateRestaurant, type MapsImportedHour, type RestaurantInput } from './api'
 import type { DiningCategory, Restaurant, RestaurantHour } from './types'
 import { DAY_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -47,6 +47,18 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   }, [hotelId])
 
   useEffect(() => { void load() }, [load])
+
+  // Keeps this list in sync with another staff member's own changes
+  // (adding a restaurant, editing a category, ...) without waiting on this
+  // session to happen to reload the page.
+  useEffect(() => {
+    const unsubscribeRestaurants = subscribeToRestaurants(supabase, hotelId, () => void load())
+    const unsubscribeCategories = subscribeToCategories(supabase, hotelId, () => void load())
+    return () => {
+      unsubscribeRestaurants()
+      unsubscribeCategories()
+    }
+  }, [hotelId, load])
 
   async function onDelete(restaurant: Restaurant) {
     const confirmed = await confirm({

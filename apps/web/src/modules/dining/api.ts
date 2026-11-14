@@ -45,6 +45,19 @@ export async function deleteCategory(client: SupabaseClient, id: string): Promis
   await mutateOneOrThrow(client, 'dining_categories', 'id', id, 'delete')
 }
 
+// Same mechanism Housekeeping's own queue uses (subscribeToQueue) -- without
+// it, one staff member adding/editing a category only ever shows up for
+// everyone else's already-open session on their next manual reload.
+export function subscribeToCategories(client: SupabaseClient, hotelId: string, onChange: () => void): () => void {
+  const channel = client
+    .channel(`dining-categories-${hotelId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'dining_categories', filter: `hotel_id=eq.${hotelId}` }, onChange)
+    .subscribe()
+  return () => {
+    client.removeChannel(channel)
+  }
+}
+
 export async function listRestaurants(client: SupabaseClient, hotelId: string): Promise<Restaurant[]> {
   const { data, error } = await client
     .from('restaurants')
@@ -73,6 +86,19 @@ export async function updateRestaurant(client: SupabaseClient, id: string, chang
 
 export async function deleteRestaurant(client: SupabaseClient, id: string): Promise<void> {
   await mutateOneOrThrow(client, 'restaurants', 'id', id, 'delete')
+}
+
+// Same reasoning as subscribeToCategories above -- a restaurant another
+// staff member just added (or edited, or deleted) otherwise never appears
+// here until this session happens to reload the page.
+export function subscribeToRestaurants(client: SupabaseClient, hotelId: string, onChange: () => void): () => void {
+  const channel = client
+    .channel(`dining-restaurants-${hotelId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurants', filter: `hotel_id=eq.${hotelId}` }, onChange)
+    .subscribe()
+  return () => {
+    client.removeChannel(channel)
+  }
 }
 
 export class MapsLookupError extends Error {
