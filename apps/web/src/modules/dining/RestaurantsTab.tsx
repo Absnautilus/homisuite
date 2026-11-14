@@ -204,18 +204,34 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
   const [importing, setImporting] = useState(false)
   const [importNotice, setImportNotice] = useState<string | null>(null)
 
+  // Resets the whole form, but ONLY on open itself -- `categories` (read
+  // below for its starting default) is deliberately NOT a dependency here.
+  // `categories` is a fresh array every time RestaurantsTab reloads it, and
+  // reloads can happen while this modal is already open and someone is
+  // mid-edit (typing, or having just run "Importa da Google Maps"); with
+  // `categories` in this effect's deps, that reload re-ran this reset and
+  // silently wiped everything they'd just entered.
   useEffect(() => {
     if (open) {
       setSaving(false)
       setError(null)
-      setCategoryId(categories[0]?.id ?? '')
+      setCategoryId((current) => current || categories[0]?.id || '')
       setIsExternal(true)
       setRequiresOnlineBooking(false)
       setForm(EMPTY_CREATE_FORM)
       setImportUrl('')
       setImportNotice(null)
     }
-  }, [open, categories])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  // Picks a default category once the list is available, without
+  // overwriting a choice already made -- covers the modal opening before
+  // `categories` has loaded (the "Nuovo ristorante" button is hidden until
+  // then today, but this stays correct even if that changes).
+  useEffect(() => {
+    if (open && !categoryId && categories.length > 0) setCategoryId(categories[0].id)
+  }, [open, categories, categoryId])
 
   async function onImport() {
     if (!importUrl.trim()) {
