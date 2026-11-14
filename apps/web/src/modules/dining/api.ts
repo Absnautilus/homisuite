@@ -139,6 +139,13 @@ export interface MapsPlaceLookupResult {
   // never a reason to fail the rest of the import.
   walkMinutes: number | null
   hours: MapsImportedHour[]
+  // Same best-effort reasoning as walkMinutes -- null if the place has no
+  // photo, the Photo Media fetch failed, or the upload to our own bucket
+  // failed. coverImageAttribution is null only when Google supplied no
+  // author name for the photo; display it alongside the image wherever
+  // shown, per Google's Place Photos attribution requirement.
+  coverImageUrl: string | null
+  coverImageAttribution: string | null
 }
 
 // Same error-unwrapping shape as Smart Inbox's own `invoke` helper --

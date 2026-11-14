@@ -30,6 +30,11 @@ export interface Restaurant {
   concierge_description: string | null
   ideal_for: string | null
   guest_profile: string | null
+  cover_image_url: string | null
+  // Google's Place Photos terms require crediting the photo's author
+  // wherever it's shown -- kept alongside the URL so every place that
+  // renders cover_image_url can show it without a separate lookup.
+  cover_image_attribution: string | null
 }
 
 export type CommercialAgreement = 'partner_commission' | 'partner_no_commission' | 'none'

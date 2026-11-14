@@ -121,7 +121,9 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
       <div>
         {visible.map((restaurant) => (
           <div className="dining-rest-row" key={restaurant.id} onClick={() => setManaging(restaurant)}>
-            <div className="dining-rest-thumb">{restaurant.name[0]}</div>
+            {restaurant.cover_image_url
+              ? <img className="dining-rest-thumb" src={restaurant.cover_image_url} alt="" />
+              : <div className="dining-rest-thumb">{restaurant.name[0]}</div>}
             <div className="dining-rest-main">
               <strong>{restaurant.name}</strong>
               <div className="meta">
@@ -198,10 +200,13 @@ interface CreateRestaurantFormState {
   address: string
   priceTier: 1 | 2 | 3 | 4 | null
   walkMinutes: number | null
+  coverImageUrl: string | null
+  coverImageAttribution: string | null
 }
 
 const EMPTY_CREATE_FORM: CreateRestaurantFormState = {
   name: '', cuisine: '', description: '', mapsUrl: '', websiteUrl: '', phone: '', address: '', priceTier: null, walkMinutes: null,
+  coverImageUrl: null, coverImageAttribution: null,
 }
 
 function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClose, onSaved }: {
@@ -283,11 +288,14 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         cuisine: current.cuisine || place.cuisineHint || '',
         priceTier: place.priceTier ?? current.priceTier,
         walkMinutes: place.walkMinutes ?? current.walkMinutes,
+        coverImageUrl: place.coverImageUrl ?? current.coverImageUrl,
+        coverImageAttribution: place.coverImageAttribution ?? current.coverImageAttribution,
       }))
       setImportedHours(place.hours)
       const infoParts = [
         place.hours.length > 0 ? `Orari importati (${place.hours.length} fasce).` : null,
         place.walkMinutes != null ? `Distanza a piedi: ${place.walkMinutes} min.` : null,
+        place.coverImageUrl ? 'Foto importata.' : null,
       ].filter(Boolean)
       setImportInfo(infoParts.length > 0 ? infoParts.join(' ') : null)
       setImportNotice(place.businessStatus ? (BUSINESS_STATUS_WARNINGS[place.businessStatus] ?? null) : null)
@@ -317,6 +325,8 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         cuisine: form.cuisine || null,
         price_tier: form.priceTier,
         walk_minutes: form.walkMinutes,
+        cover_image_url: form.coverImageUrl,
+        cover_image_attribution: form.coverImageAttribution,
         short_description: null,
         guest_tags: [],
         is_recommended: false,
@@ -375,6 +385,15 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         {importNotice ? <p className="form-error" role="alert" style={{ marginTop: 6 }}>{importNotice}</p> : null}
         {importInfo ? <p className="muted" style={{ marginTop: 6 }}>{importInfo}</p> : null}
         {!hotelAddress ? <p className="muted" style={{ marginTop: 6 }}>Imposta l'indirizzo della struttura in Impostazioni per importare anche la distanza a piedi.</p> : null}
+        {form.coverImageUrl ? (
+          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src={form.coverImageUrl} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: 'cover' }} />
+            {/* Google's Place Photos terms require crediting the photo's
+                author wherever it's shown -- shown right alongside the
+                preview, not just stored for later. */}
+            {form.coverImageAttribution ? <span className="muted" style={{ fontSize: 12 }}>Foto: {form.coverImageAttribution}</span> : null}
+          </div>
+        ) : null}
       </div>
       <form className="modal-form" id="restaurant-create-form" onSubmit={submit}>
         <label className="form-field"><span>Nome</span><input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required minLength={1} maxLength={120} /></label>

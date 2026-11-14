@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.116.0'
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.116.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,8 +26,9 @@ Deno.serve(async (request: Request) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const placesApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
-    if (!supabaseUrl || !anonKey || !placesApiKey) return json({ error: 'server_not_configured' }, 500)
+    if (!supabaseUrl || !anonKey || !serviceRoleKey || !placesApiKey) return json({ error: 'server_not_configured' }, 500)
 
     const caller = createClient(supabaseUrl, anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -34,6 +36,13 @@ Deno.serve(async (request: Request) => {
     })
     const { data: userData, error: userError } = await caller.auth.getUser()
     if (userError || !userData.user) return json({ error: 'invalid_session' }, 401)
+
+    // The photo upload below writes to the dining-photos bucket under no
+    // particular caller's identity (it's a cache of Google's own data, not
+    // anyone's content) -- the service role key bypasses Storage RLS for
+    // that one write, same as any other server-side-only bucket write. The
+    // caller's own session is still required and checked above first.
+    const storage = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 
     // A maps.app.goo.gl / goo.gl short link carries nothing parseable
     // itself -- it has to be followed to the real, parameter-rich
@@ -65,6 +74,26 @@ Deno.serve(async (request: Request) => {
       }
     }
 
+    // Best-effort, same reasoning as walking distance above: a photo
+    // upload failing (Photo Media not enabled yet, a transient fetch
+    // error, Storage hiccup, ...) is never a reason to fail the rest of
+    // an otherwise-successful import.
+    let coverImageUrl: string | null = null
+    let coverImageAttribution: string | null = null
+    const firstPhoto = details.photos?.[0]
+    if (firstPhoto) {
+      try {
+        const uploaded = await importCoverPhoto(storage, placesApiKey, candidate.id, firstPhoto.name)
+        coverImageUrl = uploaded
+        coverImageAttribution = (firstPhoto.authorAttributions ?? [])
+          .map((attribution) => attribution.displayName)
+          .filter((value): value is string => Boolean(value))
+          .join(', ') || null
+      } catch (cause) {
+        console.error('cover photo import failed', cause)
+      }
+    }
+
     return json({
       name: details.displayName?.text ?? name,
       address: details.formattedAddress ?? null,
@@ -76,6 +105,8 @@ Deno.serve(async (request: Request) => {
       businessStatus: details.businessStatus ?? null,
       walkMinutes,
       hours: hoursFromOpeningHours(details.regularOpeningHours),
+      coverImageUrl,
+      coverImageAttribution,
     }, 200)
   } catch (error) {
     console.error('maps-place-lookup failed', error)
@@ -152,6 +183,9 @@ interface OpeningHoursPeriodPoint { day: number; hour: number; minute: number }
 interface OpeningHoursPeriod { open?: OpeningHoursPeriodPoint; close?: OpeningHoursPeriodPoint }
 interface OpeningHours { periods?: OpeningHoursPeriod[] }
 
+interface PlacePhotoAttribution { displayName?: string }
+interface PlacePhoto { name: string; authorAttributions?: PlacePhotoAttribution[] }
+
 interface PlaceDetails {
   displayName?: { text?: string }
   formattedAddress?: string
@@ -164,12 +198,13 @@ interface PlaceDetails {
   location?: LatLng
   primaryTypeDisplayName?: { text?: string }
   regularOpeningHours?: OpeningHours
+  photos?: PlacePhoto[]
 }
 
 async function placeDetails(apiKey: string, placeId: string): Promise<PlaceDetails> {
   const fields = [
     'displayName', 'formattedAddress', 'internationalPhoneNumber', 'websiteUri', 'googleMapsUri',
-    'priceLevel', 'types', 'businessStatus', 'location', 'primaryTypeDisplayName', 'regularOpeningHours',
+    'priceLevel', 'types', 'businessStatus', 'location', 'primaryTypeDisplayName', 'regularOpeningHours', 'photos',
   ].join(',')
   // languageCode is a query param here (this is a GET, unlike Text Search's
   // POST body) -- keeps displayName/primaryTypeDisplayName in Italian
@@ -214,6 +249,29 @@ async function walkingMinutesBetween(apiKey: string, origin: LatLng, destination
   const seconds = Number(duration.replace(/s$/, ''))
   if (!Number.isFinite(seconds)) return null
   return Math.max(1, Math.round(seconds / 60))
+}
+
+// Fetches the actual photo bytes from Google's Photo Media endpoint (a
+// separate call from Place Details, its own billed SKU) and re-hosts them
+// in our own public bucket, so the restaurant list can show a plain <img
+// src> instead of proxying through Google (and so the URL still works if
+// this key's photo access ever changes). Google's terms cap how long a
+// cached Place Photo may be kept (30 days) before it has to be re-fetched
+// -- fine for a one-shot import a staff member can always re-run, but this
+// isn't yet wired to auto-refresh if the restaurant's photo is kept far
+// longer than that.
+async function importCoverPhoto(storage: SupabaseClient, apiKey: string, placeId: string, photoName: string): Promise<string | null> {
+  const response = await fetch(`https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=1200`, {
+    headers: { 'X-Goog-Api-Key': apiKey },
+  })
+  if (!response.ok) throw new Error(`place_photo_media_http_${response.status}`)
+  const contentType = response.headers.get('content-type') ?? 'image/jpeg'
+  const extension = contentType.includes('png') ? 'png' : 'jpg'
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  const path = `restaurants/${placeId}.${extension}`
+  const { error } = await storage.storage.from('dining-photos').upload(path, bytes, { contentType, upsert: true })
+  if (error) throw error
+  return storage.storage.from('dining-photos').getPublicUrl(path).data.publicUrl
 }
 
 interface ImportedHour { dayOfWeek: number; opensAt: string; closesAt: string }
