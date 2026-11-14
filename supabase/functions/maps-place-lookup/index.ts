@@ -107,6 +107,8 @@ Deno.serve(async (request: Request) => {
       hours: hoursFromOpeningHours(details.regularOpeningHours),
       coverImageUrl,
       coverImageAttribution,
+      googleRating: details.rating ?? null,
+      googleRatingCount: details.userRatingCount ?? null,
     }, 200)
   } catch (error) {
     console.error('maps-place-lookup failed', error)
@@ -199,12 +201,18 @@ interface PlaceDetails {
   primaryTypeDisplayName?: { text?: string }
   regularOpeningHours?: OpeningHours
   photos?: PlacePhoto[]
+  rating?: number
+  userRatingCount?: number
 }
 
 async function placeDetails(apiKey: string, placeId: string): Promise<PlaceDetails> {
+  // rating/userRatingCount are both "Pro" tier fields -- no higher than
+  // priceLevel/phone/website below already push this call to, so adding
+  // them costs nothing beyond what this call already bills per request.
   const fields = [
     'displayName', 'formattedAddress', 'internationalPhoneNumber', 'websiteUri', 'googleMapsUri',
     'priceLevel', 'types', 'businessStatus', 'location', 'primaryTypeDisplayName', 'regularOpeningHours', 'photos',
+    'rating', 'userRatingCount',
   ].join(',')
   // languageCode is a query param here (this is a GET, unlike Text Search's
   // POST body) -- keeps displayName/primaryTypeDisplayName in Italian

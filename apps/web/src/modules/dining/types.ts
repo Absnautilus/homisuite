@@ -35,6 +35,8 @@ export interface Restaurant {
   // wherever it's shown -- kept alongside the URL so every place that
   // renders cover_image_url can show it without a separate lookup.
   cover_image_attribution: string | null
+  google_rating: number | null
+  google_rating_count: number | null
 }
 
 export type CommercialAgreement = 'partner_commission' | 'partner_no_commission' | 'none'

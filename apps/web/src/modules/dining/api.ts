@@ -146,6 +146,8 @@ export interface MapsPlaceLookupResult {
   // shown, per Google's Place Photos attribution requirement.
   coverImageUrl: string | null
   coverImageAttribution: string | null
+  googleRating: number | null
+  googleRatingCount: number | null
 }
 
 // Same error-unwrapping shape as Smart Inbox's own `invoke` helper --

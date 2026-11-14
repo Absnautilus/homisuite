@@ -130,6 +130,7 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
                 {categoryName(restaurant.category_id)}
                 {restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}
                 {restaurant.price_tier ? ` · ${'€'.repeat(restaurant.price_tier)}` : ''}
+                {restaurant.google_rating != null ? ` · ★ ${restaurant.google_rating.toFixed(1)}${restaurant.google_rating_count != null ? ` (${restaurant.google_rating_count})` : ''}` : ''}
                 {!restaurant.active ? ' · Disattivato' : ''}
               </div>
             </div>
@@ -202,11 +203,13 @@ interface CreateRestaurantFormState {
   walkMinutes: number | null
   coverImageUrl: string | null
   coverImageAttribution: string | null
+  googleRating: number | null
+  googleRatingCount: number | null
 }
 
 const EMPTY_CREATE_FORM: CreateRestaurantFormState = {
   name: '', cuisine: '', description: '', mapsUrl: '', websiteUrl: '', phone: '', address: '', priceTier: null, walkMinutes: null,
-  coverImageUrl: null, coverImageAttribution: null,
+  coverImageUrl: null, coverImageAttribution: null, googleRating: null, googleRatingCount: null,
 }
 
 function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClose, onSaved }: {
@@ -290,12 +293,15 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         walkMinutes: place.walkMinutes ?? current.walkMinutes,
         coverImageUrl: place.coverImageUrl ?? current.coverImageUrl,
         coverImageAttribution: place.coverImageAttribution ?? current.coverImageAttribution,
+        googleRating: place.googleRating ?? current.googleRating,
+        googleRatingCount: place.googleRatingCount ?? current.googleRatingCount,
       }))
       setImportedHours(place.hours)
       const infoParts = [
         place.hours.length > 0 ? `Orari importati (${place.hours.length} fasce).` : null,
         place.walkMinutes != null ? `Distanza a piedi: ${place.walkMinutes} min.` : null,
         place.coverImageUrl ? 'Foto importata.' : null,
+        place.googleRating != null ? `Voto Google: ${place.googleRating.toFixed(1)}${place.googleRatingCount != null ? ` (${place.googleRatingCount} recensioni)` : ''}.` : null,
       ].filter(Boolean)
       setImportInfo(infoParts.length > 0 ? infoParts.join(' ') : null)
       setImportNotice(place.businessStatus ? (BUSINESS_STATUS_WARNINGS[place.businessStatus] ?? null) : null)
@@ -327,6 +333,8 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         walk_minutes: form.walkMinutes,
         cover_image_url: form.coverImageUrl,
         cover_image_attribution: form.coverImageAttribution,
+        google_rating: form.googleRating,
+        google_rating_count: form.googleRatingCount,
         short_description: null,
         guest_tags: [],
         is_recommended: false,
