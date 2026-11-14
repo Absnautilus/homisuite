@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type PropsWithChildren, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 // A right-anchored panel for content that's read alongside the list behind
@@ -88,7 +89,13 @@ export function SlideOver({ open, title, description, onClose, footer, wide, chi
   }, [open])
 
   if (!open) return null
-  return (
+  // Portaled to <body> -- same reasoning as Modal in @homisuite/ui: this
+  // scrim lived inside .page-content, whose own fade-in CSS animation
+  // creates a stacking context there, trapping this scrim's z-index inside
+  // it and letting the shell's floating "?" help button (never a
+  // descendant of .page-content) draw on top of it regardless of either
+  // one's z-index number.
+  return createPortal(
     <div
       className="dining-slideover-scrim"
       role="presentation"
@@ -115,6 +122,7 @@ export function SlideOver({ open, title, description, onClose, footer, wide, chi
         <div className="dining-slideover-body">{children}</div>
         {footer ? <footer className="dining-slideover-foot">{footer}</footer> : null}
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }

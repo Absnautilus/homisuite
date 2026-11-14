@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, type PropsWithChildren, type ReactNode, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import './modal.css'
 
@@ -135,7 +136,15 @@ export function Modal({ open, title, description, footer, onClose, dismissible =
   }, [open, dismissible])
 
   if (!open) return null
-  return (
+  // Portaled to <body> -- rendered in place, this sat inside whatever
+  // ancestor the caller happened to nest it under, and a CSS `animation`
+  // on .page-content (the page-content-fade-in every routed page gets)
+  // creates its own stacking context there: this backdrop's own z-index
+  // then only ranks among *that* context's contents, not the whole page,
+  // letting the shell's own floating "?" help button (a sibling of
+  // .page-content, not a descendant) end up drawn on top of it regardless
+  // of either one's z-index number.
+  return createPortal(
     <div
       className="ui-modal-backdrop"
       role="presentation"
@@ -155,6 +164,7 @@ export function Modal({ open, title, description, footer, onClose, dismissible =
         <div className="ui-modal-body">{children}</div>
         {footer ? <footer className="ui-modal-footer">{footer}</footer> : null}
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
