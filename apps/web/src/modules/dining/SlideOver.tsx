@@ -26,6 +26,30 @@ export function SlideOver({ open, title, description, onClose, footer, wide, chi
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
+  // Alt-tabbing back to this window, or clicking the browser window after
+  // switching away from it, lands that refocusing click wherever the cursor
+  // already is -- usually this scrim, since it covers the whole viewport
+  // outside the panel. Without this guard that stray click reads as "click
+  // outside to dismiss" and closes the panel on nothing the person actually
+  // meant to interact with. The window briefly after a refocus is the only
+  // one this suppresses; a deliberate scrim click a moment later still
+  // closes normally.
+  const justRefocusedRef = useRef(false)
+  useEffect(() => {
+    if (!open) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    function onWindowFocus() {
+      justRefocusedRef.current = true
+      clearTimeout(timer)
+      timer = setTimeout(() => { justRefocusedRef.current = false }, 250)
+    }
+    window.addEventListener('focus', onWindowFocus)
+    return () => {
+      window.removeEventListener('focus', onWindowFocus)
+      clearTimeout(timer)
+    }
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -65,7 +89,17 @@ export function SlideOver({ open, title, description, onClose, footer, wide, chi
 
   if (!open) return null
   return (
-    <div className="dining-slideover-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div
+      className="dining-slideover-scrim"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (justRefocusedRef.current) {
+          justRefocusedRef.current = false
+          return
+        }
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <section
         ref={panelRef}
         className={`dining-slideover-panel${wide ? ' is-wide' : ''}`}

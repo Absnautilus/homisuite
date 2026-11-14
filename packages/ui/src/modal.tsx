@@ -34,6 +34,30 @@ export function Modal({ open, title, description, footer, onClose, dismissible =
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
+  // Alt-tabbing back to this window, or clicking the browser window after
+  // switching away from it, lands that refocusing click wherever the cursor
+  // already is -- usually this backdrop, since it covers the whole viewport
+  // outside the panel. Without this guard that stray click reads as "click
+  // outside to dismiss" and closes the modal on nothing the person actually
+  // meant to interact with. The window briefly after a refocus is the only
+  // one this suppresses; a deliberate backdrop click a moment later still
+  // closes normally.
+  const justRefocusedRef = useRef(false)
+  useEffect(() => {
+    if (!open) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    function onWindowFocus() {
+      justRefocusedRef.current = true
+      clearTimeout(timer)
+      timer = setTimeout(() => { justRefocusedRef.current = false }, 250)
+    }
+    window.addEventListener('focus', onWindowFocus)
+    return () => {
+      window.removeEventListener('focus', onWindowFocus)
+      clearTimeout(timer)
+    }
+  }, [open])
+
   // The morph: grow the panel from the trigger's on-screen rect to its own
   // final rect via the Web Animations API, rather than a fixed fade/slide --
   // this is what makes the modal read as opening "from" the button someone
@@ -112,7 +136,17 @@ export function Modal({ open, title, description, footer, onClose, dismissible =
 
   if (!open) return null
   return (
-    <div className="ui-modal-backdrop" role="presentation" onMouseDown={(event) => { if (dismissible && event.target === event.currentTarget) onClose() }}>
+    <div
+      className="ui-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (justRefocusedRef.current) {
+          justRefocusedRef.current = false
+          return
+        }
+        if (dismissible && event.target === event.currentTarget) onClose()
+      }}
+    >
       <section ref={panelRef} className="ui-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <header className="ui-modal-header">
           <div><h2 id={titleId}>{title}</h2>{description ? <p>{description}</p> : null}</div>
