@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, Modal } from '@homisuite/ui'
-import { Clock, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Clock, Download, Plus, Settings2, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, updateRestaurant, type RestaurantInput } from './api'
+import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, lookupMapsPlace, MapsLookupError, updateRestaurant, type RestaurantInput } from './api'
 import type { DiningCategory, Restaurant, RestaurantHour } from './types'
 import { DAY_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -163,6 +163,29 @@ export function RestaurantsTab({ hotelId, canManage }: RestaurantsTabProps) {
   )
 }
 
+const MAPS_LOOKUP_ERROR_MESSAGES: Record<string, string> = {
+  place_not_recognized: 'Non riesco a riconoscere un locale da questo link. Prova a incollare il link dalla pagina del ristorante aperta su Google Maps (non una ricerca o un link condiviso diverso).',
+  place_not_found: 'Nessun locale trovato su Google Maps con questo link.',
+  invalid_input: 'Incolla prima un link di Google Maps.',
+}
+
+const BUSINESS_STATUS_WARNINGS: Record<string, string> = {
+  CLOSED_TEMPORARILY: 'Attenzione: Google Maps segna questo locale come chiuso temporaneamente.',
+  CLOSED_PERMANENTLY: 'Attenzione: Google Maps segna questo locale come chiuso definitivamente.',
+}
+
+interface CreateRestaurantFormState {
+  name: string
+  cuisine: string
+  description: string
+  mapsUrl: string
+  websiteUrl: string
+  phone: string
+  address: string
+}
+
+const EMPTY_CREATE_FORM: CreateRestaurantFormState = { name: '', cuisine: '', description: '', mapsUrl: '', websiteUrl: '', phone: '', address: '' }
+
 function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: {
   open: boolean
   categories: DiningCategory[]
@@ -175,6 +198,11 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
   const [categoryId, setCategoryId] = useState('')
   const [isExternal, setIsExternal] = useState(true)
   const [requiresOnlineBooking, setRequiresOnlineBooking] = useState(false)
+  const [form, setForm] = useState<CreateRestaurantFormState>(EMPTY_CREATE_FORM)
+
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importNotice, setImportNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -183,26 +211,57 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
       setCategoryId(categories[0]?.id ?? '')
       setIsExternal(true)
       setRequiresOnlineBooking(false)
+      setForm(EMPTY_CREATE_FORM)
+      setImportUrl('')
+      setImportNotice(null)
     }
   }, [open, categories])
+
+  async function onImport() {
+    if (!importUrl.trim()) {
+      setImportNotice(MAPS_LOOKUP_ERROR_MESSAGES.invalid_input)
+      return
+    }
+    setImporting(true)
+    setImportNotice(null)
+    try {
+      const place = await lookupMapsPlace(supabase, importUrl.trim())
+      setForm((current) => ({
+        ...current,
+        name: place.name,
+        address: place.address ?? current.address,
+        phone: place.phone ?? current.phone,
+        websiteUrl: place.websiteUrl ?? current.websiteUrl,
+        mapsUrl: place.mapsUrl,
+        // Only a loose hint from Google's own categories -- never
+        // overwrites something the person already typed by hand.
+        cuisine: current.cuisine || place.cuisineHint || '',
+      }))
+      setImportNotice(place.businessStatus ? (BUSINESS_STATUS_WARNINGS[place.businessStatus] ?? null) : null)
+    } catch (cause) {
+      const code = cause instanceof MapsLookupError ? cause.code : null
+      setImportNotice((code && MAPS_LOOKUP_ERROR_MESSAGES[code]) ?? 'Importazione non riuscita. Puoi comunque compilare i campi a mano.')
+    } finally {
+      setImporting(false)
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
     setError(null)
     try {
-      const form = new FormData(event.currentTarget)
       const input: RestaurantInput = {
         category_id: categoryId,
-        name: String(form.get('name')),
-        description: String(form.get('description') || '') || null,
+        name: form.name,
+        description: form.description || null,
         is_external: isExternal,
-        maps_url: String(form.get('maps_url') || '') || null,
-        website_url: String(form.get('website_url') || '') || null,
-        phone: String(form.get('phone') || '') || null,
-        address: String(form.get('address') || '') || null,
+        maps_url: form.mapsUrl || null,
+        website_url: form.websiteUrl || null,
+        phone: form.phone || null,
+        address: form.address || null,
         requires_online_booking: requiresOnlineBooking,
-        cuisine: String(form.get('cuisine') || '') || null,
+        cuisine: form.cuisine || null,
         price_tier: null,
         walk_minutes: null,
         short_description: null,
@@ -234,21 +293,37 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
         </>
       )}
     >
+      <div className="form-field" style={{ marginBottom: 14 }}>
+        <span>Importa da Google Maps (facoltativo)</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="url"
+            value={importUrl}
+            onChange={(event) => setImportUrl(event.target.value)}
+            placeholder="https://maps.app.goo.gl/… o il link della pagina del ristorante"
+            style={{ flex: 1 }}
+          />
+          <Button type="button" variant="secondary" onClick={() => void onImport()} disabled={importing}>
+            <Download size={14} /> {importing ? 'Importo…' : 'Importa'}
+          </Button>
+        </div>
+        {importNotice ? <p className="form-error" role="alert" style={{ marginTop: 6 }}>{importNotice}</p> : null}
+      </div>
       <form className="modal-form" id="restaurant-create-form" onSubmit={submit}>
-        <label className="form-field"><span>Nome</span><input name="name" required minLength={1} maxLength={120} /></label>
+        <label className="form-field"><span>Nome</span><input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required minLength={1} maxLength={120} /></label>
         <label className="form-field"><span>Categoria</span>
           <Select id="restaurant-category" name="category" value={categoryId} onChange={setCategoryId}>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </Select>
         </label>
-        <label className="form-field"><span>Cucina</span><input name="cuisine" maxLength={60} /></label>
-        <label className="form-field"><span>Descrizione</span><textarea name="description" rows={2} maxLength={500} spellCheck={false} /></label>
+        <label className="form-field"><span>Cucina</span><input value={form.cuisine} onChange={(e) => setForm((f) => ({ ...f, cuisine: e.target.value }))} maxLength={60} /></label>
+        <label className="form-field"><span>Descrizione</span><textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} maxLength={500} spellCheck={false} /></label>
         <label className="form-field switch-field"><span>Ristorante convenzionato (esterno)</span><Switch checked={isExternal} onChange={() => setIsExternal((v) => !v)} aria-label="Ristorante esterno" /></label>
         <label className="form-field switch-field"><span>Prenotazione richiesta solo dal sito del ristorante</span><Switch checked={requiresOnlineBooking} onChange={() => setRequiresOnlineBooking((v) => !v)} aria-label="Prenotazione solo online" /></label>
-        <label className="form-field"><span>Link Google Maps</span><input name="maps_url" type="url" placeholder="https://maps.google.com/…" /></label>
-        <label className="form-field"><span>Sito web</span><input name="website_url" type="url" placeholder="https://…" /></label>
-        <label className="form-field"><span>Telefono</span><input name="phone" /></label>
-        <label className="form-field"><span>Indirizzo</span><input name="address" /></label>
+        <label className="form-field"><span>Link Google Maps</span><input value={form.mapsUrl} onChange={(e) => setForm((f) => ({ ...f, mapsUrl: e.target.value }))} type="url" placeholder="https://maps.google.com/…" /></label>
+        <label className="form-field"><span>Sito web</span><input value={form.websiteUrl} onChange={(e) => setForm((f) => ({ ...f, websiteUrl: e.target.value }))} type="url" placeholder="https://…" /></label>
+        <label className="form-field"><span>Telefono</span><input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></label>
+        <label className="form-field"><span>Indirizzo</span><input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} /></label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
       </form>
     </Modal>

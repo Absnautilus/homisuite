@@ -75,6 +75,41 @@ export async function deleteRestaurant(client: SupabaseClient, id: string): Prom
   await mutateOneOrThrow(client, 'restaurants', 'id', id, 'delete')
 }
 
+export class MapsLookupError extends Error {
+  constructor(readonly code: string | null) {
+    super(code ?? 'maps_lookup_failed')
+    this.name = 'MapsLookupError'
+  }
+}
+
+export interface MapsPlaceLookupResult {
+  name: string
+  address: string | null
+  phone: string | null
+  websiteUrl: string | null
+  mapsUrl: string
+  priceTier: 1 | 2 | 3 | 4 | null
+  cuisineHint: string | null
+  businessStatus: string | null
+}
+
+// Same error-unwrapping shape as Smart Inbox's own `invoke` helper --
+// supabase.functions.invoke puts a non-2xx response in `error.context`
+// rather than throwing with the function's own {error: code} body.
+export async function lookupMapsPlace(client: SupabaseClient, url: string): Promise<MapsPlaceLookupResult> {
+  const { data, error } = await client.functions.invoke('maps-place-lookup', { body: { url } })
+  if (error) {
+    let code: string | null = null
+    const context = (error as { context?: unknown }).context
+    if (context instanceof Response) {
+      const payload = await context.json().catch(() => null) as { error?: unknown } | null
+      code = typeof payload?.error === 'string' ? payload.error : null
+    }
+    throw new MapsLookupError(code)
+  }
+  return data as MapsPlaceLookupResult
+}
+
 export async function listHours(client: SupabaseClient, restaurantId: string): Promise<RestaurantHour[]> {
   const { data, error } = await client
     .from('restaurant_hours')
