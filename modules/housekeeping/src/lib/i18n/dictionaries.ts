@@ -69,7 +69,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Soggiorni',
     'staff.nav.admin': 'Gestione',
     'staff.nav.logout': 'Esci',
-    'staff.nav.settings': 'Impostazioni',
     'staff.accountDisabled': "Il tuo account è disattivato. Contatta l'amministratore dell'hotel.",
     'staff.routeUnavailable': 'Questa sezione non è disponibile per il tuo ruolo.',
 
@@ -482,7 +481,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Stays',
     'staff.nav.admin': 'Management',
     'staff.nav.logout': 'Log out',
-    'staff.nav.settings': 'Settings',
     'staff.accountDisabled': 'Your account is disabled. Contact the hotel administrator.',
     'staff.routeUnavailable': "This section isn't available for your role.",
 
@@ -895,7 +893,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Séjours',
     'staff.nav.admin': 'Gestion',
     'staff.nav.logout': 'Se déconnecter',
-    'staff.nav.settings': 'Paramètres',
     'staff.accountDisabled': "Votre compte est désactivé. Contactez l'administrateur de l'hôtel.",
     'staff.routeUnavailable': "Cette section n'est pas disponible pour votre rôle.",
 
@@ -1308,7 +1305,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Aufenthalte',
     'staff.nav.admin': 'Verwaltung',
     'staff.nav.logout': 'Abmelden',
-    'staff.nav.settings': 'Einstellungen',
     'staff.accountDisabled': 'Ihr Konto ist deaktiviert. Wenden Sie sich an den Hotel-Administrator.',
     'staff.routeUnavailable': 'Dieser Bereich ist für Ihre Rolle nicht verfügbar.',
 
@@ -1721,7 +1717,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Estancias',
     'staff.nav.admin': 'Gestión',
     'staff.nav.logout': 'Salir',
-    'staff.nav.settings': 'Configuración',
     'staff.accountDisabled': 'Tu cuenta está desactivada. Contacta con el administrador del hotel.',
     'staff.routeUnavailable': 'Esta sección no está disponible para tu rol.',
 
@@ -2134,7 +2129,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Estadias',
     'staff.nav.admin': 'Gestão',
     'staff.nav.logout': 'Sair',
-    'staff.nav.settings': 'Configurações',
     'staff.accountDisabled': 'A sua conta está desativada. Contacte o administrador do hotel.',
     'staff.routeUnavailable': 'Esta secção não está disponível para a sua função.',
 
@@ -2547,7 +2541,6 @@ export const dictionaries = {
     'staff.nav.stays': '宿泊',
     'staff.nav.admin': '管理',
     'staff.nav.logout': 'ログアウト',
-    'staff.nav.settings': '設定',
     'staff.accountDisabled': 'アカウントが無効になっています。ホテル管理者にお問い合わせください。',
     'staff.routeUnavailable': 'このセクションはあなたの役職では利用できません。',
 
@@ -2960,7 +2953,6 @@ export const dictionaries = {
     'staff.nav.stays': 'থাকার তথ্য',
     'staff.nav.admin': 'ব্যবস্থাপনা',
     'staff.nav.logout': 'লগআউট',
-    'staff.nav.settings': 'সেটিংস',
     'staff.accountDisabled': 'আপনার অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে। হোটেল অ্যাডমিনের সাথে যোগাযোগ করুন।',
     'staff.routeUnavailable': 'এই বিভাগটি আপনার ভূমিকার জন্য উপলব্ধ নয়।',
 
@@ -3373,7 +3365,6 @@ export const dictionaries = {
     'staff.nav.stays': 'प्रवास',
     'staff.nav.admin': 'प्रबंधन',
     'staff.nav.logout': 'लॉगआउट',
-    'staff.nav.settings': 'सेटिंग्स',
     'staff.accountDisabled': 'आपका अकाउंट निष्क्रिय कर दिया गया है। होटल एडमिन से संपर्क करें।',
     'staff.routeUnavailable': 'यह सेक्शन आपकी भूमिका के लिए उपलब्ध नहीं है।',
 
@@ -3786,7 +3777,6 @@ export const dictionaries = {
     'staff.nav.stays': 'الإقامات',
     'staff.nav.admin': 'الإدارة',
     'staff.nav.logout': 'تسجيل الخروج',
-    'staff.nav.settings': 'الإعدادات',
     'staff.accountDisabled': 'تم تعطيل حسابك. يرجى التواصل مع مسؤول الفندق.',
     'staff.routeUnavailable': 'هذا القسم غير متاح لدورك الوظيفي.',
 
@@ -4199,7 +4189,6 @@ export const dictionaries = {
     'staff.nav.stays': '住宿',
     'staff.nav.admin': '管理',
     'staff.nav.logout': '退出登录',
-    'staff.nav.settings': '设置',
     'staff.accountDisabled': '您的账户已被停用，请联系酒店管理员。',
     'staff.routeUnavailable': '您的角色无法访问此部分。',
 
@@ -4612,7 +4601,6 @@ export const dictionaries = {
     'staff.nav.stays': 'Проживания',
     'staff.nav.admin': 'Управление',
     'staff.nav.logout': 'Выйти',
-    'staff.nav.settings': 'Настройки',
     'staff.accountDisabled': 'Ваша учётная запись отключена. Обратитесь к администратору отеля.',
     'staff.routeUnavailable': 'Этот раздел недоступен для вашей роли.',
 

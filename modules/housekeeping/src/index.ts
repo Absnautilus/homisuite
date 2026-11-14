@@ -21,4 +21,4 @@ export { configureSupabaseClient } from './lib/supabase'
 // here can't reach it) know whether "Modalità semplice" is on for this
 // device, e.g. to relocate its own floating help button while the queue's
 // minimal bar is showing instead of floating over it.
-export { isSimpleModeEnabled, SIMPLE_MODE_CHANGE_EVENT } from './lib/simple-mode-context'
+export { isSimpleModeEnabled, setSimpleModeEnabled, SIMPLE_MODE_CHANGE_EVENT } from './lib/simple-mode-context'

@@ -6,6 +6,7 @@ import { isSimpleModeEnabled, SIMPLE_MODE_CHANGE_EVENT } from '@homisuite/housek
 import { shellNavigation } from '../app/navigation'
 import { GENERAL_HELP_KEY } from '../content/helpContent'
 import { HelpButton } from './HelpButton'
+import { SimplifiedSettingsButton } from './SimplifiedSettingsButton'
 import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { getPropertyLogoUrl } from '../core/propertyLogo'
@@ -216,6 +217,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       <div className="app-shell app-shell-minimal">
         <main className="page-content"><Outlet /></main>
         <HelpButton moduleKey="housekeeping" dock />
+        <SimplifiedSettingsButton dock />
       </div>
     )
   }
@@ -309,6 +311,7 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
       )}
 
       <HelpButton moduleKey={helpKeyForPath(effectivePathname)} dock={helpDock} />
+      <SimplifiedSettingsButton dock={helpDock} />
     </div>
   )
 }

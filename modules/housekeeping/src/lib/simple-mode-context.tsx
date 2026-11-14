@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 // A per-device display preference (same storage model as ui-scale-context),
 // not per-account: this is meant for a shared tablet at a fixed station,
@@ -27,6 +27,19 @@ export function isSimpleModeEnabled(): boolean {
   return readStored()
 }
 
+// The plain write side of the same cross-boundary API -- lets a component
+// outside this module's own tree (apps/web's simplified settings panel,
+// portaled into the minimal bar the same way its help button is) flip the
+// flag without needing a SimpleModeProvider of its own.
+export function setSimpleModeEnabled(next: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+  } catch {
+    // per-device convenience only -- fine if it doesn't persist
+  }
+  window.dispatchEvent(new Event(SIMPLE_MODE_CHANGE_EVENT))
+}
+
 interface SimpleModeContextValue {
   enabled: boolean
   setEnabled: (value: boolean) => void
@@ -37,14 +50,21 @@ const SimpleModeContext = createContext<SimpleModeContextValue | null>(null)
 export function SimpleModeProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabledState] = useState<boolean>(() => readStored())
 
+  // Keeps this provider's own state in sync with a write from outside this
+  // module's tree (see setSimpleModeEnabled above) -- without this, toggling
+  // it from the simplified settings panel wouldn't update this bar's own
+  // SimpleModeToggle until something else re-mounted it.
+  useEffect(() => {
+    function onChange() {
+      setEnabledState(readStored())
+    }
+    window.addEventListener(SIMPLE_MODE_CHANGE_EVENT, onChange)
+    return () => window.removeEventListener(SIMPLE_MODE_CHANGE_EVENT, onChange)
+  }, [])
+
   function setEnabled(next: boolean) {
     setEnabledState(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
-    } catch {
-      // per-device convenience only -- fine if it doesn't persist
-    }
-    window.dispatchEvent(new Event(SIMPLE_MODE_CHANGE_EVENT))
+    setSimpleModeEnabled(next)
   }
 
   const value = useMemo<SimpleModeContextValue>(() => ({ enabled, setEnabled }), [enabled])

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, LogOut, Settings } from 'lucide-react'
+import { ArrowLeft, LogOut } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '@/components/language-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
@@ -61,23 +61,20 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {simpleModeToggle && <SimpleModeToggle />}
-          {/* HelpButton (apps/web, outside this module entirely) portals
-              its trigger in here when docked, so the "?" is a real flex
-              sibling of Impostazioni/Esci -- see HELP_SLOT_ID in
-              HelpButton.tsx. `contents` keeps this wrapper itself out of
-              the box model so the portaled button isn't nested a level
-              deeper than its neighbors. Empty (no fallback rendered) for
-              any other consumer of this bar, since only the shell's own
-              HelpButton ever targets this id. */}
+          {/* Both slots below are filled by apps/web components (HelpButton,
+              SimplifiedSettingsButton) that live outside this module
+              entirely and portal their real trigger in here when docked --
+              real flex siblings of Esci, not fixed-position guesses. See
+              HELP_SLOT_ID / SETTINGS_SLOT_ID in those files. `contents`
+              keeps each wrapper itself out of the box model so the
+              portaled button isn't nested a level deeper than its
+              neighbors. Both stay empty for any other consumer of this
+              bar, since only those two shell-owned components ever target
+              these ids. Impostazioni opens in place here (no navigation,
+              see SimplifiedSettingsButton) rather than sending someone
+              back through the shell just to reach it. */}
           <span id="hk-minimal-bar-help-slot" className="contents" />
-          <Link
-            to="/settings"
-            aria-label={t('staff.nav.settings')}
-            title={t('staff.nav.settings')}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-          >
-            <Settings className="h-4.5 w-4.5" />
-          </Link>
+          <span id="hk-minimal-bar-settings-slot" className="contents" />
           <button
             type="button"
             onClick={() => void signOut()}
