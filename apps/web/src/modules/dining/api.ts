@@ -48,9 +48,17 @@ export async function deleteCategory(client: SupabaseClient, id: string): Promis
 // Same mechanism Housekeeping's own queue uses (subscribeToQueue) -- without
 // it, one staff member adding/editing a category only ever shows up for
 // everyone else's already-open session on their next manual reload.
+//
+// The suffix makes every call's channel topic unique: DiningPage keeps all
+// five of its tabs mounted at once (only hidden, never unmounted), so
+// RestaurantsTab and CategoriesTab both subscribe to this same table at the
+// same time -- without a unique topic per subscriber, both tried to join
+// the identical Phoenix channel name, which the server read as a duplicate
+// join and force-closed, and the client kept rejoining (and getting closed
+// again) in a tight loop -- the "continuous refresh" this was causing.
 export function subscribeToCategories(client: SupabaseClient, hotelId: string, onChange: () => void): () => void {
   const channel = client
-    .channel(`dining-categories-${hotelId}`)
+    .channel(`dining-categories-${hotelId}-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'dining_categories', filter: `hotel_id=eq.${hotelId}` }, onChange)
     .subscribe()
   return () => {
@@ -92,8 +100,11 @@ export async function deleteRestaurant(client: SupabaseClient, id: string): Prom
 // staff member just added (or edited, or deleted) otherwise never appears
 // here until this session happens to reload the page.
 export function subscribeToRestaurants(client: SupabaseClient, hotelId: string, onChange: () => void): () => void {
+  // Unique per call, same reasoning as subscribeToCategories above -- only
+  // one tab subscribes to this table today, but a unique topic costs
+  // nothing and means a second one added later can never collide either.
   const channel = client
-    .channel(`dining-restaurants-${hotelId}`)
+    .channel(`dining-restaurants-${hotelId}-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurants', filter: `hotel_id=eq.${hotelId}` }, onChange)
     .subscribe()
   return () => {
