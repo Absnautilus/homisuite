@@ -107,6 +107,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Precedente',
     'staff.queue.donePageNext': 'Successiva ›',
     'staff.queue.donePageLabel': 'Pagina {page} di {total}',
+    'staff.queue.completedToday': '{count} richieste evase oggi',
 
     'staff.row.defaultTypeName': 'Richiesta',
     'staff.row.opFailed': 'Operazione non riuscita, riprova.',
@@ -518,6 +519,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Previous',
     'staff.queue.donePageNext': 'Next ›',
     'staff.queue.donePageLabel': 'Page {page} of {total}',
+    'staff.queue.completedToday': '{count} requests completed today',
 
     'staff.row.defaultTypeName': 'Request',
     'staff.row.opFailed': "Operation didn't go through, try again.",
@@ -929,6 +931,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Précédent',
     'staff.queue.donePageNext': 'Suivant ›',
     'staff.queue.donePageLabel': 'Page {page} sur {total}',
+    'staff.queue.completedToday': '{count} demandes traitées aujourd’hui',
 
     'staff.row.defaultTypeName': 'Demande',
     'staff.row.opFailed': 'Échec de l’opération, réessayez.',
@@ -1340,6 +1343,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Zurück',
     'staff.queue.donePageNext': 'Weiter ›',
     'staff.queue.donePageLabel': 'Seite {page} von {total}',
+    'staff.queue.completedToday': '{count} Anfragen heute erledigt',
 
     'staff.row.defaultTypeName': 'Anfrage',
     'staff.row.opFailed': 'Vorgang fehlgeschlagen, bitte erneut versuchen.',
@@ -1751,6 +1755,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Anterior',
     'staff.queue.donePageNext': 'Siguiente ›',
     'staff.queue.donePageLabel': 'Página {page} de {total}',
+    'staff.queue.completedToday': '{count} solicitudes completadas hoy',
 
     'staff.row.defaultTypeName': 'Solicitud',
     'staff.row.opFailed': 'La operación no se ha podido completar, inténtalo de nuevo.',
@@ -2162,6 +2167,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Anterior',
     'staff.queue.donePageNext': 'Seguinte ›',
     'staff.queue.donePageLabel': 'Página {page} de {total}',
+    'staff.queue.completedToday': '{count} pedidos concluídos hoje',
 
     'staff.row.defaultTypeName': 'Pedido',
     'staff.row.opFailed': 'A operação falhou, tente novamente.',
@@ -2573,6 +2579,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ 前へ',
     'staff.queue.donePageNext': '次へ ›',
     'staff.queue.donePageLabel': '{page} / {total}ページ',
+    'staff.queue.completedToday': '今日完了したリクエスト {count} 件',
 
     'staff.row.defaultTypeName': 'リクエスト',
     'staff.row.opFailed': '操作に失敗しました。再度お試しください。',
@@ -2984,6 +2991,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ পূর্ববর্তী',
     'staff.queue.donePageNext': 'পরবর্তী ›',
     'staff.queue.donePageLabel': 'পৃষ্ঠা {page} / {total}',
+    'staff.queue.completedToday': 'আজ {count}টি অনুরোধ সম্পন্ন হয়েছে',
 
     'staff.row.defaultTypeName': 'অনুরোধ',
     'staff.row.opFailed': 'কাজটি সম্পন্ন হয়নি, আবার চেষ্টা করুন।',
@@ -3395,6 +3403,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ पिछला',
     'staff.queue.donePageNext': 'अगला ›',
     'staff.queue.donePageLabel': 'पृष्ठ {page} / {total}',
+    'staff.queue.completedToday': 'आज {count} अनुरोध पूरे हुए',
 
     'staff.row.defaultTypeName': 'अनुरोध',
     'staff.row.opFailed': 'कार्रवाई विफल रही, पुनः प्रयास करें।',
@@ -3806,6 +3815,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ السابق',
     'staff.queue.donePageNext': 'التالي ›',
     'staff.queue.donePageLabel': 'صفحة {page} من {total}',
+    'staff.queue.completedToday': 'تم إنجاز {count} طلبًا اليوم',
 
     'staff.row.defaultTypeName': 'طلب',
     'staff.row.opFailed': 'فشلت العملية، يرجى المحاولة مرة أخرى.',
@@ -4217,6 +4227,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ 上一页',
     'staff.queue.donePageNext': '下一页 ›',
     'staff.queue.donePageLabel': '第{page}页，共{total}页',
+    'staff.queue.completedToday': '今天已完成 {count} 个请求',
 
     'staff.row.defaultTypeName': '请求',
     'staff.row.opFailed': '操作失败，请重试。',
@@ -4628,6 +4639,7 @@ export const dictionaries = {
     'staff.queue.donePagePrev': '‹ Назад',
     'staff.queue.donePageNext': 'Вперёд ›',
     'staff.queue.donePageLabel': 'Страница {page} из {total}',
+    'staff.queue.completedToday': 'Сегодня выполнено запросов: {count}',
 
     'staff.row.defaultTypeName': 'Запрос',
     'staff.row.opFailed': 'Операция не выполнена, попробуйте снова.',

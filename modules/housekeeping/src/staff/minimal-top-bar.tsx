@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { LogOut } from 'lucide-react'
+import { LogoMark } from '@/components/logo'
 import { LanguageToggle } from '@/components/language-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
 import { SimpleModeToggle } from '@/components/simple-mode-toggle'
 import { TextSizeToggle } from '@/components/text-size-toggle'
 import { OnDutyToggle } from '@/staff/on-duty-toggle'
 import { signOut } from '@/lib/staff-api'
+import { useHotelName } from '@/lib/hotel-branding-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
 
@@ -37,10 +39,19 @@ function BarAction({ label, children }: { label: string; children: ReactNode }) 
 // point of this bar for both tiers is never routing through the shell.
 export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: StaffProfile; simpleModeToggle?: boolean }) {
   const { t } = useLocale()
+  const hotelName = useHotelName()
   const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div className="border-b border-line bg-surface">
+      {/* Who this device belongs to, at a glance, on a shared tablet moved
+          between stations -- the one thing this bare bar had no room for
+          before. Homisuite's own accent, not a day-to-day control, so it
+          reads as identity rather than another button to tap. */}
+      <div className="flex h-14 shrink-0 items-center gap-2.5 bg-accent px-4 sm:px-5">
+        <LogoMark className="h-5 w-5 shrink-0 text-white" mouthColor="var(--accent)" />
+        <span className="truncate text-[15px] font-bold text-white">{hotelName}</span>
+      </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
         <span
           role="img"

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { TrendingUp } from 'lucide-react'
 import { PageHeader, Tabs, useRememberedTab } from '@homisuite/ui'
 import { EmbeddedNav } from '@/staff/embedded-nav'
 import { MinimalTopBar } from '@/staff/minimal-top-bar'
@@ -11,6 +12,7 @@ import { playAlertSound } from '@/lib/beep'
 import { RequestRow } from '@/staff/request-row'
 import { ReorderableColumn } from '@/staff/reorderable-column'
 import { NewRequestForm } from '@/staff/new-request-form'
+import { cn } from '@/lib/cn'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
 import { useSimpleMode } from '@/lib/simple-mode-context'
@@ -114,10 +116,20 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
   const clampedDonePage = Math.min(donePage, doneTotalPages - 1)
   const donePageItems = done.slice(clampedDonePage * DONE_PAGE_SIZE, clampedDonePage * DONE_PAGE_SIZE + DONE_PAGE_SIZE)
 
+  // Just the day's own count, no target -- there's no "obiettivo" concept
+  // (per-property goal, rolling average, ...) to back a progress bar with
+  // yet, so this stays a plain number rather than a fabricated one.
+  const completedToday = useMemo(() => {
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    return (queue ?? []).filter((r) => r.status === 'completed' && r.completed_at && new Date(r.completed_at) >= startOfToday).length
+  }, [queue])
+
   const onAlert = useCallback((message: string, tone: 'info' | 'warning') => push(message, tone), [push])
   useRequestAlerts(active, onAlert)
 
   const showMinimalBar = Boolean(embeddedNav?.minimal) || showSimpleHome
+  const emptyStateClassName = cn('rounded-none border-0 bg-transparent shadow-none', showMinimalBar ? 'py-6' : 'py-10')
 
   return (
     // MinimalTopBar's own action row is fixed to the viewport bottom in
@@ -157,8 +169,27 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
         </div>
       )}
 
+      {showMinimalBar && (
+        <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5" data-tour="hk-tabs">
+          <SimpleQueueTiles
+            tab={tab as Tab}
+            onSelect={setTab}
+            newCount={pending.length}
+            inProgressCount={inProgress.length}
+            doneCount={done.length}
+          />
+        </div>
+      )}
+
+      {showMinimalBar && (
+        <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface px-4 py-3 sm:px-5">
+          <TrendingUp className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          <p className="text-sm font-bold text-foreground">{t('staff.queue.completedToday', { count: completedToday })}</p>
+        </div>
+      )}
+
       <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm" data-tour="hk-queue">
-        {!embeddedNav ? (
+        {!embeddedNav && (
           <div className="border-b border-line bg-surface px-4 py-3 sm:px-5" data-tour="hk-tabs">
             <Tabs
               items={[
@@ -172,17 +203,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
               aria-label={t('staff.queue.title')}
             />
           </div>
-        ) : embeddedNav.minimal || showSimpleHome ? (
-          <div className="border-b border-line bg-surface p-4 sm:p-5" data-tour="hk-tabs">
-            <SimpleQueueTiles
-              tab={tab as Tab}
-              onSelect={setTab}
-              newCount={pending.length}
-              inProgressCount={inProgress.length}
-              doneCount={done.length}
-            />
-          </div>
-        ) : null}
+        )}
         <div className="p-4 sm:p-5">
       {loadError ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">
@@ -202,7 +223,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
                 icon={<IconInboxEmpty className="h-6 w-6" />}
                 title={t('staff.queue.emptyActiveTitle')}
                 description={t('staff.queue.emptyActiveDesc')}
-                className="rounded-none border-0 bg-transparent py-10 shadow-none"
+                className={emptyStateClassName}
               />
             ) : (
               <ReorderableColumn
@@ -224,7 +245,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
                 icon={<IconInboxEmpty className="h-6 w-6" />}
                 title={t('staff.queue.emptyInProgressTitle')}
                 description={t('staff.queue.emptyInProgressDesc')}
-                className="rounded-none border-0 bg-transparent py-10 shadow-none"
+                className={emptyStateClassName}
               />
             ) : (
               <ReorderableColumn
@@ -242,7 +263,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
           </div>
           <div hidden={tab !== 'done'}>
             {done.length === 0 ? (
-              <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} className="rounded-none border-0 bg-transparent py-10 shadow-none" />
+              <EmptyState icon={<IconInboxEmpty className="h-6 w-6" />} title={t('staff.queue.emptyDoneTitle')} description={t('staff.queue.emptyDoneDesc')} className={emptyStateClassName} />
             ) : (
               <div className="space-y-3">
                 {donePageItems.map((request) => (

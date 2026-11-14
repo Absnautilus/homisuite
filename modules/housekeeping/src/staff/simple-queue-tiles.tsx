@@ -80,7 +80,7 @@ function Tile({
         // wide enough for it.
         'flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-center text-white transition-opacity sm:flex-row sm:gap-4 sm:px-5 sm:py-5 sm:text-left',
         tone,
-        active ? 'ring-4 ring-offset-2 ring-foreground/30' : 'opacity-85 hover:opacity-100',
+        active ? 'ring-3 ring-accent ring-offset-2' : 'opacity-85 hover:opacity-100',
       )}
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 sm:h-14 sm:w-14 sm:rounded-xl">{icon}</span>
