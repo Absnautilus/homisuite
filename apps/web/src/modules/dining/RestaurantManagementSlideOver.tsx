@@ -55,8 +55,34 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     const thisLoad = ++loadId.current
     setError(null)
     setTab('public')
-    setPublicForm(restaurant)
-    setCuratedForm(restaurant)
+    // Seeded with only the fields each tab's own inputs actually edit --
+    // not the whole restaurant -- so `saveAll`'s `{...restaurant,
+    // ...publicForm, ...curatedForm}` merge only ever overrides a field
+    // with the tab that owns it. Seeding both with the full restaurant
+    // (as before) meant whichever form the person never opened still held
+    // its untouched snapshot of every field, including the other tab's --
+    // and since it's spread last here, THAT stale snapshot silently won
+    // over whatever they'd actually just typed on the tab they did edit,
+    // on every save.
+    setPublicForm({
+      name: restaurant.name,
+      cuisine: restaurant.cuisine,
+      price_tier: restaurant.price_tier,
+      walk_minutes: restaurant.walk_minutes,
+      address: restaurant.address,
+      website_url: restaurant.website_url,
+      maps_url: restaurant.maps_url,
+      short_description: restaurant.short_description,
+      guest_tags: restaurant.guest_tags,
+    })
+    setCuratedForm({
+      is_recommended: restaurant.is_recommended,
+      sort_order: restaurant.sort_order,
+      concierge_description: restaurant.concierge_description,
+      ideal_for: restaurant.ideal_for,
+      guest_profile: restaurant.guest_profile,
+      active: restaurant.active,
+    })
     try {
       const [profile, nextStats] = await Promise.all([
         getOperationalProfile(supabase, restaurant.id),
