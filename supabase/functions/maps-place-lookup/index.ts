@@ -18,8 +18,9 @@ Deno.serve(async (request: Request) => {
   if (!authorization) return json({ error: 'missing_authorization' }, 401)
 
   try {
-    const body = await request.json() as { url?: unknown }
+    const body = await request.json() as { url?: unknown; hotelAddress?: unknown }
     const inputUrl = String(body.url ?? '').trim()
+    const hotelAddress = typeof body.hotelAddress === 'string' ? body.hotelAddress.trim() : ''
     if (!inputUrl) return json({ error: 'invalid_input' }, 400)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -49,6 +50,21 @@ Deno.serve(async (request: Request) => {
 
     const details = await placeDetails(placesApiKey, candidate.id)
 
+    // Best-effort: walking time needs the Routes API, which may not be
+    // enabled yet on this key, and needs the hotel's own address to even
+    // attempt -- neither is a reason to fail the rest of the import.
+    let walkMinutes: number | null = null
+    if (hotelAddress && details.location) {
+      try {
+        const hotelPlace = await textSearch(placesApiKey, hotelAddress, null, null, 'places.location')
+        if (hotelPlace?.location) {
+          walkMinutes = await walkingMinutesBetween(placesApiKey, hotelPlace.location, details.location)
+        }
+      } catch (cause) {
+        console.error('walking distance lookup failed', cause)
+      }
+    }
+
     return json({
       name: details.displayName?.text ?? name,
       address: details.formattedAddress ?? null,
@@ -56,8 +72,10 @@ Deno.serve(async (request: Request) => {
       websiteUrl: details.websiteUri ?? null,
       mapsUrl: details.googleMapsUri ?? inputUrl,
       priceTier: mapPriceLevel(details.priceLevel),
-      cuisineHint: cuisineHintFromTypes(details.types ?? []),
+      cuisineHint: details.primaryTypeDisplayName?.text ?? cuisineHintFromTypes(details.types ?? []),
       businessStatus: details.businessStatus ?? null,
+      walkMinutes,
+      hours: hoursFromOpeningHours(details.regularOpeningHours),
     }, 200)
   } catch (error) {
     console.error('maps-place-lookup failed', error)
@@ -104,22 +122,24 @@ function extractNameAndCoords(url: string): { name: string | null; lat: number |
   return { name, lat, lng }
 }
 
-interface PlaceCandidate { id: string }
+interface LatLng { latitude: number; longitude: number }
+interface PlaceCandidate { id: string; location?: LatLng }
 
-async function textSearch(apiKey: string, query: string, lat: number | null, lng: number | null): Promise<PlaceCandidate | null> {
-  const requestBody: Record<string, unknown> = { textQuery: query }
+async function textSearch(apiKey: string, query: string, lat: number | null, lng: number | null, extraFields = ''): Promise<PlaceCandidate | null> {
+  const requestBody: Record<string, unknown> = { textQuery: query, languageCode: 'it' }
   // Biases the search toward the coordinate the link itself was centered
   // on -- without it, a common restaurant name could resolve to a
   // same-named place in a different city entirely.
   if (lat != null && lng != null) {
     requestBody.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 500 } }
   }
+  const fieldMask = ['places.id', 'places.displayName', extraFields].filter(Boolean).join(',')
   const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'places.id,places.displayName',
+      'X-Goog-FieldMask': fieldMask,
     },
     body: JSON.stringify(requestBody),
   })
@@ -127,6 +147,10 @@ async function textSearch(apiKey: string, query: string, lat: number | null, lng
   const data = await response.json() as { places?: PlaceCandidate[] }
   return data.places?.[0] ?? null
 }
+
+interface OpeningHoursPeriodPoint { day: number; hour: number; minute: number }
+interface OpeningHoursPeriod { open?: OpeningHoursPeriodPoint; close?: OpeningHoursPeriodPoint }
+interface OpeningHours { periods?: OpeningHoursPeriod[] }
 
 interface PlaceDetails {
   displayName?: { text?: string }
@@ -137,11 +161,21 @@ interface PlaceDetails {
   priceLevel?: string
   types?: string[]
   businessStatus?: string
+  location?: LatLng
+  primaryTypeDisplayName?: { text?: string }
+  regularOpeningHours?: OpeningHours
 }
 
 async function placeDetails(apiKey: string, placeId: string): Promise<PlaceDetails> {
-  const fields = ['displayName', 'formattedAddress', 'internationalPhoneNumber', 'websiteUri', 'googleMapsUri', 'priceLevel', 'types', 'businessStatus'].join(',')
-  const response = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+  const fields = [
+    'displayName', 'formattedAddress', 'internationalPhoneNumber', 'websiteUri', 'googleMapsUri',
+    'priceLevel', 'types', 'businessStatus', 'location', 'primaryTypeDisplayName', 'regularOpeningHours',
+  ].join(',')
+  // languageCode is a query param here (this is a GET, unlike Text Search's
+  // POST body) -- keeps displayName/primaryTypeDisplayName in Italian
+  // regardless of whoever last indexed the place, matching the rest of the
+  // app, rather than whatever language Google happens to default to.
+  const response = await fetch(`https://places.googleapis.com/v1/places/${placeId}?languageCode=it`, {
     headers: {
       'X-Goog-Api-Key': apiKey,
       'X-Goog-FieldMask': fields,
@@ -149,6 +183,61 @@ async function placeDetails(apiKey: string, placeId: string): Promise<PlaceDetai
   })
   if (!response.ok) throw new Error(`place_details_http_${response.status}`)
   return await response.json() as PlaceDetails
+}
+
+// Routes API, a separate Google API from Places -- walking time is simply
+// not something Places itself knows (it has no notion of "from where").
+// Falls back to null (never throws past its own caller) if the API isn't
+// enabled yet on this key, same as any other transient failure here.
+async function walkingMinutesBetween(apiKey: string, origin: LatLng, destination: LatLng): Promise<number | null> {
+  const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'routes.duration',
+    },
+    body: JSON.stringify({
+      origin: { location: { latLng: origin } },
+      destination: { location: { latLng: destination } },
+      travelMode: 'WALK',
+    }),
+  })
+  if (!response.ok) {
+    console.error('routes_api_http', response.status, await response.text().catch(() => ''))
+    return null
+  }
+  const data = await response.json() as { routes?: Array<{ duration?: string }> }
+  const duration = data.routes?.[0]?.duration
+  if (!duration) return null
+  // Google returns a protobuf Duration as a string like "423s".
+  const seconds = Number(duration.replace(/s$/, ''))
+  if (!Number.isFinite(seconds)) return null
+  return Math.max(1, Math.round(seconds / 60))
+}
+
+interface ImportedHour { dayOfWeek: number; opensAt: string; closesAt: string }
+
+// Google's day field is already 0 = Sunday, the same convention this
+// project's own restaurant_hours.day_of_week uses -- no remapping needed.
+// A period without both ends (e.g. a 24h place, or a malformed row from
+// Google's own data) is dropped rather than guessed at.
+function hoursFromOpeningHours(hours: OpeningHours | undefined): ImportedHour[] {
+  if (!hours?.periods) return []
+  const result: ImportedHour[] = []
+  for (const period of hours.periods) {
+    if (!period.open || !period.close) continue
+    result.push({
+      dayOfWeek: period.open.day,
+      opensAt: formatTimeOfDay(period.open.hour, period.open.minute),
+      closesAt: formatTimeOfDay(period.close.hour, period.close.minute),
+    })
+  }
+  return result
+}
+
+function formatTimeOfDay(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`
 }
 
 function mapPriceLevel(level: string | undefined): 1 | 2 | 3 | 4 | null {

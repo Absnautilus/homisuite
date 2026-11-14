@@ -82,6 +82,12 @@ export class MapsLookupError extends Error {
   }
 }
 
+export interface MapsImportedHour {
+  dayOfWeek: number
+  opensAt: string
+  closesAt: string
+}
+
 export interface MapsPlaceLookupResult {
   name: string
   address: string | null
@@ -91,13 +97,18 @@ export interface MapsPlaceLookupResult {
   priceTier: 1 | 2 | 3 | 4 | null
   cuisineHint: string | null
   businessStatus: string | null
+  // null when the hotel's own address wasn't supplied, or the Routes API
+  // call failed (not enabled yet on this key, a transient error, ...) --
+  // never a reason to fail the rest of the import.
+  walkMinutes: number | null
+  hours: MapsImportedHour[]
 }
 
 // Same error-unwrapping shape as Smart Inbox's own `invoke` helper --
 // supabase.functions.invoke puts a non-2xx response in `error.context`
 // rather than throwing with the function's own {error: code} body.
-export async function lookupMapsPlace(client: SupabaseClient, url: string): Promise<MapsPlaceLookupResult> {
-  const { data, error } = await client.functions.invoke('maps-place-lookup', { body: { url } })
+export async function lookupMapsPlace(client: SupabaseClient, url: string, hotelAddress: string | null): Promise<MapsPlaceLookupResult> {
+  const { data, error } = await client.functions.invoke('maps-place-lookup', { body: { url, hotelAddress } })
   if (error) {
     let code: string | null = null
     const context = (error as { context?: unknown }).context

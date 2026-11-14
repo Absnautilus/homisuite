@@ -70,10 +70,13 @@ export function DiningModuleGate() {
     )
   }
 
+  const hotelAddress = typeof runtime.property?.settings.address === 'string' ? runtime.property.settings.address : null
+
   return (
     <DiningPage
       hotelId={access.hotelId}
       hotelName={runtime.property?.name ?? 'Struttura'}
+      hotelAddress={hotelAddress}
       canManage={Boolean(canManage)}
       staffProfileId={access.staffProfileId}
       timezone={runtime.property?.timezone ?? 'UTC'}

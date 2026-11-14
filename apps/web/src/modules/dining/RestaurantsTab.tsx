@@ -5,7 +5,7 @@ import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, lookupMapsPlace, MapsLookupError, updateRestaurant, type RestaurantInput } from './api'
+import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, lookupMapsPlace, MapsLookupError, updateRestaurant, type MapsImportedHour, type RestaurantInput } from './api'
 import type { DiningCategory, Restaurant, RestaurantHour } from './types'
 import { DAY_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -13,10 +13,11 @@ import { RestaurantManagementSlideOver } from './RestaurantManagementSlideOver'
 
 interface RestaurantsTabProps {
   hotelId: string
+  hotelAddress: string | null
   canManage: boolean
 }
 
-export function RestaurantsTab({ hotelId, canManage }: RestaurantsTabProps) {
+export function RestaurantsTab({ hotelId, hotelAddress, canManage }: RestaurantsTabProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [categories, setCategories] = useState<DiningCategory[]>([])
   const [loading, setLoading] = useState(true)
@@ -148,6 +149,7 @@ export function RestaurantsTab({ hotelId, canManage }: RestaurantsTabProps) {
         open={creating}
         categories={categories}
         hotelId={hotelId}
+        hotelAddress={hotelAddress}
         onClose={() => setCreating(false)}
         onSaved={async () => { setCreating(false); await load() }}
       />
@@ -182,14 +184,19 @@ interface CreateRestaurantFormState {
   websiteUrl: string
   phone: string
   address: string
+  priceTier: 1 | 2 | 3 | 4 | null
+  walkMinutes: number | null
 }
 
-const EMPTY_CREATE_FORM: CreateRestaurantFormState = { name: '', cuisine: '', description: '', mapsUrl: '', websiteUrl: '', phone: '', address: '' }
+const EMPTY_CREATE_FORM: CreateRestaurantFormState = {
+  name: '', cuisine: '', description: '', mapsUrl: '', websiteUrl: '', phone: '', address: '', priceTier: null, walkMinutes: null,
+}
 
-function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: {
+function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClose, onSaved }: {
   open: boolean
   categories: DiningCategory[]
   hotelId: string
+  hotelAddress: string | null
   onClose: () => void
   onSaved: () => Promise<void>
 }) {
@@ -203,6 +210,13 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importNotice, setImportNotice] = useState<string | null>(null)
+  // Separate from importNotice -- a neutral "ecco cosa ho trovato" summary
+  // after a successful import, never styled like the warnings/errors above.
+  const [importInfo, setImportInfo] = useState<string | null>(null)
+  // Orari arrivano come righe separate (restaurant_hours), non un campo del
+  // form -- tenute qui finché il ristorante non esiste davvero, poi
+  // inserite una per una subito dopo la creazione (vedi submit()).
+  const [importedHours, setImportedHours] = useState<MapsImportedHour[]>([])
 
   // Resets the whole form, but ONLY on open itself -- `categories` (read
   // below for its starting default) is deliberately NOT a dependency here.
@@ -221,6 +235,8 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
       setForm(EMPTY_CREATE_FORM)
       setImportUrl('')
       setImportNotice(null)
+      setImportInfo(null)
+      setImportedHours([])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -240,8 +256,9 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
     }
     setImporting(true)
     setImportNotice(null)
+    setImportInfo(null)
     try {
-      const place = await lookupMapsPlace(supabase, importUrl.trim())
+      const place = await lookupMapsPlace(supabase, importUrl.trim(), hotelAddress)
       setForm((current) => ({
         ...current,
         name: place.name,
@@ -252,7 +269,15 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
         // Only a loose hint from Google's own categories -- never
         // overwrites something the person already typed by hand.
         cuisine: current.cuisine || place.cuisineHint || '',
+        priceTier: place.priceTier ?? current.priceTier,
+        walkMinutes: place.walkMinutes ?? current.walkMinutes,
       }))
+      setImportedHours(place.hours)
+      const infoParts = [
+        place.hours.length > 0 ? `Orari importati (${place.hours.length} fasce).` : null,
+        place.walkMinutes != null ? `Distanza a piedi: ${place.walkMinutes} min.` : null,
+      ].filter(Boolean)
+      setImportInfo(infoParts.length > 0 ? infoParts.join(' ') : null)
       setImportNotice(place.businessStatus ? (BUSINESS_STATUS_WARNINGS[place.businessStatus] ?? null) : null)
     } catch (cause) {
       const code = cause instanceof MapsLookupError ? cause.code : null
@@ -278,8 +303,8 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
         address: form.address || null,
         requires_online_booking: requiresOnlineBooking,
         cuisine: form.cuisine || null,
-        price_tier: null,
-        walk_minutes: null,
+        price_tier: form.priceTier,
+        walk_minutes: form.walkMinutes,
         short_description: null,
         guest_tags: [],
         is_recommended: false,
@@ -287,7 +312,19 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
         ideal_for: null,
         guest_profile: null,
       }
-      await createRestaurant(supabase, hotelId, input)
+      const created = await createRestaurant(supabase, hotelId, input)
+      // Orari importati da Google Maps: righe a parte (restaurant_hours),
+      // inseribili solo ora che il ristorante ha davvero un id. Un
+      // fallimento qui non deve far sembrare la creazione stessa fallita --
+      // il ristorante esiste già; gli orari si aggiungono comunque a mano
+      // dalla scheda "Orari".
+      for (const hour of importedHours) {
+        try {
+          await addHour(supabase, created.id, hour.dayOfWeek, hour.opensAt, hour.closesAt)
+        } catch (cause) {
+          console.error('import orari failed', cause)
+        }
+      }
       await onSaved()
     } catch (cause) {
       setError(readableDiningError(cause))
@@ -324,6 +361,8 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
           </Button>
         </div>
         {importNotice ? <p className="form-error" role="alert" style={{ marginTop: 6 }}>{importNotice}</p> : null}
+        {importInfo ? <p className="muted" style={{ marginTop: 6 }}>{importInfo}</p> : null}
+        {!hotelAddress ? <p className="muted" style={{ marginTop: 6 }}>Imposta l'indirizzo della struttura in Impostazioni per importare anche la distanza a piedi.</p> : null}
       </div>
       <form className="modal-form" id="restaurant-create-form" onSubmit={submit}>
         <label className="form-field"><span>Nome</span><input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required minLength={1} maxLength={120} /></label>
@@ -332,6 +371,13 @@ function CreateRestaurantModal({ open, categories, hotelId, onClose, onSaved }: 
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </Select>
         </label>
+        <label className="form-field"><span>Fascia prezzo</span>
+          <Select id="restaurant-price-tier" name="price_tier" value={String(form.priceTier ?? '')} onChange={(v) => setForm((f) => ({ ...f, priceTier: (v ? Number(v) : null) as CreateRestaurantFormState['priceTier'] }))}>
+            <option value="">—</option>
+            <option value="1">€</option><option value="2">€€</option><option value="3">€€€</option><option value="4">€€€€</option>
+          </Select>
+        </label>
+        <label className="form-field"><span>Distanza a piedi (minuti)</span><input type="number" min={0} value={form.walkMinutes ?? ''} onChange={(e) => setForm((f) => ({ ...f, walkMinutes: e.target.value ? Number(e.target.value) : null }))} /></label>
         <label className="form-field"><span>Cucina</span><input value={form.cuisine} onChange={(e) => setForm((f) => ({ ...f, cuisine: e.target.value }))} maxLength={60} /></label>
         <label className="form-field"><span>Descrizione</span><textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} maxLength={500} spellCheck={false} /></label>
         <label className="form-field switch-field"><span>Ristorante convenzionato (esterno)</span><Switch checked={isExternal} onChange={() => setIsExternal((v) => !v)} aria-label="Ristorante esterno" /></label>
