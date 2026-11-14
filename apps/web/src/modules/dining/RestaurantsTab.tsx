@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, Modal } from '@homisuite/ui'
-import { Clock, Download, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Clock, Download, Images, Plus, Settings2, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurants, lookupMapsPlace, MapsLookupError, subscribeToCategories, subscribeToRestaurants, updateRestaurant, type MapsImportedHour, type RestaurantInput } from './api'
+import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurantPhotos, listRestaurants, lookupMapsPlace, MapsLookupError, replaceRestaurantPhotos, subscribeToCategories, subscribeToRestaurants, updateRestaurant, type MapsImportedHour, type MapsImportedPhoto, type RestaurantInput, type RestaurantPhoto } from './api'
 import type { DiningCategory, Restaurant, RestaurantHour } from './types'
 import { DAY_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -25,6 +25,7 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   const [creating, setCreating] = useState(false)
   const [managing, setManaging] = useState<Restaurant | null>(null)
   const [hoursFor, setHoursFor] = useState<Restaurant | null>(null)
+  const [galleryFor, setGalleryFor] = useState<Restaurant | null>(null)
   const [filter, setFilter] = useState<'tutti' | 'consigliati' | 'visibili'>('tutti')
   const [confirmDialog, confirm] = useConfirm()
 
@@ -151,6 +152,7 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
             ) : <span />}
             {canManage ? (
               <div style={{ display: 'flex', gap: 2 }} onClick={(event) => event.stopPropagation()}>
+                <button className="icon-button" type="button" onClick={() => setGalleryFor(restaurant)} aria-label="Galleria foto"><Images size={16} /></button>
                 <button className="icon-button" type="button" onClick={() => setHoursFor(restaurant)} aria-label="Orari"><Clock size={16} /></button>
                 <button className="icon-button" type="button" onClick={() => setManaging(restaurant)} aria-label="Gestisci"><Settings2 size={16} /></button>
                 <button className="icon-button" type="button" onClick={() => void onDelete(restaurant)} aria-label="Elimina"><Trash2 size={16} /></button>
@@ -175,6 +177,7 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
         onSaved={async () => { setManaging(null); await load() }}
       />
       <HoursModal restaurant={hoursFor} onClose={() => setHoursFor(null)} />
+      <GalleryModal restaurant={galleryFor} hotelAddress={hotelAddress} onClose={() => setGalleryFor(null)} onSaved={load} />
       {confirmDialog}
     </section>
   )
@@ -201,15 +204,14 @@ interface CreateRestaurantFormState {
   address: string
   priceTier: 1 | 2 | 3 | 4 | null
   walkMinutes: number | null
-  coverImageUrl: string | null
-  coverImageAttribution: string | null
+  photos: MapsImportedPhoto[]
   googleRating: number | null
   googleRatingCount: number | null
 }
 
 const EMPTY_CREATE_FORM: CreateRestaurantFormState = {
   name: '', cuisine: '', description: '', mapsUrl: '', websiteUrl: '', phone: '', address: '', priceTier: null, walkMinutes: null,
-  coverImageUrl: null, coverImageAttribution: null, googleRating: null, googleRatingCount: null,
+  photos: [], googleRating: null, googleRatingCount: null,
 }
 
 function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClose, onSaved }: {
@@ -291,8 +293,7 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         cuisine: current.cuisine || place.cuisineHint || '',
         priceTier: place.priceTier ?? current.priceTier,
         walkMinutes: place.walkMinutes ?? current.walkMinutes,
-        coverImageUrl: place.coverImageUrl ?? current.coverImageUrl,
-        coverImageAttribution: place.coverImageAttribution ?? current.coverImageAttribution,
+        photos: place.photos.length > 0 ? place.photos : current.photos,
         googleRating: place.googleRating ?? current.googleRating,
         googleRatingCount: place.googleRatingCount ?? current.googleRatingCount,
       }))
@@ -300,7 +301,7 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
       const infoParts = [
         place.hours.length > 0 ? `Orari importati (${place.hours.length} fasce).` : null,
         place.walkMinutes != null ? `Distanza a piedi: ${place.walkMinutes} min.` : null,
-        place.coverImageUrl ? 'Foto importata.' : null,
+        place.photos.length > 0 ? `Foto importate (${place.photos.length}).` : null,
         place.googleRating != null ? `Voto Google: ${place.googleRating.toFixed(1)}${place.googleRatingCount != null ? ` (${place.googleRatingCount} recensioni)` : ''}.` : null,
       ].filter(Boolean)
       setImportInfo(infoParts.length > 0 ? infoParts.join(' ') : null)
@@ -331,8 +332,8 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         cuisine: form.cuisine || null,
         price_tier: form.priceTier,
         walk_minutes: form.walkMinutes,
-        cover_image_url: form.coverImageUrl,
-        cover_image_attribution: form.coverImageAttribution,
+        cover_image_url: form.photos[0]?.url ?? null,
+        cover_image_attribution: form.photos[0]?.attribution ?? null,
         google_rating: form.googleRating,
         google_rating_count: form.googleRatingCount,
         short_description: null,
@@ -353,6 +354,13 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
           await addHour(supabase, created.id, hour.dayOfWeek, hour.opensAt, hour.closesAt)
         } catch (cause) {
           console.error('import orari failed', cause)
+        }
+      }
+      if (form.photos.length > 0) {
+        try {
+          await replaceRestaurantPhotos(supabase, created.id, form.photos)
+        } catch (cause) {
+          console.error('import galleria failed', cause)
         }
       }
       await onSaved()
@@ -393,13 +401,15 @@ function CreateRestaurantModal({ open, categories, hotelId, hotelAddress, onClos
         {importNotice ? <p className="form-error" role="alert" style={{ marginTop: 6 }}>{importNotice}</p> : null}
         {importInfo ? <p className="muted" style={{ marginTop: 6 }}>{importInfo}</p> : null}
         {!hotelAddress ? <p className="muted" style={{ marginTop: 6 }}>Imposta l'indirizzo della struttura in Impostazioni per importare anche la distanza a piedi.</p> : null}
-        {form.coverImageUrl ? (
-          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src={form.coverImageUrl} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: 'cover' }} />
-            {/* Google's Place Photos terms require crediting the photo's
-                author wherever it's shown -- shown right alongside the
-                preview, not just stored for later. */}
-            {form.coverImageAttribution ? <span className="muted" style={{ fontSize: 12 }}>Foto: {form.coverImageAttribution}</span> : null}
+        {form.photos.length > 0 ? (
+          <div style={{ marginTop: 10, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {/* Google's Place Photos terms require crediting each photo's
+                own author wherever it's shown -- each thumbnail carries its
+                own attribution as a title (shown on hover), since the
+                strip can mix photos from different contributors. */}
+            {form.photos.map((photo, index) => (
+              <img key={index} src={photo.url} alt="" title={photo.attribution ?? undefined} style={{ width: 72, height: 72, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+            ))}
           </div>
         ) : null}
       </div>
@@ -496,6 +506,87 @@ function HoursModal({ restaurant, onClose }: { restaurant: Restaurant | null; on
         <input type="time" value={closesAt} onChange={(event) => setClosesAt(event.target.value)} required />
         <Button variant="secondary" type="submit"><Plus size={14} /> Aggiungi</Button>
       </form>
+    </Modal>
+  )
+}
+
+function GalleryModal({ restaurant, hotelAddress, onClose, onSaved }: {
+  restaurant: Restaurant | null
+  hotelAddress: string | null
+  onClose: () => void
+  onSaved: () => Promise<void>
+}) {
+  const [photos, setPhotos] = useState<RestaurantPhoto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    if (!restaurant) return
+    try {
+      setLoading(true)
+      setError(null)
+      setPhotos(await listRestaurantPhotos(supabase, restaurant.id))
+    } catch (cause) {
+      setError(readableDiningError(cause))
+    } finally {
+      setLoading(false)
+    }
+  }, [restaurant])
+
+  useEffect(() => { void load() }, [load])
+  useEffect(() => { if (restaurant) setRefreshNotice(null) }, [restaurant])
+
+  // Re-runs the same Google Maps lookup the creation form uses, keyed off
+  // this restaurant's own maps_url (no link to paste again) -- replaces
+  // its whole gallery and cover photo, and refreshes its rating, with
+  // whatever Google has now.
+  async function onRefresh() {
+    if (!restaurant) return
+    if (!restaurant.maps_url) {
+      setRefreshNotice('Questo ristorante non ha un link Google Maps salvato: aggiungilo dalla scheda "Gestisci" prima di poter aggiornare le foto.')
+      return
+    }
+    setRefreshing(true)
+    setRefreshNotice(null)
+    try {
+      const place = await lookupMapsPlace(supabase, restaurant.maps_url, hotelAddress)
+      await replaceRestaurantPhotos(supabase, restaurant.id, place.photos)
+      await updateRestaurant(supabase, restaurant.id, {
+        cover_image_url: place.photos[0]?.url ?? null,
+        cover_image_attribution: place.photos[0]?.attribution ?? null,
+        google_rating: place.googleRating,
+        google_rating_count: place.googleRatingCount,
+      })
+      await load()
+      await onSaved()
+      setRefreshNotice(place.photos.length > 0 ? `Foto aggiornate (${place.photos.length}).` : 'Nessuna foto trovata su Google Maps per questo locale.')
+    } catch (cause) {
+      const code = cause instanceof MapsLookupError ? cause.code : null
+      setRefreshNotice((code && MAPS_LOOKUP_ERROR_MESSAGES[code]) ?? 'Aggiornamento non riuscito. Riprova.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={Boolean(restaurant)}
+      title={`Foto — ${restaurant?.name ?? ''}`}
+      description="Scorri per vedere tutte le foto importate da Google Maps."
+      onClose={onClose}
+      footer={<Button variant="secondary" onClick={() => void onRefresh()} disabled={refreshing}><Download size={14} /> {refreshing ? 'Aggiorno…' : 'Aggiorna da Google Maps'}</Button>}
+    >
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
+      {refreshNotice ? <p className="muted" style={{ marginBottom: 10 }}>{refreshNotice}</p> : null}
+      {photos.length > 0 ? (
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
+          {photos.map((photo) => (
+            <img key={photo.id} src={photo.image_url} alt="" title={photo.attribution ?? undefined} style={{ width: 160, height: 160, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+          ))}
+        </div>
+      ) : (!loading ? <p className="muted">Nessuna foto importata. Usa "Aggiorna da Google Maps" per recuperarle.</p> : null)}
     </Modal>
   )
 }

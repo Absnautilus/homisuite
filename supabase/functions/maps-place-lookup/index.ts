@@ -74,23 +74,26 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    // Best-effort, same reasoning as walking distance above: a photo
+    // Best-effort, same reasoning as walking distance above: one photo
     // upload failing (Photo Media not enabled yet, a transient fetch
     // error, Storage hiccup, ...) is never a reason to fail the rest of
-    // an otherwise-successful import.
-    let coverImageUrl: string | null = null
-    let coverImageAttribution: string | null = null
-    const firstPhoto = details.photos?.[0]
-    if (firstPhoto) {
+    // an otherwise-successful import -- skip just that photo and keep
+    // going. Capped well under Google's own 10-per-place limit: a gallery
+    // doesn't need all of them, and each is its own billed Photo Media
+    // request.
+    const MAX_PHOTOS = 6
+    const photos: ImportedPhoto[] = []
+    for (const photo of (details.photos ?? []).slice(0, MAX_PHOTOS)) {
       try {
-        const uploaded = await importCoverPhoto(storage, placesApiKey, candidate.id, firstPhoto.name)
-        coverImageUrl = uploaded
-        coverImageAttribution = (firstPhoto.authorAttributions ?? [])
-          .map((attribution) => attribution.displayName)
+        const url = await importPhoto(storage, placesApiKey, candidate.id, photo.name, photos.length)
+        if (!url) continue
+        const attribution = (photo.authorAttributions ?? [])
+          .map((entry) => entry.displayName)
           .filter((value): value is string => Boolean(value))
           .join(', ') || null
+        photos.push({ url, attribution })
       } catch (cause) {
-        console.error('cover photo import failed', cause)
+        console.error('photo import failed', cause)
       }
     }
 
@@ -105,8 +108,7 @@ Deno.serve(async (request: Request) => {
       businessStatus: details.businessStatus ?? null,
       walkMinutes,
       hours: hoursFromOpeningHours(details.regularOpeningHours),
-      coverImageUrl,
-      coverImageAttribution,
+      photos,
       googleRating: details.rating ?? null,
       googleRatingCount: details.userRatingCount ?? null,
     }, 200)
@@ -259,16 +261,18 @@ async function walkingMinutesBetween(apiKey: string, origin: LatLng, destination
   return Math.max(1, Math.round(seconds / 60))
 }
 
+interface ImportedPhoto { url: string; attribution: string | null }
+
 // Fetches the actual photo bytes from Google's Photo Media endpoint (a
 // separate call from Place Details, its own billed SKU) and re-hosts them
-// in our own public bucket, so the restaurant list can show a plain <img
-// src> instead of proxying through Google (and so the URL still works if
-// this key's photo access ever changes). Google's terms cap how long a
-// cached Place Photo may be kept (30 days) before it has to be re-fetched
-// -- fine for a one-shot import a staff member can always re-run, but this
-// isn't yet wired to auto-refresh if the restaurant's photo is kept far
-// longer than that.
-async function importCoverPhoto(storage: SupabaseClient, apiKey: string, placeId: string, photoName: string): Promise<string | null> {
+// in our own public bucket, so the restaurant list/gallery can show a
+// plain <img src> instead of proxying through Google (and so the URL
+// still works if this key's photo access ever changes). Google's terms
+// cap how long a cached Place Photo may be kept (30 days) before it has
+// to be re-fetched -- fine for a one-shot import a staff member can
+// always re-run, but this isn't yet wired to auto-refresh if a
+// restaurant's photos are kept far longer than that.
+async function importPhoto(storage: SupabaseClient, apiKey: string, placeId: string, photoName: string, index: number): Promise<string | null> {
   const response = await fetch(`https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=1200`, {
     headers: { 'X-Goog-Api-Key': apiKey },
   })
@@ -276,7 +280,7 @@ async function importCoverPhoto(storage: SupabaseClient, apiKey: string, placeId
   const contentType = response.headers.get('content-type') ?? 'image/jpeg'
   const extension = contentType.includes('png') ? 'png' : 'jpg'
   const bytes = new Uint8Array(await response.arrayBuffer())
-  const path = `restaurants/${placeId}.${extension}`
+  const path = `restaurants/${placeId}-${index}.${extension}`
   const { error } = await storage.storage.from('dining-photos').upload(path, bytes, { contentType, upsert: true })
   if (error) throw error
   return storage.storage.from('dining-photos').getPublicUrl(path).data.publicUrl

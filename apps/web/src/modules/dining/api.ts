@@ -125,6 +125,14 @@ export interface MapsImportedHour {
   closesAt: string
 }
 
+export interface MapsImportedPhoto {
+  url: string
+  // null only when Google supplied no author name for this specific
+  // photo -- display it alongside the image wherever shown, per Google's
+  // Place Photos attribution requirement.
+  attribution: string | null
+}
+
 export interface MapsPlaceLookupResult {
   name: string
   address: string | null
@@ -139,13 +147,10 @@ export interface MapsPlaceLookupResult {
   // never a reason to fail the rest of the import.
   walkMinutes: number | null
   hours: MapsImportedHour[]
-  // Same best-effort reasoning as walkMinutes -- null if the place has no
-  // photo, the Photo Media fetch failed, or the upload to our own bucket
-  // failed. coverImageAttribution is null only when Google supplied no
-  // author name for the photo; display it alongside the image wherever
-  // shown, per Google's Place Photos attribution requirement.
-  coverImageUrl: string | null
-  coverImageAttribution: string | null
+  // Best-effort, same reasoning as walkMinutes -- empty if the place has
+  // no photos, or every Photo Media fetch/upload failed. Capped server-side
+  // (not every photo Google has).
+  photos: MapsImportedPhoto[]
   googleRating: number | null
   googleRatingCount: number | null
 }
@@ -187,6 +192,43 @@ export async function addHour(client: SupabaseClient, restaurantId: string, dayO
 
 export async function deleteHour(client: SupabaseClient, id: string): Promise<void> {
   await mutateOneOrThrow(client, 'restaurant_hours', 'id', id, 'delete')
+}
+
+export interface RestaurantPhoto {
+  id: string
+  restaurant_id: string
+  image_url: string
+  attribution: string | null
+  sort_order: number
+}
+
+export async function listRestaurantPhotos(client: SupabaseClient, restaurantId: string): Promise<RestaurantPhoto[]> {
+  const { data, error } = await client
+    .from('restaurant_photos')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('sort_order')
+  if (error) throw error
+  return data as RestaurantPhoto[]
+}
+
+// Swaps a restaurant's whole gallery for a freshly imported one -- re-running
+// an import (the create flow, or "Aggiorna foto" on an existing restaurant)
+// is meant to replace what Google has now, not pile duplicates on top of
+// whatever was imported last time.
+export async function replaceRestaurantPhotos(client: SupabaseClient, restaurantId: string, photos: MapsImportedPhoto[]): Promise<void> {
+  const { error: deleteError } = await client.from('restaurant_photos').delete().eq('restaurant_id', restaurantId)
+  if (deleteError) throw deleteError
+  if (photos.length === 0) return
+  const { error: insertError } = await client
+    .from('restaurant_photos')
+    .insert(photos.map((photo, index) => ({
+      restaurant_id: restaurantId,
+      image_url: photo.url,
+      attribution: photo.attribution,
+      sort_order: index,
+    })))
+  if (insertError) throw insertError
 }
 
 export async function listReservations(client: SupabaseClient, hotelId: string): Promise<ReservationRequest[]> {
