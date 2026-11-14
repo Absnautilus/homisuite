@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import type { Membership, ModuleEntitlement, Profile, Property } from '@homisuite/core-sdk'
@@ -52,6 +52,12 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
   const [property, setProperty] = useState<Property | null>(null)
   const [membership, setMembership] = useState<Membership | null>(null)
   const [entitlements, setEntitlements] = useState<ModuleEntitlement[]>([])
+  // Read inside the onAuthStateChange callback below, which otherwise only
+  // ever sees `session` as it was at the moment that effect was set up
+  // (stale closure) -- a ref is the one thing in that closure guaranteed to
+  // reflect the current value.
+  const sessionRef = useRef<Session | null>(null)
+  useEffect(() => { sessionRef.current = session }, [session])
 
   const load = useCallback(async () => {
     setStatus('loading')
@@ -106,27 +112,28 @@ export function ModuleRuntimeProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void load()
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      // Supabase silently rotates the access token on a timer, and also the
-      // moment the tab regains focus/visibility after being hidden -- firing
-      // TOKEN_REFRESHED, not a real sign-in/out. Running the full `load()`
-      // for it (which starts by setting status back to 'loading') made
-      // ShellLayout swap the whole routed page out for its skeleton on every
-      // such refresh, unmounting it and discarding anything typed or
-      // assigned there but not yet saved, just from switching tabs/apps and
-      // coming back. Nothing in the UI reads the session for anything that
-      // actually changes on a token refresh (just .user.email, same before
-      // and after) -- `supabase` already holds the renewed token internally
-      // for every API call it makes, regardless of what's in this context --
-      // so this ignores the event entirely rather than calling setSession.
-      // Still updating `session` here was its own, quieter version of the
-      // same bug: a new session object changes `runtime`'s identity, and
-      // every page whose data-fetch effect depends on `runtime` (to call
-      // `runtime.hasPermission`) re-ran its full fetch and flashed back to
-      // its own loading state on every single token refresh -- including
-      // Turni, wiping any shift edits not yet saved, without the Shell
-      // skeleton ever showing to make it obvious.
-      if (event === 'TOKEN_REFRESHED') return
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Supabase fires this for far more than an actual sign-in/out: a
+      // silently-rotated access token (on a timer, and also the moment the
+      // tab regains focus/visibility after being hidden) re-announces the
+      // same session, and re-fetching a user's own data after a proxy-user
+      // placeholder resolves re-announces it again. None of those are a
+      // real session transition -- the person signed in before this fired
+      // and is still signed in after it, under the same account. Running
+      // the full `load()` for any of them anyway (which starts by setting
+      // status back to 'loading') made ShellLayout swap the whole routed
+      // page out for its skeleton, unmounting it and discarding anything
+      // open or typed there but not yet saved, just from switching
+      // tabs/apps and coming back -- including a modal mid-edit, or Turni's
+      // own unsaved shift edits. Only reload when a session actually
+      // appears or disappears (a real sign-in or sign-out); nothing this
+      // context fetches (profile/properties/membership/entitlements)
+      // depends on anything else these events carry, and `supabase` already
+      // holds whatever token it needs internally regardless of what's kept
+      // here.
+      const hadSession = sessionRef.current !== null
+      const hasSession = nextSession !== null
+      if (hadSession === hasSession) return
       void load()
     })
     return () => data.subscription.unsubscribe()

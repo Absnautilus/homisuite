@@ -47,6 +47,11 @@ export function PlatformProvider({ children }: PropsWithChildren) {
   // refresh() call once already 'ready' this session -- one real access,
   // one real log entry, not one per poll.
   const consoleAccessLogged = useRef(false)
+  // Set inside `load()`, the one place that actually checks the session --
+  // read by the onAuthStateChange handler below to tell a real sign-in/out
+  // transition from Supabase just re-announcing the same session (see the
+  // comment there). null until the first `load()` resolves.
+  const hasSessionRef = useRef<boolean | null>(null)
 
   const load = useCallback(async () => {
     setStatus('loading')
@@ -55,6 +60,7 @@ export function PlatformProvider({ children }: PropsWithChildren) {
       const { data, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) throw sessionError
       const session: Session | null = data.session
+      hasSessionRef.current = session !== null
 
       if (!session) {
         setAdminStatus(null)
@@ -124,11 +130,17 @@ export function PlatformProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void load()
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      // Same reasoning as ModuleRuntimeContext: a token refresh is not a
-      // real sign-in/out and must not flash the console back to its
-      // loading skeleton.
-      if (event === 'TOKEN_REFRESHED') return
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Same reasoning as ModuleRuntimeContext: Supabase fires this for far
+      // more than an actual sign-in/out (a rotated access token, the tab
+      // regaining focus, a proxy-user placeholder resolving, ...), and none
+      // of those are a real session transition -- only reload when a
+      // session actually appears or disappears, never on a same-as-before
+      // re-announce, which otherwise flashes the console back to its
+      // loading skeleton and loses whatever was open there.
+      const hadSession = hasSessionRef.current
+      const hasSession = nextSession !== null
+      if (hadSession === hasSession) return
       consoleAccessLogged.current = false
       void load()
     })
