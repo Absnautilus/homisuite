@@ -20,5 +20,8 @@ export function readableDiningError(cause: unknown): string {
   }
   if (/closes_at|opens_at|restaurant_hours_closes_after_opens/i.test(message)) return 'L’orario di chiusura deve essere successivo a quello di apertura.'
   if (/confirmation_status/i.test(message)) return 'Stato di conferma non valido.'
+  if (/restaurant_reservation_requests_restaurant_id_fkey/i.test(message)) {
+    return 'Non puoi eliminare questo ristorante: ha delle prenotazioni associate. Disattivalo con l’interruttore "Visibile" invece di eliminarlo, oppure elimina prima le sue prenotazioni.'
+  }
   return 'Operazione non riuscita. Riprova.'
 }
