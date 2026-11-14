@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, LogOut } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { LanguageToggle } from '@/components/language-toggle'
 import { NotificationSettingsToggle } from '@/components/notification-settings-toggle'
 import { SimpleModeToggle } from '@/components/simple-mode-toggle'
@@ -33,7 +32,9 @@ function BarAction({ label, children }: { label: string; children: ReactNode }) 
 // with `simpleModeToggle`, as "Modalità semplice"'s own bar for roles that
 // opted into it -- same bare-minimum look, with the toggle itself next to
 // Esci (a mode switch, not a day-to-day comfort setting) so they can
-// switch back.
+// switch back. No way back into the shell from here at all (there used to
+// be a back arrow to "/") -- "/" is itself a shell route, and the whole
+// point of this bar for both tiers is never routing through the shell.
 export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: StaffProfile; simpleModeToggle?: boolean }) {
   const { t } = useLocale()
   const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()
@@ -41,24 +42,14 @@ export function MinimalTopBar({ profile, simpleModeToggle = false }: { profile: 
   return (
     <div className="border-b border-line bg-surface">
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-2.5">
-          <Link
-            to="/"
-            aria-label={t('simpleMode.backHome')}
-            title={t('simpleMode.backHome')}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <span
-            role="img"
-            aria-label={profile.name}
-            title={profile.name}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent"
-          >
-            {initials}
-          </span>
-        </div>
+        <span
+          role="img"
+          aria-label={profile.name}
+          title={profile.name}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent"
+        >
+          {initials}
+        </span>
         <div className="flex shrink-0 items-center gap-1">
           {simpleModeToggle && <SimpleModeToggle />}
           {/* Both slots below are filled by apps/web components (HelpButton,
