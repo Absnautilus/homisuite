@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Textarea } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
 import { CategoryIcon } from '@/components/category-icon'
-import { createDiningReservationRequest, fetchDiningCatalog, fetchDiningHours, isInvalidSessionError } from '@/lib/guest-api'
+import { createDiningReservationRequest, fetchDiningCatalog, fetchDiningHours, fetchDiningPhotos, isInvalidSessionError } from '@/lib/guest-api'
 import { useLocale } from '@/lib/i18n/locale-context'
-import type { DiningCategory, DiningHour, DiningRestaurant } from '@/lib/types'
+import type { DiningCategory, DiningHour, DiningPhoto, DiningRestaurant } from '@/lib/types'
 
 const PRICE_TIER = ['€', '€€', '€€€', '€€€€']
 
@@ -118,7 +118,11 @@ function RestaurantRow({ restaurant, categoryName, onSelect }: { restaurant: Din
       onClick={() => onSelect(restaurant)}
       className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-line bg-white p-3.5 text-left shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{restaurant.name[0]}</span>
+      {restaurant.cover_image_url ? (
+        <img src={restaurant.cover_image_url} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{restaurant.name[0]}</span>
+      )}
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold text-foreground">{restaurant.name}</span>
@@ -138,10 +142,20 @@ function RestaurantDetail({ restaurant, category, onBack, onRequest }: {
 }) {
   const { t, locale } = useLocale()
   const [hours, setHours] = useState<DiningHour[] | null>(null)
+  const [photos, setPhotos] = useState<DiningPhoto[]>([])
 
   useEffect(() => {
     fetchDiningHours(restaurant.id).then(setHours).catch(() => setHours([]))
+    fetchDiningPhotos(restaurant.id).then(setPhotos).catch(() => setPhotos([]))
   }, [restaurant.id])
+
+  // Google's Place Photos terms require crediting each photo's author
+  // wherever it's shown -- one caption below the strip, de-duplicated,
+  // rather than repeating the same name under every thumbnail.
+  const photoCredits = useMemo(
+    () => Array.from(new Set(photos.map((p) => p.attribution).filter((value): value is string => Boolean(value)))),
+    [photos],
+  )
 
   const hoursByDay = useMemo(() => {
     const map = new Map<number, DiningHour[]>()
@@ -159,9 +173,20 @@ function RestaurantDetail({ restaurant, category, onBack, onRequest }: {
         <ArrowLeft size={14} /> {t('flow.back')}
       </button>
 
-      <div className="flex h-36 items-center justify-center rounded-lg bg-gradient-to-br from-accent-soft to-surface-2 text-accent">
-        <CategoryIcon icon={category?.icon ?? null} className="h-10 w-10" />
-      </div>
+      {photos.length > 0 ? (
+        <div>
+          <div className="flex h-36 gap-2 overflow-x-auto">
+            {photos.map((photo) => (
+              <img key={photo.id} src={photo.image_url} alt="" className="h-36 w-48 shrink-0 rounded-lg object-cover" />
+            ))}
+          </div>
+          {photoCredits.length > 0 && <p className="mt-1 text-[0.65rem] text-muted">{t('dining.photoCredit', { names: photoCredits.join(', ') })}</p>}
+        </div>
+      ) : (
+        <div className="flex h-36 items-center justify-center rounded-lg bg-gradient-to-br from-accent-soft to-surface-2 text-accent">
+          <CategoryIcon icon={category?.icon ?? null} className="h-10 w-10" />
+        </div>
+      )}
 
       <div>
         <div className="flex items-center gap-2">

@@ -130,8 +130,16 @@ export function GuestApp() {
 
   // Hotel-scoped, not stay-scoped -- fetched as soon as there's a session,
   // independently of the stay info request above.
+  //
+  // Gated on hotelResolved === true, not just token: on a reload with an
+  // already-stored token, this effect and the slug-resolution effect above
+  // both fire from a cold start, and getHotelId() (which fetchAvailableModules
+  // calls first) throws until resolveHotelFromSlug's own request finishes
+  // populating it -- that throw landed here as a "transient failure" and
+  // silently fell back to Housekeeping-only, hiding every other module
+  // until the next reload happened to win the race the other way.
   useEffect(() => {
-    if (!token) return
+    if (!token || hotelResolved !== true) return
     let cancelled = false
     fetchAvailableModules()
       .then((modules) => {
@@ -140,8 +148,8 @@ export function GuestApp() {
         if (modules.length === 1 && modules[0]) setSelectedModuleSlug(modules[0].slug)
       })
       .catch(() => {
-        // A transient failure here shouldn't strand the guest on a
-        // spinner forever -- fall back to Housekeeping, the one module
+        // A genuinely transient failure here shouldn't strand the guest on
+        // a spinner forever -- fall back to Housekeeping, the one module
         // that has always existed, same as before this mechanism did.
         if (!cancelled) {
           setAvailableModules([])
@@ -151,7 +159,7 @@ export function GuestApp() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, hotelResolved])
 
   if (!checked || hotelResolved === null) {
     return (

@@ -60,6 +60,11 @@ export interface DiningRestaurant {
   guest_tags?: string[]
   is_recommended?: boolean
   concierge_description?: string | null
+  // Set once a staff member has run "Importa da Google Maps" (or the
+  // newer "Aggiorna foto") on this restaurant -- optional for the same
+  // reason as the fields above.
+  cover_image_url?: string | null
+  cover_image_attribution?: string | null
 }
 
 export interface DiningHour {
@@ -68,6 +73,13 @@ export interface DiningHour {
   day_of_week: number
   opens_at: string
   closes_at: string
+}
+
+export interface DiningPhoto {
+  id: string
+  image_url: string
+  attribution: string | null
+  sort_order: number
 }
 
 // Mirrors dining's own ConfirmationStatus (apps/web/src/modules/dining/

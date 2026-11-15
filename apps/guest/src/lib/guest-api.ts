@@ -9,7 +9,7 @@ import {
   getStoredHotelName,
   setResolvedHotel,
 } from '@/lib/env'
-import type { DiningCategory, DiningHour, DiningReservation, DiningRestaurant, GuestRequest, RequestCategory, RequestType } from '@/lib/types'
+import type { DiningCategory, DiningHour, DiningPhoto, DiningReservation, DiningRestaurant, GuestRequest, RequestCategory, RequestType } from '@/lib/types'
 
 export function isInvalidSessionError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('invalid_session')
@@ -104,6 +104,15 @@ export async function fetchDiningHours(restaurantId: string): Promise<DiningHour
   const { data, error } = await supabase.from('restaurant_hours').select('*').eq('restaurant_id', restaurantId).order('day_of_week').order('opens_at')
   if (error) throw error
   return (data ?? []) as DiningHour[]
+}
+
+// Same public-read trust model as fetchDiningHours above -- restaurant_photos'
+// own RLS (restaurant_photos_public_read) already gates this to active,
+// guest-facing restaurants.
+export async function fetchDiningPhotos(restaurantId: string): Promise<DiningPhoto[]> {
+  const { data, error } = await supabase.from('restaurant_photos').select('id, image_url, attribution, sort_order').eq('restaurant_id', restaurantId).order('sort_order')
+  if (error) throw error
+  return (data ?? []) as DiningPhoto[]
 }
 
 // create_dining_reservation_request (20261006110000_dining_guest_reservation_rpc)
