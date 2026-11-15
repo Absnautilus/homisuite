@@ -117,7 +117,16 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
     const isActive = employee.active !== false
     for (const [date, shift] of Object.entries(existingForEmployee)) {
       if (!isActive) { codeOf[employee.id]![date] = shift.code; continue }
-      const cellProtected = shift.locked || (shift.kind !== 'work' && shift.code !== 'R')
+      // A pre-existing 'R' is carried over unconditionally, not just when
+      // locked: Step 1 below recomputes rest days from pure rotation math,
+      // which can land one day off from a real month's actual rest pattern
+      // (manually entered or imported) -- without this, that drift either
+      // silently drops a day's work assignment (the math frees up a day
+      // that's actually a real rest day, assigns someone there, then the
+      // caller discards it as non-regeneratable) or piles a 3rd overlapping
+      // rest day onto a real 2-day pair. Everything else keeps the original
+      // rule: protected when locked, or already a non-work code.
+      const cellProtected = shift.locked || shift.code === 'R' || shift.kind !== 'work'
       if (cellProtected) codeOf[employee.id]![date] = shift.code
     }
   }

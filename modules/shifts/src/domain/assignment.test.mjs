@@ -75,6 +75,17 @@ test('a locked shift survives regardless of its kind', () => {
   assert.equal(assignments['3']['2026-07-10'], 'C2')
 })
 
+test('a pre-existing unlocked R survives even on a day the rotation math would not pick itself', () => {
+  // Employee '3' rests 2026-07-01/02 by pure rotation math and works
+  // 2026-07-03 (C1) from a clean slate -- confirmed above. A real/imported
+  // R on 2026-07-03 must stay R, not get silently replaced by the
+  // independently recomputed C1: that drift is exactly what let a real
+  // rest day get scheduled as a work day elsewhere (and the resulting
+  // "duplicate" assignment then silently discarded as non-regeneratable).
+  const { assignments } = run({ existingAssignments: { '3': { '2026-07-03': { code: 'R', locked: false, kind: 'rest' } } } })
+  assert.equal(assignments['3']['2026-07-03'], 'R')
+})
+
 test('an inactive employee is never touched: existing shift kept, no new shifts added', () => {
   const employees = baseEmployees().map((employee) => employee.id === '3' ? { ...employee, active: false } : employee)
   const { assignments } = run({ employees, existingAssignments: { '3': { '2026-07-01': { code: 'C1', locked: false, kind: 'work' } } } })
