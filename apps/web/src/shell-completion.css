@@ -405,8 +405,13 @@ table.dining-dense th.sortable { cursor: pointer; user-select: none; }
 table.dining-dense th.sortable:hover { color: var(--ink); }
 table.dining-dense th.sortable .arrow { opacity: .4; margin-left: 3px; }
 table.dining-dense th.sortable.is-sorted .arrow { opacity: 1; color: var(--accent-text); }
+.dining-inline-edit-trigger { all: unset; cursor: text; border-radius: var(--r-sm); padding: 3px 6px; margin: -3px -6px; }
+.dining-inline-edit-trigger:hover { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.dining-inline-edit-input { font: inherit; color: inherit; width: 100%; min-width: 60px; border: 1px solid var(--accent); border-radius: var(--r-sm); padding: 3px 6px; background: var(--surface); }
 
 /* ---------- restaurant catalog: curated toggles ---------- */
+.dining-category-heading { padding: 10px 16px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-top: 1px solid var(--line); }
+.dining-category-heading .muted { font-weight: 700; text-transform: none; letter-spacing: 0; }
 .dining-rest-row { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 14px; padding: 13px 16px; border-top: 1px solid var(--line); cursor: pointer; }
 .dining-rest-row:first-child { border-top: 0; }
 .dining-rest-row:hover { background: var(--surface-2); }

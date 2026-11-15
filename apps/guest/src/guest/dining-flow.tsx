@@ -84,7 +84,12 @@ function Discover({ categories, restaurants, onSelect }: {
   const { t } = useLocale()
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? ''
   const recommended = restaurants.filter((r) => r.is_recommended)
-  const others = restaurants.filter((r) => !r.is_recommended)
+  // Grouped by category below the recommended picks, rather than one flat
+  // "all restaurants" list -- same category order Impostazioni/Categorie
+  // already lists them in (categories arrives pre-sorted by sort_order).
+  const groups = categories
+    .map((category) => ({ category, restaurants: restaurants.filter((r) => r.category_id === category.id) }))
+    .filter((group) => group.restaurants.length > 0)
 
   return (
     <div className="space-y-5">
@@ -96,12 +101,14 @@ function Discover({ categories, restaurants, onSelect }: {
           </div>
         </section>
       )}
-      <section>
-        <h3 className="mb-2 text-sm font-semibold text-foreground">{recommended.length > 0 ? t('dining.others') : t('dining.allRestaurants')}</h3>
-        <div className="space-y-2">
-          {others.map((restaurant) => <RestaurantRow key={restaurant.id} restaurant={restaurant} categoryName={categoryName(restaurant.category_id)} onSelect={onSelect} />)}
-        </div>
-      </section>
+      {groups.map(({ category, restaurants: groupRestaurants }) => (
+        <section key={category.id}>
+          <h3 className="mb-2 text-sm font-semibold text-foreground">{category.name}</h3>
+          <div className="space-y-2">
+            {groupRestaurants.map((restaurant) => <RestaurantRow key={restaurant.id} restaurant={restaurant} categoryName="" onSelect={onSelect} />)}
+          </div>
+        </section>
+      ))}
       {restaurants.length === 0 && <p className="py-4 text-center text-sm text-muted">{t('dining.empty')}</p>}
     </div>
   )

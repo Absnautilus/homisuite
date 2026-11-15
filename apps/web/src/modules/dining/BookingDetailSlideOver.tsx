@@ -29,7 +29,7 @@ function formatDate(iso: string): string {
 // directly, in any direction, as a general fallback alongside those
 // buttons -- 'pending'/'declined' are left out as legacy-only values a
 // person should never newly pick, not because they can't occur.
-const EDITABLE_STATUSES: ConfirmationStatus[] = ['new', 'scheduled', 'in_progress', 'unavailable', 'confirmed', 'cancelled']
+export const EDITABLE_STATUSES: ConfirmationStatus[] = ['new', 'scheduled', 'in_progress', 'unavailable', 'confirmed', 'cancelled']
 
 export function BookingDetailSlideOver({ reservation, restaurants, canManage, onClose, onChanged }: BookingDetailSlideOverProps) {
   const [alternatives, setAlternativesState] = useState<ReservationAlternative[]>([])

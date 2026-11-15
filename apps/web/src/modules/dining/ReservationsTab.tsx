@@ -61,7 +61,7 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
       ) : view === 'oggi' ? (
         <OggiPanel reservations={reservations} restaurants={restaurants} timezone={timezone} onOpenDetail={setDetailId} />
       ) : (
-        <TuttePanel key={view} reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} timezone={timezone} mode={view === 'archivio' ? 'archive' : 'upcoming'} />
+        <TuttePanel key={view} reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} timezone={timezone} canManage={canManage} onChanged={load} mode={view === 'archivio' ? 'archive' : 'upcoming'} />
       )}
       <CreateReservationModal
         open={createOpen}

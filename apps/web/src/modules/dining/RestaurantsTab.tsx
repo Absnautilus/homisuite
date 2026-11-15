@@ -30,8 +30,6 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   const [confirmDialog, confirm] = useConfirm()
   const pushUndo = useUndo()
 
-  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? '—'
-
   const load = useCallback(async () => {
     try {
       setError(null)
@@ -119,6 +117,14 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name, 'it'))
 
+  // Grouped by category (in the same order as the Categorie tab lists
+  // them) instead of one flat list -- a category with nothing matching
+  // the current filter/search just doesn't get a section, rather than an
+  // empty header.
+  const groups = categories
+    .map((category) => ({ category, restaurants: visible.filter((r) => r.category_id === category.id) }))
+    .filter((group) => group.restaurants.length > 0)
+
   return (
     <section className="shell-card">
       <div className="section-heading split">
@@ -135,44 +141,48 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
         </div>
       ) : null}
       <div>
-        {visible.map((restaurant) => (
-          <div className="dining-rest-row" key={restaurant.id} onClick={() => setManaging(restaurant)}>
-            {restaurant.cover_image_url
-              ? <img className="dining-rest-thumb" src={restaurant.cover_image_url} alt="" />
-              : <div className="dining-rest-thumb">{restaurant.name[0]}</div>}
-            <div className="dining-rest-main">
-              <strong>{restaurant.name}</strong>
-              <div className="meta">
-                {categoryName(restaurant.category_id)}
-                {restaurant.cuisine ? ` · ${restaurant.cuisine}` : ''}
-                {restaurant.price_tier ? ` · ${'€'.repeat(restaurant.price_tier)}` : ''}
-                {restaurant.google_rating != null ? ` · ★ ${restaurant.google_rating.toFixed(1)}${restaurant.google_rating_count != null ? ` (${restaurant.google_rating_count})` : ''}` : ''}
-                {!restaurant.active ? ' · Disattivato' : ''}
+        {groups.map(({ category, restaurants: groupRestaurants }) => (
+          <div key={category.id}>
+            <div className="dining-category-heading">{category.name} <span className="muted">({groupRestaurants.length})</span></div>
+            {groupRestaurants.map((restaurant) => (
+              <div className="dining-rest-row" key={restaurant.id} onClick={() => setManaging(restaurant)}>
+                {restaurant.cover_image_url
+                  ? <img className="dining-rest-thumb" src={restaurant.cover_image_url} alt="" />
+                  : <div className="dining-rest-thumb">{restaurant.name[0]}</div>}
+                <div className="dining-rest-main">
+                  <strong>{restaurant.name}</strong>
+                  <div className="meta">
+                    {restaurant.cuisine ?? ''}
+                    {restaurant.price_tier ? ` · ${'€'.repeat(restaurant.price_tier)}` : ''}
+                    {restaurant.google_rating != null ? ` · ★ ${restaurant.google_rating.toFixed(1)}${restaurant.google_rating_count != null ? ` (${restaurant.google_rating_count})` : ''}` : ''}
+                    {!restaurant.active ? ' · Disattivato' : ''}
+                  </div>
+                </div>
+                {canManage ? (
+                  <button
+                    type="button"
+                    className={`dining-rec-badge${restaurant.is_recommended ? ' is-on' : ''}`}
+                    onClick={(event) => { event.stopPropagation(); void toggleRecommended(restaurant) }}
+                    title="Impostato dall'hotel"
+                  >
+                    Consigliato
+                  </button>
+                ) : restaurant.is_recommended ? <span className="dining-rec-badge is-on">Consigliato</span> : <span />}
+                {canManage ? (
+                  <div className="dining-vis-toggle" onClick={(event) => event.stopPropagation()}>
+                    Visibile <Switch checked={restaurant.active} onChange={() => void toggleVisible(restaurant)} aria-label={`Visibile — ${restaurant.name}`} />
+                  </div>
+                ) : <span />}
+                {canManage ? (
+                  <div style={{ display: 'flex', gap: 2 }} onClick={(event) => event.stopPropagation()}>
+                    <button className="icon-button" type="button" onClick={() => setGalleryFor(restaurant)} aria-label="Galleria foto"><Images size={16} /></button>
+                    <button className="icon-button" type="button" onClick={() => setHoursFor(restaurant)} aria-label="Orari"><Clock size={16} /></button>
+                    <button className="icon-button" type="button" onClick={() => setManaging(restaurant)} aria-label="Gestisci"><Settings2 size={16} /></button>
+                    <button className="icon-button" type="button" onClick={() => void onDelete(restaurant)} aria-label="Elimina"><Trash2 size={16} /></button>
+                  </div>
+                ) : <span />}
               </div>
-            </div>
-            {canManage ? (
-              <button
-                type="button"
-                className={`dining-rec-badge${restaurant.is_recommended ? ' is-on' : ''}`}
-                onClick={(event) => { event.stopPropagation(); void toggleRecommended(restaurant) }}
-                title="Impostato dall'hotel"
-              >
-                Consigliato
-              </button>
-            ) : restaurant.is_recommended ? <span className="dining-rec-badge is-on">Consigliato</span> : <span />}
-            {canManage ? (
-              <div className="dining-vis-toggle" onClick={(event) => event.stopPropagation()}>
-                Visibile <Switch checked={restaurant.active} onChange={() => void toggleVisible(restaurant)} aria-label={`Visibile — ${restaurant.name}`} />
-              </div>
-            ) : <span />}
-            {canManage ? (
-              <div style={{ display: 'flex', gap: 2 }} onClick={(event) => event.stopPropagation()}>
-                <button className="icon-button" type="button" onClick={() => setGalleryFor(restaurant)} aria-label="Galleria foto"><Images size={16} /></button>
-                <button className="icon-button" type="button" onClick={() => setHoursFor(restaurant)} aria-label="Orari"><Clock size={16} /></button>
-                <button className="icon-button" type="button" onClick={() => setManaging(restaurant)} aria-label="Gestisci"><Settings2 size={16} /></button>
-                <button className="icon-button" type="button" onClick={() => void onDelete(restaurant)} aria-label="Elimina"><Trash2 size={16} /></button>
-              </div>
-            ) : <span />}
+            ))}
           </div>
         ))}
         {!loading && visible.length === 0 && categories.length > 0 ? <p className="muted dining-empty-hint">Nessun ristorante trovato.</p> : null}
