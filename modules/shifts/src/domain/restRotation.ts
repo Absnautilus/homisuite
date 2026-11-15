@@ -71,14 +71,53 @@ function isRotatingRestDay(startWeekday: number, year: number, month: number, da
   return events.some((event) => event.includes(epochDay))
 }
 
-// The smallest non-negative integer not already used as another rotating
-// employee's slot. Assigned once per employee and persisted forever after --
-// recomputing it from array position on every run would reshuffle everyone
-// else's rest days each time staff are added, removed or reordered.
-export function nextFreeRotationSlot(profiles: Array<{ rotationSlot: number | null }>): number {
-  const used = new Set(profiles.filter((profile) => profile.rotationSlot != null).map((profile) => profile.rotationSlot as number))
+// Every profile's actual starting weekday, including the turnante-follows-
+// notturno override -- the one piece both isRestDay and
+// nextFreeRotationSlot need, so neither can drift from the other's idea of
+// who rests when.
+function effectiveStartWeekdays(profiles: RestRotationProfile[], turnanteFollowsNotturno: boolean): Record<string, number> {
+  const startWeekdayById: Record<string, number> = {}
+  for (const profile of profiles) {
+    if (profile.restMode !== 'fixed') {
+      startWeekdayById[profile.id] = ((profile.rotationSlot ?? 0) * 2) % 7
+    }
+  }
+  const notturnoTitolare = profiles.find((profile) => profile.shiftType === 'night')
+  const turnanteTitolare = profiles.find((profile) => profile.shiftType === 'rotating')
+  if (
+    turnanteFollowsNotturno &&
+    notturnoTitolare && turnanteTitolare &&
+    notturnoTitolare.restMode !== 'fixed' && turnanteTitolare.restMode !== 'fixed'
+  ) {
+    startWeekdayById[turnanteTitolare.id] = (startWeekdayById[notturnoTitolare.id]! + 2) % 7
+  }
+  return startWeekdayById
+}
+
+/**
+ * The smallest slot number that's both free property-wide (rotation_slot is
+ * unique across every unit by DB constraint, fixed-rest profiles included --
+ * `propertyProfiles` is that whole-property list) and, within this one
+ * unit, doesn't reproduce a weekday another active rotating profile already
+ * rests on. Slot numbers exactly 7 apart land on the same weekday, since the
+ * weekday is `(slot*2) mod 7` -- so picking by free integer alone could
+ * still hand out a slot that silently duplicates someone else's rest days
+ * while a free weekday sat unused. `unitProfiles` (plus the
+ * turnante-follows-notturno flag) is what makes that second check possible;
+ * omit it to fall back to pure free-integer behavior. Assigned once per
+ * employee and persisted forever after -- recomputing it from array
+ * position on every run would reshuffle everyone else's rest days each
+ * time staff are added, removed or reordered.
+ */
+export function nextFreeRotationSlot(
+  propertyProfiles: Array<{ rotationSlot: number | null }>,
+  unitProfiles: RestRotationProfile[] = [],
+  turnanteFollowsNotturno: boolean = true,
+): number {
+  const usedSlots = new Set(propertyProfiles.filter((profile) => profile.rotationSlot != null).map((profile) => profile.rotationSlot as number))
+  const usedWeekdays = new Set(Object.values(effectiveStartWeekdays(unitProfiles, turnanteFollowsNotturno)))
   let slot = 0
-  while (used.has(slot)) slot += 1
+  while (usedSlots.has(slot) || usedWeekdays.has((slot * 2) % 7)) slot += 1
   return slot
 }
 
@@ -131,23 +170,7 @@ export function isRestDay(
   turnanteFollowsNotturno: boolean,
   pairsPerCycle: number = DEFAULT_PAIRS_PER_CYCLE,
 ): Record<string, boolean> {
-  const startWeekdayById: Record<string, number> = {}
-  for (const profile of profiles) {
-    if (profile.restMode !== 'fixed') {
-      startWeekdayById[profile.id] = ((profile.rotationSlot ?? 0) * 2) % 7
-    }
-  }
-
-  const notturnoTitolare = profiles.find((profile) => profile.shiftType === 'night')
-  const turnanteTitolare = profiles.find((profile) => profile.shiftType === 'rotating')
-  if (
-    turnanteFollowsNotturno &&
-    notturnoTitolare && turnanteTitolare &&
-    notturnoTitolare.restMode !== 'fixed' && turnanteTitolare.restMode !== 'fixed'
-  ) {
-    startWeekdayById[turnanteTitolare.id] = (startWeekdayById[notturnoTitolare.id]! + 2) % 7
-  }
-
+  const startWeekdayById = effectiveStartWeekdays(profiles, turnanteFollowsNotturno)
   const result: Record<string, boolean> = {}
   for (const profile of profiles) {
     result[profile.id] = profile.restMode === 'fixed'

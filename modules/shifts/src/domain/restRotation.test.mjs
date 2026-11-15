@@ -133,6 +133,41 @@ test('nextFreeRotationSlot assigns the first free integer, not simply max+1', ()
   assert.equal(nextFreeRotationSlot(profiles), 1)
 })
 
+test('nextFreeRotationSlot skips an integer that would reproduce a weekday already in use, even though that integer itself is free', () => {
+  // Slots 0-7 are already taken property-wide (by this unit or others), so
+  // the next free INTEGER is 8 -- but 8 and the existing slot-1 person land
+  // on the same weekday (16 mod 7 === 2 mod 7 === 1*2 mod 7), so handing out
+  // 8 would silently put a new hire to rest on the exact same days as that
+  // slot-1 person. The picker must skip past it to slot 9 (weekday 4), the
+  // next integer whose weekday isn't already taken in this unit.
+  const propertyProfiles = [0, 1, 2, 3, 4, 5, 6, 7].map((rotationSlot) => ({ rotationSlot }))
+  const unitProfiles = [{ id: 'existing', shiftType: 'day', restMode: 'rotating', rotationSlot: 1, fixedRestDays: [] }]
+  assert.equal(nextFreeRotationSlot(propertyProfiles, unitProfiles), 9)
+})
+
+test('nextFreeRotationSlot keeps the turnante-follows-notturno weekday reserved even though no profile stores that slot directly', () => {
+  // The turnante's own rotationSlot (2 -> weekday 4) is overridden at
+  // render time by the notturno's weekday + 2 (0 + 2 = weekday 2) -- so a
+  // new hire must avoid weekday 2 too, not just weekday 4, or they'd
+  // collide with the turnante's real rest days instead of their nominal
+  // (unused) ones.
+  const propertyProfiles = [{ rotationSlot: 0 }, { rotationSlot: 2 }]
+  const unitProfiles = [
+    { id: 'notturno', shiftType: 'night', restMode: 'rotating', rotationSlot: 0, fixedRestDays: [] },
+    { id: 'turnante', shiftType: 'rotating', restMode: 'rotating', rotationSlot: 2, fixedRestDays: [] },
+  ]
+  // Slot 1 (weekday 2) would collide with the turnante's real, overridden
+  // rest days -- must be skipped even though no profile's own rotationSlot
+  // is 1 or maps to weekday 2 on its own.
+  assert.equal(nextFreeRotationSlot(propertyProfiles, unitProfiles, true), 3)
+})
+
+test('nextFreeRotationSlot falls back to pure free-integer behavior when no unit profiles are given', () => {
+  // Omitting unitProfiles (e.g. a caller that hasn't wired the per-unit
+  // weekday check) must not throw or change the original contract.
+  assert.equal(nextFreeRotationSlot([{ rotationSlot: 1 }]), 0)
+})
+
 test('an existing rotationSlot does not change when another profile is removed or reordered', () => {
   const before = [
     { id: 1, shiftType: 'day', restMode: 'rotating', rotationSlot: 0, fixedRestDays: [] },

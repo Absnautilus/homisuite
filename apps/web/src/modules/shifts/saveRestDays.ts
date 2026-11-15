@@ -38,23 +38,33 @@ async function setRestDaysForMonth(
   const memberIds = unit.people.map((person) => person.id)
   if (memberIds.length === 0) return {}
 
-  const [{ data: unitStaff, error: unitStaffError }, { data: restCode, error: restCodeError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
+  const [{ data: unitStaff, error: unitStaffError }, { data: unitMembers, error: unitMembersError }, { data: restCode, error: restCodeError }, { data: existingShifts, error: existingShiftsError }] = await Promise.all([
     supabase.from('shift_staff_profiles').select('id,shift_type,rest_mode,fixed_rest_days,rotation_slot').eq('property_id', propertyId).in('id', memberIds),
+    supabase.from('shift_unit_members').select('staff_profile_id,assignment_profile_key').eq('property_id', propertyId).eq('planning_unit_id', unit.id).in('staff_profile_id', memberIds),
     supabase.from('shift_codes').select('id').eq('property_id', propertyId).eq('planning_unit_id', unit.id).eq('code', 'R').maybeSingle(),
     supabase.from('shifts').select('staff_profile_id,shift_date').eq('property_id', propertyId).eq('planning_unit_id', unit.id).gte('shift_date', `${monthKey}-01`).lt('shift_date', nextMonthStart(year, month)),
   ])
   if (unitStaffError) throw unitStaffError
+  if (unitMembersError) throw unitMembersError
   if (restCodeError) throw restCodeError
   if (existingShiftsError) throw existingShiftsError
   if (!restCode) throw new Error("Codice turno 'R' (Riposo) non configurato per questa unità.")
 
+  const turnanteFollowsNotturno = initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard).riposoTurnanteDopoNotturno ?? true
   const unitStaffRows = (unitStaff ?? []) as StaffProfileRow[]
-  const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unitStaffRows)
+  const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unit.id, unitStaffRows, turnanteFollowsNotturno)
+  // The employee's scheduling role (day/night/rotating/fom/director) is set
+  // per planning-unit membership (shift_unit_members.assignment_profile_key
+  // -- what the "Tipo turno" column in the Employees panel shows), not on
+  // shift_staff_profiles.shift_type, which is a leftover onboarding default
+  // ('day' for almost everyone): the notturno/turnante pair this unit
+  // actually has would otherwise go unrecognized, and
+  // riposoTurnanteDopoNotturno would silently never apply.
+  const roleByStaffId = new Map((unitMembers ?? []).map((row) => [String(row.staff_profile_id), row.assignment_profile_key as string | null]))
   const profiles: RestRotationProfile[] = unitStaffRows.map((staff) => ({
-    id: staff.id, shiftType: staff.shift_type as RestRotationProfile['shiftType'], restMode: staff.rest_mode as RestRotationProfile['restMode'],
+    id: staff.id, shiftType: (roleByStaffId.get(staff.id) ?? staff.shift_type) as RestRotationProfile['shiftType'], restMode: staff.rest_mode as RestRotationProfile['restMode'],
     fixedRestDays: staff.fixed_rest_days ?? [], rotationSlot: newSlotByProfileId.get(staff.id) ?? staff.rotation_slot,
   }))
-  const turnanteFollowsNotturno = initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard).riposoTurnanteDopoNotturno ?? true
   const pairsPerCycle = initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle)
   const restDaysByProfile = computeMonthRestDays(profiles, year, month, daysInMonth, turnanteFollowsNotturno, pairsPerCycle)
   const takenDates = new Set((existingShifts ?? []).map((row) => `${row.staff_profile_id}_${row.shift_date}`))

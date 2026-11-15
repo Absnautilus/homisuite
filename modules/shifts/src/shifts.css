@@ -174,15 +174,29 @@
 .shift-coverage-list span { background: var(--shift-soft); border: 1px solid var(--shift-line); border-radius: 999px; color: var(--shift-muted); font-size: 11px; font-weight: 750; padding: 5px 8px; }
 
 .shift-grid-scroll {
+  --shift-fade-start: 1;
+  --shift-fade-end: 1;
   border-block: 1px solid var(--shift-line);
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
-  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 10px), transparent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--shift-line-strong) transparent;
+  -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,var(--shift-fade-start)), black 16px, black calc(100% - 16px), rgba(0,0,0,var(--shift-fade-end)));
+  mask-image: linear-gradient(to right, rgba(0,0,0,var(--shift-fade-start)), black 16px, black calc(100% - 16px), rgba(0,0,0,var(--shift-fade-end)));
 }
-.shift-grid-scroll::-webkit-scrollbar { display: none; }
+/* Kept visible (not display:none) -- it's the only cue on a month with
+   more day-columns than fit that there's anything to scroll to, e.g. day
+   31 past the right edge on a 31-day month. */
+.shift-grid-scroll::-webkit-scrollbar { height: 7px; }
+.shift-grid-scroll::-webkit-scrollbar-track { background: transparent; }
+.shift-grid-scroll::-webkit-scrollbar-thumb { background: var(--shift-line-strong); border-radius: 999px; }
+/* The fade only shows on the side that actually hides more columns -- a
+   grid that fits entirely, or is scrolled all the way to one end, renders
+   with sharp edges there instead of looking like its last column was cut
+   off. */
+.shift-grid-scroll.can-scroll-start { --shift-fade-start: 0; }
+.shift-grid-scroll.can-scroll-end { --shift-fade-end: 0; }
 .shift-grid { border-collapse: separate; border-spacing: 0; min-width: 880px; width: 100%; }
 .shift-grid th, .shift-grid td { border-bottom: 1px solid var(--shift-line); padding: 9px 7px; text-align: center; }
 .shift-grid thead th { background: var(--shift-soft); color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
@@ -279,7 +293,7 @@
    sliding white pill -- so it's never mistaken for one of the command
    buttons (Assegna automaticamente, Salva turni, ...) in the actions row. */
 .shift-view-segment { background: var(--shift-soft); border-radius: 10px; margin-left: auto; padding: 3px; }
-.shift-view-segment button { background: transparent; border: 0; border-radius: 7px; color: var(--shift-muted); font-weight: 700; min-height: 32px; padding: 0 14px; }
+.shift-view-segment button { background: transparent; border: 0; border-radius: 7px; color: var(--shift-muted); cursor: pointer; font-weight: 700; min-height: 32px; padding: 0 14px; }
 .shift-view-segment button.is-active { background: var(--shift-panel); box-shadow: 0 2px 8px rgba(23,16,46,.1); color: var(--shift-ink); }
 .shift-toolbar-menu { position: relative; }
 .shift-toolbar-menu-trigger { align-items: center; background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); cursor: pointer; display: inline-flex; height: 40px; justify-content: center; width: 40px; }

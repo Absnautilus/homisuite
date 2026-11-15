@@ -18,6 +18,7 @@ interface ExistingShiftRow {
   staff_profile_id: string
   shift_date: string
   locked: boolean
+  source: string
   shift_codes: { code: string; kind: string } | { code: string; kind: string }[] | null
 }
 
@@ -39,10 +40,12 @@ function nextMonthStart(year: number, month: number): string {
 /**
  * "Assegna automaticamente": runs domain/assignment.ts's generateSchedule
  * against the unit's current staff, codes, coverage and rules, then writes
- * only what changed -- deletes the non-protected existing shifts for the
- * month (not locked, and either a work-kind code or 'R') and inserts the
- * newly computed ones. Protected shifts (locked, or an absence/leave/
- * permission code) are never touched, matching the original app's guard.
+ * only what changed -- deletes and replaces only its own previous output
+ * (not locked, source = 'automatic', and either a work-kind code or 'R').
+ * Anything entered by a person -- manually typed/dragged shifts, or
+ * imported real-world data, both saved with source = 'manual' -- is never
+ * touched, whatever its code or kind (riposi, ferie, permessi, DNM...):
+ * the engine only ever overwrites what it generated itself.
  */
 export async function generateUnitAssignments(
   supabase: SupabaseClient,
@@ -56,6 +59,8 @@ export async function generateUnitAssignments(
   const year = Number(yearText)
   const month = Number(monthText) - 1 // 0-indexed, matching Date.UTC
   const daysInMonth = unit.assignmentDates?.length ?? new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const hardRules = initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard)
+  const turnanteFollowsNotturno = hardRules.riposoTurnanteDopoNotturno ?? true
 
   const memberIds = unit.people.map((person) => person.id)
   if (memberIds.length === 0) return { assignments: {}, conflicts: [] }
@@ -64,7 +69,7 @@ export async function generateUnitAssignments(
     supabase.from('shift_staff_profiles').select('id,shift_type,rest_mode,fixed_rest_days,rotation_slot,preferred_shift_codes,weekday_shift_preferences').eq('property_id', propertyId).in('id', memberIds),
     supabase.from('shift_unit_members').select('staff_profile_id,assignment_profile_key').eq('property_id', propertyId).eq('planning_unit_id', unit.id).in('staff_profile_id', memberIds),
     supabase.from('shift_codes').select('id,code,kind').eq('property_id', propertyId).eq('planning_unit_id', unit.id),
-    supabase.from('shifts').select('id,staff_profile_id,shift_date,locked,shift_codes!inner(code,kind)').eq('property_id', propertyId).eq('planning_unit_id', unit.id).gte('shift_date', `${unit.month}-01`).lt('shift_date', nextMonthStart(year, month)),
+    supabase.from('shifts').select('id,staff_profile_id,shift_date,locked,source,shift_codes!inner(code,kind)').eq('property_id', propertyId).eq('planning_unit_id', unit.id).gte('shift_date', `${unit.month}-01`).lt('shift_date', nextMonthStart(year, month)),
   ])
   if (unitStaffError) throw unitStaffError
   if (unitMembersError) throw unitMembersError
@@ -72,7 +77,7 @@ export async function generateUnitAssignments(
   if (existingShiftsError) throw existingShiftsError
 
   const unitStaffRows = (unitStaff ?? []) as PreferenceStaffRow[]
-  const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unitStaffRows)
+  const newSlotByProfileId = await ensureRotationSlots(supabase, propertyId, unit.id, unitStaffRows, turnanteFollowsNotturno)
   // The employee's scheduling role (day/night/rotating/fom/director) is set
   // per planning-unit membership (shift_unit_members.assignment_profile_key
   // -- what the "Tipo turno" column in the Employees panel shows), not on
@@ -129,10 +134,9 @@ export async function generateUnitAssignments(
     existingAssignments[row.staff_profile_id] ??= {}
     existingAssignments[row.staff_profile_id]![row.shift_date] = { code: code.code, locked: row.locked, kind: code.kind as ShiftCodeKind }
     existingIdByKey.set(key, row.id)
-    if (!row.locked && (code.kind === 'work' || code.code === 'R')) regeneratableKeys.add(key)
+    if (!row.locked && row.source === 'automatic' && (code.kind === 'work' || code.code === 'R')) regeneratableKeys.add(key)
   }
 
-  const hardRules = initRuleEnabled(DEFAULT_HARD_RULES, unit.rules.hard)
   const { assignments, conflicts } = generateSchedule({
     employees,
     existingAssignments,
@@ -144,7 +148,7 @@ export async function generateUnitAssignments(
     hardRules,
     softRuleOrder: initRuleOrder(DEFAULT_SOFT_RULES, unit.rules.soft),
     softRulesEnabled: initRuleEnabled(DEFAULT_SOFT_RULES, unit.rules.soft),
-    turnanteFollowsNotturno: hardRules.riposoTurnanteDopoNotturno ?? true,
+    turnanteFollowsNotturno,
     restRotationPairsPerCycle: initRestRotationPairsPerCycle(unit.rules.restRotationPairsPerCycle),
     roleCodes,
   })

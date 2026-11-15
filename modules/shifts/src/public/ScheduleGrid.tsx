@@ -1,5 +1,5 @@
 import { Lock } from 'lucide-react'
-import { useEffect, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
 import type { ShiftPlanningUnit } from '../preview/fixtures'
 import { ShiftSelect } from './ShiftSelect'
 
@@ -40,6 +40,12 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   // bottom, left-to-right order).
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
   const [clipboard, setClipboard] = useState<string[] | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // The left/right edge fades only hint at hidden content on the side that
+  // actually has some -- a table that fits (or is scrolled all the way to
+  // one end) must render with sharp, fully-visible edges instead of looking
+  // like its last column got cut off.
+  const [scrollEdges, setScrollEdges] = useState({ start: false, end: false })
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 760px)')
@@ -73,6 +79,20 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   const dates = unit.assignmentDates?.length ? unit.assignmentDates : fallbackDates(view === 'week' ? 7 : 30)
   const visibleDates = view === 'week' ? dates.slice(0, 7) : dates
   const people = unit.people
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    function update() {
+      const { scrollLeft, scrollWidth, clientWidth } = el!
+      setScrollEdges({ start: scrollLeft > 1, end: scrollLeft < scrollWidth - clientWidth - 1 })
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const resizeObserver = new ResizeObserver(update)
+    resizeObserver.observe(el)
+    return () => { el.removeEventListener('scroll', update); resizeObserver.disconnect() }
+  }, [view, unit.id, visibleDates.length])
 
   const selectionSize = selectedKeys.size
   // The selection ring/tint only shows once there are 2+ cells in play --
@@ -177,7 +197,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   }
 
   return (
-    <div className="shift-grid-scroll" tabIndex={0} aria-label={`Tabella turni ${unit.name}`} onKeyDown={handleGridKeyDown}>
+    <div ref={scrollRef} className={`shift-grid-scroll${scrollEdges.start ? ' can-scroll-start' : ''}${scrollEdges.end ? ' can-scroll-end' : ''}`} tabIndex={0} aria-label={`Tabella turni ${unit.name}`} onKeyDown={handleGridKeyDown}>
       {editable && selectionSize > 1 ? <div className="shift-selection-bar" role="toolbar" aria-label="Azioni sulla selezione">
         <span>{selectionSize} celle selezionate</span>
         <div className="shift-selection-codes">

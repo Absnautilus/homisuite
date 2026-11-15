@@ -6,6 +6,7 @@ interface ExistingShiftRow {
   staff_profile_id: string
   shift_date: string
   locked: boolean
+  source: string
   shift_codes: { code: string; kind: string } | { code: string; kind: string }[] | null
 }
 
@@ -25,9 +26,11 @@ export interface ClearDraftShiftsResult {
 /**
  * "Svuota bozza": deletes every shift in the unit's current month that
  * "Assegna automaticamente" itself would be allowed to overwrite -- not
- * locked, and either a work-kind code or 'R' -- leaving locked shifts and
- * absence/leave/permission entries untouched. Only valid while the month
- * is still Bozza (same guard generateUnitAssignments uses).
+ * locked, source = 'automatic', and either a work-kind code or 'R' --
+ * leaving locked shifts and anything a person entered (manually typed/
+ * dragged, or imported real-world data) untouched, whatever its code or
+ * kind. Only valid while the month is still Bozza (same guard
+ * generateUnitAssignments uses).
  */
 export async function clearDraftShifts(
   supabase: SupabaseClient,
@@ -38,7 +41,7 @@ export async function clearDraftShifts(
   if (!unit.month) throw new Error('Mese non disponibile per questa unità.')
 
   const { data: existingShifts, error: existingShiftsError } = await supabase
-    .from('shifts').select('id,staff_profile_id,shift_date,locked,shift_codes!inner(code,kind)')
+    .from('shifts').select('id,staff_profile_id,shift_date,locked,source,shift_codes!inner(code,kind)')
     .eq('property_id', propertyId).eq('planning_unit_id', unit.id)
     .gte('shift_date', `${unit.month}-01`).lt('shift_date', nextMonthStart(unit.month))
   if (existingShiftsError) throw existingShiftsError
@@ -49,7 +52,7 @@ export async function clearDraftShifts(
   for (const row of rows) {
     const code = relatedCode(row)
     if (!code) continue
-    const regeneratable = !row.locked && (code.kind === 'work' || code.code === 'R')
+    const regeneratable = !row.locked && row.source === 'automatic' && (code.kind === 'work' || code.code === 'R')
     if (!regeneratable) continue
     idsToDelete.push(row.id)
     cleared[row.staff_profile_id] ??= []
