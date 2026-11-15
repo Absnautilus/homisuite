@@ -1,18 +1,23 @@
-// Ported from Absnautilus/plannerturni's src/domain/restRotation.js, the
-// tested rest-day rotation engine the rest of this module's rule system was
-// already modeled on. Field names are adapted to homisuite's schema and the
-// weekday convention is 0=Sunday (matching fixed_rest_days / Date.getUTCDay,
-// not the original app's own 0=Monday) -- the epoch below is anchored one
-// day earlier than the original's to realign, so every mod-7 computation
-// stays byte-for-byte the same, just relabeled.
+// Originally ported from Absnautilus/plannerturni's src/domain/restRotation.js.
+// Field names are adapted to homisuite's schema and the weekday convention
+// is 0=Sunday (matching fixed_rest_days / Date.getUTCDay, not the original
+// app's own 0=Monday) -- the epoch below is anchored one day earlier than
+// the original's to realign, so every mod-7 computation stays byte-for-byte
+// the same, just relabeled.
 //
-// Confirmed production rule, carried over verbatim: a rotating employee
-// rests in consecutive pairs of 2 days a week. After `pairsPerCycle`
-// consecutive pairs, the next rest turn is a SINGLE day (not a pair) and the
-// weekday of rest shifts back by 1, to rotate the pattern -- then pairs
-// resume on the new weekday. Pairs are generated in one continuous sequence
-// (never as a pure function of the day alone) so they always stay exactly 7
-// days apart, with no dependency on where month boundaries fall.
+// A rotating employee rests in consecutive pairs of 2 days a week, every 7
+// days -- 5 working days between pairs. After `pairsPerCycle` consecutive
+// pairs, the rest of the pattern needs to rotate back by one weekday (so the
+// same employee doesn't always rest on, say, the same weekend). The
+// original app did that with a single rest day in place of a pair; no rest
+// turn is ever a single day now -- every rest is always a pair of 2. The
+// rotation instead comes from a single SHORT working week (4 days instead
+// of 5) right before that turn's pair: pairs are still exactly 7 days apart
+// everywhere else, but the gap leading into the rotation pair is 6 days,
+// and that missing day is what shifts the weekday back by 1 from then on.
+// Pairs are generated in one continuous sequence (never as a pure function
+// of the day alone) so the cadence never depends on where month boundaries
+// fall.
 
 export interface RestRotationProfile {
   id: string
@@ -30,15 +35,15 @@ function daysSinceEpoch(year: number, month: number, day: number): number {
   return Math.round((Date.UTC(year, month, day) - EPOCH_SUNDAY_UTC) / MS_PER_DAY)
 }
 
-// Walking forward from the epoch, generates rest events (a [start, end] pair
-// of epoch-day numbers, or a single [day]) for a given starting weekday,
+// Walking forward from the epoch, generates rest events (always a [start,
+// end] pair of epoch-day numbers, 2 days) for a given starting weekday,
 // until past `throughEpochDay`. Every event starts exactly 7 days after the
-// previous one's start (keeping 5 working days between rest turns); every
-// (pairsPerCycle + 1)-th event is a single day, on the SAME weekday as the
-// pairs before it (not the new one -- otherwise the 5-working-day cadence
-// breaks and an anomalous work streak appears). The weekday shifts back by 1
-// only in the gap toward the next block, which is therefore 6 days instead
-// of 7 -- that missing day is exactly what rotates the weekly pattern back.
+// previous one's start (keeping 5 working days between rest turns) EXCEPT
+// every (pairsPerCycle + 1)-th one, the rotation turn: that pair starts 6
+// days after the previous one instead of 7 (a 4-working-day week, not the
+// usual 5) and the weekday shifts back by 1 from there on -- that missing
+// day is exactly what rotates the weekly pattern back, same effect the
+// original single-day turn had, without ever leaving a lone rest day.
 function generateRestEvents(startWeekday: number, throughEpochDay: number, pairsPerCycle: number): number[][] {
   const events: number[][] = []
   let weekday = ((startWeekday % 7) + 7) % 7
@@ -50,9 +55,10 @@ function generateRestEvents(startWeekday: number, throughEpochDay: number, pairs
       pairsSoFar += 1
       start += 7
     } else {
-      events.push([start])
+      start -= 1
+      events.push([start, start + 1])
       weekday = ((weekday - 1) % 7 + 7) % 7
-      start += 6
+      start += 7
       pairsSoFar = 0
     }
   }

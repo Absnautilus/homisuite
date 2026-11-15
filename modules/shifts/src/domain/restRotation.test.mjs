@@ -26,13 +26,14 @@ function continuousRestGroups(profile, startDate, endDate, turnanteFollowsNottur
   return groups
 }
 
-test('confirmed rule: pair, pair, pair, single (then rotates and restarts)', () => {
+test('confirmed rule: every rest turn is a pair -- a short (4-day) work week rotates the pattern instead of a single day', () => {
   // The simulation window starts at an arbitrary point in the real cycle
   // (which runs from the epoch), so the observed PHASE of the pattern is
-  // unpredictable (it may start mid-pair or right on a single). These
-  // assertions don't assume a fixed phase: they only check that (a) every
-  // group is length 1 or 2, and (b) singles are always separated by exactly
-  // 3 pairs.
+  // unpredictable (it may start mid-pair or right before a short week).
+  // These assertions don't assume a fixed phase: they only check that (a)
+  // every rest turn is a pair (never a single day), (b) every work week
+  // between turns is 4 or 5 days, and (c) the 4-day weeks recur exactly
+  // every 3 pairs (pairsPerCycle).
   const start = new Date(Date.UTC(2026, 6, 1))
   const end = new Date(Date.UTC(2028, 6, 1))
   for (let slot = 0; slot < 8; slot += 1) {
@@ -41,30 +42,44 @@ test('confirmed rule: pair, pair, pair, single (then rotates and restarts)', () 
     // Discard the first/last group: the window can cut them in half (e.g.
     // show only the second day of a pair that started before the window)
     // -- every INTERNAL group is always complete and genuine.
-    const lengths = groups.slice(1, -1).map((group) => group.length)
-    for (const [index, length] of lengths.entries()) {
-      assert.ok([1, 2].includes(length), `slot ${slot}, event ${index}: invalid length ${length}`)
+    const internal = groups.slice(1, -1)
+    for (const [index, group] of internal.entries()) {
+      assert.equal(group.length, 2, `slot ${slot}, turn ${index}: rest turn was not a pair (length ${group.length})`)
     }
-    const singleIndexes = lengths.map((length, index) => (length === 1 ? index : -1)).filter((index) => index !== -1)
-    assert.ok(singleIndexes.length > 1, `slot ${slot}: no single found in the window`)
-    for (let k = 1; k < singleIndexes.length; k += 1) {
-      const distance = singleIndexes[k] - singleIndexes[k - 1]
-      assert.equal(distance, 4, `slot ${slot}: two consecutive singles ${distance} apart instead of 4 (3 pairs)`)
+    const workWeeks = []
+    for (let i = 1; i < internal.length; i += 1) {
+      const previousEnd = internal[i - 1][internal[i - 1].length - 1]
+      const currentStart = internal[i][0]
+      workWeeks.push(currentStart - previousEnd - 1)
     }
-    assert.ok(lengths.length > 8)
+    for (const [index, days] of workWeeks.entries()) {
+      assert.ok([4, 5].includes(days), `slot ${slot}, gap ${index}: invalid work week length ${days}`)
+    }
+    const shortIndexes = workWeeks.map((days, index) => (days === 4 ? index : -1)).filter((index) => index !== -1)
+    assert.ok(shortIndexes.length > 1, `slot ${slot}: no 4-day work week found in the window`)
+    for (let k = 1; k < shortIndexes.length; k += 1) {
+      const distance = shortIndexes[k] - shortIndexes[k - 1]
+      assert.equal(distance, 4, `slot ${slot}: two consecutive 4-day weeks ${distance} turns apart instead of 4 (3 pairs)`)
+    }
+    assert.ok(workWeeks.length > 8)
   }
 })
 
-test('exactly 5 working days between the end of a pair and the next single or pair', () => {
+test('the 4-day work week recurs with a fixed period of pairsPerCycle+1 rest turns', () => {
   const profile = { id: 'x', shiftType: 'day', restMode: 'rotating', rotationSlot: 2, fixedRestDays: [] }
   const start = new Date(Date.UTC(2026, 6, 1))
   const end = new Date(Date.UTC(2027, 6, 1))
   const groups = continuousRestGroups(profile, start, end).slice(1, -1)
+  const workWeeks = []
   for (let i = 1; i < groups.length; i += 1) {
     const previousGroupEnd = groups[i - 1][groups[i - 1].length - 1]
     const currentGroupStart = groups[i][0]
-    const workingDays = currentGroupStart - previousGroupEnd - 1
-    assert.equal(workingDays, 5, `between group ${i - 1} and group ${i}`)
+    workWeeks.push(currentGroupStart - previousGroupEnd - 1)
+  }
+  for (const days of workWeeks) assert.ok([4, 5].includes(days))
+  const period = 4 // pairsPerCycle (3) + 1
+  for (let i = period; i < workWeeks.length; i += 1) {
+    assert.equal(workWeeks[i], workWeeks[i - period], `gap ${i} should repeat the same length as gap ${i - period}`)
   }
 })
 
