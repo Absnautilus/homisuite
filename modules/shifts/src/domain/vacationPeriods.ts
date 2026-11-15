@@ -21,6 +21,9 @@ export interface VacationSettings {
 
 export type VacationDisplayStatus = 'taken' | 'confirmed' | 'pending' | 'missing'
 
+/** A day in an approved period the server left untouched because it already held something other than a rest day -- reported back for the manager to resolve by hand. */
+export interface VacationDecisionConflict { planningUnitId: string; date: string; existingCode: string }
+
 /** Inclusive day count between two ISO dates ('YYYY-MM-DD'). */
 export function countVacationDays(start: string, end: string): number {
   const startMs = Date.parse(`${start}T00:00:00Z`)

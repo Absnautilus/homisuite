@@ -48,9 +48,16 @@ export async function requestVacationPeriod(
   if (error) throw error
 }
 
-export async function decideVacationPeriod(supabase: SupabaseClient, periodId: string, approve: boolean) {
-  const { error } = await supabase.rpc('decide_vacation_period', { p_period_id: periodId, p_approve: approve })
+export interface VacationDecisionConflict { planningUnitId: string; date: string; existingCode: string }
+
+export async function decideVacationPeriod(supabase: SupabaseClient, periodId: string, approve: boolean): Promise<VacationDecisionConflict[]> {
+  const { data, error } = await supabase.rpc('decide_vacation_period', { p_period_id: periodId, p_approve: approve })
   if (error) throw error
+  return (data ?? []).map((row: { planning_unit_id: string; shift_date: string; existing_code: string }) => ({
+    planningUnitId: row.planning_unit_id,
+    date: row.shift_date,
+    existingCode: row.existing_code,
+  }))
 }
 
 export async function saveVacationSettings(supabase: SupabaseClient, propertyId: string, settings: VacationSettings) {

@@ -250,8 +250,9 @@ export function ShiftPlannerPage() {
     void refreshLiveData({ silent: true })
   }} onDecideVacationPeriod={async (periodId, approve) => {
     if (!propertyId) throw new Error('Missing active property')
-    await decideVacationPeriod(supabase, periodId, approve)
+    const conflicts = await decideVacationPeriod(supabase, periodId, approve)
     void refreshLiveData({ silent: true })
+    return conflicts
   }} onSaveVacationSettings={async (settings) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveVacationSettings(supabase, propertyId, settings)

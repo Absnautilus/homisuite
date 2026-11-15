@@ -4,7 +4,7 @@ import { Check, X } from 'lucide-react'
 import type { ShiftPreviewProperty, ShiftPerson } from '../preview/fixtures'
 import {
   countVacationDays, findVacationOverlap, validateVacationRequest, displayVacationStatus,
-  type VacationPeriod, type VacationSettings, type VacationDisplayStatus,
+  type VacationPeriod, type VacationSettings, type VacationDisplayStatus, type VacationDecisionConflict,
 } from '../domain/vacationPeriods'
 
 const STATUS_LABEL: Record<VacationDisplayStatus, string> = { taken: 'Presa', confirmed: 'Confermata', pending: 'In attesa', missing: 'Da pianificare' }
@@ -177,11 +177,12 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
   property: ShiftPreviewProperty
   periods: VacationPeriod[]
   settings: VacationSettings
-  onDecidePeriod?: (periodId: string, approve: boolean) => Promise<void>
+  onDecidePeriod?: (periodId: string, approve: boolean) => Promise<VacationDecisionConflict[]>
   onSaveSettings?: (next: VacationSettings) => Promise<void>
 }) {
   const roster = useMemo(() => rosterOf(property), [property])
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [conflicts, setConflicts] = useState<VacationDecisionConflict[]>([])
   const [form, setForm] = useState(settings)
   const [savingSettings, setSavingSettings] = useState(false)
   const pending = periods.filter((period) => period.status === 'pending' && period.id)
@@ -189,7 +190,13 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
   async function decide(periodId: string, approve: boolean) {
     if (!onDecidePeriod) return
     setResolvingId(periodId)
-    try { await onDecidePeriod(periodId, approve) } finally { setResolvingId(null) }
+    setConflicts([])
+    try {
+      const result = await onDecidePeriod(periodId, approve)
+      if (approve) setConflicts(result)
+    } finally {
+      setResolvingId(null)
+    }
   }
 
   async function saveSettings() {
@@ -215,6 +222,13 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
         </div>
       })}
     </div>}
+    {conflicts.length > 0 ? <div className="shift-vacation-result is-conflict" role="alert">
+      <strong>Ferie confermate, ma {conflicts.length} {conflicts.length === 1 ? 'giorno' : 'giorni'} non {conflicts.length === 1 ? 'è stato aggiornato' : 'sono stati aggiornati'} in Turni perché già occupato da un altro turno:</strong>
+      <ul>{conflicts.map((conflict, index) => {
+        const unitName = property.units.find((unit) => unit.id === conflict.planningUnitId)?.name ?? conflict.planningUnitId
+        return <li key={index}>{fmtLong(conflict.date)} ({unitName}): già impostato su "{conflict.existingCode}". Correggi a mano in Turni se necessario.</li>
+      })}</ul>
+    </div> : null}
 
     <div className="shift-panel-title"><div><h2>Impostazioni piano ferie</h2><p>Quanti periodi può pianificare ogni dipendente e quanto può durare ciascuno.</p></div></div>
     <div className="shift-vacation-settings-form">
@@ -233,7 +247,7 @@ export interface VacationPlannerProps {
   currentStaffProfileId?: string
   canManage: boolean
   onRequestPeriod?: (input: VacationRequestInput) => Promise<void>
-  onDecidePeriod?: (periodId: string, approve: boolean) => Promise<void>
+  onDecidePeriod?: (periodId: string, approve: boolean) => Promise<VacationDecisionConflict[]>
   onSaveSettings?: (settings: VacationSettings) => Promise<void>
 }
 
