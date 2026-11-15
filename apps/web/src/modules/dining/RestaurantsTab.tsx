@@ -5,7 +5,8 @@ import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurantPhotos, listRestaurants, lookupMapsPlace, MapsLookupError, replaceRestaurantPhotos, subscribeToCategories, subscribeToRestaurants, updateRestaurant, type MapsImportedHour, type MapsImportedPhoto, type RestaurantInput, type RestaurantPhoto } from './api'
+import { useUndo } from '../../core/UndoContext'
+import { addHour, createRestaurant, deleteHour, deleteRestaurant, listCategories, listHours, listRestaurantPhotos, listRestaurants, lookupMapsPlace, MapsLookupError, replaceRestaurantPhotos, restoreHour, restoreRestaurant, subscribeToCategories, subscribeToRestaurants, updateRestaurant, type MapsImportedHour, type MapsImportedPhoto, type RestaurantInput, type RestaurantPhoto } from './api'
 import type { DiningCategory, Restaurant, RestaurantHour } from './types'
 import { DAY_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -28,6 +29,7 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   const [galleryFor, setGalleryFor] = useState<Restaurant | null>(null)
   const [filter, setFilter] = useState<'tutti' | 'consigliati' | 'visibili'>('tutti')
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
 
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? '—'
 
@@ -69,8 +71,22 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
     })
     if (!confirmed) return
     try {
+      // Captured before deleting -- the delete cascades to both tables,
+      // and undoing it needs to put everything back, not just the
+      // restaurant's own row.
+      const [hours, photos] = await Promise.all([
+        listHours(supabase, restaurant.id),
+        listRestaurantPhotos(supabase, restaurant.id),
+      ])
       await deleteRestaurant(supabase, restaurant.id)
       await load()
+      pushUndo({
+        message: `"${restaurant.name}" eliminato.`,
+        undo: async () => {
+          await restoreRestaurant(supabase, restaurant, hours, photos)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }
@@ -445,6 +461,7 @@ function HoursModal({ restaurant, onClose }: { restaurant: Restaurant | null; on
   const [hours, setHours] = useState<RestaurantHour[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const pushUndo = useUndo()
   const [day, setDay] = useState('1')
   const [opensAt, setOpensAt] = useState('12:00')
   const [closesAt, setClosesAt] = useState('15:00')
@@ -480,6 +497,13 @@ function HoursModal({ restaurant, onClose }: { restaurant: Restaurant | null; on
     try {
       await deleteHour(supabase, hour.id)
       await load()
+      pushUndo({
+        message: `Orario di ${DAY_LABELS[hour.day_of_week]} eliminato.`,
+        undo: async () => {
+          await restoreHour(supabase, hour)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }

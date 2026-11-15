@@ -45,6 +45,13 @@ export async function deleteCategory(client: SupabaseClient, id: string): Promis
   await mutateOneOrThrow(client, 'dining_categories', 'id', id, 'delete')
 }
 
+// Undo for deleteCategory -- re-inserts the exact row (same id) the caller
+// captured just before deleting it.
+export async function restoreCategory(client: SupabaseClient, category: DiningCategory): Promise<void> {
+  const { error } = await client.from('dining_categories').insert(category)
+  if (error) throw error
+}
+
 // Same mechanism Housekeeping's own queue uses (subscribeToQueue) -- without
 // it, one staff member adding/editing a category only ever shows up for
 // everyone else's already-open session on their next manual reload.
@@ -94,6 +101,22 @@ export async function updateRestaurant(client: SupabaseClient, id: string, chang
 
 export async function deleteRestaurant(client: SupabaseClient, id: string): Promise<void> {
   await mutateOneOrThrow(client, 'restaurants', 'id', id, 'delete')
+}
+
+// Undo for deleteRestaurant -- the delete cascades to restaurant_hours and
+// restaurant_photos, so the caller captures those too (just before
+// deleting) and this puts all three back, same ids, in one call.
+export async function restoreRestaurant(client: SupabaseClient, restaurant: Restaurant, hours: RestaurantHour[], photos: RestaurantPhoto[]): Promise<void> {
+  const { error } = await client.from('restaurants').insert(restaurant)
+  if (error) throw error
+  if (hours.length > 0) {
+    const { error: hoursError } = await client.from('restaurant_hours').insert(hours)
+    if (hoursError) throw hoursError
+  }
+  if (photos.length > 0) {
+    const { error: photosError } = await client.from('restaurant_photos').insert(photos)
+    if (photosError) throw photosError
+  }
 }
 
 // Same reasoning as subscribeToCategories above -- a restaurant another
@@ -192,6 +215,11 @@ export async function addHour(client: SupabaseClient, restaurantId: string, dayO
 
 export async function deleteHour(client: SupabaseClient, id: string): Promise<void> {
   await mutateOneOrThrow(client, 'restaurant_hours', 'id', id, 'delete')
+}
+
+export async function restoreHour(client: SupabaseClient, hour: RestaurantHour): Promise<void> {
+  const { error } = await client.from('restaurant_hours').insert(hour)
+  if (error) throw error
 }
 
 export interface RestaurantPhoto {
@@ -431,6 +459,11 @@ export async function updateGuestTag(client: SupabaseClient, id: string, changes
 
 export async function deleteGuestTag(client: SupabaseClient, id: string): Promise<void> {
   await mutateOneOrThrow(client, 'dining_guest_tags', 'id', id, 'delete')
+}
+
+export async function restoreGuestTag(client: SupabaseClient, tag: GuestTag): Promise<void> {
+  const { error } = await client.from('dining_guest_tags').insert(tag)
+  if (error) throw error
 }
 
 export interface RestaurantStats {

@@ -25,6 +25,19 @@
   opacity: 1;
 }
 
+.ui-toast button {
+  border: 1px solid color-mix(in srgb, var(--surface) 35%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ui-toast button:disabled { opacity: 0.6; cursor: default; }
+
 @media (max-width: 640px) {
   .ui-toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }

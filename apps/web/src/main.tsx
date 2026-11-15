@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from './app/App'
 import { ModuleRuntimeProvider } from './core/ModuleRuntimeContext'
+import { UndoProvider } from './core/UndoContext'
 import { UpdateBanner } from './components/UpdateBanner'
 import { initTheme } from './lib/theme'
 import './styles.css'
@@ -24,7 +25,9 @@ createRoot(root).render(
     <UpdateBanner />
     <BrowserRouter>
       <ModuleRuntimeProvider>
-        <App />
+        <UndoProvider>
+          <App />
+        </UndoProvider>
       </ModuleRuntimeProvider>
     </BrowserRouter>
   </StrictMode>,

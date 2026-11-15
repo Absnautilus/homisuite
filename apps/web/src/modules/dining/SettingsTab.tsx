@@ -3,7 +3,8 @@ import { Plus, X } from 'lucide-react'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { createGuestTag, deleteGuestTag, listGuestTags, listRestaurants, updateRestaurant } from './api'
+import { useUndo } from '../../core/UndoContext'
+import { createGuestTag, deleteGuestTag, listGuestTags, listRestaurants, restoreGuestTag, updateRestaurant } from './api'
 import type { GuestTag, Restaurant } from './types'
 import { readableDiningError } from './readableDiningError'
 
@@ -19,6 +20,7 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
   const [error, setError] = useState<string | null>(null)
   const [newTag, setNewTag] = useState('')
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +82,13 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
     try {
       await deleteGuestTag(supabase, tag.id)
       await load()
+      pushUndo({
+        message: `Tag "${tag.label}" rimosso.`,
+        undo: async () => {
+          await restoreGuestTag(supabase, tag)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }

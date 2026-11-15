@@ -3,7 +3,8 @@ import { Button, Modal } from '@homisuite/ui'
 import { Pencil, Plus, UtensilsCrossed } from 'lucide-react'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
-import { createCategory, deleteCategory, listCategories, subscribeToCategories, updateCategory } from './api'
+import { useUndo } from '../../core/UndoContext'
+import { createCategory, deleteCategory, listCategories, restoreCategory, subscribeToCategories, updateCategory } from './api'
 import type { DiningCategory } from './types'
 import { readableDiningError } from './readableDiningError'
 
@@ -18,6 +19,7 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<DiningCategory | 'new' | null>(null)
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
 
   const load = useCallback(async () => {
     try {
@@ -49,6 +51,13 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
     try {
       await deleteCategory(supabase, category.id)
       await load()
+      pushUndo({
+        message: `Categoria "${category.name}" eliminata.`,
+        undo: async () => {
+          await restoreCategory(supabase, category)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }
