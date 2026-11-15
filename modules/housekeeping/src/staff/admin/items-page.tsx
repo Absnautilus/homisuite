@@ -5,7 +5,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { ChevronRight, Languages, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { FieldError, FieldGroup, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { Switch, SwitchControl } from '@/components/ui/switch'
-import { Tabs } from '@homisuite/ui'
+import { Tabs, useUndo } from '@homisuite/ui'
 import { AutoText } from '@/components/auto-text'
 import { CategoryIcon } from '@/components/category-icon'
 import { IconPicker } from '@/components/icon-picker'
@@ -18,6 +18,8 @@ import {
   deleteRequestType,
   listMenu,
   listPropertyJobTitles,
+  restoreRequestCategory,
+  restoreRequestType,
   setCategoryJobTitles,
   setRequestCategoryActive,
   setRequestTypeActive,
@@ -50,6 +52,7 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
   const [jobTitles, setJobTitles] = useState<JobTitleOption[]>([])
   const [error, setError] = useState<string | null>(null)
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
   const [removedCategoryIds, setRemovedCategoryIds] = useState<Set<string>>(new Set())
   const [removedTypeIds, setRemovedTypeIds] = useState<Set<string>>(new Set())
   // Collapsed by default -- with many categories, a flat always-expanded
@@ -144,6 +147,10 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
     const ok = await confirm({ title: t('staff.items.categoryRemoveTitle'), description: t('staff.items.categoryRemoveDesc', { name: category.name }), confirmLabel: t('staff.items.categoryRemoveConfirm') })
     if (!ok) return
     setError(null)
+    // Captured before the removal runs -- deletedItemIds/deactivatedItemIds
+    // only ever name items that were in this category to begin with, so
+    // their full rows (needed to re-insert on undo) have to come from here.
+    const itemsInCategory = types.filter((item) => item.category_id === category.id)
     try {
       const result = await removeCategoryWithItems(category.id, types, {
         deleteCategory: deleteRequestCategory,
@@ -159,11 +166,50 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
         setTypes((current) => current.map((item) => (deactivatedIds.has(item.id) ? { ...item, active: false } : item)))
       }
       setRemovedCategoryIds((current) => new Set(current).add(category.id))
+      const deletedItems = itemsInCategory.filter((item) => result.deletedItemIds.includes(item.id))
+      const deactivatedItems = itemsInCategory.filter((item) => result.deactivatedItemIds.includes(item.id))
       if (result.outcome === 'deleted') {
         push(t('common.toast.removed'), 'success')
+        pushUndo({
+          message: t('staff.items.categoryRemoveUndoMessage', { name: category.name }),
+          undo: async () => {
+            await restoreRequestCategory(category)
+            for (const item of deletedItems) await restoreRequestType(item)
+            setRemovedCategoryIds((current) => {
+              const next = new Set(current)
+              next.delete(category.id)
+              return next
+            })
+            setRemovedTypeIds((current) => {
+              const next = new Set(current)
+              for (const item of deletedItems) next.delete(item.id)
+              return next
+            })
+            await reload()
+          },
+        })
       } else {
         setCategories((current) => current.map((item) => (item.id === category.id ? { ...item, active: false } : item)))
         setError(t('staff.items.categoryRemoveBlockedDeactivated'))
+        pushUndo({
+          message: t('staff.items.categoryRemoveUndoMessage', { name: category.name }),
+          undo: async () => {
+            await setRequestCategoryActive(category.id, true)
+            for (const item of deletedItems) await restoreRequestType(item)
+            for (const item of deactivatedItems) await setRequestTypeActive(item.id, true)
+            setRemovedCategoryIds((current) => {
+              const next = new Set(current)
+              next.delete(category.id)
+              return next
+            })
+            setRemovedTypeIds((current) => {
+              const next = new Set(current)
+              for (const item of deletedItems) next.delete(item.id)
+              return next
+            })
+            await reload()
+          },
+        })
       }
     } catch {
       await reload().catch(() => undefined)
@@ -183,10 +229,35 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
       if (result === 'deactivated') {
         setTypes((current) => current.map((currentItem) => (currentItem.id === item.id ? { ...currentItem, active: false } : currentItem)))
         setError(t('staff.items.removeBlockedDeactivated'))
+        setRemovedTypeIds((current) => new Set(current).add(item.id))
+        pushUndo({
+          message: t('staff.items.removeUndoMessage', { name: item.name }),
+          undo: async () => {
+            await setRequestTypeActive(item.id, true)
+            setRemovedTypeIds((current) => {
+              const next = new Set(current)
+              next.delete(item.id)
+              return next
+            })
+            await reload()
+          },
+        })
       } else {
         push(t('common.toast.removed'), 'success')
+        setRemovedTypeIds((current) => new Set(current).add(item.id))
+        pushUndo({
+          message: t('staff.items.removeUndoMessage', { name: item.name }),
+          undo: async () => {
+            await restoreRequestType(item)
+            setRemovedTypeIds((current) => {
+              const next = new Set(current)
+              next.delete(item.id)
+              return next
+            })
+            await reload()
+          },
+        })
       }
-      setRemovedTypeIds((current) => new Set(current).add(item.id))
     } catch {
       setError(t('staff.items.removeError'))
     }

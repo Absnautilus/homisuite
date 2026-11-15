@@ -14,10 +14,11 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
-import { createRoom, deleteRoom, listRooms, setRoomActive, type Room } from '@/lib/admin-api'
+import { createRoom, deleteRoom, listRooms, restoreRoom, setRoomActive, type Room } from '@/lib/admin-api'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useUndo } from '@homisuite/ui'
 
 export function RoomsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
@@ -28,6 +29,7 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
   const visibleRooms = rooms?.filter((room) => !hiddenRoomIds.has(room.id)) ?? null
 
   async function reload() {
@@ -83,6 +85,18 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
       await deleteRoom(room.id)
       setHiddenRoomIds((current) => new Set(current).add(room.id))
       push(t('common.toast.removed'), 'success')
+      pushUndo({
+        message: t('staff.rooms.deleteUndoMessage', { room: room.room_number }),
+        undo: async () => {
+          await restoreRoom(room)
+          setHiddenRoomIds((current) => {
+            const next = new Set(current)
+            next.delete(room.id)
+            return next
+          })
+          await reload()
+        },
+      })
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && err.code === '23503') {
         try {
@@ -90,6 +104,18 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
           setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: false } : r)) ?? current)
           setHiddenRoomIds((current) => new Set(current).add(room.id))
           setError(t('staff.rooms.deleteBlockedDeactivated'))
+          pushUndo({
+            message: t('staff.rooms.deleteUndoMessage', { room: room.room_number }),
+            undo: async () => {
+              await setRoomActive(room.id, true)
+              setHiddenRoomIds((current) => {
+                const next = new Set(current)
+                next.delete(room.id)
+                return next
+              })
+              await reload()
+            },
+          })
         } catch {
           setError(t('staff.rooms.deleteError'))
         }

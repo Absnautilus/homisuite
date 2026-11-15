@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Toast } from '@homisuite/ui'
+import { Toast } from './toast'
 
 export interface UndoAction {
   // Shown in the toast while the undo window is open, e.g. '"Oniga" eliminato.'
@@ -13,8 +13,7 @@ interface UndoContextValue {
 
 const UndoContext = createContext<UndoContextValue | null>(null)
 
-// Same auto-dismiss length Housekeeping's own toast stack already uses --
-// long enough to react to, short enough that "undo" never reaches back
+// Long enough to react to, short enough that "undo" never reaches back
 // further than the person would expect from their last action.
 const UNDO_WINDOW_MS = 8000
 
@@ -24,6 +23,13 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
 }
 
+// Shared across every app/module in the monorepo (apps/web, the
+// housekeeping and shifts packages, ...) so one UndoProvider mounted once
+// at the host app's root covers all of them -- they all render inside that
+// same React tree already (see e.g. HousekeepingModuleGate), they just need
+// to import this same context instance via @homisuite/ui rather than each
+// package growing its own.
+//
 // One pending action at a time, not a history stack -- matches the actual
 // ask (undo the thing I just did), and keeps "what does Ctrl+Z do right
 // now" unambiguous. A new delete simply replaces whatever was pending.

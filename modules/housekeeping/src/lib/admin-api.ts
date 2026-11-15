@@ -36,6 +36,13 @@ export async function deleteRoom(id: string): Promise<void> {
   if (!data) throw new Error('room_delete_not_applied')
 }
 
+// Undo for deleteRoom -- re-inserts the exact row (same id) the caller
+// captured just before deleting it.
+export async function restoreRoom(room: Room): Promise<void> {
+  const { error } = await supabase.from('rooms').insert(room)
+  if (error) throw error
+}
+
 export interface Hotel {
   id: string
   name: string
@@ -268,12 +275,28 @@ export async function deleteRequestType(id: string): Promise<void> {
   if (!data) throw new Error('request_type_delete_not_applied')
 }
 
+// Undo for deleteRequestType -- re-inserts the exact row (same id).
+export async function restoreRequestType(type: RequestTypeAdmin): Promise<void> {
+  const { error } = await supabase.from('request_types').insert(type)
+  if (error) throw error
+}
+
 // request_types.category_id has the same plain foreign key -- deleting a
 // category still holding any items (active or not) hits the same 23503.
 export async function deleteRequestCategory(id: string): Promise<void> {
   const { data, error } = await supabase.from('request_categories').delete().eq('id', id).select('id').maybeSingle()
   if (error) throw error
   if (!data) throw new Error('request_category_delete_not_applied')
+}
+
+// Undo for deleteRequestCategory -- job_title_ids is derived (a separate
+// join table, see listMenu), not a real column, so it's restored as its
+// own step via setCategoryJobTitles rather than part of the row insert.
+export async function restoreRequestCategory(category: RequestCategoryAdmin): Promise<void> {
+  const { job_title_ids, ...row } = category
+  const { error } = await supabase.from('request_categories').insert(row)
+  if (error) throw error
+  if (job_title_ids.length > 0) await setCategoryJobTitles(category.id, job_title_ids)
 }
 
 export interface DepartmentStat {

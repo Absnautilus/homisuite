@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import type { CoreRole, JobTitle, MemberPermissionStatus, ModuleEntitlement, TeamMember } from '@homisuite/core-sdk'
-import { Button, Modal, ModuleNav, Tabs, useRememberedState } from '@homisuite/ui'
+import { Button, Modal, ModuleNav, Tabs, useRememberedState, useUndo } from '@homisuite/ui'
 import { Boxes, BriefcaseBusiness, Building2, KeyRound, Pencil, Plus, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { GuestLinkRow } from '../components/GuestLinkRow'
 import { PageState } from '../components/PageState'
@@ -46,6 +46,7 @@ export function TeamPage() {
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [modulesForId, setModulesForId] = useRememberedState<string | null>('team.modulesForMemberId', null)
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
   const anyModuleEntitled = runtime.entitlements.some((item) => item.enabled)
   const [canManageProperty, setCanManageProperty] = useState(false)
   const [propertyOpen, setPropertyOpen] = useRememberedState('team.propertyOpen', false)
@@ -106,6 +107,14 @@ export function TeamPage() {
     try {
       await core.archiveTeamMember({ membershipId: member.membership.id })
       await loadTeam({ silent: true })
+      pushUndo({
+        message: `${member.profile.fullName} rimosso dal team.`,
+        undo: async () => {
+          if (!property) return
+          await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId: property.id, membershipStatus: member.membership.status })
+          await loadTeam({ silent: true })
+        },
+      })
     } catch (cause) {
       setError(readableError(cause))
     } finally {
