@@ -217,7 +217,7 @@
 .shift-person-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shift-person-copy small { color: var(--shift-muted); font-weight: 500; margin-top: 2px; }
 .shift-cell { align-items: center; background: var(--shift-color); border-radius: 0; color: var(--shift-text); display: flex; flex-direction: column; gap: 1px; justify-content: center; height: 100%; min-height: 48px; padding: 5px; position: relative; width: 100%; }
-.shift-cell strong { font-size: 15px; font-weight: 800; }
+.shift-cell strong { font-size: 15px; font-weight: 400; }
 .shift-cell small { font-size: 9px; opacity: .9; }
 .shift-cell svg { position: absolute; right: 5px; top: 5px; }
 
@@ -653,7 +653,12 @@
   padding: 4px;
   width: 100%;
 }
-.shift-cell strong { font-size: 13px; font-weight: 800; }
+.shift-cell strong { font-size: 13px; font-weight: 400; }
+@media (min-width: 761px) {
+  /* Square cells, desktop only -- the mobile/compact layout below 760px
+     keeps its own narrower column sizing untouched. */
+  .shift-grid td:not(.shift-person-column) { width: 42px; }
+}
 .shift-legend {
   gap: 8px 15px;
   padding: 15px 1px 0;
@@ -953,11 +958,11 @@
    an 18px chip floating inside it -- the opposite of the spreadsheet-like
    "whole cell is the color, code sits big and centered in it" look asked
    for, and it's what was actually overriding .shift-cell's own fill above
-   (same specificity, defined later). The code now just sits as plain bold
-   text directly on .shift-cell's own color. */
+   (same specificity, defined later). The code now just sits as plain text
+   directly on .shift-cell's own color. */
 .shift-cell.has-value strong {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
 }
 .shift-cell-editor {
   align-items: center;
