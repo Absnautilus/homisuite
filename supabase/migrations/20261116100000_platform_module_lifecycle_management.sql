@@ -3,12 +3,9 @@
 -- Moduli page (not the separate /admin console) -- same data these
 -- already-seen read-only platform APIs expose, just with a write path.
 --
--- Gated on platform_has_permission('platform.modules.manage') alone, no
--- MFA step-up: unlike set_platform_admin_status or an impersonation
--- grant, this never touches another user's access or any guest/tenant
--- data -- it only moves a module's own rollout label and which
--- properties may try it, the same risk tier as the existing read-only
--- platform.properties.read APIs this migration's RPCs sit next to.
+-- Gated on platform_has_permission('platform.modules.manage') AND a
+-- verified MFA session, the same two-check pattern every other mutating
+-- platform RPC (set_platform_admin_status) already follows.
 
 insert into platform_permissions (slug) values ('platform.modules.manage')
 on conflict (slug) do nothing;
@@ -27,6 +24,9 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not platform_has_permission('platform.modules.manage') then
     raise exception 'insufficient_privilege' using errcode = '42501';
+  end if;
+  if not platform_mfa_satisfied() then
+    raise exception 'mfa_required' using errcode = '42501';
   end if;
   if p_status not in ('in_development', 'testing', 'beta', 'active', 'deprecated') then
     raise exception 'invalid_status' using errcode = '22023';
@@ -48,6 +48,9 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not platform_has_permission('platform.modules.manage') then
     raise exception 'insufficient_privilege' using errcode = '42501';
+  end if;
+  if not platform_mfa_satisfied() then
+    raise exception 'mfa_required' using errcode = '42501';
   end if;
 
   insert into property_modules (property_id, module_id, testing_access)

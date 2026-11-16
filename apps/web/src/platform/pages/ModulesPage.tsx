@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Puzzle } from 'lucide-react'
-import { PageHeader } from '@homisuite/ui'
+import { Button, PageHeader, Select, Toggle, type SelectOption } from '@homisuite/ui'
 import { supabase } from '../../core/client'
 import { PageState } from '../../components/PageState'
 import { MODULE_CATALOG, type ModuleStatus } from '../../pages/ModulesPage'
@@ -9,7 +9,7 @@ import { usePlatformContext } from '../PlatformContext'
 type ModuleRow = { id: string; slug: string; display_name: string; status: ModuleStatus }
 type TestingAccessRow = { property_id: string; property_name: string; organization_name: string; testing_access: boolean }
 
-const STATUS_OPTIONS: Array<{ value: ModuleStatus; label: string }> = [
+const STATUS_OPTIONS: Array<SelectOption<ModuleStatus>> = [
   { value: 'in_development', label: 'In sviluppo' },
   { value: 'testing', label: 'In collaudo' },
   { value: 'beta', label: 'Beta' },
@@ -22,7 +22,9 @@ const STATUS_OPTIONS: Array<{ value: ModuleStatus; label: string }> = [
  * Admin sets a module's own rollout stage (which determines who even sees
  * it on that tenant page) and, for a module in collaudo, exactly which
  * properties are opted in -- the two things that page itself can only
- * display, never change.
+ * display, never change. Every row is a draft until "Salva": nothing is
+ * written until the admin explicitly commits it, so skimming through
+ * statuses or toggles never changes anything by accident.
  */
 export function ModulesPage() {
   const runtime = usePlatformContext()
@@ -33,6 +35,8 @@ export function ModulesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [testingAccess, setTestingAccess] = useState<Record<string, TestingAccessRow[]>>({})
   const [loadingAccessId, setLoadingAccessId] = useState<string | null>(null)
+  const [draftStatus, setDraftStatus] = useState<Record<string, ModuleStatus>>({})
+  const [draftAccess, setDraftAccess] = useState<Record<string, Record<string, boolean>>>({})
 
   // PlatformLayout only ever mounts this page once runtime.status is
   // 'ready', so the permission check alone is enough here.
@@ -46,25 +50,13 @@ export function ModulesPage() {
       setState('error')
       return
     }
-    setModules((data ?? []) as ModuleRow[])
+    const rows = (data ?? []) as ModuleRow[]
+    setModules(rows)
+    setDraftStatus(Object.fromEntries(rows.map((module) => [module.id, module.status])))
     setState('ready')
   }, [])
 
   useEffect(() => { void load() }, [load])
-
-  async function changeStatus(moduleId: string, status: ModuleStatus) {
-    setActionError(null)
-    setSavingId(moduleId)
-    try {
-      const { error } = await supabase.rpc('platform_set_module_status', { p_module_id: moduleId, p_status: status })
-      if (error) throw error
-      await load()
-    } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : 'Impossibile aggiornare lo stato del modulo.')
-    } finally {
-      setSavingId(null)
-    }
-  }
 
   async function loadTestingAccess(moduleId: string) {
     setLoadingAccessId(moduleId)
@@ -72,7 +64,9 @@ export function ModulesPage() {
     try {
       const { data, error } = await supabase.rpc('platform_list_module_testing_access', { p_module_id: moduleId })
       if (error) throw error
-      setTestingAccess((prev) => ({ ...prev, [moduleId]: (data ?? []) as TestingAccessRow[] }))
+      const rows = (data ?? []) as TestingAccessRow[]
+      setTestingAccess((prev) => ({ ...prev, [moduleId]: rows }))
+      setDraftAccess((prev) => ({ ...prev, [moduleId]: Object.fromEntries(rows.map((row) => [row.property_id, row.testing_access])) }))
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : 'Impossibile caricare le strutture abilitate.')
     } finally {
@@ -86,17 +80,38 @@ export function ModulesPage() {
     if (next && !testingAccess[next]) void loadTestingAccess(next)
   }
 
-  async function toggleTestingAccess(moduleId: string, propertyId: string, enabled: boolean) {
+  function hasPendingChanges(module: ModuleRow): boolean {
+    if (draftStatus[module.id] !== module.status) return true
+    const originalAccess = testingAccess[module.id]
+    const draft = draftAccess[module.id]
+    if (!originalAccess || !draft) return false
+    return originalAccess.some((row) => draft[row.property_id] !== row.testing_access)
+  }
+
+  async function save(module: ModuleRow) {
     setActionError(null)
+    setSavingId(module.id)
     try {
-      const { error } = await supabase.rpc('platform_set_module_testing_access', { p_module_id: moduleId, p_property_id: propertyId, p_enabled: enabled })
-      if (error) throw error
-      setTestingAccess((prev) => ({
-        ...prev,
-        [moduleId]: (prev[moduleId] ?? []).map((row) => (row.property_id === propertyId ? { ...row, testing_access: enabled } : row)),
-      }))
+      const nextStatus = draftStatus[module.id]
+      if (nextStatus !== module.status) {
+        const { error } = await supabase.rpc('platform_set_module_status', { p_module_id: module.id, p_status: nextStatus })
+        if (error) throw error
+      }
+      const originalAccess = testingAccess[module.id] ?? []
+      const draft = draftAccess[module.id] ?? {}
+      const changedAccess = originalAccess.filter((row) => draft[row.property_id] !== row.testing_access)
+      for (const row of changedAccess) {
+        const { error } = await supabase.rpc('platform_set_module_testing_access', {
+          p_module_id: module.id, p_property_id: row.property_id, p_enabled: draft[row.property_id],
+        })
+        if (error) throw error
+      }
+      await load()
+      if (changedAccess.length > 0 || nextStatus === 'testing') await loadTestingAccess(module.id)
     } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : 'Impossibile aggiornare la struttura abilitata.')
+      setActionError(cause instanceof Error ? cause.message : 'Impossibile salvare le modifiche.')
+    } finally {
+      setSavingId(null)
     }
   }
 
@@ -121,6 +136,8 @@ export function ModulesPage() {
             const Icon = meta?.icon ?? Puzzle
             const isExpanded = expandedId === module.id
             const access = testingAccess[module.id] ?? []
+            const draftModuleAccess = draftAccess[module.id] ?? {}
+            const pending = hasPendingChanges(module)
             return (
               <article className="platform-module-row" key={module.id}>
                 <div className="platform-module-row-main">
@@ -129,38 +146,41 @@ export function ModulesPage() {
                     <strong>{meta?.title ?? module.display_name}</strong>
                     <span>{meta?.description ?? 'Modulo Homisuite.'}</span>
                   </div>
-                  <label className="platform-module-status-select">
-                    <span className="sr-only">Stato di {meta?.title ?? module.display_name}</span>
-                    <select
-                      value={module.status}
-                      disabled={!canManage || savingId === module.id}
-                      onChange={(event) => void changeStatus(module.id, event.target.value as ModuleStatus)}
-                    >
-                      {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </label>
-                  {module.status === 'testing' ? (
+                  <Select
+                    value={draftStatus[module.id] ?? module.status}
+                    options={STATUS_OPTIONS}
+                    disabled={!canManage || savingId === module.id}
+                    onChange={(next) => setDraftStatus((prev) => ({ ...prev, [module.id]: next }))}
+                    aria-label={`Stato di ${meta?.title ?? module.display_name}`}
+                  />
+                  {(draftStatus[module.id] ?? module.status) === 'testing' ? (
                     <button type="button" className="platform-module-expand" onClick={() => toggleExpanded(module.id)} aria-expanded={isExpanded}>
                       Strutture abilitate {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
                   ) : null}
+                  <Button variant="primary" size="sm" disabled={!canManage || !pending || savingId === module.id} onClick={() => void save(module)}>
+                    {savingId === module.id ? 'Salvataggio…' : 'Salva'}
+                  </Button>
                 </div>
-                {isExpanded && module.status === 'testing' ? (
+                {isExpanded && (draftStatus[module.id] ?? module.status) === 'testing' ? (
                   <div className="platform-module-access-list">
                     {loadingAccessId === module.id && access.length === 0 ? (
                       <p className="platform-module-access-loading">Caricamento strutture…</p>
                     ) : (
                       access.map((row) => (
-                        <label className="platform-module-access-row" key={row.property_id}>
-                          <input
-                            type="checkbox"
-                            checked={row.testing_access}
+                        <div className="platform-module-access-row" key={row.property_id}>
+                          <Toggle
+                            checked={draftModuleAccess[row.property_id] ?? row.testing_access}
                             disabled={!canManage}
-                            onChange={(event) => void toggleTestingAccess(module.id, row.property_id, event.target.checked)}
+                            onCheckedChange={(checked) => setDraftAccess((prev) => ({
+                              ...prev,
+                              [module.id]: { ...(prev[module.id] ?? {}), [row.property_id]: checked },
+                            }))}
+                            aria-label={`Abilita ${row.property_name} al collaudo`}
                           />
                           <span>{row.property_name}</span>
                           <small>{row.organization_name}</small>
-                        </label>
+                        </div>
                       ))
                     )}
                   </div>

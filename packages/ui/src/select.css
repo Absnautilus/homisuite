@@ -1,0 +1,64 @@
+/* A plain single-select dropdown, styled consistently with <Button>/
+   <Toggle> rather than left as the browser's own <select> chrome (whose
+   open list can't be restyled at all on most platforms). Colors come from
+   each consumer's own theme tokens, with literal fallbacks, same
+   convention as Button/Modal. */
+.ui-select { position: relative; display: inline-flex; }
+.ui-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line-strong, #d8dae3);
+  border-radius: var(--r-sm, 8px);
+  background: var(--surface, #fff);
+  color: var(--ink, #15181d);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--motion-fast, 120ms) var(--motion-ease, ease);
+}
+.ui-select-trigger:hover { border-color: var(--accent, #6d4fc9); }
+.ui-select-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 3px rgba(156, 79, 199, .18)); }
+.ui-select-trigger:disabled { cursor: not-allowed; opacity: 0.5; }
+.ui-select-trigger svg { flex-shrink: 0; color: var(--muted, #6b7280); transition: transform var(--motion-fast, 120ms) var(--motion-ease, ease); }
+.ui-select-trigger[aria-expanded='true'] svg { transform: rotate(180deg); }
+
+.ui-select-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e4e7ee);
+  border-radius: var(--r-md, 10px);
+  box-shadow: var(--shadow-lg, 0 12px 28px rgba(16, 15, 30, .16));
+}
+.ui-select-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--ink, #15181d);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ui-select-list button:hover { background: var(--surface-2, #f4f4f7); }
+.ui-select-list button.is-selected { color: var(--accent, #6d4fc9); }
+.ui-select-list button svg { flex-shrink: 0; color: var(--accent, #6d4fc9); }
