@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { PlatformAuditLogEntry, PlatformPropertyOption } from '@homisuite/core-sdk'
-import { Select, type SelectOption } from '@homisuite/ui'
 import { core } from '../../core/client'
 import { PageState } from '../../components/PageState'
+import { Select } from '../../components/Select'
 
 const ACTION_LABELS: Record<string, string> = {
   'platform.console_accessed': 'Accesso alla console',
@@ -45,11 +45,6 @@ export function AuditLogPage({ propertyId, title = 'Registro attività', descrip
     return () => { cancelled = true }
   }, [propertyFilter])
 
-  const propertyOptions: Array<SelectOption<string>> = [
-    { value: ALL_PROPERTIES, label: 'Tutte le strutture' },
-    ...properties.map((property) => ({ value: property.id, label: `${property.name} · ${property.organizationName}` })),
-  ]
-
   return (
     <>
       <div className="platform-page-head">
@@ -58,7 +53,10 @@ export function AuditLogPage({ propertyId, title = 'Registro attività', descrip
           <p className="muted">{description ?? 'Ultime 100 operazioni registrate sulla console Platform Admin.'}</p>
         </div>
         {!propertyId ? (
-          <Select value={propertyFilter} options={propertyOptions} onChange={setPropertyFilter} aria-label="Filtra per struttura" />
+          <Select name="audit-property-filter" value={propertyFilter} onChange={setPropertyFilter}>
+            <option value={ALL_PROPERTIES}>Tutte le strutture</option>
+            {properties.map((property) => <option key={property.id} value={property.id}>{property.name} · {property.organizationName}</option>)}
+          </Select>
         ) : null}
       </div>
       {error ? <PageState kind="error" title="Impossibile caricare il registro." description={error} /> : null}

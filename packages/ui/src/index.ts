@@ -1,7 +1,5 @@
 export { Toggle } from './toggle'
 export type { ToggleProps } from './toggle'
-export { Select } from './select'
-export type { SelectOption, SelectProps } from './select'
 export { Button } from './button'
 export type { ButtonProps, ButtonVariant, ButtonSize } from './button'
 export { IconButton } from './icon-button'

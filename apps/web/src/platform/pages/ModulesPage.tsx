@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Puzzle } from 'lucide-react'
-import { Button, PageHeader, Select, Toggle, type SelectOption } from '@homisuite/ui'
+import { Button, PageHeader, Toggle } from '@homisuite/ui'
 import { supabase } from '../../core/client'
 import { PageState } from '../../components/PageState'
+import { Select } from '../../components/Select'
 import { MODULE_CATALOG, type ModuleStatus } from '../../pages/ModulesPage'
 import { usePlatformContext } from '../PlatformContext'
 
 type ModuleRow = { id: string; slug: string; display_name: string; status: ModuleStatus }
 type TestingAccessRow = { property_id: string; property_name: string; organization_name: string; testing_access: boolean }
 
-const STATUS_OPTIONS: Array<SelectOption<ModuleStatus>> = [
+const STATUS_OPTIONS: Array<{ value: ModuleStatus; label: string }> = [
   { value: 'in_development', label: 'In sviluppo' },
   { value: 'testing', label: 'In collaudo' },
   { value: 'beta', label: 'Beta' },
@@ -156,12 +157,13 @@ export function ModulesPage() {
                     <span>{meta?.description ?? 'Modulo Homisuite.'}</span>
                   </div>
                   <Select
+                    name={`module-status-${module.id}`}
                     value={draftStatus[module.id] ?? module.status}
-                    options={STATUS_OPTIONS}
                     disabled={!canManage || saving}
-                    onChange={(next) => setDraftStatus((prev) => ({ ...prev, [module.id]: next }))}
-                    aria-label={`Stato di ${meta?.title ?? module.display_name}`}
-                  />
+                    onChange={(next) => setDraftStatus((prev) => ({ ...prev, [module.id]: next as ModuleStatus }))}
+                  >
+                    {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </Select>
                   {(draftStatus[module.id] ?? module.status) === 'testing' ? (
                     <button type="button" className="platform-module-expand" onClick={() => toggleExpanded(module.id)} aria-expanded={isExpanded}>
                       Strutture abilitate {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
