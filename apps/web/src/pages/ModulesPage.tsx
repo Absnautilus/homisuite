@@ -13,12 +13,14 @@ type ModuleRow = {
   slug: string
   display_name: string
   status: ModuleStatus
+  guest_facing: boolean
 }
 
 type PropertyModuleRow = {
   module_id: string
   enabled: boolean
   testing_access: boolean
+  guest_enabled: boolean
 }
 
 export const MODULE_CATALOG: Record<string, { title: string; description: string; icon: LucideIcon; path: string; settingsPath?: string }> = {
@@ -69,8 +71,8 @@ export function ModulesPage() {
   const load = useCallback(async (propertyIdToLoad: string, isCancelled: () => boolean) => {
     setState('loading')
     const [modulesResult, entitlementsResult, platformAdminResult] = await Promise.all([
-      supabase.from('modules').select('id, slug, display_name, status').order('display_name'),
-      supabase.from('property_modules').select('module_id, enabled, testing_access').eq('property_id', propertyIdToLoad),
+      supabase.from('modules').select('id, slug, display_name, status, guest_facing').order('display_name'),
+      supabase.from('property_modules').select('module_id, enabled, testing_access, guest_enabled').eq('property_id', propertyIdToLoad),
       supabase.rpc('is_platform_admin'),
     ])
 
@@ -106,6 +108,10 @@ export function ModulesPage() {
     () => new Map(propertyModules.map((item) => [item.module_id, item.testing_access])),
     [propertyModules],
   )
+  const guestEnabledById = useMemo(
+    () => new Map(propertyModules.map((item) => [item.module_id, item.guest_enabled])),
+    [propertyModules],
+  )
   // in_development: technical/master admins only, wherever they're working
   // from -- never surfaced to a property's own team. testing: admins plus
   // the specific properties opted in via property_modules.testing_access,
@@ -134,6 +140,25 @@ export function ModulesPage() {
       await Promise.all([load(propertyId, () => false), runtime.refresh()])
     } catch (cause) {
       setToggleError(cause instanceof Error ? cause.message : 'Impossibile aggiornare il modulo.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  async function toggleGuestModule(moduleId: string, nextEnabled: boolean) {
+    if (!propertyId) return
+    setToggleError(null)
+    setSavingId(moduleId)
+    try {
+      const { error } = await supabase.rpc('set_property_module_guest_enabled', {
+        p_property_id: propertyId,
+        p_module_id: moduleId,
+        p_enabled: nextEnabled,
+      })
+      if (error) throw error
+      await load(propertyId, () => false)
+    } catch (cause) {
+      setToggleError(cause instanceof Error ? cause.message : 'Impossibile aggiornare la visibilità per l\'app guest.')
     } finally {
       setSavingId(null)
     }
@@ -196,15 +221,28 @@ export function ModulesPage() {
                 </div>
                 <p className={lifecycleClass}>{lifecycleLabel}</p>
                 <div className="module-card-footer">
-                  <label className="module-card-toggle">
-                    <Toggle
-                      checked={enabled}
-                      onCheckedChange={(next) => void toggleModule(module.id, next)}
-                      disabled={savingId === module.id}
-                      aria-label={enabled ? `Disattiva ${meta.title}` : `Attiva ${meta.title}`}
-                    />
-                    <span>{enabled ? 'Attivo' : 'Non attivo'}</span>
-                  </label>
+                  <div className="module-card-toggles">
+                    <label className="module-card-toggle">
+                      <Toggle
+                        checked={enabled}
+                        onCheckedChange={(next) => void toggleModule(module.id, next)}
+                        disabled={savingId === module.id}
+                        aria-label={enabled ? `Disattiva ${meta.title}` : `Attiva ${meta.title}`}
+                      />
+                      <span>{enabled ? 'Attivo' : 'Non attivo'}</span>
+                    </label>
+                    {enabled && module.guest_facing ? (
+                      <label className="module-card-toggle">
+                        <Toggle
+                          checked={guestEnabledById.get(module.id) ?? true}
+                          onCheckedChange={(next) => void toggleGuestModule(module.id, next)}
+                          disabled={savingId === module.id}
+                          aria-label={`Attiva ${meta.title} in app guest`}
+                        />
+                        <span>Attivo in app guest</span>
+                      </label>
+                    ) : null}
+                  </div>
                   {enabled ? (
                     <Link
                       className="module-card-settings"

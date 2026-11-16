@@ -126,6 +126,7 @@ export interface Database {
           plan: string | null
           settings: Json
           testing_access: boolean
+          guest_enabled: boolean
           created_at: string
           updated_at: string
         }
@@ -137,6 +138,7 @@ export interface Database {
           plan?: string | null
           settings?: Json
           testing_access?: boolean
+          guest_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -148,6 +150,7 @@ export interface Database {
           plan?: string | null
           settings?: Json
           testing_access?: boolean
+          guest_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -517,6 +520,10 @@ export interface Database {
         Returns: boolean
       }
       set_property_module_enabled: {
+        Args: { p_property_id: string; p_module_id: string; p_enabled: boolean }
+        Returns: undefined
+      }
+      set_property_module_guest_enabled: {
         Args: { p_property_id: string; p_module_id: string; p_enabled: boolean }
         Returns: undefined
       }
