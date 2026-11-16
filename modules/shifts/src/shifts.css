@@ -198,7 +198,12 @@
 .shift-grid-scroll.can-scroll-start { --shift-fade-start: 0; }
 .shift-grid-scroll.can-scroll-end { --shift-fade-end: 0; }
 .shift-grid { border-collapse: separate; border-spacing: 0; min-width: 880px; width: 100%; }
-.shift-grid th, .shift-grid td { border-bottom: 1px solid var(--shift-line); padding: 9px 7px; text-align: center; }
+.shift-grid th, .shift-grid td { border-bottom: 1px solid var(--shift-line); border-right: 1px solid var(--shift-line); padding: 9px 7px; text-align: center; }
+/* The code's own cell (not the person-name column, which keeps the padding
+   above) fills edge-to-edge like a real spreadsheet grid -- .shift-cell
+   below supplies its own color right up to this td's border, instead of
+   sitting inset as a smaller rounded chip with visible gaps around it. */
+.shift-grid tbody td:not(.shift-person-column) { padding: 0; }
 .shift-grid thead th { background: var(--shift-soft); color: var(--shift-muted); font-size: 11px; text-transform: uppercase; }
 .shift-grid thead th span, .shift-grid thead th strong { display: block; }
 .shift-grid thead th strong { color: var(--shift-ink); font-size: 15px; margin-top: 2px; }
@@ -211,14 +216,14 @@
 .shift-person-copy { display: grid; min-width: 0; }
 .shift-person-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shift-person-copy small { color: var(--shift-muted); font-weight: 500; margin-top: 2px; }
-.shift-cell { align-items: center; background: var(--shift-color); border-radius: 9px; color: var(--shift-text); display: inline-flex; flex-direction: column; gap: 1px; justify-content: center; min-height: 48px; min-width: 76px; padding: 5px; position: relative; width: 100%; }
-.shift-cell strong { font-size: 13px; }
+.shift-cell { align-items: center; background: var(--shift-color); border-radius: 0; color: var(--shift-text); display: flex; flex-direction: column; gap: 1px; justify-content: center; height: 100%; min-height: 48px; padding: 5px; position: relative; width: 100%; }
+.shift-cell strong { font-size: 15px; font-weight: 800; }
 .shift-cell small { font-size: 9px; opacity: .9; }
 .shift-cell svg { position: absolute; right: 5px; top: 5px; }
 
 /* ---- shift-click multi-select + copy/paste ---- */
 .shift-grid td.is-selected { background: var(--shift-accent-soft, rgba(156,79,199,.12)); }
-.shift-cell.is-selected, .shift-cell-editor.is-selected { box-shadow: inset 0 0 0 1.5px var(--shift-accent-soft-line, rgba(156,79,199,.45)); border-radius: 9px; }
+.shift-cell.is-selected, .shift-cell-editor.is-selected { box-shadow: inset 0 0 0 1.5px var(--shift-accent-soft-line, rgba(156,79,199,.45)); }
 .shift-selection-bar { align-items: center; background: var(--shift-accent-soft); border: 1px solid var(--shift-accent-soft-line); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12.5px; font-weight: 500; color: var(--shift-ink); margin: 0 20px 12px; padding: 9px 14px; }
 .shift-selection-codes { display: flex; flex-wrap: wrap; gap: 6px; }
 .shift-selection-codes button { background: var(--shift-color, var(--shift-panel)); color: var(--shift-text, var(--shift-ink)); border: 1px solid var(--shift-line-strong); border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 800; min-height: 30px; padding: 0 11px; }
@@ -628,16 +633,27 @@
   text-transform: uppercase;
 }
 .shift-grid td { min-width: 25px; }
+/* Was background: transparent + color: var(--shift-ink) here, which (same
+   specificity as the .shift-cell rule up top, but later in the file) won
+   on every property it redeclared -- the cell's own color never actually
+   painted, and its text used the generic ink color instead of the shift
+   code's own contrasting --shift-text. Kept as one real rule instead of
+   two competing ones for the same class. */
 .shift-cell {
-  background: transparent;
+  align-items: center;
+  background: var(--shift-color);
   border: 0;
   border-radius: 0;
-  color: var(--shift-ink);
+  color: var(--shift-text);
+  display: flex;
+  height: 100%;
+  justify-content: center;
   min-height: 40px;
   min-width: 24px;
-  padding: 0;
+  padding: 4px;
+  width: 100%;
 }
-.shift-cell strong { font-size: 10px; }
+.shift-cell strong { font-size: 13px; font-weight: 800; }
 .shift-legend {
   gap: 8px 15px;
   padding: 15px 1px 0;
@@ -932,23 +948,16 @@
 }
 
 
-/* Planner fidelity pass: coded cells, dropdowns and calendar controls. */
-.shift-cell.has-value {
-  background: transparent;
-}
+/* Planner fidelity pass: coded cells, dropdowns and calendar controls.
+   A has-value cell used to turn transparent and shrink its code down to
+   an 18px chip floating inside it -- the opposite of the spreadsheet-like
+   "whole cell is the color, code sits big and centered in it" look asked
+   for, and it's what was actually overriding .shift-cell's own fill above
+   (same specificity, defined later). The code now just sits as plain bold
+   text directly on .shift-cell's own color. */
 .shift-cell.has-value strong {
-  align-items: center;
-  background: var(--shift-color);
-  border-radius: 4px;
-  color: var(--shift-text);
-  display: inline-flex;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 800;
-  height: 18px;
-  justify-content: center;
-  line-height: 1;
-  min-width: 18px;
-  padding: 0 4px;
 }
 .shift-cell-editor {
   align-items: center;
