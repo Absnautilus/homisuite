@@ -30,7 +30,7 @@ export function ModulesPage() {
   const runtime = usePlatformContext()
   const [modules, setModules] = useState<ModuleRow[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [savingId, setSavingId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [testingAccess, setTestingAccess] = useState<Record<string, TestingAccessRow[]>>({})
@@ -88,34 +88,43 @@ export function ModulesPage() {
     return originalAccess.some((row) => draft[row.property_id] !== row.testing_access)
   }
 
-  async function save(module: ModuleRow) {
+  const rows = useMemo(() => modules.map((module) => ({ module, meta: MODULE_CATALOG[module.slug] })), [modules])
+  // Not memoized: hasPendingChanges itself closes over state that changes
+  // every render, so memoizing this would need the same deps anyway -- the
+  // module list is short enough that recomputing it plainly is simpler.
+  const dirtyModules = modules.filter(hasPendingChanges)
+
+  // One save for the whole page, at the bottom, instead of a button per
+  // row: an admin reclassifying several modules at once reviews everything
+  // first, then commits it all in a single action.
+  async function saveAll() {
     setActionError(null)
-    setSavingId(module.id)
+    setSaving(true)
     try {
-      const nextStatus = draftStatus[module.id]
-      if (nextStatus !== module.status) {
-        const { error } = await supabase.rpc('platform_set_module_status', { p_module_id: module.id, p_status: nextStatus })
-        if (error) throw error
-      }
-      const originalAccess = testingAccess[module.id] ?? []
-      const draft = draftAccess[module.id] ?? {}
-      const changedAccess = originalAccess.filter((row) => draft[row.property_id] !== row.testing_access)
-      for (const row of changedAccess) {
-        const { error } = await supabase.rpc('platform_set_module_testing_access', {
-          p_module_id: module.id, p_property_id: row.property_id, p_enabled: draft[row.property_id],
-        })
-        if (error) throw error
+      for (const module of dirtyModules) {
+        const nextStatus = draftStatus[module.id]
+        if (nextStatus !== module.status) {
+          const { error } = await supabase.rpc('platform_set_module_status', { p_module_id: module.id, p_status: nextStatus })
+          if (error) throw error
+        }
+        const originalAccess = testingAccess[module.id] ?? []
+        const draft = draftAccess[module.id] ?? {}
+        for (const row of originalAccess) {
+          if (draft[row.property_id] === row.testing_access) continue
+          const { error } = await supabase.rpc('platform_set_module_testing_access', {
+            p_module_id: module.id, p_property_id: row.property_id, p_enabled: draft[row.property_id],
+          })
+          if (error) throw error
+        }
       }
       await load()
-      if (changedAccess.length > 0 || nextStatus === 'testing') await loadTestingAccess(module.id)
+      await Promise.all(dirtyModules.filter((module) => testingAccess[module.id]).map((module) => loadTestingAccess(module.id)))
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : 'Impossibile salvare le modifiche.')
     } finally {
-      setSavingId(null)
+      setSaving(false)
     }
   }
-
-  const rows = useMemo(() => modules.map((module) => ({ module, meta: MODULE_CATALOG[module.slug] })), [modules])
 
   return (
     <div className="page-stack">
@@ -139,7 +148,7 @@ export function ModulesPage() {
             const draftModuleAccess = draftAccess[module.id] ?? {}
             const pending = hasPendingChanges(module)
             return (
-              <article className="platform-module-row" key={module.id}>
+              <article className={`platform-module-row${pending ? ' is-dirty' : ''}`} key={module.id}>
                 <div className="platform-module-row-main">
                   <div className="module-icon"><Icon size={18} /></div>
                   <div className="platform-module-row-copy">
@@ -149,7 +158,7 @@ export function ModulesPage() {
                   <Select
                     value={draftStatus[module.id] ?? module.status}
                     options={STATUS_OPTIONS}
-                    disabled={!canManage || savingId === module.id}
+                    disabled={!canManage || saving}
                     onChange={(next) => setDraftStatus((prev) => ({ ...prev, [module.id]: next }))}
                     aria-label={`Stato di ${meta?.title ?? module.display_name}`}
                   />
@@ -158,9 +167,7 @@ export function ModulesPage() {
                       Strutture abilitate {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
                   ) : null}
-                  <Button variant="primary" size="sm" disabled={!canManage || !pending || savingId === module.id} onClick={() => void save(module)}>
-                    {savingId === module.id ? 'Salvataggio…' : 'Salva'}
-                  </Button>
+                  {pending ? <span className="platform-module-dirty-badge">Modificato</span> : null}
                 </div>
                 {isExpanded && (draftStatus[module.id] ?? module.status) === 'testing' ? (
                   <div className="platform-module-access-list">
@@ -171,7 +178,7 @@ export function ModulesPage() {
                         <div className="platform-module-access-row" key={row.property_id}>
                           <Toggle
                             checked={draftModuleAccess[row.property_id] ?? row.testing_access}
-                            disabled={!canManage}
+                            disabled={!canManage || saving}
                             onCheckedChange={(checked) => setDraftAccess((prev) => ({
                               ...prev,
                               [module.id]: { ...(prev[module.id] ?? {}), [row.property_id]: checked },
@@ -188,6 +195,12 @@ export function ModulesPage() {
               </article>
             )
           })}
+          <div className="platform-module-save-bar">
+            <span>{dirtyModules.length === 0 ? 'Nessuna modifica da salvare.' : `${dirtyModules.length} ${dirtyModules.length === 1 ? 'modulo modificato' : 'moduli modificati'}.`}</span>
+            <Button variant="primary" disabled={!canManage || dirtyModules.length === 0 || saving} onClick={() => void saveAll()}>
+              {saving ? 'Salvataggio…' : 'Salva modifiche'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types/database'
-import type { CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformTeamMember, ResetPlatformTeamMemberPasswordInput, UpdatePlatformTeamMemberInput } from './types/domain'
+import type { CreatePlatformTeamMemberInput, CreatePlatformTeamMemberResult, PlatformAdminStatus, PlatformAuditLogEntry, PlatformOperationalSession, PlatformOperationalSessionRecord, PlatformOperationalSessionStatus, PlatformOrganization, PlatformProperty, PlatformPropertyModule, PlatformPropertyOption, PlatformTeamMember, ResetPlatformTeamMemberPasswordInput, UpdatePlatformTeamMemberInput } from './types/domain'
 
 // Platform Admin is deliberately its own small module, not folded into
 // memberships.ts/permissions.ts -- it never touches a membership, a role,
@@ -50,8 +50,8 @@ export async function getPlatformPropertyModules(client: SupabaseClient<Database
   return (data ?? []).map((row) => ({ moduleId: row.module_id, slug: row.slug, displayName: row.display_name, enabled: row.enabled }))
 }
 
-export async function getPlatformAuditLog(client: SupabaseClient<Database>, limit = 50, offset = 0): Promise<PlatformAuditLogEntry[]> {
-  const { data, error } = await client.rpc('platform_list_audit_log', { p_limit: limit, p_offset: offset })
+export async function getPlatformAuditLog(client: SupabaseClient<Database>, limit = 50, offset = 0, propertyId?: string): Promise<PlatformAuditLogEntry[]> {
+  const { data, error } = await client.rpc('platform_list_audit_log', { p_limit: limit, p_offset: offset, p_property_id: propertyId ?? null })
   if (error) throw error
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -62,7 +62,15 @@ export async function getPlatformAuditLog(client: SupabaseClient<Database>, limi
     targetId: row.target_id,
     metadata: (row.metadata as Record<string, unknown> | null) ?? null,
     createdAt: row.created_at,
+    propertyId: row.property_id,
+    propertyName: row.property_name,
   }))
+}
+
+export async function getPlatformAllProperties(client: SupabaseClient<Database>): Promise<PlatformPropertyOption[]> {
+  const { data, error } = await client.rpc('platform_list_all_properties')
+  if (error) throw error
+  return (data ?? []).map((row) => ({ id: row.id, name: row.name, organizationName: row.organization_name }))
 }
 
 export async function createPlatformOrganization(client: SupabaseClient<Database>, name: string, slug: string): Promise<string> {

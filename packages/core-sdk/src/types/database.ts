@@ -635,7 +635,7 @@ export interface Database {
         Returns: { property_id: string; property_name: string; organization_name: string; testing_access: boolean }[]
       }
       platform_list_audit_log: {
-        Args: { p_limit?: number; p_offset?: number }
+        Args: { p_limit?: number; p_offset?: number; p_property_id?: string | null }
         Returns: {
           id: string
           actor_profile_id: string | null
@@ -645,7 +645,13 @@ export interface Database {
           target_id: string | null
           metadata: Json | null
           created_at: string
+          property_id: string | null
+          property_name: string | null
         }[]
+      }
+      platform_list_all_properties: {
+        Args: Record<string, never>
+        Returns: { id: string; name: string; organization_name: string }[]
       }
       platform_create_organization: {
         Args: { p_name: string; p_slug: string }

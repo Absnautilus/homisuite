@@ -11,6 +11,7 @@ import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { Field } from '../PlatformField'
 import { usePlatformContext } from '../PlatformContext'
+import { AuditLogPage } from './AuditLogPage'
 
 export function PropertyDetailPage() {
   const { organizationId, propertyId } = useParams<{ organizationId: string; propertyId: string }>()
@@ -59,6 +60,7 @@ export function PropertyDetailPage() {
   const canOpenOperationalView = hasPlatformPermission('platform.support.read')
   const canManageTeam = hasPlatformPermission('platform.team.manage')
   const canImpersonate = hasPlatformPermission('platform.impersonation.write')
+  const canViewAudit = hasPlatformPermission('platform.audit.read')
 
   useEffect(() => {
     if (!organizationId || !propertyId) return
@@ -323,6 +325,14 @@ export function PropertyDetailPage() {
               </tbody>
             </table>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Archivio -- questa proprietà vista nel registro attività, senza il
+          selettore di struttura (è già fissato su questa). */}
+      {canViewAudit ? (
+        <div className="platform-section">
+          <AuditLogPage propertyId={propertyId} title="Archivio" description="Attività registrata per questa struttura." />
         </div>
       ) : null}
 

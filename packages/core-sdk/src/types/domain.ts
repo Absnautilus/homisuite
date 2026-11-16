@@ -235,6 +235,23 @@ export interface PlatformAuditLogEntry {
   targetId: string | null
   metadata: Record<string, unknown> | null
   createdAt: string
+  // Resolved server-side from either the row's own property target or a
+  // property_id carried in its metadata (module testing-access changes,
+  // property-scoped team actions) -- null for an action that isn't about
+  // any one property (an organization-level action, for example).
+  propertyId: string | null
+  propertyName: string | null
+}
+
+// The flat, platform-wide property picker the audit log's and Moduli's own
+// filters/pickers share -- every property across every organization, with
+// its organization's name alongside for disambiguation, instead of each
+// caller drilling into platform_list_properties(organization_id) one
+// organization at a time.
+export interface PlatformPropertyOption {
+  id: string
+  name: string
+  organizationName: string
 }
 
 // The console's session-history view (Fase C, PR C4) -- across every

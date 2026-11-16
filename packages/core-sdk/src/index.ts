@@ -28,6 +28,7 @@ export type {
   PlatformAdminStatus,
   PlatformOrganization,
   PlatformProperty,
+  PlatformPropertyOption,
   PlatformPropertyModule,
   PlatformAuditLogEntry,
   PlatformOperationalSession,
