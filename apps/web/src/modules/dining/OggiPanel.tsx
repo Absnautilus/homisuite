@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Clock3, Inbox } from 'lucide-react'
+import { AlertTriangle, Clock3, History, Inbox } from 'lucide-react'
 import { Button } from '@homisuite/ui'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
@@ -131,7 +131,7 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
           <table className="dining-dense">
             <thead>
               <tr>
-                <th>Ora</th><th>Camera</th><th>Ospite</th><th>Ristorante</th><th>Pax</th><th>Stato</th>
+                <th>Ora</th><th>Camera</th><th>Ospite</th><th>Ristorante</th><th>Pax</th><th>Stato</th><th>Attività</th>
               </tr>
             </thead>
             <tbody>
@@ -143,6 +143,17 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
                   <td>{restaurantName(reservation)}</td>
                   <td>{reservation.party_size}</td>
                   <td><span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span></td>
+                  <td onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="dining-activity-btn"
+                      onClick={() => onOpenDetail(reservation.id)}
+                      aria-label={`Attività della prenotazione di ${reservation.guest_name}`}
+                      title="Attività"
+                    >
+                      <History size={16} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

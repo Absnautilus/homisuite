@@ -106,7 +106,7 @@ export const helpContent: Record<string, HelpTopic> = {
         icon: Search,
         body: [
           'L’archivio completo, con ricerca libera e filtri per ristorante, stato e intervallo di date, così non scorri più l’intera cronologia.',
-          'Apri una riga per vedere il dettaglio: puoi anche modificare i dati della prenotazione (ospite, camera, data, ora, persone), non solo lo stato.',
+          'Apri una riga (o l’icona Attività a lato) per vedere il dettaglio: puoi anche modificare i dati della prenotazione (ospite, camera, data, ora, persone), non solo lo stato, e la cronologia di ogni modifica fatta su quella prenotazione -- chi, cosa e quando.',
         ],
       },
       {
@@ -118,9 +118,9 @@ export const helpContent: Record<string, HelpTopic> = {
         ],
       },
       {
-        heading: 'Ristoranti, Categorie, Registro modifiche',
+        heading: 'Ristoranti, Categorie',
         icon: UtensilsCrossed,
-        body: ['Gestiscono l’elenco dei ristoranti e delle categorie, e tengono traccia di ogni modifica fatta sulle prenotazioni -- riservati a chi ha i permessi di gestione.'],
+        body: ['Gestiscono l’elenco dei ristoranti e delle categorie -- riservati a chi ha i permessi di gestione.'],
       },
     ],
   },
@@ -318,7 +318,7 @@ export const moduleTours: Record<string, ModuleTour> = {
       {
         target: '[data-tour="dining-nav"]',
         title: 'Le sezioni di Ristorazione',
-        body: 'Cinque schede in alto -- Prenotazioni, Ristoranti, Categorie, Registro modifiche e Impostazioni. Le vediamo una per una, poi entriamo nel dettaglio di Prenotazioni.',
+        body: 'Quattro schede in alto -- Prenotazioni, Ristoranti, Categorie e Impostazioni. Le vediamo una per una, poi entriamo nel dettaglio di Prenotazioni.',
       },
       {
         target: '[role="tab"][data-value="ristoranti"]',
@@ -329,11 +329,6 @@ export const moduleTours: Record<string, ModuleTour> = {
         target: '[role="tab"][data-value="categorie"]',
         title: 'Categorie',
         body: 'Le categorie usate per organizzare i ristoranti (es. colazione, cena, bar) -- anche questa riservata a chi gestisce il modulo.',
-      },
-      {
-        target: '[role="tab"][data-value="registro"]',
-        title: 'Registro modifiche',
-        body: 'La cronologia di ogni modifica fatta sulle prenotazioni -- chi, cosa e quando, utile in caso di dubbi su una richiesta.',
       },
       {
         target: '[role="tab"][data-value="impostazioni"]',

@@ -1,9 +1,8 @@
 import { ModuleNav, useRememberedTab } from '@homisuite/ui'
-import { BookOpenText, CalendarDays, ListTree, Settings, UtensilsCrossed } from 'lucide-react'
+import { CalendarDays, ListTree, Settings, UtensilsCrossed } from 'lucide-react'
 import { CategoriesTab } from './CategoriesTab'
 import { RestaurantsTab } from './RestaurantsTab'
 import { ReservationsTab } from './ReservationsTab'
-import { ChangeLogTab } from './ChangeLogTab'
 import { SettingsTab } from './SettingsTab'
 
 interface DiningPageProps {
@@ -22,7 +21,6 @@ const TABS = [
   { value: 'prenotazioni', label: 'Prenotazioni', icon: <CalendarDays /> },
   { value: 'ristoranti', label: 'Ristoranti', icon: <UtensilsCrossed /> },
   { value: 'categorie', label: 'Categorie', icon: <ListTree /> },
-  { value: 'registro', label: 'Registro modifiche', icon: <BookOpenText /> },
   { value: 'impostazioni', label: 'Impostazioni', icon: <Settings /> },
 ]
 
@@ -58,7 +56,7 @@ export function DiningPage({ hotelId, hotelName, hotelAddress, canManage, staffP
           } : undefined}
         />
       </div>
-      {/* All five panels stay mounted, switching only which is visible --
+      {/* All four panels stay mounted, switching only which is visible --
           unmounting/remounting a tab (the previous behaviour) discarded
           whatever the person had open or typed there, e.g. the "Aggiungi
           prenotazione" modal closing and losing its draft when they
@@ -66,7 +64,6 @@ export function DiningPage({ hotelId, hotelName, hotelAddress, canManage, staffP
       <div hidden={tab !== 'prenotazioni'}><ReservationsTab hotelId={hotelId} staffProfileId={staffProfileId} canManage={canManage} view={reservationsView as 'oggi' | 'tutte' | 'archivio'} timezone={timezone} /></div>
       <div hidden={tab !== 'ristoranti'}><RestaurantsTab hotelId={hotelId} hotelAddress={hotelAddress} canManage={canManage} /></div>
       <div hidden={tab !== 'categorie'}><CategoriesTab hotelId={hotelId} canManage={canManage} /></div>
-      <div hidden={tab !== 'registro'}><ChangeLogTab hotelId={hotelId} /></div>
       <div hidden={tab !== 'impostazioni'}><SettingsTab hotelId={hotelId} canManage={canManage} /></div>
     </div>
   )

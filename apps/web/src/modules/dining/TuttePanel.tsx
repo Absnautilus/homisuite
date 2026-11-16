@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
-import { Search } from 'lucide-react'
+import { History, Search } from 'lucide-react'
 import { Button, DatePicker } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
@@ -121,7 +121,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
             <tr>
               <th className={`sortable${sort.col === 'date' ? ' is-sorted' : ''}`} onClick={() => toggleSort('date')}>Data<span className="arrow">{sort.col === 'date' && sort.dir === -1 ? '▾' : '▴'}</span></th>
               <th className={`sortable${sort.col === 'time' ? ' is-sorted' : ''}`} onClick={() => toggleSort('time')}>Ora<span className="arrow">{sort.col === 'time' && sort.dir === -1 ? '▾' : '▴'}</span></th>
-              <th>Camera</th><th>Ospite</th><th>N. prenotazione</th><th>Ristorante</th><th>Pax</th><th>Stato</th><th>Richieste</th><th>Note</th>
+              <th>Camera</th><th>Ospite</th><th>N. prenotazione</th><th>Ristorante</th><th>Pax</th><th>Stato</th><th>Richieste</th><th>Note</th><th>Attività</th>
             </tr>
           </thead>
           <tbody>
@@ -190,6 +190,17 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
                       canEdit={canManage}
                       onSave={(next) => save(reservation.id, { staff_notes: next || null })}
                     />
+                  </td>
+                  <td onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="dining-activity-btn"
+                      onClick={() => onOpenDetail(reservation.id)}
+                      aria-label={`Attività della prenotazione di ${reservation.guest_name}`}
+                      title="Attività"
+                    >
+                      <History size={16} />
+                    </button>
                   </td>
                 </tr>
               )

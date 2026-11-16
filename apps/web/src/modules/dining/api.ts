@@ -496,17 +496,6 @@ export async function getFeedback(client: SupabaseClient, reservationId: string)
   return data as ReservationFeedback | null
 }
 
-export async function listChangeLog(client: SupabaseClient, hotelId: string): Promise<ChangeLogEntry[]> {
-  const { data, error } = await client
-    .from('dining_change_log')
-    .select('*')
-    .eq('hotel_id', hotelId)
-    .order('created_at', { ascending: false })
-    .limit(200)
-  if (error) throw error
-  return data as ChangeLogEntry[]
-}
-
 // Powers the booking detail panel's "Attività" timeline -- one reservation's
 // own history, not the whole hotel's log, so no arbitrary limit is needed.
 export async function listChangeLogForEntity(client: SupabaseClient, entityId: string): Promise<ChangeLogEntry[]> {
