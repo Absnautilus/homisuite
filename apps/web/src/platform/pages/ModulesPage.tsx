@@ -7,7 +7,7 @@ import { Select } from '../../components/Select'
 import { MODULE_CATALOG, type ModuleStatus } from '../../pages/ModulesPage'
 import { usePlatformContext } from '../PlatformContext'
 
-type ModuleRow = { id: string; slug: string; display_name: string; status: ModuleStatus }
+type ModuleRow = { id: string; slug: string; display_name: string; status: ModuleStatus; guest_facing: boolean }
 type TestingAccessRow = { property_id: string; property_name: string; organization_name: string; testing_access: boolean }
 
 const STATUS_OPTIONS: Array<{ value: ModuleStatus; label: string }> = [
@@ -38,6 +38,7 @@ export function ModulesPage() {
   const [loadingAccessId, setLoadingAccessId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<Record<string, ModuleStatus>>({})
   const [draftAccess, setDraftAccess] = useState<Record<string, Record<string, boolean>>>({})
+  const [draftGuestFacing, setDraftGuestFacing] = useState<Record<string, boolean>>({})
 
   // PlatformLayout only ever mounts this page once runtime.status is
   // 'ready', so the permission check alone is enough here.
@@ -45,7 +46,7 @@ export function ModulesPage() {
 
   const load = useCallback(async () => {
     setState('loading')
-    const { data, error } = await supabase.from('modules').select('id, slug, display_name, status').order('display_name')
+    const { data, error } = await supabase.from('modules').select('id, slug, display_name, status, guest_facing').order('display_name')
     if (error) {
       console.error('platform ModulesPage', error)
       setState('error')
@@ -54,6 +55,7 @@ export function ModulesPage() {
     const rows = (data ?? []) as ModuleRow[]
     setModules(rows)
     setDraftStatus(Object.fromEntries(rows.map((module) => [module.id, module.status])))
+    setDraftGuestFacing(Object.fromEntries(rows.map((module) => [module.id, module.guest_facing])))
     setState('ready')
   }, [])
 
@@ -83,6 +85,7 @@ export function ModulesPage() {
 
   function hasPendingChanges(module: ModuleRow): boolean {
     if (draftStatus[module.id] !== module.status) return true
+    if ((draftGuestFacing[module.id] ?? module.guest_facing) !== module.guest_facing) return true
     const originalAccess = testingAccess[module.id]
     const draft = draftAccess[module.id]
     if (!originalAccess || !draft) return false
@@ -106,6 +109,11 @@ export function ModulesPage() {
         const nextStatus = draftStatus[module.id]
         if (nextStatus !== module.status) {
           const { error } = await supabase.rpc('platform_set_module_status', { p_module_id: module.id, p_status: nextStatus })
+          if (error) throw error
+        }
+        const nextGuestFacing = draftGuestFacing[module.id] ?? module.guest_facing
+        if (nextGuestFacing !== module.guest_facing) {
+          const { error } = await supabase.rpc('platform_set_module_guest_facing', { p_module_id: module.id, p_enabled: nextGuestFacing })
           if (error) throw error
         }
         const originalAccess = testingAccess[module.id] ?? []
@@ -169,6 +177,15 @@ export function ModulesPage() {
                       Strutture abilitate {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
                   ) : null}
+                  <label className="platform-module-guest-toggle">
+                    <Toggle
+                      checked={draftGuestFacing[module.id] ?? module.guest_facing}
+                      disabled={!canManage || saving}
+                      onCheckedChange={(checked) => setDraftGuestFacing((prev) => ({ ...prev, [module.id]: checked }))}
+                      aria-label={`Attiva ${meta?.title ?? module.display_name} in app guest`}
+                    />
+                    <span>Attiva in app guest</span>
+                  </label>
                   {pending ? <span className="platform-module-dirty-badge">Modificato</span> : null}
                 </div>
                 {isExpanded && (draftStatus[module.id] ?? module.status) === 'testing' ? (
@@ -200,7 +217,7 @@ export function ModulesPage() {
           <div className="platform-module-save-bar">
             <span>{dirtyModules.length === 0 ? 'Nessuna modifica da salvare.' : `${dirtyModules.length} ${dirtyModules.length === 1 ? 'modulo modificato' : 'moduli modificati'}.`}</span>
             <Button variant="primary" disabled={!canManage || dirtyModules.length === 0 || saving} onClick={() => void saveAll()}>
-              {saving ? 'Salvataggio…' : 'Salva modifiche'}
+              {saving ? 'Salvataggio…' : 'Salva'}
             </Button>
           </div>
         </div>

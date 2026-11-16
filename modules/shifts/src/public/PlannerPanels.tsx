@@ -521,11 +521,14 @@ export function PersonalPanel({ unit, initialPreferences, onSavePreferences }: {
       const selected = (dayPreferences[day.key] ?? []).includes(code)
       return <button type="button" key={code} aria-pressed={selected} className={selected ? 'is-selected' : undefined} style={selected ? { background: def?.color, color: def?.textColor ?? '#fff' } : undefined} onClick={() => toggleDayPreference(day.key, code)}>{code}</button>
     })}</span></div>)}</div>
-    <Button variant="primary" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
-      if (!onSavePreferences) return
-      setSaveState('saving')
-      void onSavePreferences({ preferredShiftCodes: order, weekdayShiftPreferences: dayPreferences }).then(() => setSaveState('saved')).catch(() => setSaveState('error'))
-    }}>{saveState === 'saving' ? 'Salvataggio…' : saveState === 'saved' ? 'Salvate' : 'Salva preferenze'}</Button>
+    <div className="shift-preferences-save">
+      {saveState === 'error' ? <span className="shift-preferences-save-error" role="alert">Impossibile salvare: verifica di avere i permessi necessari.</span> : null}
+      <Button variant="primary" disabled={!onSavePreferences || saveState === 'saving'} onClick={() => {
+        if (!onSavePreferences) return
+        setSaveState('saving')
+        void onSavePreferences({ preferredShiftCodes: order, weekdayShiftPreferences: dayPreferences }).then(() => setSaveState('saved')).catch(() => setSaveState('error'))
+      }}>{saveState === 'saving' ? 'Salvataggio…' : saveState === 'saved' ? 'Salvate' : 'Salva'}</Button>
+    </div>
   </section>
 }
 

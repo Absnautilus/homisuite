@@ -834,6 +834,8 @@
 .shift-balance-table .shift-avatar { display: inline-flex; font-style: normal; }
 
 .shift-preferences { max-width: 980px; }
+.shift-preferences-save { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+.shift-preferences-save-error { color: var(--shift-terracotta-ink); font-size: 12.5px; }
 .shift-preference-order {
   display: grid;
   gap: 7px;
@@ -1278,6 +1280,9 @@
 .shift-vacation-icon-btn.is-reject:hover { color: var(--shift-terracotta-ink); background: var(--shift-terracotta-bg); }
 .shift-vacation-icon-btn.is-approve { width: 48px; height: 48px; border-radius: 999px; background: var(--shift-accent); color: var(--shift-accent-ink); }
 .shift-vacation-icon-btn.is-approve:hover { filter: brightness(1.06); }
-.shift-vacation-settings-form { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+.shift-vacation-settings-form { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; justify-content: space-between; }
+.shift-vacation-settings-fields { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
 .shift-vacation-settings-form input { background: var(--shift-panel); border: 1px solid var(--shift-line-strong); border-radius: 8px; color: var(--shift-ink); font: inherit; font-size: 13px; height: 40px; padding: 0 11px; width: 90px; }
 .shift-vacation-settings-form input:focus { outline: none; border-color: var(--shift-accent); box-shadow: var(--shift-focus-ring); }
+.shift-vacation-settings-save { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.shift-vacation-settings-error { color: var(--shift-terracotta-ink); font-size: 12.5px; }

@@ -356,6 +356,7 @@ export async function saveOperationalProfile(client: SupabaseClient, restaurantI
 // the whole form saves, or none of it does.
 export interface RestaurantManagementInput {
   name: string
+  category_id: string
   cuisine: string | null
   price_tier: Restaurant['price_tier']
   walk_minutes: number | null
@@ -381,6 +382,7 @@ export async function saveRestaurantManagement(
   const { error } = await client.rpc('save_restaurant_management', {
     p_restaurant_id: restaurantId,
     p_name: restaurant.name,
+    p_category_id: restaurant.category_id,
     p_cuisine: restaurant.cuisine,
     p_price_tier: restaurant.price_tier,
     p_walk_minutes: restaurant.walk_minutes,

@@ -21,3 +21,15 @@ new one — do not build a second, simpler Select anywhere. Migrating it
 into `@homisuite/ui` (and updating every call site) is a deliberate,
 separate piece of work, not something to do incidentally while adding an
 unrelated feature.
+
+## Save buttons
+
+A page or panel's save button must always read exactly "Salva" — never
+"Salva impostazioni", "Salva modifiche", "Salva preferenze", or any other
+qualified label. Context comes from the surrounding page/section heading,
+not the button. It must always sit bottom-right of whatever it's saving
+(the form, panel, or page). When a save can fail (permission, network,
+validation), surface that failure to the user — a bare `try { ... }
+finally { ... }` with no `catch` that reports the error is a bug: the
+button must never silently reset to its idle label after a failed save
+with no visible indication anything went wrong.

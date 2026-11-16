@@ -66,6 +66,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     // on every save.
     setPublicForm({
       name: restaurant.name,
+      category_id: restaurant.category_id,
       cuisine: restaurant.cuisine,
       price_tier: restaurant.price_tier,
       walk_minutes: restaurant.walk_minutes,
@@ -102,9 +103,9 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
   async function saveAll() {
     if (!restaurant) return
     const merged = { ...restaurant, ...publicForm, ...curatedForm }
-    if (!merged.name?.trim() || merged.walk_minutes == null || !merged.address?.trim()) {
+    if (!merged.name?.trim() || !merged.category_id || merged.walk_minutes == null || !merged.address?.trim()) {
       setTab('public')
-      setError('Nome, distanza a piedi e indirizzo sono obbligatori.')
+      setError('Nome, categoria, distanza a piedi e indirizzo sono obbligatori.')
       return
     }
     setSaving(true)
@@ -112,6 +113,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     try {
       await saveRestaurantManagement(supabase, restaurant.id, {
         name: merged.name,
+        category_id: merged.category_id,
         cuisine: merged.cuisine,
         price_tier: merged.price_tier,
         walk_minutes: merged.walk_minutes,
@@ -136,7 +138,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
   }
 
   if (!restaurant) return null
-  const categoryName = categories.find((c) => c.id === restaurant.category_id)?.name ?? '—'
+  const categoryName = categories.find((c) => c.id === (publicForm.category_id ?? restaurant.category_id))?.name ?? '—'
 
   return (
     <SlideOver
@@ -148,7 +150,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       footer={(
         <>
           <Button variant="secondary" onClick={onClose}>Annulla</Button>
-          <Button variant="primary" onClick={() => void saveAll()} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva modifiche'}</Button>
+          <Button variant="primary" onClick={() => void saveAll()} disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button>
         </>
       )}
     >
@@ -163,6 +165,12 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       {tab === 'public' ? (
         <div className="dining-field-grid">
           <label className="form-field"><span>Nome</span><input required value={publicForm.name ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, name: e.target.value }))} /></label>
+          <label className="form-field"><span>Categoria</span>
+            <Select id="restaurant-category" name="category_id" value={publicForm.category_id ?? ''} onChange={(v) => setPublicForm((f) => ({ ...f, category_id: v }))}>
+              <option value="">—</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </Select>
+          </label>
           <label className="form-field"><span>Cucina</span><input value={publicForm.cuisine ?? ''} onChange={(e) => setPublicForm((f) => ({ ...f, cuisine: e.target.value || null }))} /></label>
           <label className="form-field"><span>Fascia prezzo</span>
             <Select id="price-tier" name="price_tier" value={String(publicForm.price_tier ?? '')} onChange={(v) => setPublicForm((f) => ({ ...f, price_tier: (v ? Number(v) : null) as Restaurant['price_tier'] }))}>

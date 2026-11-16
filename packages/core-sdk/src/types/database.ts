@@ -93,6 +93,7 @@ export interface Database {
           slug: string
           display_name: string
           status: string
+          guest_facing: boolean
           created_at: string
           updated_at: string
         }
@@ -101,6 +102,7 @@ export interface Database {
           slug: string
           display_name: string
           status?: string
+          guest_facing?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -109,6 +111,7 @@ export interface Database {
           slug?: string
           display_name?: string
           status?: string
+          guest_facing?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -628,6 +631,10 @@ export interface Database {
       }
       platform_set_module_testing_access: {
         Args: { p_module_id: string; p_property_id: string; p_enabled: boolean }
+        Returns: undefined
+      }
+      platform_set_module_guest_facing: {
+        Args: { p_module_id: string; p_enabled: boolean }
         Returns: undefined
       }
       platform_list_module_testing_access: {

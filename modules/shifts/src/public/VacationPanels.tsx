@@ -185,6 +185,7 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
   const [conflicts, setConflicts] = useState<VacationDecisionConflict[]>([])
   const [form, setForm] = useState(settings)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [settingsError, setSettingsError] = useState(false)
   const pending = periods.filter((period) => period.status === 'pending' && period.id)
 
   async function decide(periodId: string, approve: boolean) {
@@ -202,7 +203,14 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
   async function saveSettings() {
     if (!onSaveSettings) return
     setSavingSettings(true)
-    try { await onSaveSettings(form) } finally { setSavingSettings(false) }
+    setSettingsError(false)
+    try {
+      await onSaveSettings(form)
+    } catch {
+      setSettingsError(true)
+    } finally {
+      setSavingSettings(false)
+    }
   }
 
   return <div className="shift-vacation-approvals">
@@ -232,10 +240,15 @@ function VacationApprovalsPanel({ property, periods, settings, onDecidePeriod, o
 
     <div className="shift-panel-title"><div><h2>Impostazioni piano ferie</h2><p>Quanti periodi può pianificare ogni dipendente e quanto può durare ciascuno.</p></div></div>
     <div className="shift-vacation-settings-form">
-      <label className="shift-field"><span>Periodi per dipendente all'anno</span><input type="number" min={1} max={6} value={form.periodsPerYear} onChange={(event) => setForm({ ...form, periodsPerYear: Number(event.target.value) })} /></label>
-      <label className="shift-field"><span>Durata minima (giorni)</span><input type="number" min={1} value={form.minDays} onChange={(event) => setForm({ ...form, minDays: Number(event.target.value) })} /></label>
-      <label className="shift-field"><span>Durata massima (giorni)</span><input type="number" min={form.minDays} value={form.maxDays} onChange={(event) => setForm({ ...form, maxDays: Number(event.target.value) })} /></label>
-      <Button variant="primary" disabled={savingSettings} onClick={() => void saveSettings()}>{savingSettings ? 'Salvataggio…' : 'Salva impostazioni'}</Button>
+      <div className="shift-vacation-settings-fields">
+        <label className="shift-field"><span>Periodi per dipendente all'anno</span><input type="number" min={1} max={6} value={form.periodsPerYear} onChange={(event) => setForm({ ...form, periodsPerYear: Number(event.target.value) })} /></label>
+        <label className="shift-field"><span>Durata minima (giorni)</span><input type="number" min={1} value={form.minDays} onChange={(event) => setForm({ ...form, minDays: Number(event.target.value) })} /></label>
+        <label className="shift-field"><span>Durata massima (giorni)</span><input type="number" min={form.minDays} value={form.maxDays} onChange={(event) => setForm({ ...form, maxDays: Number(event.target.value) })} /></label>
+      </div>
+      <div className="shift-vacation-settings-save">
+        {settingsError ? <span className="shift-vacation-settings-error" role="alert">Impossibile salvare: verifica di avere i permessi necessari.</span> : null}
+        <Button variant="primary" disabled={savingSettings} onClick={() => void saveSettings()}>{savingSettings ? 'Salvataggio…' : 'Salva'}</Button>
+      </div>
     </div>
   </div>
 }
