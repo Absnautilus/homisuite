@@ -214,10 +214,10 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
       {error ? <p className="form-error" role="alert">{error}</p> : null}
 
       <div className="dining-dp-section">
-        <div className="section-heading split">
+        <div className="dining-dp-heading">
           <h3>Ospite</h3>
           {canManage && !editing ? (
-            <button type="button" className="icon-button" aria-label="Modifica prenotazione" onClick={() => setEditing(true)}><Pencil size={14} /></button>
+            <button type="button" className="dining-dp-edit-btn" aria-label="Modifica prenotazione" onClick={() => setEditing(true)}><Pencil size={14} /></button>
           ) : null}
         </div>
         {editing ? (
@@ -244,7 +244,14 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
       <div className="dining-dp-section">
         <h3>Stato</h3>
         {canManage ? (
-          <Select id="reservation-status" name="status" value={reservation.confirmation_status} onChange={(value) => void setStatus(value as ConfirmationStatus)} disabled={saving}>
+          <Select
+            id="reservation-status"
+            name="status"
+            value={reservation.confirmation_status}
+            onChange={(value) => void setStatus(value as ConfirmationStatus)}
+            disabled={saving}
+            triggerClassName={`dining-pill-select status-${reservation.confirmation_status}`}
+          >
             {(EDITABLE_STATUSES.includes(reservation.confirmation_status) ? EDITABLE_STATUSES : [reservation.confirmation_status, ...EDITABLE_STATUSES]).map((status) => (
               <option key={status} value={status}>{CONFIRMATION_STATUS_LABELS[status]}</option>
             ))}
@@ -315,7 +322,10 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
             {activity.map((entry) => (
               <li key={entry.id}>
                 <time>{new Date(entry.created_at).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</time>
-                <span>{entry.actor_name} — {entry.summary}</span>
+                {/* summary already names who did it ("... da Mario Rossi" /
+                    "... da ospite") -- entry.actor_name here would just
+                    repeat it. */}
+                <span>{entry.summary}</span>
               </li>
             ))}
           </ul>

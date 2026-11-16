@@ -164,6 +164,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
                         name="status"
                         value={reservation.confirmation_status}
                         onChange={(value) => void save(reservation.id, { confirmation_status: value as ConfirmationStatus })}
+                        triggerClassName={`dining-pill-select status-${reservation.confirmation_status}`}
                       >
                         {(EDITABLE_STATUSES.includes(reservation.confirmation_status) ? EDITABLE_STATUSES : [reservation.confirmation_status, ...EDITABLE_STATUSES]).map((status) => (
                           <option key={status} value={status}>{CONFIRMATION_STATUS_LABELS[status]}</option>

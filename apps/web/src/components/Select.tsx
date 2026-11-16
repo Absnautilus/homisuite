@@ -46,6 +46,7 @@ export function Select({
   disabled,
   required,
   children,
+  triggerClassName,
 }: {
   id?: string
   name: string
@@ -54,6 +55,10 @@ export function Select({
   disabled?: boolean
   required?: boolean
   children: ReactNode
+  // Extra class(es) on the trigger button only -- e.g. to recolor it as a
+  // status pill (see TuttePanel/OggiPanel's "Stato" column) without
+  // touching the dozen other call sites that don't need it.
+  triggerClassName?: string
 }) {
   const options = useMemo(
     () =>
@@ -153,7 +158,7 @@ export function Select({
           setOpen((value) => !value)
         }}
         onKeyDown={onKeyDown}
-        className="select-trigger"
+        className={triggerClassName ? `select-trigger ${triggerClassName}` : 'select-trigger'}
       >
         <span>{selected?.label ?? ''}</span>
         <ChevronDown size={16} className={open ? 'rotate' : undefined} aria-hidden="true" />
