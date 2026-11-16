@@ -426,6 +426,28 @@ a.module-card:hover .module-card-arrow, a.module-card:focus-visible .module-card
   .home-today { display: none; }
 }
 
+/* Personalized "at a glance" row (today's shift, next vacation) -- only
+   rendered when real data backs it (Turni enabled and this account is
+   staffed in it), never a placeholder/empty tile. */
+.home-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.home-stat-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 18px 20px; }
+.home-stat-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 10px; }
+.home-stat-value { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.home-stat-sub { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+.home-stat-sub.is-accent { color: var(--accent-text); font-weight: 700; }
+
+.home-shift-strip-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 18px 20px; margin-bottom: 24px; }
+.home-shift-strip-card h2 { margin: 0 0 14px; font-size: 14px; }
+.home-shift-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.home-shift-day { text-align: center; }
+.home-shift-day-label { margin: 0 0 5px; font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
+.home-shift-day.is-today .home-shift-day-label { color: var(--ink); font-weight: 700; }
+.home-shift-day-chip { width: 100%; aspect-ratio: 1; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--surface-2); color: var(--muted); }
+.home-shift-day-chip.is-today { background: var(--accent); color: #fff; }
+@media (max-width: 480px) {
+  .home-shift-day-chip { font-size: 10px; }
+}
+
 /* mobile — sidebar becomes topbar + global drawer */
 @media (max-width: 920px) {
   .login-screen { padding: 16px; }

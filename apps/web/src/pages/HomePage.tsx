@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@homisuite/ui'
-import { ArrowRight, CalendarDays, CarFront, CircleCheck, Hotel, Mail, UtensilsCrossed } from 'lucide-react'
+import { ArrowRight, CalendarDays, CarFront, CircleCheck, Clock3, Hotel, Mail, Palmtree, UtensilsCrossed } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
 import { useDiningAccess } from '../modules/dining/useDiningAccess'
 import { useIsMobile } from '../lib/useIsMobile'
+import { loadHomeDashboard, type HomeDashboardData } from './homeDashboard'
 
 const moduleCatalog = [
   { slug: 'guest_requests', title: 'Housekeeping', description: 'Richieste ospiti e operatività camere.', path: '/housekeeping', icon: Hotel },
@@ -20,6 +22,16 @@ const moduleCatalog = [
 function formatTodayItalian(date: Date): string {
   const formatted = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
+function formatShortItalian(iso: string): string {
+  const [, m, d] = iso.split('-')
+  const months = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']
+  return `${Number(d)} ${months[Number(m) - 1]}`
+}
+
+function weekdayShortItalian(iso: string): string {
+  return new Intl.DateTimeFormat('it-IT', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace('.', '')
 }
 
 export function HomePage() {
@@ -53,6 +65,21 @@ export function HomePage() {
   // PlatformOperationalRuntimeProvider sets for exactly this purpose.
   const navPath = (path: string) => (runtime.isPlatformOperationalView ? path.slice(1) : path)
 
+  // Personalized "today" row -- only when Turni is enabled and this signed-in
+  // account is actually staffed in it (an owner/admin-only login isn't, and
+  // simply sees no row, not an empty one). Never blocks the rest of the
+  // page: a failure here just leaves `dashboard` null.
+  const [dashboard, setDashboard] = useState<HomeDashboardData | null>(null)
+  useEffect(() => {
+    if (!runtime.property?.id || !enabled.has('shifts')) { setDashboard(null); return }
+    let cancelled = false
+    loadHomeDashboard(supabase, runtime.property.id)
+      .then((result) => { if (!cancelled) setDashboard(result) })
+      .catch(() => { if (!cancelled) setDashboard(null) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runtime.property?.id])
+
   return (
     <div className="page-stack">
       <PageHeader
@@ -66,6 +93,46 @@ export function HomePage() {
           </div>
         }
       />
+
+      {dashboard?.todayShift || dashboard?.nextVacation ? (
+        <section className="home-stats">
+          {dashboard.todayShift ? (
+            <div className="home-stat-tile">
+              <div className="home-stat-label"><Clock3 size={14} /> Turno di oggi</div>
+              <div className="home-stat-value">
+                {dashboard.todayShift.startsAt && dashboard.todayShift.endsAt
+                  ? `${dashboard.todayShift.startsAt.slice(0, 5)} – ${dashboard.todayShift.endsAt.slice(0, 5)}`
+                  : dashboard.todayShift.code}
+              </div>
+              {dashboard.todayShift.label ? <p className="home-stat-sub">{dashboard.todayShift.label}</p> : null}
+            </div>
+          ) : null}
+          {dashboard.nextVacation ? (
+            <div className="home-stat-tile">
+              <div className="home-stat-label"><Palmtree size={14} /> Prossime ferie</div>
+              <div className="home-stat-value">{formatShortItalian(dashboard.nextVacation.start)} – {formatShortItalian(dashboard.nextVacation.end)}</div>
+              <p className={`home-stat-sub${dashboard.nextVacation.status === 'confirmed' ? ' is-accent' : ''}`}>
+                {dashboard.nextVacation.status === 'confirmed' ? 'Confermate' : 'In attesa di approvazione'}
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {dashboard?.upcomingShifts.some((day) => day.code) ? (
+        <section className="home-shift-strip-card">
+          <h2>I tuoi prossimi turni</h2>
+          <div className="home-shift-strip">
+            {dashboard.upcomingShifts.map((day, index) => (
+              <div className={`home-shift-day${index === 0 ? ' is-today' : ''}`} key={day.date}>
+                <p className="home-shift-day-label">{weekdayShortItalian(day.date)}</p>
+                <div className={`home-shift-day-chip${index === 0 ? ' is-today' : ''}`}>{day.code ?? '–'}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="module-grid" data-tour="module-grid">
         {/* The whole card is the link (not just "Apri modulo"): a bigger,
             more forgiving touch target on a hotel front desk, and one clear
