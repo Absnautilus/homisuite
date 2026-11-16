@@ -7,6 +7,7 @@ import { CategoryIcon } from '@/components/category-icon'
 import { AutoText } from '@/components/auto-text'
 import { createGuestRequest, fetchMenu, isInvalidSessionError } from '@/lib/guest-api'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useBackableStep } from '@/lib/use-backable-step'
 import type { GuestRequest, RequestCategory, RequestType } from '@/lib/types'
 
 type Step =
@@ -27,7 +28,7 @@ export function RequestFlow({
   const { t } = useLocale()
   const [menu, setMenu] = useState<{ categories: RequestCategory[]; types: RequestType[] } | null>(null)
   const [menuError, setMenuError] = useState<string | null>(null)
-  const [step, setStep] = useState<Step>({ name: 'categories' })
+  const [step, setStep] = useBackableStep<Step>({ name: 'categories' })
 
   useEffect(() => {
     fetchMenu()

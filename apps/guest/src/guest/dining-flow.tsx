@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { CategoryIcon } from '@/components/category-icon'
 import { createDiningReservationRequest, fetchDiningCatalog, fetchDiningHours, fetchDiningPhotos, isInvalidSessionError } from '@/lib/guest-api'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useBackableStep } from '@/lib/use-backable-step'
 import type { DiningCategory, DiningHour, DiningPhoto, DiningRestaurant } from '@/lib/types'
 
 const PRICE_TIER = ['€', '€€', '€€€', '€€€€']
@@ -29,7 +30,7 @@ export function DiningFlow({ token, onSessionExpired }: { token: string; onSessi
   const { t } = useLocale()
   const [catalog, setCatalog] = useState<{ categories: DiningCategory[]; restaurants: DiningRestaurant[] } | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
-  const [step, setStep] = useState<Step>({ name: 'discover' })
+  const [step, setStep] = useBackableStep<Step>({ name: 'discover' })
 
   useEffect(() => {
     fetchDiningCatalog()
