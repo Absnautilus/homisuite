@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { Boxes, History, LogOut, Moon, ScrollText, ShieldAlert, Sun } from 'lucide-react'
+import { Boxes, History, LogOut, Moon, Puzzle, ScrollText, ShieldAlert, Sun } from 'lucide-react'
 import { PageState } from '../components/PageState'
 import { LoginScreen } from '../components/LoginScreen'
 import { supabase } from '../core/client'
@@ -79,6 +79,11 @@ export function PlatformLayout() {
           <NavLink className={({ isActive }) => `platform-nav-item${isActive ? ' active' : ''}`} to="/admin" end>
             <Boxes size={17} /><span>Organizzazioni</span>
           </NavLink>
+          {runtime.hasPlatformPermission('platform.modules.manage') ? (
+            <NavLink className={({ isActive }) => `platform-nav-item${isActive ? ' active' : ''}`} to="/admin/modules">
+              <Puzzle size={17} /><span>Moduli</span>
+            </NavLink>
+          ) : null}
           {runtime.hasPlatformPermission('platform.audit.read') ? (
             <NavLink className={({ isActive }) => `platform-nav-item${isActive ? ' active' : ''}`} to="/admin/audit">
               <ScrollText size={17} /><span>Registro attività</span>

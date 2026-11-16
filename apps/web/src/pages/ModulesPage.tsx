@@ -6,11 +6,13 @@ import { supabase } from '../core/client'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { PageState } from '../components/PageState'
 
+export type ModuleStatus = 'in_development' | 'testing' | 'beta' | 'active' | 'deprecated'
+
 type ModuleRow = {
   id: string
   slug: string
   display_name: string
-  status: 'in_development' | 'testing' | 'beta' | 'active' | 'deprecated'
+  status: ModuleStatus
 }
 
 type PropertyModuleRow = {
@@ -19,7 +21,7 @@ type PropertyModuleRow = {
   testing_access: boolean
 }
 
-const catalog: Record<string, { title: string; description: string; icon: LucideIcon; path: string; settingsPath?: string }> = {
+export const MODULE_CATALOG: Record<string, { title: string; description: string; icon: LucideIcon; path: string; settingsPath?: string }> = {
   guest_requests: {
     title: 'Housekeeping',
     description: 'Richieste ospiti, assegnazione operativa e gestione delle attività in camera.',
@@ -156,7 +158,7 @@ export function ModulesPage() {
       {state === 'ready' && (
         <section className="module-grid" data-tour="modules-list">
           {visibleModules.map((module) => {
-            const meta = catalog[module.slug] ?? {
+            const meta = MODULE_CATALOG[module.slug] ?? {
               title: module.display_name,
               description: 'Modulo Homisuite.',
               icon: Puzzle,

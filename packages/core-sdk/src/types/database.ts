@@ -622,6 +622,18 @@ export interface Database {
         Args: { p_property_id: string }
         Returns: { module_id: string; slug: string; display_name: string; enabled: boolean }[]
       }
+      platform_set_module_status: {
+        Args: { p_module_id: string; p_status: string }
+        Returns: undefined
+      }
+      platform_set_module_testing_access: {
+        Args: { p_module_id: string; p_property_id: string; p_enabled: boolean }
+        Returns: undefined
+      }
+      platform_list_module_testing_access: {
+        Args: { p_module_id: string }
+        Returns: { property_id: string; property_name: string; organization_name: string; testing_access: boolean }[]
+      }
       platform_list_audit_log: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {

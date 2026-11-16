@@ -10,8 +10,14 @@ import { core } from '../core/client'
 // reads MFA/suspension/permissions, never opens or touches an operational
 // session, and a failure here (RPC error, signed out) just means the link
 // stays hidden, never a thrown error in the ordinary shell.
-export function usePlatformAdminSelf(): { isAdmin: boolean } {
+export function usePlatformAdminSelf(): { isAdmin: boolean; checked: boolean } {
   const [isAdmin, setIsAdmin] = useState(false)
+  // Distinct from isAdmin so a caller that must act differently while this
+  // is still in flight (e.g. redirecting a Platform Admin straight to
+  // /admin on login) doesn't momentarily treat "not checked yet" as "not an
+  // admin" -- the existing isAdmin-only consumer (AccountMenu) is
+  // unaffected, it just never reads this field.
+  const [checked, setChecked] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -23,10 +29,13 @@ export function usePlatformAdminSelf(): { isAdmin: boolean } {
       .catch(() => {
         if (!cancelled) setIsAdmin(false)
       })
+      .finally(() => {
+        if (!cancelled) setChecked(true)
+      })
     return () => {
       cancelled = true
     }
   }, [])
 
-  return { isAdmin }
+  return { isAdmin, checked }
 }

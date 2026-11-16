@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ShellLayout } from '../components/ShellLayout'
 import { PageState } from '../components/PageState'
 import { HomePage } from '../pages/HomePage'
+import { HomeOrPlatformRedirect } from './HomeOrPlatformRedirect'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { ModulesPage } from '../pages/ModulesPage'
 import { TeamPage } from '../pages/TeamPage'
@@ -17,6 +18,7 @@ import { OrganizationDetailPage } from '../platform/pages/OrganizationDetailPage
 import { PropertyDetailPage } from '../platform/pages/PropertyDetailPage'
 import { AuditLogPage } from '../platform/pages/AuditLogPage'
 import { SessionHistoryPage } from '../platform/pages/SessionHistoryPage'
+import { ModulesPage as PlatformModulesPage } from '../platform/pages/ModulesPage'
 
 const HousekeepingModuleGate = lazy(async () => {
   const module = await import('../modules/housekeeping/HousekeepingModuleGate')
@@ -76,11 +78,12 @@ export function App() {
             <Route path="housekeeping/*" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
           </Route>
         </Route>
+        <Route path="modules" element={<PlatformModulesPage />} />
         <Route path="audit" element={<AuditLogPage />} />
         <Route path="sessions" element={<SessionHistoryPage />} />
       </Route>
       <Route element={<ShellLayout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<HomeOrPlatformRedirect />} />
         <Route path="housekeeping/*" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Housekeeping…" />}><HousekeepingModuleGate /></Suspense>} />
         <Route path="dining" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Ristorazione…" />}><DiningModuleGate /></Suspense>} />
         <Route path="turni" element={<Suspense fallback={<PageState kind="loading" title="Caricamento Turni…" />}><ShiftPlannerPage /></Suspense>} />

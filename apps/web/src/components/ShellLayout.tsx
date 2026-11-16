@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Menu, X } from 'lucide-react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useDropdownTransition } from '@homisuite/ui'
 import { isSimpleModeEnabled, SIMPLE_MODE_CHANGE_EVENT } from '@homisuite/housekeeping-module'
 import { shellNavigation } from '../app/navigation'
@@ -13,6 +13,7 @@ import { getPropertyLogoUrl } from '../core/propertyLogo'
 import { useHousekeepingAccess } from '../modules/housekeeping/useHousekeepingAccess'
 import { useHousekeepingCapabilities } from '../modules/housekeeping/useHousekeepingCapabilities'
 import { useDiningAccess } from '../modules/dining/useDiningAccess'
+import { usePlatformAdminSelf } from '../platform/usePlatformAdminSelf'
 import { LoginScreen } from './LoginScreen'
 import { PageState } from './PageState'
 import { PropertySwitcher } from './PropertySwitcher'
@@ -53,6 +54,14 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   // no queueManage) can be detected before the runtime.status early returns,
   // resolving to "not a facchino yet" rather than skipping the hook.
   const housekeepingCapabilities = useHousekeepingCapabilities()
+  // Same unconditional-call reasoning: a Platform Admin (technical staff or
+  // "admin master") with zero hotel memberships would otherwise dead-end on
+  // "Nessuna struttura accessibile" just for having no property -- this
+  // lets the no-property branch below send them to /admin instead, where
+  // they actually work. Never checked under hidePlatformNav (the admin's
+  // own operational-view reuse of this same shell): that path already has
+  // a real property via PlatformOperationalRuntimeProvider, not this one.
+  const platformAdminSelf = usePlatformAdminSelf()
   const location = useLocation()
   // Every shellNavigation path is absolute ('/housekeeping', '/turni', ...),
   // correct for this shell's real, root-mounted usage. Nested under Admin
@@ -197,6 +206,12 @@ export function ShellLayout({ hidePlatformNav = false }: { hidePlatformNav?: boo
   }
   if (runtime.status === 'signed-out') return <LoginScreen />
   if (runtime.status === 'no-property') {
+    if (!hidePlatformNav && !platformAdminSelf.checked) {
+      return <PageState kind="loading" title="Caricamento…" variant="fullscreen" />
+    }
+    if (!hidePlatformNav && platformAdminSelf.isAdmin) {
+      return <Navigate to="/admin" replace />
+    }
     return <main><PageState kind="unavailable" title="Nessuna struttura accessibile." description="Il tuo account non è ancora collegato a nessuna struttura Homisuite." variant="fullscreen" /></main>
   }
   if (runtime.status === 'error') {
