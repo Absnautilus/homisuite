@@ -122,6 +122,7 @@ export interface Database {
           enabled: boolean
           plan: string | null
           settings: Json
+          testing_access: boolean
           created_at: string
           updated_at: string
         }
@@ -132,6 +133,7 @@ export interface Database {
           enabled?: boolean
           plan?: string | null
           settings?: Json
+          testing_access?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -142,6 +144,7 @@ export interface Database {
           enabled?: boolean
           plan?: string | null
           settings?: Json
+          testing_access?: boolean
           created_at?: string
           updated_at?: string
         }

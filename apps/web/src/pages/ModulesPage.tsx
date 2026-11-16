@@ -10,12 +10,13 @@ type ModuleRow = {
   id: string
   slug: string
   display_name: string
-  status: 'active' | 'beta' | 'deprecated'
+  status: 'in_development' | 'testing' | 'beta' | 'active' | 'deprecated'
 }
 
 type PropertyModuleRow = {
   module_id: string
   enabled: boolean
+  testing_access: boolean
 }
 
 const catalog: Record<string, { title: string; description: string; icon: LucideIcon; path: string; settingsPath?: string }> = {
@@ -58,15 +59,17 @@ export function ModulesPage() {
   const propertyId = runtime.property?.id ?? null
   const [registered, setRegistered] = useState<ModuleRow[]>([])
   const [propertyModules, setPropertyModules] = useState<PropertyModuleRow[]>([])
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [toggleError, setToggleError] = useState<string | null>(null)
 
   const load = useCallback(async (propertyIdToLoad: string, isCancelled: () => boolean) => {
     setState('loading')
-    const [modulesResult, entitlementsResult] = await Promise.all([
+    const [modulesResult, entitlementsResult, platformAdminResult] = await Promise.all([
       supabase.from('modules').select('id, slug, display_name, status').order('display_name'),
-      supabase.from('property_modules').select('module_id, enabled').eq('property_id', propertyIdToLoad),
+      supabase.from('property_modules').select('module_id, enabled, testing_access').eq('property_id', propertyIdToLoad),
+      supabase.rpc('is_platform_admin'),
     ])
 
     if (isCancelled()) return
@@ -78,6 +81,9 @@ export function ModulesPage() {
 
     setRegistered((modulesResult.data ?? []) as ModuleRow[])
     setPropertyModules((entitlementsResult.data ?? []) as PropertyModuleRow[])
+    // A failed platform-admin check (e.g. a transient network error) must
+    // never grant the elevated view by accident -- default to false.
+    setIsPlatformAdmin(platformAdminResult.error ? false : platformAdminResult.data === true)
     setState('ready')
   }, [])
 
@@ -93,6 +99,23 @@ export function ModulesPage() {
   const enabledById = useMemo(
     () => new Map(propertyModules.map((item) => [item.module_id, item.enabled])),
     [propertyModules],
+  )
+  const testingAccessById = useMemo(
+    () => new Map(propertyModules.map((item) => [item.module_id, item.testing_access])),
+    [propertyModules],
+  )
+  // in_development: technical/master admins only, wherever they're working
+  // from -- never surfaced to a property's own team. testing: admins plus
+  // the specific properties opted in via property_modules.testing_access,
+  // so a pilot property can actually try the module while everyone else
+  // sees nothing change. beta/active/deprecated are unrestricted, as before.
+  const visibleModules = useMemo(
+    () => registered.filter((module) => {
+      if (module.status === 'in_development') return isPlatformAdmin
+      if (module.status === 'testing') return isPlatformAdmin || testingAccessById.get(module.id) === true
+      return true
+    }),
+    [registered, isPlatformAdmin, testingAccessById],
   )
 
   async function toggleModule(moduleId: string, nextEnabled: boolean) {
@@ -132,7 +155,7 @@ export function ModulesPage() {
 
       {state === 'ready' && (
         <section className="module-grid" data-tour="modules-list">
-          {registered.map((module) => {
+          {visibleModules.map((module) => {
             const meta = catalog[module.slug] ?? {
               title: module.display_name,
               description: 'Modulo Homisuite.',
@@ -145,8 +168,16 @@ export function ModulesPage() {
             // Attivo module can still be Deprecato platform-wide. Kept as
             // two visually distinct labels so neither reads as the other.
             const enabled = enabledById.get(module.id) === true
-            const lifecycleLabel = module.status === 'beta' ? 'Beta' : module.status === 'deprecated' ? 'Deprecato' : 'Disponibile'
-            const lifecycleClass = module.status === 'beta' ? 'module-lifecycle is-beta' : module.status === 'deprecated' ? 'module-lifecycle is-deprecated' : 'module-lifecycle'
+            const lifecycleLabel = {
+              in_development: 'In sviluppo',
+              testing: 'In collaudo',
+              beta: 'Beta',
+              deprecated: 'Deprecato',
+              active: 'Disponibile',
+            }[module.status]
+            const lifecycleClass = module.status === 'active'
+              ? 'module-lifecycle'
+              : `module-lifecycle is-${module.status.replace(/_/g, '-')}`
             const Icon = meta.icon
 
             return (
