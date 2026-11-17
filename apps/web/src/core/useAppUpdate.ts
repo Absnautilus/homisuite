@@ -2,6 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 
 const CHECK_INTERVAL_MS = 5 * 60_000
 
+// A device left open overnight (a reception tablet, mostly) can silently
+// reload itself once an update is found -- nobody's realistically mid-task
+// at this hour, so there's no banner to dismiss and no "Aggiorna ora" to
+// click. Outside this window the dismissible banner still applies, since
+// someone could genuinely be using the device right then. Local device
+// time, deliberately not hotel-timezone-aware -- good enough for "nobody's
+// working right now" without needing a timezone source per hotel.
+const QUIET_HOURS_START = 3
+const QUIET_HOURS_END = 5
+
+function inQuietHours(): boolean {
+  const hour = new Date().getHours()
+  return hour >= QUIET_HOURS_START && hour < QUIET_HOURS_END
+}
+
 // Tolerant of attribute order (type="module" before or after src="...") --
 // safer than one combined regex now that the exact built markup isn't
 // something this code controls directly (it's Vite's own output).
@@ -38,6 +53,10 @@ export function useAppUpdate(): { available: boolean; reload: () => void } {
         const html = await res.text()
         const latestSrc = extractEntryScriptSrc(html)
         if (latestSrc && currentSrcRef.current && latestSrc !== currentSrcRef.current) {
+          if (inQuietHours()) {
+            window.location.reload()
+            return
+          }
           setAvailable(true)
         }
       } catch {
