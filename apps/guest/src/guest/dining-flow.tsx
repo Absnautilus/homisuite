@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle2, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Textarea } from '@/components/ui/field'
@@ -22,6 +22,7 @@ function weekdayLabel(locale: string, dayOfWeek: number): string {
 
 type Step =
   | { name: 'discover' }
+  | { name: 'category'; category: DiningCategory }
   | { name: 'detail'; restaurant: DiningRestaurant }
   | { name: 'request'; restaurant: DiningRestaurant }
   | { name: 'confirmed'; restaurant: DiningRestaurant }
@@ -46,6 +47,18 @@ export function DiningFlow({ token, onSessionExpired }: { token: string; onSessi
       <Discover
         categories={catalog.categories}
         restaurants={catalog.restaurants}
+        onSelectCategory={(category) => setStep({ name: 'category', category })}
+        onSelect={(restaurant) => setStep({ name: 'detail', restaurant })}
+      />
+    )
+  }
+
+  if (step.name === 'category') {
+    return (
+      <CategoryList
+        category={step.category}
+        restaurants={catalog.restaurants.filter((r) => r.category_id === step.category.id)}
+        onBack={() => setStep({ name: 'discover' })}
         onSelect={(restaurant) => setStep({ name: 'detail', restaurant })}
       />
     )
@@ -77,17 +90,20 @@ export function DiningFlow({ token, onSessionExpired }: { token: string; onSessi
   return <ConfirmPanel restaurant={step.restaurant} onNewRequest={() => setStep({ name: 'discover' })} />
 }
 
-function Discover({ categories, restaurants, onSelect }: {
+function Discover({ categories, restaurants, onSelectCategory, onSelect }: {
   categories: DiningCategory[]
   restaurants: DiningRestaurant[]
+  onSelectCategory: (category: DiningCategory) => void
   onSelect: (restaurant: DiningRestaurant) => void
 }) {
   const { t } = useLocale()
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? ''
   const recommended = restaurants.filter((r) => r.is_recommended)
-  // Grouped by category below the recommended picks, rather than one flat
-  // "all restaurants" list -- same category order Impostazioni/Categorie
-  // already lists them in (categories arrives pre-sorted by sort_order).
+  // One card per category instead of a flat section listing every one of
+  // its restaurants inline -- with a dozen+ places split across just two or
+  // three categories, that used to mean scrolling past a long undifferentiated
+  // list before reaching the one the guest actually wants. Categories arrive
+  // pre-sorted by sort_order, same order Impostazioni/Categorie already uses.
   const groups = categories
     .map((category) => ({ category, restaurants: restaurants.filter((r) => r.category_id === category.id) }))
     .filter((group) => group.restaurants.length > 0)
@@ -102,15 +118,93 @@ function Discover({ categories, restaurants, onSelect }: {
           </div>
         </section>
       )}
-      {groups.map(({ category, restaurants: groupRestaurants }) => (
-        <section key={category.id}>
-          <h3 className="mb-2 text-sm font-semibold text-foreground">{category.name}</h3>
-          <div className="space-y-2">
-            {groupRestaurants.map((restaurant) => <RestaurantRow key={restaurant.id} restaurant={restaurant} categoryName="" onSelect={onSelect} />)}
+      {groups.length > 0 && (
+        <section>
+          <div className="space-y-2.5">
+            {groups.map(({ category, restaurants: groupRestaurants }) => (
+              <CategoryCard key={category.id} category={category} restaurants={groupRestaurants} onSelect={() => onSelectCategory(category)} />
+            ))}
           </div>
         </section>
-      ))}
+      )}
       {restaurants.length === 0 && <p className="py-4 text-center text-sm text-muted">{t('dining.empty')}</p>}
+    </div>
+  )
+}
+
+function CategoryCard({ category, restaurants, onSelect }: { category: DiningCategory; restaurants: DiningRestaurant[]; onSelect: () => void }) {
+  const { t } = useLocale()
+  const nearestWalk = restaurants.reduce<number | null>((min, r) => {
+    if (r.walk_minutes == null) return min
+    return min === null ? r.walk_minutes : Math.min(min, r.walk_minutes)
+  }, null)
+  const preview = nearestWalk != null
+    ? t('dining.categoryPreview', { count: restaurants.length, minutes: nearestWalk })
+    : t('dining.categoryPreviewNoWalk', { count: restaurants.length })
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-line bg-white p-4 text-left shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <CategoryIcon icon={category.icon} className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground">{category.name}</span>
+        <span className="block text-xs text-muted">{preview}</span>
+      </span>
+      <ChevronRight size={18} className="shrink-0 text-muted" />
+    </button>
+  )
+}
+
+function CategoryList({ category, restaurants, onBack, onSelect }: {
+  category: DiningCategory
+  restaurants: DiningRestaurant[]
+  onBack: () => void
+  onSelect: (restaurant: DiningRestaurant) => void
+}) {
+  const { t } = useLocale()
+  const [priceFilter, setPriceFilter] = useState<number | null>(null)
+  // Only offer tiers that actually occur in this category -- a chip for
+  // "€€€€" nobody here charges would just be a dead end.
+  const availableTiers = Array.from(new Set(restaurants.map((r) => r.price_tier).filter((tier): tier is 1 | 2 | 3 | 4 => tier != null))).sort()
+  const filtered = restaurants
+    .filter((r) => priceFilter === null || r.price_tier === priceFilter)
+    .sort((a, b) => (a.walk_minutes ?? Infinity) - (b.walk_minutes ?? Infinity))
+
+  return (
+    <div className="space-y-4">
+      <button type="button" onClick={onBack} className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-muted hover:text-foreground">
+        <ArrowLeft size={14} /> {category.name}
+      </button>
+      {availableTiers.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPriceFilter(null)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${priceFilter === null ? 'border-accent bg-accent text-white' : 'border-line-strong bg-white text-muted hover:text-foreground'}`}
+          >
+            {t('dining.priceAll')}
+          </button>
+          {availableTiers.map((tier) => (
+            <button
+              key={tier}
+              type="button"
+              onClick={() => setPriceFilter(tier)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${priceFilter === tier ? 'border-accent bg-accent text-white' : 'border-line-strong bg-white text-muted hover:text-foreground'}`}
+            >
+              {PRICE_TIER[tier - 1]}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="space-y-2">
+        {filtered.map((restaurant) => <RestaurantRow key={restaurant.id} restaurant={restaurant} categoryName="" onSelect={onSelect} />)}
+        {filtered.length === 0 && <p className="py-4 text-center text-sm text-muted">{t('dining.noFilterMatches')}</p>}
+      </div>
     </div>
   )
 }
