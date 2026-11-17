@@ -579,6 +579,38 @@
   border: 0;
   border-radius: 0;
 }
+/* The frame can't live on .shift-grid-scroll itself: that element already
+   has its own mask-image (the edge-fade cue for "more columns to scroll
+   to" above), and mask-image fades the WHOLE painted box, border included
+   -- a border there would fade in and out with scroll position instead of
+   staying put. A separate, non-masked wrapper around it keeps the frame
+   solid regardless of scroll state, while .shift-grid-scroll keeps scrolling
+   independently inside it (overflow:hidden here only clips the frame's own
+   corners, not the inner element's horizontal scroll). */
+.shift-grid-frame {
+  background: var(--shift-panel);
+  border: 2px solid var(--shift-line-strong);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(22, 24, 43, 0.06);
+  overflow: hidden;
+}
+/* One rectangle wrapping the whole row (the person cell plus every date
+   cell), not borders repeated on each cell -- a ::after on the row itself,
+   absolutely positioned against it (position:relative on <tr> is supported
+   in every evergreen browser), rather than individually bordering each of
+   its <td>s, which would show as a segmented/doubled line at every cell
+   boundary instead of one continuous outline. */
+.shift-grid tbody tr.is-me {
+  position: relative;
+}
+.shift-grid tbody tr.is-me::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border: 2px solid var(--shift-accent);
+  border-radius: 8px;
+  pointer-events: none;
+}
 .shift-grid:has(th:nth-child(n+15)) { min-width: 970px; }
 .shift-grid {
   border-collapse: collapse;

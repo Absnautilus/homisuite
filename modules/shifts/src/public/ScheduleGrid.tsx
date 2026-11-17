@@ -9,6 +9,8 @@ interface ScheduleGridProps {
   editable?: boolean
   onAssignmentChange?: (staffProfileId: string, date: string, code: string) => void
   onLockChange?: (staffProfileId: string, date: string, locked: boolean) => Promise<void>
+  /** Highlights this person's own row -- see ShiftPlannerModule's own prop of the same name. */
+  currentStaffProfileId?: string
 }
 
 interface CellPos { personIdx: number; dateIdx: number }
@@ -28,7 +30,7 @@ function parseCellKey(key: string): CellPos {
   return { personIdx: Number(personIdx), dateIdx: Number(dateIdx) }
 }
 
-export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange }: ScheduleGridProps) {
+export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange, currentStaffProfileId }: ScheduleGridProps) {
   // Compact (icon-only) by default on every screen size -- used to only
   // kick in below 760px, but a wide desktop grid with many date columns
   // benefits just as much from not spending ~235px per row on a name/role
@@ -188,6 +190,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   }
 
   return (
+    <div className="shift-grid-frame">
     <div ref={scrollRef} className={`shift-grid-scroll${scrollEdges.start ? ' can-scroll-start' : ''}${scrollEdges.end ? ' can-scroll-end' : ''}`} tabIndex={0} aria-label={`Tabella turni ${unit.name}`} onKeyDown={handleGridKeyDown}>
       {editable && selectionSize > 1 ? <div className="shift-selection-bar" role="toolbar" aria-label="Azioni sulla selezione">
         <span>{selectionSize} celle selezionate</span>
@@ -205,7 +208,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
           const headClass = [weekend ? 'is-weekend' : null, isToday ? 'is-today' : null].filter(Boolean).join(' ') || undefined
           return <th className={headClass} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>
         })}</tr></thead>
-        <tbody>{people.map((person, personIdx) => <tr key={person.id}>
+        <tbody>{people.map((person, personIdx) => <tr key={person.id} className={person.id === currentStaffProfileId ? 'is-me' : undefined}>
           <th scope="row" className={`shift-person-column${peopleExpanded ? '' : ' is-compact'}`}>
             <button
               type="button"
@@ -234,6 +237,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
           })}
         </tr>)}</tbody>
       </table>
+    </div>
     </div>
   )
 }
