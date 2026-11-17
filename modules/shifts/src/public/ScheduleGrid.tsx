@@ -82,6 +82,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   const dates = unit.assignmentDates?.length ? unit.assignmentDates : fallbackDates(view === 'week' ? 7 : 30)
   const visibleDates = view === 'week' ? dates.slice(0, 7) : dates
   const people = unit.people
+  const todayIso = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -213,7 +214,9 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
         <thead><tr><th className={`shift-person-column${compactPeople ? ' is-compact' : ''}`}>Dipendente</th>{visibleDates.map((date) => {
           const parsed = new Date(`${date}T00:00:00Z`)
           const weekend = [0, 6].includes(parsed.getUTCDay())
-          return <th className={weekend ? 'is-weekend' : undefined} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>
+          const isToday = date === todayIso
+          const headClass = [weekend ? 'is-weekend' : null, isToday ? 'is-today' : null].filter(Boolean).join(' ') || undefined
+          return <th className={headClass} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>
         })}</tr></thead>
         <tbody>{people.map((person, personIdx) => <tr key={person.id}>
           <th scope="row" className={`shift-person-column${compactPeople && !expandedPeople.has(person.id) ? ' is-compact' : ''}`}>
@@ -235,8 +238,10 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
             const definition = codeMap.get(code)
             const locked = unit.lockedAssignments?.[person.id]?.includes(date) ?? false
             const selected = isSelected(personIdx, dateIdx)
-            return <td key={`${person.id}-${date}`} className={selected ? 'is-selected' : undefined} onClickCapture={(event) => handleCellClick(event, personIdx, dateIdx)}>
-              {editable && !locked ? <div className={`shift-cell-editor${selected ? ' is-selected' : ''}`}><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} extraAction={code && onLockChange ? { label: 'Non spostare (DNM)', icon: <Lock size={13} strokeWidth={2.25} />, onSelect: () => { void onLockChange(person.id, date, true) } } : undefined} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}${selected ? ' is-selected' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
+            const isToday = date === todayIso
+            const tdClass = [selected ? 'is-selected' : null, isToday ? 'is-today' : null].filter(Boolean).join(' ') || undefined
+            return <td key={`${person.id}-${date}`} className={tdClass} onClickCapture={(event) => handleCellClick(event, personIdx, dateIdx)}>
+              {editable && !locked ? <div className={`shift-cell-editor${selected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`}><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} value={code} onChange={(next) => onAssignmentChange?.(person.id, date, next)} extraAction={code && onLockChange ? { label: 'Non spostare (DNM)', icon: <Lock size={13} strokeWidth={2.25} />, onSelect: () => { void onLockChange(person.id, date, true) } } : undefined} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}${selected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
                 <strong>{code}</strong>{locked ? <button type="button" className="shift-lock-toggle is-locked" title={editable ? 'Consenti di nuovo lo spostamento' : 'Turno bloccato'} aria-label={editable ? `Sblocca ${person.name}, ${date}` : 'Bloccato'} disabled={!editable || !onLockChange} onClick={(event) => { event.stopPropagation(); void onLockChange?.(person.id, date, false) }}><Lock size={9} strokeWidth={2.5} /></button> : null}
               </div>}
             </td>
