@@ -45,6 +45,13 @@ export function useAppUpdate(): { available: boolean; reload: () => void } {
       }
     }
 
+    // visibilitychange/focus only fire on a *change* -- the app is already
+    // visible and focused the instant it mounts, so neither one ever fires
+    // during a session that's opened once and never backgrounded. A PWA
+    // used in short bursts (open, check a request, close) could otherwise
+    // go through every session without running a single check, leaving it
+    // stuck on a stale build indefinitely with the banner never appearing.
+    void check()
     const interval = setInterval(() => void check(), CHECK_INTERVAL_MS)
     function onVisible() {
       if (document.visibilityState === 'visible') void check()
