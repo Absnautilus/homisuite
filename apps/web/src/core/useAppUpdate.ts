@@ -8,13 +8,15 @@ const CHECK_INTERVAL_MS = 5 * 60_000
 // click. Outside this window the dismissible banner still applies, since
 // someone could genuinely be using the device right then. Local device
 // time, deliberately not hotel-timezone-aware -- good enough for "nobody's
-// working right now" without needing a timezone source per hotel.
-const QUIET_HOURS_START = 3
-const QUIET_HOURS_END = 5
+// working right now" without needing a timezone source per hotel. Minutes
+// since midnight, not just the hour, so the window can end on a half hour.
+const QUIET_HOURS_START_MIN = 4 * 60
+const QUIET_HOURS_END_MIN = 4 * 60 + 30
 
 function inQuietHours(): boolean {
-  const hour = new Date().getHours()
-  return hour >= QUIET_HOURS_START && hour < QUIET_HOURS_END
+  const now = new Date()
+  const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
+  return minutesSinceMidnight >= QUIET_HOURS_START_MIN && minutesSinceMidnight < QUIET_HOURS_END_MIN
 }
 
 // Tolerant of attribute order (type="module" before or after src="...") --
