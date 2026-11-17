@@ -36,7 +36,15 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   // longer tied to viewport width, so it's a plain constant rather than
   // state driven by a resize listener.
   const compactPeople = true
-  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set())
+  // Starts with every row expanded (name + mansione visible) -- the
+  // compact icon-only row is a click away for whoever wants it, but the
+  // default is to show everyone's name rather than make it an extra step
+  // to see who's who.
+  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set(unit.people.map((person) => person.id)))
+  useEffect(() => {
+    setExpandedPeople(new Set(unit.people.map((person) => person.id)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit.id])
   // Shift-click adds exactly the clicked cell to the selection -- never a
   // filled rectangle between two distant clicks -- so several (possibly
   // scattered) cells can be re-assigned in one action instead of one dropdown

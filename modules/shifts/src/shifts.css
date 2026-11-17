@@ -210,7 +210,7 @@
 .shift-grid thead th.is-weekend { background: var(--shift-soft); }
 .shift-grid .shift-person-column { background: var(--shift-soft); left: 0; min-width: 210px; position: sticky; text-align: left; z-index: 3; }
 .shift-grid tbody .shift-person-column { background: var(--shift-panel); z-index: 2; }
-.shift-person-trigger { align-items: center; background: transparent; border: 0; color: inherit; display: flex; font: inherit; gap: 10px; padding: 0; text-align: left; width: 100%; }
+.shift-person-trigger { align-items: center; background: transparent; border: 0; color: inherit; cursor: pointer; display: flex; font: inherit; gap: 10px; padding: 0; text-align: left; width: 100%; }
 .shift-person-trigger:disabled { cursor: default; opacity: 1; }
 .shift-avatar { align-items: center; background: var(--shift-accent-soft); border-radius: 999px; color: var(--shift-accent-text); display: inline-flex; flex: 0 0 34px; font-size: 11px; font-weight: 800; height: 34px; justify-content: center; width: 34px; }
 .shift-person-copy { display: grid; min-width: 0; }
