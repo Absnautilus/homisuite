@@ -52,4 +52,6 @@ export interface GuestRequest {
   archived_at: string | null
   returned_at: string | null
   urgent: boolean
+  rejected_by: string | null
+  rejected_at: string | null
 }

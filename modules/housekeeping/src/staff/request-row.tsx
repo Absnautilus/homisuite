@@ -8,7 +8,7 @@ import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, ChevronDown, ChevronU
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
-import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, revertRequest, setRequestUrgent, updateRequest } from '@/lib/staff-api'
+import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, rejectRequest, revertRequest, setRequestUrgent, updateRequest } from '@/lib/staff-api'
 import type { QueueJobTitle, QueuedRequest } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -64,6 +64,7 @@ export function RequestRow({
   const categoryName = request.request_types?.request_categories?.name
   const categoryNameI18n = request.request_types?.request_categories?.name_i18n
   const trackable = request.request_types?.available_quantity != null
+  const rejected = Boolean(request.rejected_at)
 
   async function run(action: () => Promise<void>) {
     setPending(true)
@@ -116,6 +117,18 @@ export function RequestRow({
     if (ok) run(() => cancelRequest(request.id))
   }
 
+  // Deliberately not cancelRequest: rejecting a still-unclaimed request
+  // leaves status alone (see rejectRequest's own comment) so the row stays
+  // visible right where it was, instead of jumping to "Completate".
+  async function onReject() {
+    const ok = await confirm({
+      title: t('staff.row.rejectTitle'),
+      description: t('staff.row.rejectDesc', { room: request.room_number, type: typeName }),
+      confirmLabel: t('staff.row.rejectConfirm'),
+    })
+    if (ok) run(() => rejectRequest(request.id, staffId))
+  }
+
   async function onDelete() {
     const ok = await confirm({
       title: t('staff.row.deleteTitle'),
@@ -135,7 +148,44 @@ export function RequestRow({
         : t('staff.row.waitingSince', { time: formatElapsed(request.created_at, now) })
 
   const draggable =
-    canReorder && mode === 'active' && (request.status === 'requested' || request.status === 'in_progress') && Boolean(onDragPointerDown)
+    canReorder && mode === 'active' && !rejected && (request.status === 'requested' || request.status === 'in_progress') && Boolean(onDragPointerDown)
+
+  // A rejected-but-unclaimed request (still status='requested', see
+  // rejectRequest) gets its own compact read-only card instead of the
+  // normal active-row body -- no claim/complete/edit/urgent controls make
+  // sense once it's been rejected, and showing who rejected it is the
+  // entire point: without it, two people sharing a queue can each assume
+  // the other is handling something that's actually already been decided
+  // on, or vice versa.
+  if (rejected) {
+    return (
+      <Card className="border-bad-line bg-bad-bg/40">
+        {confirmDialog}
+        <CardBody>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-2xl leading-none font-extrabold text-muted">{request.room_number}</span>
+                <p className="text-lg leading-tight font-semibold text-muted line-through">
+                  <AutoText text={typeName} translations={typeNameI18n} />
+                </p>
+                {request.quantity ? <span className="shrink-0 text-sm font-bold text-muted">× {request.quantity}</span> : null}
+              </div>
+              <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-bad-ink">
+                {request.rejected_by_staff && <Avatar name={request.rejected_by_staff.name} />}
+                {t('staff.row.rejectedBy', { name: request.rejected_by_staff?.name ?? '—' })}
+                {request.rejected_at && <span className="font-normal text-muted">· {formatTime(request.rejected_at)}</span>}
+              </p>
+            </div>
+            {canManageRequest && (
+              <IconButton tone="danger" icon={Trash2} label={t('staff.row.delete')} disabled={pending} onClick={onDelete} />
+            )}
+          </div>
+          {error && <p className="mt-2 text-xs text-bad-ink">{error}</p>}
+        </CardBody>
+      </Card>
+    )
+  }
 
   return (
     <Card>
@@ -316,7 +366,7 @@ export function RequestRow({
                 {/* Destructive/routing controls are Reception-only. Operational
                     staff can still claim and complete work assigned to them. */}
                 {canManageRequest && (request.status === 'requested' ? (
-                  <IconButton tone="hintCaution" icon={X} label={t('staff.row.reject')} disabled={pending} onClick={onCancel} />
+                  <IconButton tone="hintCaution" icon={X} label={t('staff.row.reject')} disabled={pending} onClick={onReject} />
                 ) : (
                   <IconButton tone="danger" icon={X} label={t('staff.row.cancel')} disabled={pending} onClick={onCancel} />
                 ))}

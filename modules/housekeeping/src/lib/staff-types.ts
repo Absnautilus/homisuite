@@ -20,6 +20,7 @@ export interface QueuedRequest extends GuestRequest {
     request_categories: { name: string; name_i18n: Record<string, string> } | null
   } | null
   accepted_by_staff: { name: string } | null
+  rejected_by_staff: { name: string } | null
 }
 
 export interface QueueJobTitle {

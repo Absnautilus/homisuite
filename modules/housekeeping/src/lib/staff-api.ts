@@ -5,7 +5,7 @@ import { usernameToEmail } from '@/lib/operator-login'
 import { hotelFilter, realtimeHotelFilter } from '@/lib/hotel-query-scope'
 
 const QUEUE_SELECT =
-  '*, request_types(name, name_i18n, allows_quantity, available_quantity, request_categories(name, name_i18n)), accepted_by_staff:staff_profiles!accepted_by(name)'
+  '*, request_types(name, name_i18n, allows_quantity, available_quantity, request_categories(name, name_i18n)), accepted_by_staff:staff_profiles!accepted_by(name), rejected_by_staff:staff_profiles!rejected_by(name)'
 
 export async function fetchMyProfile(): Promise<StaffProfile | null> {
   const {
@@ -86,6 +86,7 @@ export async function claimRequest(id: string, staffId: string) {
     .update({ status: 'in_progress', accepted_by: staffId, accepted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('status', 'requested')
+    .is('rejected_at', null)
   if (error) throw error
 }
 
@@ -99,6 +100,21 @@ export async function completeRequest(id: string) {
 
 export async function cancelRequest(id: string) {
   const { error } = await supabase.from('guest_requests').update({ status: 'cancelled' }).eq('id', id)
+  if (error) throw error
+}
+
+// Rejecting a brand-new, still-unclaimed request is deliberately NOT the
+// same thing as cancelling one that's already in progress: it leaves
+// status untouched (still 'requested') and only stamps who rejected it and
+// when, so the row keeps rendering in the exact same "Nuove" column it was
+// already in instead of jumping to "Completate" indistinguishable from a
+// real completion. Permanently removing it from view is deleteRequest's
+// job, Reception-only, same as today.
+export async function rejectRequest(id: string, staffId: string) {
+  const { error } = await supabase
+    .from('guest_requests')
+    .update({ rejected_by: staffId, rejected_at: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }
 

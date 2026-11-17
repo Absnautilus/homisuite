@@ -6,7 +6,7 @@ import { MinimalTopBar } from '@/staff/minimal-top-bar'
 import { SimpleQueueTiles } from '@/staff/simple-queue-tiles'
 import { useToast } from '@/components/toast-context'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
-import { cancelRequest, claimRequest, fetchQueue, listQueueJobTitles, subscribeToQueue } from '@/lib/staff-api'
+import { claimRequest, fetchQueue, listQueueJobTitles, rejectRequest, subscribeToQueue } from '@/lib/staff-api'
 import { useRequestAlerts } from '@/hooks/use-request-alerts'
 import { playAlertSound } from '@/lib/beep'
 import { RequestRow } from '@/staff/request-row'
@@ -76,7 +76,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
           pushCard({
             title,
             onAccept: () => void claimRequest(request.id, profile.id),
-            ...(managesFrontDesk ? { onReject: () => void cancelRequest(request.id) } : {}),
+            ...(managesFrontDesk ? { onReject: () => void rejectRequest(request.id, profile.id) } : {}),
           })
           playAlertSound()
         }
@@ -101,7 +101,14 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
     return () => clearInterval(interval)
   }, [])
 
-  const pending = (queue ?? []).filter((r) => r.status === 'requested')
+  // A rejected request stays status='requested' (see rejectRequest's own
+  // comment) so it keeps rendering in this same "Nuove" column -- but it
+  // must not count toward the badge/alert/empty-state logic below, which
+  // exists to say "this needs action." It's rendered separately, below the
+  // reorderable pending list, since dragging a dead row around a priority
+  // list makes no sense.
+  const pending = (queue ?? []).filter((r) => r.status === 'requested' && !r.rejected_at)
+  const rejectedPending = (queue ?? []).filter((r) => r.status === 'requested' && r.rejected_at)
   const inProgress = (queue ?? []).filter((r) => r.status === 'in_progress')
   const active = [...pending, ...inProgress]
   const done = useMemo(
@@ -218,7 +225,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
         // read as a lag on every tab switch.
         <>
           <div hidden={tab !== 'new'}>
-            {pending.length === 0 ? (
+            {pending.length === 0 && rejectedPending.length === 0 ? (
               <EmptyState
                 icon={<IconInboxEmpty className="h-6 w-6" />}
                 title={t('staff.queue.emptyActiveTitle')}
@@ -226,17 +233,33 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
                 className={emptyStateClassName}
               />
             ) : (
-              <ReorderableColumn
-                items={pending}
-                now={now}
-                staffId={profile.id}
-                canReorder={canReorder}
-                canFlagUrgent={managesFrontDesk}
-                canManageRequest={managesFrontDesk}
-                jobTitles={jobTitles}
-                onReordered={reload}
-                onCompleteOverride={onCompleteOverride}
-              />
+              <div className="space-y-3">
+                {pending.length > 0 && (
+                  <ReorderableColumn
+                    items={pending}
+                    now={now}
+                    staffId={profile.id}
+                    canReorder={canReorder}
+                    canFlagUrgent={managesFrontDesk}
+                    canManageRequest={managesFrontDesk}
+                    jobTitles={jobTitles}
+                    onReordered={reload}
+                    onCompleteOverride={onCompleteOverride}
+                  />
+                )}
+                {/* Rejected rows aren't part of the reorderable priority list --
+                    there's nothing to prioritize about a row nobody will act
+                    on -- but they stay in this same "Nuove" view rather than
+                    moving to "Completate", so whoever rejected it is visible
+                    to the rest of the shift at a glance. */}
+                {rejectedPending.length > 0 && (
+                  <div className="space-y-3">
+                    {rejectedPending.map((request) => (
+                      <RequestRow key={request.id} request={request} now={now} staffId={profile.id} mode="active" canManageRequest={managesFrontDesk} jobTitles={jobTitles} />
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div hidden={tab !== 'inProgress'}>
