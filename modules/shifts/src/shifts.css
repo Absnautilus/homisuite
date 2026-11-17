@@ -175,15 +175,18 @@
 
 /* A quiet frame, not a boxed-in look -- 1px, the same line color the cells
    themselves use (not the stronger one), a small radius and a faint lift
-   instead of a hard outline. overflow-y:hidden here also clips the frame's
-   own corners around the table (overflow-x:auto still scrolls normally);
-   the table's own four extreme cells get a matching radius below, or the
-   square cell corners would show through as a mismatched notch of this
-   element's own background at each rounded corner. */
+   instead of a hard outline. Rounded on the left only: the person column
+   is sticky there (see .shift-person-column's own left:0), so the left
+   edge always shows that same cell and can round cleanly to match it
+   below. The right edge is where the date columns scroll underneath the
+   frame -- whatever column happens to land at that boundary is square and
+   arbitrary, never the table's true last column except at full scroll, so
+   rounding it clipped a mismatched notch out of whatever cell was there.
+   Square on the right avoids that entirely. */
 .shift-grid-scroll {
   background: var(--shift-panel);
   border: 1px solid var(--shift-line);
-  border-radius: 10px;
+  border-radius: 10px 0 0 10px;
   box-shadow: 0 1px 2px rgba(22, 24, 43, 0.04);
   overflow-x: auto;
   overflow-y: hidden;
@@ -192,9 +195,7 @@
   scrollbar-color: var(--shift-line-strong) transparent;
 }
 .shift-grid thead tr:first-child th:first-child { border-top-left-radius: 9px; }
-.shift-grid thead tr:first-child th:last-child { border-top-right-radius: 9px; }
 .shift-grid tbody tr:last-child th:first-child { border-bottom-left-radius: 9px; }
-.shift-grid tbody tr:last-child td:last-child { border-bottom-right-radius: 9px; }
 /* The scrollbar itself (kept visible, not display:none) is the cue that
    there's more to scroll to on a month with more day-columns than fit --
    the mask-image edge fade this used to have faded unevenly against the
@@ -685,6 +686,23 @@
   width: 100%;
 }
 .shift-cell strong { font-size: 13px; font-weight: 400; }
+/* A hovered cell lifts above its neighbors instead of just changing color
+   -- scale + a real drop shadow (not just the selection/today rings, which
+   are inset and wouldn't read as "raised") plus a z-index so the slight
+   scale-up visibly overlaps the grid lines of the cells next to it rather
+   than being clipped by them. */
+.shift-cell, .shift-cell-editor { transition: transform 120ms ease, box-shadow 120ms ease; }
+.shift-cell:hover, .shift-cell-editor:hover {
+  box-shadow: 0 4px 10px rgba(22, 24, 43, 0.22);
+  cursor: pointer;
+  position: relative;
+  transform: scale(1.1);
+  z-index: 4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shift-cell, .shift-cell-editor { transition: none; }
+  .shift-cell:hover, .shift-cell-editor:hover { transform: none; }
+}
 @media (min-width: 761px) {
   /* Square cells, desktop only -- the mobile/compact layout below 760px
      keeps its own narrower column sizing untouched. A plain width:42px
