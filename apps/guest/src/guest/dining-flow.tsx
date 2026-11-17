@@ -97,8 +97,11 @@ function Discover({ categories, restaurants, onSelectCategory, onSelect }: {
   onSelect: (restaurant: DiningRestaurant) => void
 }) {
   const { t } = useLocale()
+  const [recommendedExpanded, setRecommendedExpanded] = useState(false)
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? ''
   const recommended = restaurants.filter((r) => r.is_recommended)
+  const RECOMMENDED_COLLAPSED_COUNT = 3
+  const visibleRecommended = recommendedExpanded ? recommended : recommended.slice(0, RECOMMENDED_COLLAPSED_COUNT)
   // One card per category instead of a flat section listing every one of
   // its restaurants inline -- with a dozen+ places split across just two or
   // three categories, that used to mean scrolling past a long undifferentiated
@@ -114,8 +117,17 @@ function Discover({ categories, restaurants, onSelectCategory, onSelect }: {
         <section>
           <h3 className="mb-2 text-sm font-semibold text-foreground">{t('dining.recommended')}</h3>
           <div className="space-y-2">
-            {recommended.map((restaurant) => <RestaurantRow key={restaurant.id} restaurant={restaurant} categoryName={categoryName(restaurant.category_id)} onSelect={onSelect} />)}
+            {visibleRecommended.map((restaurant) => <RestaurantRow key={restaurant.id} restaurant={restaurant} categoryName={categoryName(restaurant.category_id)} onSelect={onSelect} />)}
           </div>
+          {recommended.length > RECOMMENDED_COLLAPSED_COUNT && (
+            <button
+              type="button"
+              onClick={() => setRecommendedExpanded((v) => !v)}
+              className="mt-2 cursor-pointer text-xs font-semibold text-accent hover:underline"
+            >
+              {recommendedExpanded ? t('dining.collapse') : t('dining.expand')}
+            </button>
+          )}
         </section>
       )}
       {groups.length > 0 && (
