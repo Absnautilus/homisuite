@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Textarea } from '@/components/ui/field'
@@ -120,7 +120,7 @@ function Discover({ categories, restaurants, onSelectCategory, onSelect }: {
       )}
       {groups.length > 0 && (
         <section>
-          <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-3">
             {groups.map(({ category, restaurants: groupRestaurants }) => (
               <CategoryCard key={category.id} category={category} restaurants={groupRestaurants} onSelect={() => onSelectCategory(category)} />
             ))}
@@ -146,7 +146,7 @@ function CategoryCard({ category, restaurants, onSelect }: { category: DiningCat
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-line bg-white p-4 text-left shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
+      className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-line bg-white p-5 text-center shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
         {/* Most hotels never set a per-category icon (dining_categories.icon
@@ -157,11 +157,10 @@ function CategoryCard({ category, restaurants, onSelect }: { category: DiningCat
             restaurant with no cover photo, at least tells cards apart. */}
         {category.icon ? <CategoryIcon icon={category.icon} className="h-5 w-5" /> : <span className="text-sm font-bold">{category.name.trim()[0]?.toUpperCase()}</span>}
       </span>
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0">
         <span className="block text-sm font-semibold text-foreground">{category.name}</span>
         <span className="block text-xs text-muted">{preview}</span>
       </span>
-      <ChevronRight size={18} className="shrink-0 text-muted" />
     </button>
   )
 }
