@@ -18,7 +18,13 @@ export default defineConfig({
       cssFileName: 'shifts-module',
     },
     rollupOptions: {
-      external: ['react', 'react/jsx-runtime', 'react-dom'],
+      // @homisuite/ui wasn't external -- bundled in here, this module would
+      // get its own separate copy of any context @homisuite/ui exports
+      // (createContext() called twice is two distinct context objects),
+      // invisible to the single <UndoProvider> (or any future provider)
+      // apps/web mounts around the whole app. See the identical, actually
+      // triggered bug this fixed in modules/housekeeping/vite.config.ts.
+      external: ['react', 'react/jsx-runtime', 'react-dom', '@homisuite/ui'],
     },
   },
 })
