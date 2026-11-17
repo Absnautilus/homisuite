@@ -29,7 +29,13 @@ function parseCellKey(key: string): CellPos {
 }
 
 export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange }: ScheduleGridProps) {
-  const [compactPeople, setCompactPeople] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches)
+  // Compact (icon-only, click to reveal name + mansione) on every screen
+  // size -- used to only kick in below 760px, but a wide desktop grid
+  // with many date columns benefits just as much from not spending
+  // ~235px per row on a name/role that's rarely needed at a glance. No
+  // longer tied to viewport width, so it's a plain constant rather than
+  // state driven by a resize listener.
+  const compactPeople = true
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set())
   // Shift-click adds exactly the clicked cell to the selection -- never a
   // filled rectangle between two distant clicks -- so several (possibly
@@ -46,17 +52,6 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   // one end) must render with sharp, fully-visible edges instead of looking
   // like its last column got cut off.
   const [scrollEdges, setScrollEdges] = useState({ start: false, end: false })
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 760px)')
-    const sync = () => {
-      setCompactPeople(media.matches)
-      if (!media.matches) setExpandedPeople(new Set())
-    }
-    sync()
-    media.addEventListener('change', sync)
-    return () => media.removeEventListener('change', sync)
-  }, [])
 
   // A view switch (or unit switch) changes which dates/people are visible at
   // all, so any row/column indices held in the selection would point at

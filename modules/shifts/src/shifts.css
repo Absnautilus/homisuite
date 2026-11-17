@@ -656,7 +656,20 @@
 .shift-cell strong { font-size: 13px; font-weight: 400; }
 @media (min-width: 761px) {
   /* Square cells, desktop only -- the mobile/compact layout below 760px
-     keeps its own narrower column sizing untouched. */
+     keeps its own narrower column sizing untouched. A plain width:42px
+     hint under the default auto table layout is only a MINIMUM: with
+     few enough date columns that their total width falls short of the
+     table's own width:100% (still active from the base .shift-grid
+     rule), the browser stretches every column to fill the gap, so cells
+     end up wider than tall again. table-layout:fixed makes the explicit
+     widths exact instead of advisory, and width:auto stops the table
+     itself from being forced to fill its container -- it's only as wide
+     as the person column plus 42px per date column. */
+  .shift-grid { table-layout: fixed; width: auto; }
+  .shift-grid .shift-person-column { min-width: 56px; width: 56px; padding-inline: 4px; }
+  .shift-grid .shift-person-column:not(.is-compact) { min-width: 235px; width: 235px; padding-inline: 10px; }
+  .shift-person-column.is-compact .shift-person-trigger { justify-content: center; }
+  .shift-grid th:not(.shift-person-column),
   .shift-grid td:not(.shift-person-column) { width: 42px; }
 }
 .shift-legend {
