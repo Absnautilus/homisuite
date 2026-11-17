@@ -175,18 +175,26 @@
 
 /* A quiet frame, not a boxed-in look -- 1px, the same line color the cells
    themselves use (not the stronger one), a small radius and a faint lift
-   instead of a hard outline. Rounded on the left only: the person column
-   is sticky there (see .shift-person-column's own left:0), so the left
-   edge always shows that same cell and can round cleanly to match it
-   below. The right edge is where the date columns scroll underneath the
-   frame -- whatever column happens to land at that boundary is square and
-   arbitrary, never the table's true last column except at full scroll, so
-   rounding it clipped a mismatched notch out of whatever cell was there.
-   Square on the right avoids that entirely. */
+   instead of a hard outline. Square at the top: .shift-grid-scroll sits
+   directly inside .shift-schedule-card, whose own top corners are already
+   square by design when it follows .shift-unit-selector (the "Reception
+   10" chip) -- it merges flush with the chip above instead of looking
+   like a separate card. A rounded top edge here was nested one layer
+   inside that already-square top, invisible in practice since the outer
+   square shape is what the eye actually reads at that corner -- not a
+   notch, just a rounding with nothing outside it to show it off. Rounded
+   bottom-left only: the person column is sticky there (see
+   .shift-person-column's own left:0), so that corner always shows the
+   same cell and can round cleanly to match it below. Square everywhere
+   else on the right/bottom-right: the right edge is where the date
+   columns scroll underneath the frame -- whatever column happens to land
+   at that boundary is square and arbitrary, never the table's true last
+   column except at full scroll, so rounding it clipped a mismatched notch
+   out of whatever cell was there. */
 .shift-grid-scroll {
   background: var(--shift-panel);
   border: 1px solid var(--shift-line);
-  border-radius: 10px 0 0 10px;
+  border-radius: 0 0 0 10px;
   box-shadow: 0 1px 2px rgba(22, 24, 43, 0.04);
   overflow-x: auto;
   overflow-y: hidden;
@@ -194,7 +202,6 @@
   scrollbar-width: thin;
   scrollbar-color: var(--shift-line-strong) transparent;
 }
-.shift-grid thead tr:first-child th:first-child { border-top-left-radius: 9px; }
 .shift-grid tbody tr:last-child th:first-child { border-bottom-left-radius: 9px; }
 /* The scrollbar itself (kept visible, not display:none) is the cue that
    there's more to scroll to on a month with more day-columns than fit --
