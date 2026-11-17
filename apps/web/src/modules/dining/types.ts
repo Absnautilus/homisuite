@@ -3,6 +3,7 @@ export interface DiningCategory {
   hotel_id: string
   name: string
   icon: string | null
+  image_url: string | null
   active: boolean
   sort_order: number
 }

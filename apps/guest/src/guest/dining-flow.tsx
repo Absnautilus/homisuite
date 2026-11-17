@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle2, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Textarea } from '@/components/ui/field'
@@ -123,9 +123,10 @@ function Discover({ categories, restaurants, onSelectCategory, onSelect }: {
             <button
               type="button"
               onClick={() => setRecommendedExpanded((v) => !v)}
-              className="mt-2 cursor-pointer text-xs font-semibold text-accent hover:underline"
+              className="mx-auto mt-3 flex cursor-pointer items-center gap-1.5 rounded-full bg-accent-soft px-4 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft-line"
             >
               {recommendedExpanded ? t('dining.collapse') : t('dining.expand')}
+              <ChevronDown size={14} className={`transition-transform ${recommendedExpanded ? 'rotate-180' : ''}`} />
             </button>
           )}
         </section>
@@ -158,18 +159,22 @@ function CategoryCard({ category, restaurants, onSelect }: { category: DiningCat
     <button
       type="button"
       onClick={onSelect}
-      className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-line bg-white p-5 text-center shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
+      className="flex cursor-pointer flex-col items-center overflow-hidden rounded-lg border border-line bg-white text-center shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-        {/* Most hotels never set a per-category icon (dining_categories.icon
-            is null in practice) -- falling back to the generic "..." glyph
-            here means every single card shows the exact same placeholder,
-            which reads as broken rather than merely plain. The category's
-            own initial, same treatment RestaurantRow already uses for a
-            restaurant with no cover photo, at least tells cards apart. */}
-        {category.icon ? <CategoryIcon icon={category.icon} className="h-5 w-5" /> : <span className="text-sm font-bold">{category.name.trim()[0]?.toUpperCase()}</span>}
-      </span>
-      <span className="min-w-0">
+      {category.image_url ? (
+        <img src={category.image_url} alt="" className="h-24 w-full object-cover" />
+      ) : (
+        <span className="mt-5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+          {/* Most hotels never set a per-category icon or photo --
+              falling back to the generic "..." glyph here means every
+              single card shows the exact same placeholder, which reads
+              as broken rather than merely plain. The category's own
+              initial, same treatment RestaurantRow already uses for a
+              restaurant with no cover photo, at least tells cards apart. */}
+          {category.icon ? <CategoryIcon icon={category.icon} className="h-5 w-5" /> : <span className="text-sm font-bold">{category.name.trim()[0]?.toUpperCase()}</span>}
+        </span>
+      )}
+      <span className="min-w-0 px-5 pt-2 pb-5">
         <span className="block text-sm font-semibold text-foreground">{category.name}</span>
         <span className="block text-xs text-muted">{preview}</span>
       </span>

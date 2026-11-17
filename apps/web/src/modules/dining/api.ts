@@ -37,7 +37,7 @@ export async function createCategory(client: SupabaseClient, hotelId: string, na
   if (error) throw error
 }
 
-export async function updateCategory(client: SupabaseClient, id: string, changes: Partial<Pick<DiningCategory, 'name' | 'active' | 'sort_order'>>): Promise<void> {
+export async function updateCategory(client: SupabaseClient, id: string, changes: Partial<Pick<DiningCategory, 'name' | 'active' | 'sort_order' | 'image_url'>>): Promise<void> {
   await mutateOneOrThrow(client, 'dining_categories', 'id', id, 'update', changes)
 }
 

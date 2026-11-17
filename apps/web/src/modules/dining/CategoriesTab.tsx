@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Button, Modal, useUndo } from '@homisuite/ui'
 import { Pencil, Plus, UtensilsCrossed } from 'lucide-react'
 import { useConfirm } from '../../components/ConfirmDialog'
@@ -6,6 +6,10 @@ import { supabase } from '../../core/client'
 import { createCategory, deleteCategory, listCategories, restoreCategory, subscribeToCategories, updateCategory } from './api'
 import type { DiningCategory } from './types'
 import { readableDiningError } from './readableDiningError'
+
+const CATEGORY_PHOTO_BUCKET = 'dining-category-photos'
+const CATEGORY_PHOTO_MAX_BYTES = 3 * 1024 * 1024
+const CATEGORY_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp'
 
 interface CategoriesTabProps {
   hotelId: string
@@ -79,6 +83,7 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
         category={editing}
         onClose={() => setEditing(null)}
         onSaved={async () => { setEditing(null); await load() }}
+        onRefresh={load}
         onDelete={onDelete}
         hotelId={hotelId}
       />
@@ -87,18 +92,41 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
   )
 }
 
-function CategoryModal({ category, hotelId, onClose, onSaved, onDelete }: {
+function CategoryModal({ category, hotelId, onClose, onSaved, onRefresh, onDelete }: {
   category: DiningCategory | 'new' | null
   hotelId: string
   onClose: () => void
   onSaved: () => Promise<void>
+  // Refreshes the chip list in the background without closing the modal --
+  // distinct from onSaved, which always closes it. A photo upload/removal
+  // needs the former: the person stays on this same modal to see the new
+  // preview (or go on to edit the name), instead of getting bounced out
+  // the moment the upload finishes.
+  onRefresh: () => Promise<void>
   onDelete: (category: DiningCategory) => Promise<void>
 }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const existing = category && category !== 'new' ? category : null
 
-  useEffect(() => { if (category) { setSaving(false); setError(null) } }, [category])
+  useEffect(() => {
+    if (!category) return
+    setSaving(false)
+    setError(null)
+    setPhotoBusy(false)
+    setPhotoError(null)
+    // Local state, not read from `existing` on every render: a background
+    // onRefresh() updates the parent's category list, but `category` here
+    // is still the exact object reference captured when this modal opened,
+    // so it would otherwise keep showing the pre-upload photo (or lack of
+    // one) for as long as the modal stays open.
+    setPhotoUrl(existing?.image_url ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -112,6 +140,47 @@ function CategoryModal({ category, hotelId, onClose, onSaved, onDelete }: {
     } catch (cause) {
       setError(readableDiningError(cause))
       setSaving(false)
+    }
+  }
+
+  async function onPhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (photoInputRef.current) photoInputRef.current.value = ''
+    if (!file || !existing) return
+    if (!CATEGORY_PHOTO_ACCEPT.split(',').includes(file.type)) { setPhotoError('Usa un file JPG, PNG o WEBP.'); return }
+    if (file.size > CATEGORY_PHOTO_MAX_BYTES) { setPhotoError('Il file supera i 3 MB consentiti.'); return }
+    setPhotoBusy(true)
+    setPhotoError(null)
+    try {
+      const path = `${hotelId}/${existing.id}`
+      const { error: uploadError } = await supabase.storage.from(CATEGORY_PHOTO_BUCKET).upload(path, file, { upsert: true, contentType: file.type })
+      if (uploadError) throw uploadError
+      const publicUrl = supabase.storage.from(CATEGORY_PHOTO_BUCKET).getPublicUrl(path).data.publicUrl
+      const versionedUrl = `${publicUrl}?v=${Date.now()}`
+      await updateCategory(supabase, existing.id, { image_url: versionedUrl })
+      setPhotoUrl(versionedUrl)
+      await onRefresh()
+    } catch {
+      setPhotoError('Non è stato possibile caricare la foto.')
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  async function onPhotoRemove() {
+    if (!existing) return
+    setPhotoBusy(true)
+    setPhotoError(null)
+    try {
+      const { error: removeError } = await supabase.storage.from(CATEGORY_PHOTO_BUCKET).remove([`${hotelId}/${existing.id}`])
+      if (removeError) throw removeError
+      await updateCategory(supabase, existing.id, { image_url: null })
+      setPhotoUrl(null)
+      await onRefresh()
+    } catch {
+      setPhotoError('Non è stato possibile rimuovere la foto.')
+    } finally {
+      setPhotoBusy(false)
     }
   }
 
@@ -130,6 +199,25 @@ function CategoryModal({ category, hotelId, onClose, onSaved, onDelete }: {
       )}
     >
       <form className="modal-form" id="category-form" onSubmit={submit}>
+        {existing ? (
+          <div className="form-field">
+            <span>Foto categoria</span>
+            <div className="logo-picker">
+              {photoUrl ? <img src={photoUrl} alt="" className="logo-picker-preview" /> : <div className="logo-picker-placeholder" aria-hidden="true" />}
+              <div className="logo-picker-actions">
+                <Button type="button" variant="secondary" onClick={() => photoInputRef.current?.click()} disabled={photoBusy}>
+                  {photoBusy ? 'Attendere…' : photoUrl ? 'Cambia foto' : 'Carica foto'}
+                </Button>
+                {photoUrl ? <button className="link-button" type="button" onClick={() => void onPhotoRemove()} disabled={photoBusy}>Rimuovi</button> : null}
+                <input ref={photoInputRef} type="file" accept={CATEGORY_PHOTO_ACCEPT} hidden onChange={onPhotoChange} />
+              </div>
+            </div>
+            <small>JPG, PNG o WEBP · max 3 MB</small>
+            {photoError ? <p className="form-error" role="alert">{photoError}</p> : null}
+          </div>
+        ) : (
+          <p className="muted">Potrai caricare una foto dopo aver salvato la categoria.</p>
+        )}
         <label className="form-field"><span>Nome categoria</span><input name="name" required minLength={1} maxLength={80} defaultValue={existing?.name ?? ''} /></label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
       </form>
