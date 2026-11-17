@@ -29,22 +29,15 @@ function parseCellKey(key: string): CellPos {
 }
 
 export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange, onLockChange }: ScheduleGridProps) {
-  // Compact (icon-only, click to reveal name + mansione) on every screen
-  // size -- used to only kick in below 760px, but a wide desktop grid
-  // with many date columns benefits just as much from not spending
-  // ~235px per row on a name/role that's rarely needed at a glance. No
-  // longer tied to viewport width, so it's a plain constant rather than
-  // state driven by a resize listener.
-  const compactPeople = true
-  // Starts with every row expanded (name + mansione visible) -- the
-  // compact icon-only row is a click away for whoever wants it, but the
-  // default is to show everyone's name rather than make it an extra step
-  // to see who's who.
-  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(() => new Set(unit.people.map((person) => person.id)))
-  useEffect(() => {
-    setExpandedPeople(new Set(unit.people.map((person) => person.id)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unit.id])
+  // Compact (icon-only) by default on every screen size -- used to only
+  // kick in below 760px, but a wide desktop grid with many date columns
+  // benefits just as much from not spending ~235px per row on a name/role
+  // that's rarely needed at a glance. One column can't render at two
+  // different widths for different rows (a table column has a single
+  // width, full stop), so this is a single on/off for the whole roster,
+  // not a per-row toggle -- clicking any row's icon, or the "Dipendente"
+  // header, widens or narrows every row together.
+  const [peopleExpanded, setPeopleExpanded] = useState(false)
   // Shift-click adds exactly the clicked cell to the selection -- never a
   // filled rectangle between two distant clicks -- so several (possibly
   // scattered) cells can be re-assigned in one action instead of one dropdown
@@ -68,14 +61,8 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
     setSelectedKeys(new Set())
   }, [view, unit.id])
 
-  function togglePerson(personId: string) {
-    if (!compactPeople) return
-    setExpandedPeople((current) => {
-      const next = new Set(current)
-      if (next.has(personId)) next.delete(personId)
-      else next.add(personId)
-      return next
-    })
+  function togglePeople() {
+    setPeopleExpanded((current) => !current)
   }
 
   const codeMap = new Map(unit.codes.map((code) => [code.code, code]))
@@ -211,7 +198,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
         <span className="shift-selection-hint">Ctrl+C copia · Ctrl+V incolla · Esc deseleziona</span>
       </div> : null}
       <table className="shift-grid">
-        <thead><tr><th className={`shift-person-column${compactPeople ? ' is-compact' : ''}`}>Dipendente</th>{visibleDates.map((date) => {
+        <thead><tr><th className={`shift-person-column${peopleExpanded ? '' : ' is-compact'}`}>Dipendente</th>{visibleDates.map((date) => {
           const parsed = new Date(`${date}T00:00:00Z`)
           const weekend = [0, 6].includes(parsed.getUTCDay())
           const isToday = date === todayIso
@@ -219,17 +206,16 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
           return <th className={headClass} key={date}><strong>{parsed.getUTCDate()}</strong><span>{WEEKDAY.format(parsed).replace('.', '')}</span></th>
         })}</tr></thead>
         <tbody>{people.map((person, personIdx) => <tr key={person.id}>
-          <th scope="row" className={`shift-person-column${compactPeople && !expandedPeople.has(person.id) ? ' is-compact' : ''}`}>
+          <th scope="row" className={`shift-person-column${peopleExpanded ? '' : ' is-compact'}`}>
             <button
               type="button"
               className="shift-person-trigger"
-              onClick={() => togglePerson(person.id)}
-              aria-expanded={!compactPeople || expandedPeople.has(person.id)}
-              aria-label={compactPeople ? `${expandedPeople.has(person.id) ? 'Riduci' : 'Mostra'} ${person.name}` : undefined}
-              disabled={!compactPeople}
+              onClick={togglePeople}
+              aria-expanded={peopleExpanded}
+              aria-label={`${peopleExpanded ? 'Riduci' : 'Mostra'} tutti i nomi (${person.name})`}
             >
               <span className="shift-avatar" aria-hidden="true">{person.initials}</span>
-              {(!compactPeople || expandedPeople.has(person.id)) ? <span className="shift-person-copy"><strong>{person.name}</strong><small>{person.assignmentProfile}</small></span> : null}
+              {peopleExpanded ? <span className="shift-person-copy"><strong>{person.name}</strong><small>{person.assignmentProfile}</small></span> : null}
             </button>
           </th>
           {visibleDates.map((date, dateIdx) => {

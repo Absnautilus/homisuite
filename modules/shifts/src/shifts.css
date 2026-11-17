@@ -671,10 +671,22 @@
      table's own width:100% (still active from the base .shift-grid
      rule), the browser stretches every column to fill the gap, so cells
      end up wider than tall again. table-layout:fixed makes the explicit
-     widths exact instead of advisory, and width:auto stops the table
-     itself from being forced to fill its container -- it's only as wide
-     as the person column plus 42px per date column. */
-  .shift-grid { table-layout: fixed; width: auto; }
+     widths exact instead of advisory -- but width:auto on a table still
+     behaves like any other block box (fills, or SHRINKS to, its
+     container), so on a real screen narrower than the column sum
+     (person column + 42px * however many date columns there are) every
+     column got compressed below 42px while row height stayed fixed,
+     producing cells narrower than tall. width:max-content is what
+     actually keeps the table at its natural, uncompressed width,
+     scrolling horizontally instead of squeezing when the screen is
+     narrower than that. The base .shift-grid rule's own min-width:900px
+     (and the 970px variant for 15+ columns) fights max-content the same
+     way width:100% did -- on a week view with few date columns, the
+     natural width is well under 900px, so that min-width stretched the
+     table back out and re-widened the columns. Zeroing it here lets
+     max-content actually govern on desktop. */
+  .shift-grid { table-layout: fixed; width: max-content; min-width: 0; }
+  .shift-grid:has(th:nth-child(n+15)) { min-width: 0; }
   .shift-grid .shift-person-column { min-width: 56px; width: 56px; padding-inline: 4px; }
   .shift-grid .shift-person-column:not(.is-compact) { min-width: 235px; width: 235px; padding-inline: 10px; }
   .shift-person-column.is-compact .shift-person-trigger { justify-content: center; }
