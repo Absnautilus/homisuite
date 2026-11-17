@@ -601,6 +601,15 @@
   border: 2px solid var(--shift-accent);
   border-radius: 8px;
   pointer-events: none;
+  /* The sticky Dipendente cell (.shift-person-column, z-index 2 in
+     tbody) otherwise painted over this overlay wherever the two
+     overlap -- which is exactly where the row's left edge and corner
+     are, since that cell sits flush against it. The border looked like
+     it started abruptly at the first date cell instead of wrapping the
+     name too. Needs to paint above that sticky cell, not above
+     everything -- .shift-cell:hover's z-index:4 still wins over this
+     when a cell in this row is actually hovered. */
+  z-index: 3;
 }
 .shift-grid:has(th:nth-child(n+15)) { min-width: 970px; }
 .shift-grid {
