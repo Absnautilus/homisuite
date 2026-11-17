@@ -149,7 +149,13 @@ function CategoryCard({ category, restaurants, onSelect }: { category: DiningCat
       className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-line bg-white p-4 text-left shadow-sm transition-colors hover:border-accent-soft-line hover:bg-accent-soft"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-        <CategoryIcon icon={category.icon} className="h-5 w-5" />
+        {/* Most hotels never set a per-category icon (dining_categories.icon
+            is null in practice) -- falling back to the generic "..." glyph
+            here means every single card shows the exact same placeholder,
+            which reads as broken rather than merely plain. The category's
+            own initial, same treatment RestaurantRow already uses for a
+            restaurant with no cover photo, at least tells cards apart. */}
+        {category.icon ? <CategoryIcon icon={category.icon} className="h-5 w-5" /> : <span className="text-sm font-bold">{category.name.trim()[0]?.toUpperCase()}</span>}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-foreground">{category.name}</span>

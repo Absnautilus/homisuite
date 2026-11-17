@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Boxes, Sparkles, UtensilsCrossed, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Boxes, Sparkles, UtensilsCrossed, type LucideIcon } from 'lucide-react'
 import { PublicHeader } from '@/components/public-header'
 import { SectionCard } from '@/components/section-card'
 import { brandColorStyle } from '@/lib/brand-color'
@@ -68,8 +68,11 @@ export function GuestApp() {
   // First step toward guest.homisuite.com being a real per-hotel directory
   // of services instead of a single hardcoded Housekeeping flow (see
   // guest_available_modules). null = still loading; [] = the hotel has no
-  // guest-facing module enabled at all. Exactly one entry auto-selects
-  // itself below, so today's guests never see a one-tile directory screen.
+  // guest-facing module enabled at all. A single entry used to auto-select
+  // itself to skip a "pointless" one-tile screen, but that left a guest
+  // with no way back to anything once inside the module -- the directory
+  // (one tile or many) is always the first screen now, so there's always
+  // somewhere to return to.
   const [availableModules, setAvailableModules] = useState<AvailableModule[] | null>(null)
   const [selectedModuleSlug, setSelectedModuleSlug] = useState<string | null>(null)
 
@@ -145,7 +148,6 @@ export function GuestApp() {
       .then((modules) => {
         if (cancelled) return
         setAvailableModules(modules)
-        if (modules.length === 1 && modules[0]) setSelectedModuleSlug(modules[0].slug)
       })
       .catch(() => {
         // A genuinely transient failure here shouldn't strand the guest on
@@ -198,7 +200,7 @@ export function GuestApp() {
         <SectionCard title={t('directory.title')}>
           {selectedModuleSlug === 'guest_requests' ? (
             <>
-              <ModuleHeading slug="guest_requests" />
+              <ModuleHeading slug="guest_requests" onBack={() => setSelectedModuleSlug(null)} />
               <div className="mb-5 flex gap-1 rounded-md bg-surface-2 p-1">
                 <TabButton active={tab === 'new'} onClick={() => setTab('new')}>
                   {t('tabs.new')}
@@ -223,7 +225,7 @@ export function GuestApp() {
             </>
           ) : selectedModuleSlug === 'dining' ? (
             <>
-              <ModuleHeading slug="dining" />
+              <ModuleHeading slug="dining" onBack={() => setSelectedModuleSlug(null)} />
               <div className="mb-5 flex gap-1 rounded-md bg-surface-2 p-1">
                 <TabButton active={diningTab === 'discover'} onClick={() => setDiningTab('discover')}>
                   {t('dining.tabDiscover')}
@@ -263,22 +265,31 @@ export function GuestApp() {
   )
 }
 
-// Shown above a module's own content -- with one guest-facing module this
-// is the only place its name/description appear at all (the directory grid
-// below is skipped entirely), so it can't be folded into ModuleDirectory.
-function ModuleHeading({ slug }: { slug: string }) {
+// Shown above a module's own content. onBack returns to the directory --
+// the only way out of a module once inside it, now that selecting one is
+// never automatic (see the availableModules effect above).
+function ModuleHeading({ slug, onBack }: { slug: string; onBack: () => void }) {
   const { t } = useLocale()
   const Icon = MODULE_ICONS[slug] ?? Boxes
   const label = MODULE_LABELS[slug]
   const description = MODULE_DESCRIPTIONS[slug]
   return (
-    <div className="mb-4 flex items-start gap-3">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-        <Icon size={20} />
-      </span>
-      <div>
-        <p className="text-base font-semibold text-foreground">{label ? t(label) : slug}</p>
-        {description && <p className="text-sm text-muted">{t(description)}</p>}
+    <div className="mb-4 space-y-2">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-muted hover:text-foreground"
+      >
+        <ArrowLeft size={14} /> {t('directory.backToHome')}
+      </button>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <Icon size={20} />
+        </span>
+        <div>
+          <p className="text-base font-semibold text-foreground">{label ? t(label) : slug}</p>
+          {description && <p className="text-sm text-muted">{t(description)}</p>}
+        </div>
       </div>
     </div>
   )
