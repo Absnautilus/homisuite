@@ -49,6 +49,17 @@
   font: inherit;
   font-size: 13px;
   min-width: 0;
+  /* Mobile Chrome/Safari auto-inflate font size inside narrow columns
+     ("text autosizing"/"font boosting"), independent of any font-size set
+     here -- harmless on ordinary prose, but on the 42x42 date grid it
+     grows the text past what the fixed-width cell was sized for. Width
+     stays locked under table-layout:fixed, but a table cell's height is
+     only ever a floor, never a ceiling, so the row grows taller to fit
+     the inflated text while the column doesn't grow to match -- a
+     rectangle again, despite width/height both being set equal. Turned
+     off so the grid's own font-size is what actually renders. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Dark-mode values for every token above. Like Housekeeping's .hk-root,
