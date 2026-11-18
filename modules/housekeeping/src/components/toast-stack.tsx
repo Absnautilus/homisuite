@@ -1,4 +1,5 @@
 import type { Toast } from '@/hooks/use-toasts'
+import { createPortal } from 'react-dom'
 import { AlertCircle, AlertTriangle, Bell, Check, X } from 'lucide-react'
 import { IconButton } from '@/components/ui/icon-button'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -6,7 +7,14 @@ import { useLocale } from '@/lib/i18n/locale-context'
 export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
   const { t } = useLocale()
   if (toasts.length === 0) return null
-  return (
+  // Portaled straight to <body>, not rendered in place: the shell's
+  // .page-content wrapper animates opacity on mount (its fade-in), and any
+  // animated/transformed ancestor creates its own CSS stacking context --
+  // which traps this stack's z-50 inside it, below .help-fab's z-index:20
+  // floating "?" (a sibling of .page-content, so outside that trap) even
+  // though 50 > 20 on paper. Same fix HelpButton already uses for its
+  // docked variant.
+  return createPortal(
     <div className="fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
       {toasts.map((toast) =>
         toast.card ? (
@@ -62,6 +70,7 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
           </div>
         ),
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }

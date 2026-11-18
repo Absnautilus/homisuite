@@ -38,6 +38,13 @@
   --shift-terracotta-bg: #fbe6d8;
   --shift-terracotta-ink: #974c27;
   --shift-focus-ring: 0 0 0 3px var(--shift-accent-soft), 0 0 0 1.5px var(--shift-accent);
+  /* .shift-grid-scroll's own ambient shadow. A dark cast shadow at low
+     opacity reads as a faint lift on a white page, but is literally
+     invisible once the page around it goes dark too (a near-black shadow
+     on a near-black backdrop has no contrast to show) -- tokenized so dark
+     mode can swap in a shadow that actually separates the card from the
+     page instead of silently doing nothing. */
+  --shift-card-shadow: 0 1px 2px rgba(22, 24, 43, 0.04);
   color: var(--shift-ink);
   font: inherit;
   font-size: 13px;
@@ -77,6 +84,7 @@
     --shift-success-ink: #42d797;
     --shift-terracotta-bg: #2f1c13;
     --shift-terracotta-ink: #e39d7b;
+    --shift-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 }
 :root[data-theme='dark'] .shift-root {
@@ -101,6 +109,7 @@
   --shift-success-ink: #42d797;
   --shift-terracotta-bg: #2f1c13;
   --shift-terracotta-ink: #e39d7b;
+  --shift-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .shift-root *, .shift-root *::before, .shift-root *::after { box-sizing: border-box; }
@@ -173,9 +182,13 @@
 .shift-coverage-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; }
 .shift-coverage-list span { background: var(--shift-soft); border: 1px solid var(--shift-line); border-radius: 999px; color: var(--shift-muted); font-size: 11px; font-weight: 750; padding: 5px 8px; }
 
-/* A quiet frame, not a boxed-in look -- 1px, the same line color the cells
-   themselves use (not the stronger one), a small radius and a faint lift
-   instead of a hard outline. Square at the top: .shift-grid-scroll sits
+/* A quiet frame, not a boxed-in look -- 1px, a small radius and a faint
+   lift instead of a hard outline. Uses --shift-line-strong, not the plain
+   --shift-line the cells themselves use: in dark mode --shift-line
+   (#332f55) sits too close in lightness to --shift-panel (#1c1b33) to read
+   as a border at 1px at all -- this frame is the one thing in the module
+   that needs to be visible as a card edge on its own, not just a quiet
+   divider between things already separated by content. Square at the top: .shift-grid-scroll sits
    directly inside .shift-schedule-card, whose own top corners are already
    square by design when it follows .shift-unit-selector (the "Reception
    10" chip) -- it merges flush with the chip above instead of looking
@@ -193,9 +206,9 @@
    out of whatever cell was there. */
 .shift-grid-scroll {
   background: var(--shift-panel);
-  border: 1px solid var(--shift-line);
+  border: 1px solid var(--shift-line-strong);
   border-radius: 0 0 0 10px;
-  box-shadow: 0 1px 2px rgba(22, 24, 43, 0.04);
+  box-shadow: var(--shift-card-shadow);
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
