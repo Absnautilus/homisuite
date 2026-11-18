@@ -102,7 +102,10 @@ export async function listRoster(hotelId: string): Promise<StaffProfile[]> {
     .eq('active', true)
     .order('name')
   if (error) throw error
-  const profiles = (data ?? []) as StaffProfile[]
+  // Admin Master is a platform-level account (not scoped to one hotel, not
+  // a real employee -- see its own staff_profiles row, which always has
+  // department null) and must never show up in a staff-facing roster.
+  const profiles = ((data ?? []) as StaffProfile[]).filter((profile) => profile.role !== 'master')
   if (profiles.length === 0) return profiles
 
   const { data: details, error: detailsError } = await supabase
