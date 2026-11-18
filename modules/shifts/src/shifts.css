@@ -1088,6 +1088,7 @@
 }
 .shift-custom-select.is-compact {
   height: 100%;
+  min-height: 0;
   min-width: 0;
   width: 100%;
 }
@@ -1095,8 +1096,9 @@
   background: transparent;
   border: 0;
   border-radius: 0;
+  height: 100%;
   justify-content: center;
-  min-height: 34px;
+  min-height: 0;
   padding: 0;
 }
 .shift-custom-select.is-compact .shift-custom-select-trigger:hover,
@@ -1111,6 +1113,10 @@
   align-items: center;
   display: inline-flex;
   min-width: 0;
+}
+.shift-custom-select.is-compact .shift-select-value {
+  height: 100%;
+  min-height: 0;
 }
 .shift-select-code {
   align-items: center;
