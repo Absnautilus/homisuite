@@ -22,16 +22,33 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
   const [quantity, setQuantity] = useState(1)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
-    Promise.all([listRooms(hotelId), listMenu(hotelId)]).then(([roomList, menu]) => {
-      const activeRooms = roomList.filter((r) => r.active)
-      setRooms(activeRooms)
-      setRoomId((c) => c || (activeRooms[0]?.id ?? ''))
-      setCategories(menu.categories.filter((c) => c.active))
-      setTypes(menu.types.filter((t) => t.active))
-    })
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    Promise.all([listRooms(hotelId), listMenu(hotelId)])
+      .then(([roomList, menu]) => {
+        if (cancelled) return
+        const activeRooms = roomList.filter((r) => r.active)
+        setRooms(activeRooms)
+        setRoomId((c) => c || (activeRooms[0]?.id ?? ''))
+        setCategories(menu.categories.filter((c) => c.active))
+        setTypes(menu.types.filter((t) => t.active))
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(getErrorMessage(err) || t('staff.newRequest.loadError'))
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, hotelId])
 
   const selectedType = useMemo(() => types.find((t) => t.id === typeId) ?? null, [types, typeId])
@@ -74,6 +91,20 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
         <h2 className="text-sm font-semibold text-foreground">{t('staff.newRequest.title')}</h2>
       </CardHeader>
       <CardBody>
+        {loading || loadError ? (
+          <>
+            {loading ? (
+              <p role="status" className="text-sm text-muted">{t('staff.queue.loading')}</p>
+            ) : (
+              <FieldError>{loadError ?? undefined}</FieldError>
+            )}
+            <div className="mt-3 flex justify-end">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                {t('staff.newRequest.cancel')}
+              </Button>
+            </div>
+          </>
+        ) : (
         <form onSubmit={onSubmit}>
           <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-[140px_1fr]">
             <FieldGroup>
@@ -147,6 +178,7 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
             </Button>
           </div>
         </form>
+        )}
       </CardBody>
     </Card>
   )

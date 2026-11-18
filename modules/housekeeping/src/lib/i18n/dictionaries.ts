@@ -178,6 +178,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'Invio…',
     'staff.newRequest.cancel': 'Annulla',
     'staff.newRequest.error': 'Impossibile creare la segnalazione.',
+    'staff.newRequest.loadError': 'Impossibile caricare camere e voci.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'Annulla',
@@ -610,6 +611,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'Sending…',
     'staff.newRequest.cancel': 'Cancel',
     'staff.newRequest.error': "We couldn't create the request.",
+    'staff.newRequest.loadError': "Couldn't load rooms and menu items.",
     'staff.newRequest.tenantMismatchError': 'Blocked: the selected room, request type, or staff member belongs to a different property. Report this code to support: {ref}',
 
     'staff.confirm.cancel': 'Cancel',
@@ -1042,6 +1044,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'Envoi…',
     'staff.newRequest.cancel': 'Annuler',
     'staff.newRequest.error': 'Impossible de créer le signalement.',
+    'staff.newRequest.loadError': 'Impossible de charger les chambres et les articles.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'Annuler',
@@ -1474,6 +1477,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'Wird gesendet…',
     'staff.newRequest.cancel': 'Abbrechen',
     'staff.newRequest.error': 'Meldung konnte nicht erstellt werden.',
+    'staff.newRequest.loadError': 'Zimmer und Menüpunkte konnten nicht geladen werden.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'Abbrechen',
@@ -1906,6 +1910,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'Enviando…',
     'staff.newRequest.cancel': 'Cancelar',
     'staff.newRequest.error': 'No hemos podido crear la incidencia.',
+    'staff.newRequest.loadError': 'No se han podido cargar las habitaciones y los artículos.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'Cancelar',
@@ -2338,6 +2343,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'A enviar…',
     'staff.newRequest.cancel': 'Cancelar',
     'staff.newRequest.error': 'Não foi possível criar o registo.',
+    'staff.newRequest.loadError': 'Não foi possível carregar os quartos e os itens.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'Cancelar',
@@ -2770,6 +2776,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': '送信中…',
     'staff.newRequest.cancel': 'キャンセル',
     'staff.newRequest.error': '報告を作成できません。',
+    'staff.newRequest.loadError': '部屋とメニュー項目を読み込めませんでした。',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'キャンセル',
@@ -3202,6 +3209,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'পাঠানো হচ্ছে…',
     'staff.newRequest.cancel': 'বাতিল করুন',
     'staff.newRequest.error': 'রিপোর্ট তৈরি করা যায়নি।',
+    'staff.newRequest.loadError': 'রুম এবং মেনু আইটেম লোড করা যায়নি।',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'বাতিল করুন',
@@ -3634,6 +3642,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'भेजा जा रहा है…',
     'staff.newRequest.cancel': 'रद्द करें',
     'staff.newRequest.error': 'रिपोर्ट नहीं बनाई जा सकी।',
+    'staff.newRequest.loadError': 'कमरे और मेनू आइटम लोड नहीं हो सके।',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'रद्द करें',
@@ -4066,6 +4075,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'جارٍ الإرسال…',
     'staff.newRequest.cancel': 'إلغاء',
     'staff.newRequest.error': 'تعذّر إنشاء البلاغ.',
+    'staff.newRequest.loadError': 'تعذر تحميل الغرف وعناصر القائمة.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'إلغاء',
@@ -4498,6 +4508,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': '发送中…',
     'staff.newRequest.cancel': '取消',
     'staff.newRequest.error': '无法创建报修。',
+    'staff.newRequest.loadError': '无法加载房间和菜单项目。',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': '取消',
@@ -4930,6 +4941,7 @@ export const dictionaries = {
     'staff.newRequest.submitPending': 'Отправка…',
     'staff.newRequest.cancel': 'Отменить',
     'staff.newRequest.error': 'Не удалось создать обращение.',
+    'staff.newRequest.loadError': 'Не удалось загрузить номера и позиции меню.',
     'staff.newRequest.tenantMismatchError': 'Operazione bloccata: la camera, il tipo di richiesta o il membro dello staff selezionato appartiene a un\'altra struttura. Segnala questo codice al supporto: {ref}',
 
     'staff.confirm.cancel': 'Отменить',
