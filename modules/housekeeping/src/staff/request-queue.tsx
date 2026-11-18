@@ -13,6 +13,7 @@ import { playAlertSound } from '@/lib/beep'
 import { RequestRow } from '@/staff/request-row'
 import { ReorderableColumn } from '@/staff/reorderable-column'
 import { NewRequestForm } from '@/staff/new-request-form'
+import { WhoOnDuty } from '@/staff/who-on-duty'
 import { cn } from '@/lib/cn'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
@@ -193,6 +194,8 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
           <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
         </div>
       )}
+
+      {!showMinimalBar && <WhoOnDuty hotelId={profile.hotel_id} />}
 
       {showMinimalBar && (
         <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5" data-tour="hk-tabs">

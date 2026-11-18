@@ -80,6 +80,36 @@ export function subscribeToQueue(
   }
 }
 
+// The "Chi è in turno" roster -- every active staff member for the hotel,
+// not just whoever shows up in accepted_by/rejected_by on a request.
+// staff_profiles_select_scoped already lets any active staff member read
+// the whole hotel roster (it backs the existing Mansione-reassign picker
+// too), so this needs no new RLS.
+export async function listRoster(hotelId: string): Promise<StaffProfile[]> {
+  const { data, error } = await supabase
+    .from('staff_profiles')
+    .select('id, hotel_id, auth_user_id, name, role, department, active, on_duty')
+    .eq(...hotelFilter(hotelId))
+    .eq('active', true)
+    .order('name')
+  if (error) throw error
+  return (data ?? []) as StaffProfile[]
+}
+
+export function subscribeToRoster(hotelId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`staff_profiles-roster-${hotelId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'staff_profiles', filter: realtimeHotelFilter(hotelId) },
+      onChange,
+    )
+    .subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
 export async function claimRequest(id: string, staffId: string) {
   const { error } = await supabase
     .from('guest_requests')
