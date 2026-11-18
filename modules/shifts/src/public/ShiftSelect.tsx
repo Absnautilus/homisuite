@@ -5,11 +5,15 @@ import { getShiftPortalTarget } from './portal-target'
 
 export interface ShiftSelectOption { value: string; label: string; shortLabel?: string; color?: string; textColor?: string }
 
-export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = false, compact = false, extraAction, onOpenChange }: {
+export function ShiftSelect({ value, options, onChange, ariaLabel, title, disabled = false, compact = false, extraAction, onOpenChange }: {
   value: string
   options: ShiftSelectOption[]
   onChange: (value: string) => void
   ariaLabel: string
+  // Native hover tooltip, same role as the read-only .shift-cell's own
+  // title -- compact/grid callers only, so an editable cell's tooltip
+  // matches a locked one's instead of showing nothing on hover.
+  title?: string
   disabled?: boolean
   compact?: boolean
   extraAction?: { label: string; icon?: ReactNode; onSelect: () => void }
@@ -100,7 +104,7 @@ export function ShiftSelect({ value, options, onChange, ariaLabel, disabled = fa
   }
 
   return <div className={`shift-custom-select${open ? ' is-open' : ''}${compact ? ' is-compact' : ''}`}>
-    <button ref={triggerRef} className="shift-custom-select-trigger" type="button" disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => { if (open) { setOpen(false); onOpenChange?.(false) } else showMenu() }} onKeyDown={(event) => {
+    <button ref={triggerRef} className="shift-custom-select-trigger" type="button" title={title} disabled={disabled} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-menu`} onClick={() => { if (open) { setOpen(false); onOpenChange?.(false) } else showMenu() }} onKeyDown={(event) => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); showMenu() }
     }}><span className="shift-select-value">{compact ? <b className="shift-select-code" style={{ background: selected?.color, color: selected?.color ? (selected.textColor ?? '#fff') : undefined }}>{selected?.value ? (selected.shortLabel ?? selected.value) : ''}</b> : <span>{selected?.label ?? '—'}</span>}</span><ChevronDown size={16} aria-hidden="true" /></button>
     {open ? createPortal(<div ref={menuRef} id={`${id}-menu`} className="shift-custom-select-menu" role="listbox" aria-label={ariaLabel} style={menuStyle}>
