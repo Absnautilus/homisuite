@@ -1085,6 +1085,7 @@
   justify-content: center;
   min-height: 34px;
   padding: 0;
+  position: relative;
 }
 .shift-custom-select.is-compact .shift-custom-select-trigger:hover,
 .shift-custom-select.is-compact.is-open .shift-custom-select-trigger {
@@ -1110,6 +1111,23 @@
   line-height: 1;
   min-width: 21px;
   padding: 0 5px;
+}
+/* An editable, unlocked cell renders this same code badge inside a
+   .shift-custom-select.is-compact trigger, not the plain .shift-cell div
+   above -- so every month still in Bozza (not yet locked/Definitivo) was
+   showing a small ~19px pill floating in an otherwise empty, mostly
+   transparent cell button, instead of one solid rectangle of color like a
+   locked/read-only cell. Absolutely positioned over the whole trigger
+   here so the compact badge *is* the cell's fill, edge to edge, matching
+   .shift-cell exactly regardless of editable/locked state. */
+.shift-custom-select.is-compact .shift-select-code {
+  border-radius: 0;
+  height: 100%;
+  inset: 0;
+  min-width: 0;
+  padding: 0;
+  position: absolute;
+  width: 100%;
 }
 .shift-select-option-copy {
   align-items: center;
