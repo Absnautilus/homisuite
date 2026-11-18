@@ -189,13 +189,16 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
         <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
       )}
 
-      {managesFrontDesk && (
-        <div className="flex justify-end" data-tour="hk-new-request">
-          <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
+      {(managesFrontDesk || !showMinimalBar) && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {!showMinimalBar ? <WhoOnDuty hotelId={profile.hotel_id} /> : <span />}
+          {managesFrontDesk && (
+            <div className="ml-auto" data-tour="hk-new-request">
+              <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
+            </div>
+          )}
         </div>
       )}
-
-      {!showMinimalBar && <WhoOnDuty hotelId={profile.hotel_id} />}
 
       {showMinimalBar && (
         <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5" data-tour="hk-tabs">
