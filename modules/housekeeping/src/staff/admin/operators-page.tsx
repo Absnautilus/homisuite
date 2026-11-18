@@ -93,6 +93,9 @@ export function OperatorsPage({
 
       {error && <p role="alert" className="text-sm text-bad-ink">{error}</p>}
 
+      {staff === null ? (
+        <p role="status" className="text-sm text-muted">{t('staff.operators.loading')}</p>
+      ) : (
       <TableFrame>
         <Table aria-label={t('staff.operators.title')}>
           <TableHead>
@@ -152,6 +155,7 @@ export function OperatorsPage({
           </TableBody>
         </Table>
       </TableFrame>
+      )}
     </div>
   )
 }

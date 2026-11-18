@@ -231,6 +231,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Tempo di evasione',
 
     'staff.operators.title': 'Staff',
+    'staff.operators.loading': 'Caricamento…',
     'staff.operators.loadError': 'Non riusciamo a caricare lo staff.',
     'staff.operators.toggleError': 'Impossibile aggiornare lo stato della persona. Riprova.',
     'staff.operators.deactivateTitle': 'Disattivare questo account?',
@@ -664,6 +665,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Resolution time',
 
     'staff.operators.title': 'Staff',
+    'staff.operators.loading': 'Loading…',
     'staff.operators.loadError': "We can't load the staff list.",
     'staff.operators.toggleError': "We couldn't update the person's status. Try again.",
     'staff.operators.deactivateTitle': 'Deactivate this account?',
@@ -1097,6 +1099,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Temps de résolution',
 
     'staff.operators.title': 'Personnel',
+    'staff.operators.loading': 'Chargement…',
     'staff.operators.loadError': 'Impossible de charger le personnel.',
     'staff.operators.toggleError': 'Impossible de mettre à jour le statut de la personne. Réessayez.',
     'staff.operators.deactivateTitle': 'Désactiver ce compte ?',
@@ -1530,6 +1533,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Bearbeitungszeit',
 
     'staff.operators.title': 'Personal',
+    'staff.operators.loading': 'Wird geladen…',
     'staff.operators.loadError': 'Personal kann nicht geladen werden.',
     'staff.operators.toggleError': 'Der Status der Person konnte nicht aktualisiert werden.',
     'staff.operators.deactivateTitle': 'Dieses Konto deaktivieren?',
@@ -1963,6 +1967,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Tiempo de resolución',
 
     'staff.operators.title': 'Personal',
+    'staff.operators.loading': 'Cargando…',
     'staff.operators.loadError': 'No podemos cargar el personal.',
     'staff.operators.toggleError': 'No hemos podido actualizar el estado de la persona.',
     'staff.operators.deactivateTitle': '¿Desactivar esta cuenta?',
@@ -2396,6 +2401,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Tempo de resolução',
 
     'staff.operators.title': 'Equipa',
+    'staff.operators.loading': 'A carregar…',
     'staff.operators.loadError': 'Não conseguimos carregar a equipa.',
     'staff.operators.toggleError': 'Não foi possível atualizar o estado da pessoa.',
     'staff.operators.deactivateTitle': 'Desativar esta conta?',
@@ -2829,6 +2835,7 @@ export const dictionaries = {
     'staff.archive.colDuration': '処理時間',
 
     'staff.operators.title': 'スタッフ',
+    'staff.operators.loading': '読み込み中…',
     'staff.operators.loadError': 'スタッフを読み込めません。',
     'staff.operators.toggleError': 'ステータスを更新できませんでした。',
     'staff.operators.deactivateTitle': 'このアカウントを無効化しますか?',
@@ -3262,6 +3269,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'সমাধান সময়',
 
     'staff.operators.title': 'স্টাফ',
+    'staff.operators.loading': 'লোড হচ্ছে…',
     'staff.operators.loadError': 'স্টাফ লোড করা যাচ্ছে না।',
     'staff.operators.toggleError': 'স্ট্যাটাস আপডেট করা যায়নি।',
     'staff.operators.deactivateTitle': 'এই অ্যাকাউন্টটি নিষ্ক্রিয় করবেন?',
@@ -3695,6 +3703,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'निपटान समय',
 
     'staff.operators.title': 'स्टाफ',
+    'staff.operators.loading': 'लोड हो रहा है…',
     'staff.operators.loadError': 'स्टाफ लोड नहीं हो पा रहा।',
     'staff.operators.toggleError': 'स्थिति अपडेट नहीं हो सकी।',
     'staff.operators.deactivateTitle': 'क्या इस खाते को निष्क्रिय करें?',
@@ -4128,6 +4137,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'وقت الإنجاز',
 
     'staff.operators.title': 'فريق العمل',
+    'staff.operators.loading': 'جارٍ التحميل…',
     'staff.operators.loadError': 'تعذّر تحميل فريق العمل.',
     'staff.operators.toggleError': 'تعذّر تحديث الحالة.',
     'staff.operators.deactivateTitle': 'هل تريد تعطيل هذا الحساب؟',
@@ -4561,6 +4571,7 @@ export const dictionaries = {
     'staff.archive.colDuration': '处理时间',
 
     'staff.operators.title': '员工',
+    'staff.operators.loading': '加载中…',
     'staff.operators.loadError': '无法加载员工信息。',
     'staff.operators.toggleError': '无法更新状态。',
     'staff.operators.deactivateTitle': '要停用此账户吗?',
@@ -4994,6 +5005,7 @@ export const dictionaries = {
     'staff.archive.colDuration': 'Время выполнения',
 
     'staff.operators.title': 'Персонал',
+    'staff.operators.loading': 'Загрузка…',
     'staff.operators.loadError': 'Не удаётся загрузить данные персонала.',
     'staff.operators.toggleError': 'Не удалось обновить статус.',
     'staff.operators.deactivateTitle': 'Отключить эту учётную запись?',
