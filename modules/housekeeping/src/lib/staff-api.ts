@@ -85,6 +85,15 @@ export function subscribeToQueue(
 // staff_profiles_select_scoped already lets any active staff member read
 // the whole hotel roster (it backs the existing Mansione-reassign picker
 // too), so this needs no new RLS.
+//
+// staff_profiles.department itself is the legacy column -- Team-bridged
+// profiles (the normal case now; see housekeeping_push_consolidation's own
+// comment) are represented as role='admin' with department left null, so
+// reading that column alone silently drops every bridged person from every
+// department group. The real, current department lives on
+// property_staff_details.housekeeping_department (already read for the
+// same reason by housekeeping_push_recipient_profiles), so it's merged in
+// here, same RLS story (has_property_access already granted to this caller).
 export async function listRoster(hotelId: string): Promise<StaffProfile[]> {
   const { data, error } = await supabase
     .from('staff_profiles')
@@ -93,7 +102,18 @@ export async function listRoster(hotelId: string): Promise<StaffProfile[]> {
     .eq('active', true)
     .order('name')
   if (error) throw error
-  return (data ?? []) as StaffProfile[]
+  const profiles = (data ?? []) as StaffProfile[]
+  if (profiles.length === 0) return profiles
+
+  const { data: details, error: detailsError } = await supabase
+    .from('property_staff_details')
+    .select('profile_id, housekeeping_department')
+    .in('profile_id', profiles.map((profile) => profile.auth_user_id))
+  if (detailsError) throw detailsError
+  const departmentByProfileId = new Map(
+    (details ?? []).map((row) => [row.profile_id as string, row.housekeeping_department as StaffProfile['department']]),
+  )
+  return profiles.map((profile) => ({ ...profile, department: departmentByProfileId.get(profile.auth_user_id) ?? profile.department }))
 }
 
 export function subscribeToRoster(hotelId: string, onChange: () => void) {

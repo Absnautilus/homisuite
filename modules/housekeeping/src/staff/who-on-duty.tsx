@@ -12,6 +12,11 @@ const DEPARTMENT_KEY: Record<StaffDepartment, 'staff.roster.deptReception' | 'st
   housekeeping: 'staff.roster.deptHousekeeping',
   maintenance: 'staff.roster.deptMaintenance',
 }
+// A fourth, catch-all group -- someone active in the roster but with no
+// resolved department (a platform-admin account, a profile missing its
+// property_staff_details row, ...) used to just vanish from every group
+// silently instead of showing up somewhere.
+const OTHER = 'other' as const
 
 // "Chi è in turno": the hotel's whole active roster, grouped by department,
 // so anyone can see at a glance who's actually working right now -- not
@@ -45,14 +50,19 @@ export function WhoOnDuty({ hotelId }: { hotelId: string }) {
   if (!roster || roster.length === 0) return null
 
   const onDutyCount = roster.filter((person) => person.on_duty).length
-  const groups = DEPARTMENTS.map((department) => ({
-    department,
-    people: roster
-      .filter((person) => person.department === department && (person.on_duty || showOffline))
-      .sort((a, b) => Number(b.on_duty) - Number(a.on_duty) || a.name.localeCompare(b.name)),
-  })).filter((group) => group.people.length > 0)
-
-  if (groups.length === 0) return null
+  const byVisibility = (a: StaffProfile, b: StaffProfile) => Number(b.on_duty) - Number(a.on_duty) || a.name.localeCompare(b.name)
+  const groups = [
+    ...DEPARTMENTS.map((department) => ({
+      key: department as StaffDepartment | typeof OTHER,
+      labelKey: DEPARTMENT_KEY[department],
+      people: roster.filter((person) => person.department === department && (person.on_duty || showOffline)).sort(byVisibility),
+    })),
+    {
+      key: OTHER,
+      labelKey: 'staff.roster.deptOther' as const,
+      people: roster.filter((person) => !DEPARTMENTS.includes(person.department as StaffDepartment) && (person.on_duty || showOffline)).sort(byVisibility),
+    },
+  ].filter((group) => group.people.length > 0)
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5" data-tour="hk-who-on-duty">
@@ -81,9 +91,10 @@ export function WhoOnDuty({ hotelId }: { hotelId: string }) {
         </label>
       </div>
       <div className="flex flex-col gap-3.5">
+        {groups.length === 0 && <p className="text-xs text-muted">{t('staff.roster.empty')}</p>}
         {groups.map((group) => (
-          <div key={group.department}>
-            <p className="mb-1.5 text-[10.5px] font-extrabold tracking-wide text-muted uppercase">{t(DEPARTMENT_KEY[group.department]!)}</p>
+          <div key={group.key}>
+            <p className="mb-1.5 text-[10.5px] font-extrabold tracking-wide text-muted uppercase">{t(group.labelKey)}</p>
             <div className="flex flex-wrap gap-2">
               {group.people.map((person) => (
                 <div
