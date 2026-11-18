@@ -39,8 +39,11 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
                 tone="hintPositive"
                 icon={Check}
                 label={t('staff.row.claim')}
-                onClick={() => {
-                  toast.card?.onAccept()
+                onClick={async () => {
+                  // Dismisses either way -- a lost race or a real failure
+                  // both mean there's nothing left to act on from this
+                  // toast; onAccept is responsible for its own message.
+                  await toast.card?.onAccept()
                   onDismiss(toast.id)
                 }}
               />

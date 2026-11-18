@@ -133,14 +133,22 @@ export function subscribeToRoster(hotelId: string, onChange: () => void) {
   }
 }
 
-export async function claimRequest(id: string, staffId: string) {
-  const { error } = await supabase
+// Scoped to status='requested' so two staff members tapping "prendi in
+// carico" on the same request can't both succeed -- whoever loses that race
+// updates 0 rows, which Supabase reports as success with an empty result,
+// not an error. Returning whether a row actually changed (instead of just
+// swallowing that distinction, the way this used to) is what lets every
+// caller tell a real claim apart from a lost race.
+export async function claimRequest(id: string, staffId: string): Promise<boolean> {
+  const { data, error } = await supabase
     .from('guest_requests')
     .update({ status: 'in_progress', accepted_by: staffId, accepted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('status', 'requested')
     .is('rejected_at', null)
+    .select('id')
   if (error) throw error
+  return (data?.length ?? 0) > 0
 }
 
 export async function completeRequest(id: string) {

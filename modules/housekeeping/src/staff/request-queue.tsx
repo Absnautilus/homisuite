@@ -78,7 +78,11 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
           const title = `${t('staff.newRequest.room')} ${request.room_number} · ${itemName}${request.quantity ? ` × ${request.quantity}` : ''}`
           pushCard({
             title,
-            onAccept: () => void claimRequest(request.id, profile.id),
+            onAccept: async () => {
+              const claimed = await claimRequest(request.id, profile.id)
+              if (!claimed) push(t('staff.row.claimConflict'), 'warning')
+              return claimed
+            },
             // Confirms before actually rejecting, same as the request list's
             // own reject button -- a quick tap on the toast must not
             // silently reject something nobody meant to decline. The card

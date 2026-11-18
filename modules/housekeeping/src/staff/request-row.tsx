@@ -392,7 +392,10 @@ export function RequestRow({
                   <IconButton tone="neutral" icon={ArrowLeft} label={t('staff.row.revert')} disabled={pending} onClick={() => run(() => revertRequest(request.id, 'in_progress'))} />
                 )}
                 {request.status === 'requested' && (
-                  <IconButton tone="hintPositive" filled shape="circle" size="lg" icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(() => claimRequest(request.id, staffId))} />
+                  <IconButton tone="hintPositive" filled shape="circle" size="lg" icon={ArrowDownToLine} label={t('staff.row.claim')} disabled={pending} onClick={() => run(async () => {
+                    const claimed = await claimRequest(request.id, staffId)
+                    if (!claimed) push(t('staff.row.claimConflict'), 'warning')
+                  })} />
                 )}
                 {request.status === 'in_progress' && (
                   <IconButton tone="ok" filled shape="circle" size="lg" icon={Check} label={t('staff.row.complete')} disabled={pending} onClick={() => run(() => (onCompleteOverride ?? completeRequest)(request.id))} />

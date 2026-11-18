@@ -2,7 +2,13 @@ import { useCallback, useRef, useState } from 'react'
 
 export interface ToastCard {
   title: string
-  onAccept: () => void
+  // Returns whether the claim actually went through -- a lost race (someone
+  // else claimed it first) and a real failure both resolve false. The card
+  // dismisses either way once this settles (there's nothing left to retry
+  // from the toast itself); the implementation is responsible for its own
+  // user-facing message on false, same as onReject is for a cancelled
+  // confirm.
+  onAccept: () => boolean | Promise<boolean>
   // Returns whether the reject actually went through -- a caller that
   // confirms first (so a quick tap on the toast can't silently reject
   // something, the same way the request list's own reject already

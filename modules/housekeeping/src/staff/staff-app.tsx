@@ -113,11 +113,19 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
   useEffect(() => {
     const claimId = searchParams.get('claim')
     if (!claimId || !profile) return
-    claimRequest(claimId, profile.id).finally(() => {
-      const next = new URLSearchParams(searchParams)
-      next.delete('claim')
-      setSearchParams(next, { replace: true })
-    })
+    // Best-effort: this runs from a push-notification deep link, outside
+    // ToastProvider (rendered further down by this same component), so
+    // there's no toast to surface a lost race or a real failure through --
+    // either way the person lands on the queue and sees the request's
+    // actual current state there. A rejection just needs to not go
+    // unhandled; it doesn't need its own UI.
+    claimRequest(claimId, profile.id)
+      .catch((err) => console.error('claim-by-link failed', err))
+      .finally(() => {
+        const next = new URLSearchParams(searchParams)
+        next.delete('claim')
+        setSearchParams(next, { replace: true })
+      })
   }, [searchParams, profile, setSearchParams])
 
 
