@@ -587,7 +587,7 @@
 .shift-unit-selector {
   background: transparent;
   border: 0;
-  padding: 0 0 8px;
+  padding: 0;
 }
 .shift-unit-selector button {
   min-height: 30px;
