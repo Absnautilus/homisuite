@@ -5,6 +5,7 @@ import { EmbeddedNav } from '@/staff/embedded-nav'
 import { MinimalTopBar } from '@/staff/minimal-top-bar'
 import { SimpleQueueTiles } from '@/staff/simple-queue-tiles'
 import { useToast } from '@/components/toast-context'
+import { useConfirm } from '@/components/confirm-dialog'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { claimRequest, fetchQueue, listQueueJobTitles, rejectRequest, subscribeToQueue } from '@/lib/staff-api'
 import { useRequestAlerts } from '@/hooks/use-request-alerts'
@@ -44,6 +45,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
   const [jobTitles, setJobTitles] = useState<QueueJobTitle[]>([])
   const [now, setNow] = useState(() => new Date())
   const { push, pushCard } = useToast()
+  const [confirmDialog, confirm] = useConfirm()
   const knownIds = useRef<Set<string> | null>(null)
 
   // Operational queue controls belong to Reception. In embedded Core mode
@@ -76,7 +78,23 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
           pushCard({
             title,
             onAccept: () => void claimRequest(request.id, profile.id),
-            ...(managesFrontDesk ? { onReject: () => void rejectRequest(request.id, profile.id) } : {}),
+            // Confirms before actually rejecting, same as the request list's
+            // own reject button -- a quick tap on the toast must not
+            // silently reject something nobody meant to decline. The card
+            // stays open on cancel (ToastStack only dismisses it when this
+            // resolves true).
+            ...(managesFrontDesk ? {
+              onReject: async () => {
+                const ok = await confirm({
+                  title: t('staff.row.rejectTitle'),
+                  description: t('staff.row.rejectDesc', { room: request.room_number, type: itemName }),
+                  confirmLabel: t('staff.row.rejectConfirm'),
+                })
+                if (!ok) return false
+                await rejectRequest(request.id, profile.id)
+                return true
+              },
+            } : {}),
           })
           playAlertSound()
         }
@@ -320,6 +338,7 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
       )}
         </div>
       </section>
+      {confirmDialog}
     </div>
   )
 }

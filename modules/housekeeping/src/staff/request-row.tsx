@@ -372,7 +372,7 @@ export function RequestRow({
                 ) : (
                   <IconButton tone="danger" icon={X} label={t('staff.row.cancel')} disabled={pending} onClick={onCancel} />
                 ))}
-                {canManageRequest && request.status === 'in_progress' && (
+                {canManageRequest && (request.status === 'in_progress' || (request.status === 'requested' && !rejected)) && (
                   <IconButton
                     tone="neutral"
                     icon={Bell}

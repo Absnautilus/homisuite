@@ -3,7 +3,12 @@ import { useCallback, useRef, useState } from 'react'
 export interface ToastCard {
   title: string
   onAccept: () => void
-  onReject?: () => void
+  // Returns whether the reject actually went through -- a caller that
+  // confirms first (so a quick tap on the toast can't silently reject
+  // something, the same way the request list's own reject already
+  // confirms) returns false on cancel, and the card stays open instead
+  // of disappearing as if it had been handled.
+  onReject?: () => boolean | Promise<boolean>
 }
 
 export interface Toast {
