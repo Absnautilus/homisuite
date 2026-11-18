@@ -43,11 +43,15 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
   }, [sharedCoreNavigation, location.pathname, basePath, navigate])
   // One list drives both the nav (primary/secondary split below) and
   // which pane is visible -- the nav and the content can't disagree since
-  // both read the same match().
+  // both read the same match(). The icon lives on each tab's own entry
+  // (rather than a second, index-matched array built separately) so
+  // adding, removing or reordering a tab can't silently desync its icon
+  // from its label the way a parallel array could.
   const tabs = [
     ...(!sharedCoreNavigation ? [{
       to: basePath,
       label: t('staff.admin.tabStaff'),
+      icon: <UsersRound />,
       match: (p: string) => p === basePath || p === `${basePath}/`,
       element: embedded ? (
         <OperatorsPage profile={profile} platformStaffManagement={platformStaffManagement} hotelId={hotelId} />
@@ -55,24 +59,21 @@ export function AdminHome({ profile, basePath, embedded = false, platformStaffMa
         <OperatorsPage profile={profile} />
       ),
     },
-    { to: `${basePath}/camere`, label: t('staff.admin.tabRooms'), match: (p: string) => p.startsWith(`${basePath}/camere`), element: <RoomsPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/camere`, label: t('staff.admin.tabRooms'), icon: <BedDouble />, match: (p: string) => p.startsWith(`${basePath}/camere`), element: <RoomsPage hotelId={operationalHotelId} /> },
     ] : []),
-    { to: `${basePath}/menu`, label: t('staff.admin.tabMenu'), match: (p: string) => p.startsWith(`${basePath}/menu`), element: <ItemsPage hotelId={operationalHotelId} /> },
-    { to: `${basePath}/disponibilita`, label: t('staff.admin.tabAvailability'), match: (p: string) => p.startsWith(`${basePath}/disponibilita`), element: <AvailabilityPage hotelId={operationalHotelId} /> },
-    { to: `${basePath}/statistiche`, label: t('staff.admin.tabStats'), match: (p: string) => p.startsWith(`${basePath}/statistiche`), element: <StatsPage hotelId={operationalHotelId} /> },
-    { to: `${basePath}/archivio`, label: t('staff.admin.tabArchive'), match: (p: string) => p.startsWith(`${basePath}/archivio`), element: <ArchivePage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/menu`, label: t('staff.admin.tabMenu'), icon: <ClipboardList />, match: (p: string) => p.startsWith(`${basePath}/menu`), element: <ItemsPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/disponibilita`, label: t('staff.admin.tabAvailability'), icon: <UsersRound />, match: (p: string) => p.startsWith(`${basePath}/disponibilita`), element: <AvailabilityPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/statistiche`, label: t('staff.admin.tabStats'), icon: <ChartNoAxesColumnIncreasing />, match: (p: string) => p.startsWith(`${basePath}/statistiche`), element: <StatsPage hotelId={operationalHotelId} /> },
+    { to: `${basePath}/archivio`, label: t('staff.admin.tabArchive'), icon: <Archive />, match: (p: string) => p.startsWith(`${basePath}/archivio`), element: <ArchivePage hotelId={operationalHotelId} /> },
     // Properties on Hotel Core's shared navigation reach PMS integration
     // from Struttura e Team now (it's structure-wide, not Housekeeping-
     // specific) -- standalone/legacy-embedded deployments, which have no
     // Struttura e Team to move it to, keep it here unchanged.
-    ...(!sharedCoreNavigation ? [{ to: `${basePath}/pms`, label: t('staff.admin.tabPms'), match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> }] : []),
+    ...(!sharedCoreNavigation ? [{ to: `${basePath}/pms`, label: t('staff.admin.tabPms'), icon: <Plug />, match: (p: string) => p.startsWith(`${basePath}/pms`), element: <PmsIntegrationPage profile={profile} /> }] : []),
   ]
   const activeTab = tabs.find((tab) => tab.match(location.pathname))
   const selectedTab = activeTab?.to ?? (sharedCoreNavigation ? `${basePath}/menu` : basePath)
-  const tabIcons = sharedCoreNavigation
-    ? [<ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />]
-    : [<UsersRound />, <BedDouble />, <ClipboardList />, <UsersRound />, <ChartNoAxesColumnIncreasing />, <Archive />, <Plug />]
-  const navItems = tabs.map((tab, index) => ({ value: tab.to, label: tab.label, icon: tabIcons[index] }))
+  const navItems = tabs.map((tab) => ({ value: tab.to, label: tab.label, icon: tab.icon }))
 
 
   return (
