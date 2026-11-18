@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@homisuite/ui'
 import { Select } from '../../components/Select'
-import { Switch } from '../../components/Switch'
 import { supabase } from '../../core/client'
 import { getOperationalProfile, getRestaurantStats, saveRestaurantManagement, type RestaurantStats } from './api'
 import type { CommercialAgreement, CommissionBasis, CommissionType, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile } from './types'
@@ -77,12 +76,9 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       guest_tags: restaurant.guest_tags,
     })
     setCuratedForm({
-      is_recommended: restaurant.is_recommended,
-      sort_order: restaurant.sort_order,
       concierge_description: restaurant.concierge_description,
       ideal_for: restaurant.ideal_for,
       guest_profile: restaurant.guest_profile,
-      active: restaurant.active,
     })
     try {
       const [profile, nextStats] = await Promise.all([
@@ -190,18 +186,11 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       {tab === 'curated' ? (
         <>
           <div className="dining-field-grid">
-            <label className="form-field"><span>Consigliato dall'hotel</span>
-              <Select id="is-recommended" name="is_recommended" value={curatedForm.is_recommended ? 'si' : 'no'} onChange={(v) => setCuratedForm((f) => ({ ...f, is_recommended: v === 'si' }))}>
-                <option value="si">Sì</option><option value="no">No</option>
-              </Select>
-            </label>
-            <label className="form-field"><span>Priorità visualizzazione</span><input type="number" value={curatedForm.sort_order ?? 0} onChange={(e) => setCuratedForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} /></label>
             <label className="form-field span2"><span>Descrizione concierge (vista dall'ospite)</span><textarea rows={2} value={curatedForm.concierge_description ?? ''} onChange={(e) => setCuratedForm((f) => ({ ...f, concierge_description: e.target.value || null }))} /></label>
             <label className="form-field"><span>Ideale per</span><input value={curatedForm.ideal_for ?? ''} onChange={(e) => setCuratedForm((f) => ({ ...f, ideal_for: e.target.value || null }))} /></label>
             <label className="form-field"><span>Profilo ospite</span><input value={curatedForm.guest_profile ?? ''} onChange={(e) => setCuratedForm((f) => ({ ...f, guest_profile: e.target.value || null }))} /></label>
-            <label className="form-field switch-field"><span>Visibile agli ospiti</span><Switch checked={curatedForm.active ?? true} onChange={() => setCuratedForm((f) => ({ ...f, active: !(f.active ?? true) }))} aria-label="Visibile agli ospiti" /></label>
           </div>
-          <div className="dining-visibility-note" style={{ marginTop: 14 }}>Questa sezione e la successiva (Operativo) non sono mai visibili agli ospiti, a eccezione della descrizione concierge qui sopra.</div>
+          <div className="dining-visibility-note" style={{ marginTop: 14 }}>Questa sezione e la successiva (Operativo) non sono mai visibili agli ospiti, a eccezione della descrizione concierge qui sopra. Consigliato, Visibile e Priorità si impostano direttamente in riga nell'elenco Ristoranti.</div>
         </>
       ) : null}
 
