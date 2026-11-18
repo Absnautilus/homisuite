@@ -1158,9 +1158,14 @@
 .shift-grid td {
   height: 42px;
 }
-.shift-grid td {
-  padding-inline: 2px;
-}
+/* padding-inline: 2px used to live here. Same specificity as, and later
+   than, the padding: 0 that .shift-grid td already gets above (part of
+   the .shift-grid th, .shift-grid td rule) -- so it silently won on every
+   date cell, shrinking each .shift-cell 2px in from its <td> on both
+   sides and showing the page background through the gap. The code cells
+   are meant to read as one solid mosaic with no visible seams between
+   them (only the shared 1px grid line), so dropped rather than kept at
+   a smaller value. */
 .shift-grid thead th {
   height: 35px;
 }
