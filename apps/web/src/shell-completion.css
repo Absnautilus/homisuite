@@ -445,11 +445,26 @@ table.dining-dense th.sortable.is-sorted .arrow { opacity: 1; color: var(--accen
 .dining-rest-thumb { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent-text); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex-shrink: 0; object-fit: cover; }
 .dining-rest-main strong { display: block; font-size: 14px; font-weight: 800; }
 .dining-rest-main .meta { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.dining-rest-main strong svg { margin-left: 6px; vertical-align: -1px; color: var(--muted); }
 .dining-switch-cell { display: flex; align-items: center; }
 @media (max-width: 640px) {
   .dining-rest-row { grid-template-columns: auto 1fr; }
   .dining-rest-head { display: none; }
   .dining-rest-row .dining-switch-cell, .dining-rest-row .dining-priority-input { display: none; }
+}
+
+/* ---------- category catalog: same row pattern as the restaurant one above,
+   just without the per-category grouping (categories aren't grouped by
+   anything) ---------- */
+.dining-cat-row { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 14px; padding: 13px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+.dining-cat-row:first-child { border-top: 0; }
+.dining-cat-row:hover { background: var(--surface-2); }
+.dining-cat-head { cursor: default; padding: 8px 16px; min-height: 0; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.dining-cat-head:hover { background: var(--surface-2); }
+@media (max-width: 640px) {
+  .dining-cat-row { grid-template-columns: auto 1fr; }
+  .dining-cat-head { display: none; }
+  .dining-cat-row .dining-switch-cell, .dining-cat-row .dining-priority-input { display: none; }
 }
 
 /* ---------- restaurant management: tabs + field grid ---------- */

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEv
 import { Button, Modal, useUndo } from '@homisuite/ui'
 import { Pencil, Plus, UtensilsCrossed } from 'lucide-react'
 import { useConfirm } from '../../components/ConfirmDialog'
+import { Switch } from '../../components/Switch'
 import { supabase } from '../../core/client'
 import { createCategory, deleteCategory, listCategories, restoreCategory, subscribeToCategories, updateCategory } from './api'
 import type { DiningCategory } from './types'
@@ -44,6 +45,26 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
     return subscribeToCategories(supabase, hotelId, () => void load())
   }, [hotelId, load])
 
+  async function toggleActive(category: DiningCategory) {
+    setCategories((current) => current.map((c) => c.id === category.id ? { ...c, active: !c.active } : c))
+    try {
+      await updateCategory(supabase, category.id, { active: !category.active })
+    } catch (cause) {
+      setError(readableDiningError(cause))
+      await load()
+    }
+  }
+
+  async function setPriority(category: DiningCategory, value: number) {
+    setCategories((current) => current.map((c) => c.id === category.id ? { ...c, sort_order: value } : c))
+    try {
+      await updateCategory(supabase, category.id, { sort_order: value })
+    } catch (cause) {
+      setError(readableDiningError(cause))
+      await load()
+    }
+  }
+
   async function onDelete(category: DiningCategory) {
     const confirmed = await confirm({
       title: 'Eliminare la categoria?',
@@ -73,11 +94,36 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
         {canManage ? <button className="secondary-action" type="button" onClick={() => setEditing('new')}><Plus size={16} /> Nuova categoria</button> : null}
       </div>
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
-      <div className="job-role-grid">
-        {categories.map((category) => canManage
-          ? <button className="job-role-chip active" type="button" key={category.id} onClick={() => setEditing(category)}><UtensilsCrossed size={15} /><span>{category.name}</span><Pencil size={12} /></button>
-          : <div className="job-role-chip active" key={category.id}><UtensilsCrossed size={15} /><span>{category.name}</span></div>)}
-        {!loading && categories.length === 0 ? <span className="muted">Nessuna categoria creata.</span> : null}
+      <div>
+        {categories.length > 0 ? (
+          <div className="dining-cat-row dining-cat-head">
+            <span /><span /><span>Visibile</span><span>Priorità</span>
+          </div>
+        ) : null}
+        {categories.map((category) => (
+          <div className="dining-cat-row" key={category.id} onClick={() => canManage && setEditing(category)}>
+            {category.image_url
+              ? <img className="dining-rest-thumb" src={category.image_url} alt="" />
+              : <div className="dining-rest-thumb"><UtensilsCrossed size={16} /></div>}
+            <div className="dining-rest-main">
+              <strong>{category.name}{canManage ? <Pencil size={12} aria-hidden="true" /> : null}</strong>
+            </div>
+            <div className="dining-switch-cell" onClick={canManage ? (event) => event.stopPropagation() : undefined}>
+              <Switch checked={category.active} onChange={() => void toggleActive(category)} aria-label={`Visibile — ${category.name}`} disabled={!canManage} />
+            </div>
+            {canManage ? (
+              <input
+                type="number"
+                className="dining-priority-input"
+                value={category.sort_order}
+                onClick={(event) => event.stopPropagation()}
+                onChange={(e) => void setPriority(category, Number(e.target.value))}
+                aria-label={`Priorità — ${category.name}`}
+              />
+            ) : <span />}
+          </div>
+        ))}
+        {!loading && categories.length === 0 ? <p className="muted dining-empty-hint">Nessuna categoria creata.</p> : null}
       </div>
       <CategoryModal
         category={editing}
