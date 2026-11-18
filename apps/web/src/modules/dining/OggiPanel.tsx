@@ -119,7 +119,7 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
         <div className="section-heading split" style={{ padding: '16px 20px 0' }}>
           <div><h2>Programma di oggi</h2></div>
         </div>
-        <div className="filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 20px 16px' }}>
+        <div className="dining-grid-toolbar">
           <Button variant="chip" pressed={statusFilter === 'tutte'} onClick={() => setStatusFilter('tutte')}>Tutte</Button>
           {(['confirmed', 'in_progress', 'new', 'unavailable', 'cancelled'] as ConfirmationStatus[]).map((status) => (
             <Button key={status} variant="chip" pressed={statusFilter === status} onClick={() => setStatusFilter(status)}>
