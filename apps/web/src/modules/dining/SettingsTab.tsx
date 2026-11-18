@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Plus, X } from 'lucide-react'
-import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { supabase } from '../../core/client'
 import { useUndo } from '@homisuite/ui'
-import { createGuestTag, deleteGuestTag, listGuestTags, listRestaurants, restoreGuestTag, updateRestaurant } from './api'
-import type { GuestTag, Restaurant } from './types'
+import { createGuestTag, deleteGuestTag, listGuestTags, restoreGuestTag } from './api'
+import type { GuestTag } from './types'
 import { readableDiningError } from './readableDiningError'
 
 interface SettingsTabProps {
@@ -14,7 +13,6 @@ interface SettingsTabProps {
 }
 
 export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [guestTags, setGuestTags] = useState<GuestTag[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,12 +23,7 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
   const load = useCallback(async () => {
     try {
       setError(null)
-      const [nextRestaurants, nextTags] = await Promise.all([
-        listRestaurants(supabase, hotelId),
-        listGuestTags(supabase, hotelId),
-      ])
-      setRestaurants(nextRestaurants)
-      setGuestTags(nextTags)
+      setGuestTags(await listGuestTags(supabase, hotelId))
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {
@@ -39,26 +32,6 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
   }, [hotelId])
 
   useEffect(() => { void load() }, [load])
-
-  async function toggleField(restaurant: Restaurant, field: 'is_recommended' | 'active') {
-    setRestaurants((current) => current.map((r) => r.id === restaurant.id ? { ...r, [field]: !r[field] } : r))
-    try {
-      await updateRestaurant(supabase, restaurant.id, { [field]: !restaurant[field] })
-    } catch (cause) {
-      setError(readableDiningError(cause))
-      await load()
-    }
-  }
-
-  async function setPriority(restaurant: Restaurant, value: number) {
-    setRestaurants((current) => current.map((r) => r.id === restaurant.id ? { ...r, sort_order: value } : r))
-    try {
-      await updateRestaurant(supabase, restaurant.id, { sort_order: value })
-    } catch (cause) {
-      setError(readableDiningError(cause))
-      await load()
-    }
-  }
 
   async function addTag(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -94,35 +67,9 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
     }
   }
 
-  const sortedRestaurants = restaurants.slice().sort((a, b) => a.sort_order - b.sort_order)
-
   return (
     <div className="page-stack">
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
-
-      <section className="shell-card">
-        <div className="section-heading" style={{ padding: '16px 20px 0' }}>
-          <h2>Classificazione ristoranti</h2>
-          <p>Consigliato, visibilità e ordine di priorità nella vetrina ospite.</p>
-        </div>
-        <div className="dining-class-table">
-          <div className="dining-class-row dining-class-head">
-            <span>Ristorante</span><span>Consigliato</span><span>Visibile</span><span>Priorità</span>
-          </div>
-          {sortedRestaurants.map((restaurant) => (
-            <div className="dining-class-row" key={restaurant.id}>
-              <span>{restaurant.name}</span>
-              <span><Switch checked={restaurant.is_recommended} onChange={() => void toggleField(restaurant, 'is_recommended')} aria-label={`Consigliato — ${restaurant.name}`} disabled={!canManage} /></span>
-              <span><Switch checked={restaurant.active} onChange={() => void toggleField(restaurant, 'active')} aria-label={`Visibile — ${restaurant.name}`} disabled={!canManage} /></span>
-              <span><input type="number" className="dining-priority-input" value={restaurant.sort_order} disabled={!canManage} onChange={(e) => void setPriority(restaurant, Number(e.target.value))} aria-label={`Priorità — ${restaurant.name}`} /></span>
-            </div>
-          ))}
-          {!loading && sortedRestaurants.length === 0 ? <p className="muted dining-empty-hint">Nessun ristorante creato.</p> : null}
-        </div>
-        <p style={{ padding: '0 20px 14px', fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>
-          Accordi commerciali e provvigioni si gestiscono per singolo ristorante, nella sua scheda → Operativo (non sono un'etichetta pubblica).
-        </p>
-      </section>
 
       <section className="shell-card">
         <div className="section-heading" style={{ padding: '16px 20px 0' }}>

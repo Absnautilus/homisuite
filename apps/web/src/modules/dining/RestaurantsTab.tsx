@@ -109,9 +109,18 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
     }
   }
 
-  // Alphabetical for browsing, same choice the approved prototype made --
-  // the one place display order is deliberate is Impostazioni's own
-  // classification table (sort_order / "Priorità"), not this catalog.
+  async function setPriority(restaurant: Restaurant, value: number) {
+    setRestaurants((current) => current.map((r) => r.id === restaurant.id ? { ...r, sort_order: value } : r))
+    try {
+      await updateRestaurant(supabase, restaurant.id, { sort_order: value })
+    } catch (cause) {
+      setError(readableDiningError(cause))
+      await load()
+    }
+  }
+
+  // Alphabetical for browsing -- Priorità still only drives the guest-facing
+  // vetrina order, not this catalog's own layout.
   const visible = restaurants
     .filter((r) => filter === 'tutti' || (filter === 'consigliati' && r.is_recommended) || (filter === 'visibili' && r.active))
     .slice()
@@ -141,6 +150,11 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
         </div>
       ) : null}
       <div>
+        {canManage && groups.length > 0 ? (
+          <div className="dining-rest-row dining-rest-head">
+            <span /><span /><span>Consigliato</span><span>Visibile</span><span>Priorità</span><span />
+          </div>
+        ) : null}
         {groups.map(({ category, restaurants: groupRestaurants }) => (
           <div key={category.id}>
             <div className="dining-category-heading">{category.name} <span className="muted">({groupRestaurants.length})</span></div>
@@ -170,8 +184,18 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
                 ) : restaurant.is_recommended ? <span className="dining-rec-badge is-on">Consigliato</span> : <span />}
                 {canManage ? (
                   <div className="dining-vis-toggle" onClick={(event) => event.stopPropagation()}>
-                    Visibile <Switch checked={restaurant.active} onChange={() => void toggleVisible(restaurant)} aria-label={`Visibile — ${restaurant.name}`} />
+                    <Switch checked={restaurant.active} onChange={() => void toggleVisible(restaurant)} aria-label={`Visibile — ${restaurant.name}`} />
                   </div>
+                ) : <span />}
+                {canManage ? (
+                  <input
+                    type="number"
+                    className="dining-priority-input"
+                    value={restaurant.sort_order}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(e) => void setPriority(restaurant, Number(e.target.value))}
+                    aria-label={`Priorità — ${restaurant.name}`}
+                  />
                 ) : <span />}
                 {canManage ? (
                   <div style={{ display: 'flex', gap: 2 }} onClick={(event) => event.stopPropagation()}>
