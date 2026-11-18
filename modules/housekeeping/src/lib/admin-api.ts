@@ -338,16 +338,21 @@ export interface StatsSummary {
   byOperator: OperatorStat[]
 }
 
-// All-time, computed client-side over every completed row — small enough at
+// Computed client-side over every completed row in range — small enough at
 // hotel scale that a dedicated aggregate query/materialized view isn't
-// worth the added moving part yet.
-export async function fetchCompletionStats(hotelId: string): Promise<StatsSummary> {
-  const { data, error } = await supabase
+// worth the added moving part yet. `range`, when given, scopes to rows
+// completed within it (omit for the previous, all-time behavior) -- without
+// it, a hotel running a while blends its entire history into one average,
+// hiding anything seasonal or any change in how the team works.
+export async function fetchCompletionStats(hotelId: string, range?: { from: string; to: string }): Promise<StatsSummary> {
+  let query = supabase
     .from('guest_requests')
     .select('assigned_department, created_at, accepted_at, completed_at, accepted_by, accepted_by_staff:staff_profiles!accepted_by(name, role)')
     .eq(...hotelFilter(hotelId))
     .eq('status', 'completed')
     .not('completed_at', 'is', null)
+  if (range) query = query.gte('completed_at', range.from).lte('completed_at', range.to)
+  const { data, error } = await query
   if (error) throw error
   const rows = (data ?? []) as unknown as {
     assigned_department: Department | null

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Tabs } from '@homisuite/ui'
 import { Card, CardBody } from '@/components/ui/card'
 import { fetchCompletionStats, type StatsSummary } from '@/lib/admin-api'
 import { formatDuration } from '@/lib/format'
@@ -6,23 +7,58 @@ import { getErrorMessage } from '@/lib/errors'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { TranslationKey } from '@/lib/i18n/dictionaries'
 
+type RangePreset = '7d' | '30d' | '90d' | 'all'
+
+const RANGE_DAYS: Record<Exclude<RangePreset, 'all'>, number> = { '7d': 7, '30d': 30, '90d': 90 }
+
+// undefined means all-time (fetchCompletionStats' own previous behavior) --
+// everything else scopes to completed_at within the last N days from now.
+function rangeFor(preset: RangePreset): { from: string; to: string } | undefined {
+  if (preset === 'all') return undefined
+  const to = new Date()
+  const from = new Date(to.getTime() - RANGE_DAYS[preset] * 24 * 60 * 60 * 1000)
+  return { from: from.toISOString(), to: to.toISOString() }
+}
+
 export function StatsPage({ hotelId }: { hotelId: string }) {
   const { t } = useLocale()
+  const [range, setRange] = useState<RangePreset>('30d')
   const [stats, setStats] = useState<StatsSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchCompletionStats(hotelId)
+    // Reset to the loading state on every range change too, not just on
+    // mount -- otherwise switching range briefly keeps showing the
+    // previous range's numbers (or, once that's fetched, an incorrect
+    // "nothing completed yet" empty state) while the new query is in flight.
+    setStats(null)
+    setError(null)
+    fetchCompletionStats(hotelId, rangeFor(range))
       .then(setStats)
       .catch((err) => {
         console.error(err)
         setError(getErrorMessage(err))
       })
-  }, [hotelId])
+  }, [hotelId, range])
+
+  const rangeItems = [
+    { value: '7d', label: t('staff.stats.range7d') },
+    { value: '30d', label: t('staff.stats.range30d') },
+    { value: '90d', label: t('staff.stats.range90d') },
+    { value: 'all', label: t('staff.stats.rangeAll') },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="admin-panel-title"><h2>{t('staff.stats.title')}</h2><p>{t('staff.stats.subtitle')}</p></div>
+
+      <Tabs
+        items={rangeItems}
+        value={range}
+        onValueChange={(value) => setRange(value as RangePreset)}
+        variant="surface"
+        aria-label={t('staff.stats.rangeAriaLabel')}
+      />
 
       {error ? (
         <div className="rounded-lg border border-bad-ink/25 bg-bad-bg p-4 text-sm text-bad-ink">{t('staff.stats.loadError')}</div>
