@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, Modal, useUndo } from '@homisuite/ui'
-import { Clock, Download, Images, Plus, Settings2, Trash2 } from 'lucide-react'
+import { ArrowUpDown, Clock, Download, Images, Plus, Search, Settings2, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
@@ -27,6 +27,8 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   const [hoursFor, setHoursFor] = useState<Restaurant | null>(null)
   const [galleryFor, setGalleryFor] = useState<Restaurant | null>(null)
   const [filter, setFilter] = useState<'tutti' | 'consigliati' | 'visibili'>('tutti')
+  const [search, setSearch] = useState('')
+  const [sortByPriority, setSortByPriority] = useState(false)
   const [confirmDialog, confirm] = useConfirm()
   const pushUndo = useUndo()
 
@@ -119,12 +121,15 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
     }
   }
 
-  // Alphabetical for browsing -- Priorità still only drives the guest-facing
-  // vetrina order, not this catalog's own layout.
+  // Alphabetical by default (easiest to scan while browsing); "Ordina per
+  // priorità" switches this catalog's own order to match sort_order, so
+  // editing Priorità has a visible effect without leaving this tab.
+  const searchQuery = search.trim().toLowerCase()
   const visible = restaurants
     .filter((r) => filter === 'tutti' || (filter === 'consigliati' && r.is_recommended) || (filter === 'visibili' && r.active))
+    .filter((r) => !searchQuery || r.name.toLowerCase().includes(searchQuery))
     .slice()
-    .sort((a, b) => a.name.localeCompare(b.name, 'it'))
+    .sort((a, b) => sortByPriority ? (a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'it')) : a.name.localeCompare(b.name, 'it'))
 
   // Grouped by category (in the same order as the Categorie tab lists
   // them) instead of one flat list -- a category with nothing matching
@@ -143,14 +148,21 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
       {error ? <div className="shell-alert error" role="alert">{error}</div> : null}
       {!loading && categories.length === 0 ? <p className="muted dining-empty-hint">Crea prima una categoria nella scheda "Categorie".</p> : null}
       {categories.length > 0 ? (
-        <div className="filters" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 20px 14px' }}>
+        <div className="dining-grid-toolbar">
+          <div className="dining-search-box">
+            <Search size={15} />
+            <input type="search" placeholder="Cerca ristorante…" value={search} onChange={(event) => setSearch(event.target.value)} />
+          </div>
           <Button variant="chip" pressed={filter === 'tutti'} onClick={() => setFilter('tutti')}>Tutti</Button>
           <Button variant="chip" pressed={filter === 'consigliati'} onClick={() => setFilter('consigliati')}>Consigliati</Button>
           <Button variant="chip" pressed={filter === 'visibili'} onClick={() => setFilter('visibili')}>Visibili</Button>
+          <Button variant="chip" pressed={sortByPriority} onClick={() => setSortByPriority((v) => !v)}>
+            <ArrowUpDown size={13} /> Priorità
+          </Button>
         </div>
       ) : null}
       <div>
-        {canManage && groups.length > 0 ? (
+        {groups.length > 0 ? (
           <div className="dining-rest-row dining-rest-head">
             <span /><span /><span>Consigliato</span><span>Visibile</span><span>Priorità</span><span />
           </div>
@@ -172,21 +184,12 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
                     {!restaurant.active ? ' · Disattivato' : ''}
                   </div>
                 </div>
-                {canManage ? (
-                  <button
-                    type="button"
-                    className={`dining-rec-badge${restaurant.is_recommended ? ' is-on' : ''}`}
-                    onClick={(event) => { event.stopPropagation(); void toggleRecommended(restaurant) }}
-                    title="Impostato dall'hotel"
-                  >
-                    Consigliato
-                  </button>
-                ) : restaurant.is_recommended ? <span className="dining-rec-badge is-on">Consigliato</span> : <span />}
-                {canManage ? (
-                  <div className="dining-vis-toggle" onClick={(event) => event.stopPropagation()}>
-                    <Switch checked={restaurant.active} onChange={() => void toggleVisible(restaurant)} aria-label={`Visibile — ${restaurant.name}`} />
-                  </div>
-                ) : <span />}
+                <div className="dining-switch-cell" onClick={canManage ? (event) => event.stopPropagation() : undefined}>
+                  <Switch checked={restaurant.is_recommended} onChange={() => void toggleRecommended(restaurant)} aria-label={`Consigliato — ${restaurant.name}`} disabled={!canManage} />
+                </div>
+                <div className="dining-switch-cell" onClick={canManage ? (event) => event.stopPropagation() : undefined}>
+                  <Switch checked={restaurant.active} onChange={() => void toggleVisible(restaurant)} aria-label={`Visibile — ${restaurant.name}`} disabled={!canManage} />
+                </div>
                 {canManage ? (
                   <input
                     type="number"
