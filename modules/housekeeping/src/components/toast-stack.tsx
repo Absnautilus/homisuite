@@ -19,7 +19,21 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
       {toasts.map((toast) =>
         toast.card ? (
           <div key={toast.id} role="status" className="rounded-xl border border-line bg-surface p-3 text-sm text-foreground shadow-md">
-            <p className="pr-1 font-semibold text-foreground">{toast.card.title}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="pr-1 font-semibold text-foreground">{toast.card.title}</p>
+              {/* Closing this card neither claims nor rejects the request --
+                  it just stops showing the notification here. Previously the
+                  only two actions were Accetta/Rifiuta, both with a real
+                  database effect, so there was no way to just dismiss it. */}
+              <button
+                type="button"
+                aria-label={t('common.toast.dismiss')}
+                onClick={() => onDismiss(toast.id)}
+                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-muted transition-colors hover:text-accent"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <div className="mt-2 flex justify-end gap-2">
               {toast.card.onReject && (
                 <IconButton
