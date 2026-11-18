@@ -93,6 +93,16 @@ export async function cancelStay(id: string): Promise<void> {
   if (!data) throw new Error('stay_cancel_not_applied')
 }
 
+// Undo for cancelStay -- nothing was deleted (status is a soft column), so
+// unlike other modules' restoreX() this is just a status flip back, not a
+// re-insert. Reusing status: 'active' is safe: listStays() already filters
+// on exactly that, so a restored stay simply reappears where it was.
+export async function restoreStay(id: string): Promise<void> {
+  const { data, error } = await supabase.from('stays').update({ status: 'active' }).eq('id', id).select('id').maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('stay_restore_not_applied')
+}
+
 export interface StayRequest {
   id: string
   status: 'requested' | 'in_progress' | 'completed' | 'cancelled'

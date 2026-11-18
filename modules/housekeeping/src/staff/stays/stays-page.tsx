@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@homisuite/ui'
+import { PageHeader, useUndo } from '@homisuite/ui'
 import { ChevronsRight, History, LogOut, Pencil, Power } from 'lucide-react'
 import type { PlatformHotelSettings } from '@/public/HousekeepingModule'
 import { EmbeddedNav } from '@/staff/embedded-nav'
@@ -10,7 +10,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { FieldError, FieldGroup, Input, Label, Select } from '@/components/ui/field'
 import { DatePicker, TimePicker } from '@homisuite/ui'
 import { listRooms, type Room } from '@/lib/admin-api'
-import { cancelStay, checkOutStayNow, createStay, fetchRequestsForStay, listStays, updateCheckout, updateStay, type Stay, type StayRequest } from '@/lib/stays-api'
+import { cancelStay, checkOutStayNow, createStay, fetchRequestsForStay, listStays, restoreStay, updateCheckout, updateStay, type Stay, type StayRequest } from '@/lib/stays-api'
 import { OperaImportPanel } from '@/staff/stays/opera-import-panel'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
@@ -211,6 +211,7 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
 function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: Stay; rooms: Room[]; onChanged: () => Promise<void> }) {
   const { t } = useLocale()
   const { push } = useToast()
+  const pushUndo = useUndo()
   const [editingCheckout, setEditingCheckout] = useState(false)
   const [checkOut, setCheckOut] = useState(toLocalInputValue(stay.check_out_at))
   const [editingDetails, setEditingDetails] = useState(false)
@@ -223,6 +224,12 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
   const [confirmDialog, confirm] = useConfirm()
   const [historyOpen, setHistoryOpen] = useState(false)
   const [history, setHistory] = useState<StayRequest[] | null>(null)
+  // rooms here is every room (active or not) -- NewStayForm's own picker
+  // already only offers active ones, so reassigning an existing stay
+  // shouldn't be able to put it on a deactivated room either. The stay's
+  // own current room stays an option even if it's since been deactivated,
+  // so switching some other field doesn't silently drop it from the list.
+  const assignableRooms = rooms.filter((room) => room.active || room.id === stay.room_id)
 
   function startEditingDetails() {
     setDetailsRoomId(stay.room_id)
@@ -282,7 +289,21 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
       description: t('staff.stays.deactivateDesc', { room: stay.rooms?.room_number ?? '', name: stay.guest_last_name, pin: stay.guest_pin }),
       confirmLabel: t('staff.stays.deactivateConfirm'),
     })
-    if (ok) await run(() => cancelStay(stay.id), t('staff.stays.deactivateSuccess'))
+    if (!ok) return
+    // No separate success toast here (unlike run()'s other callers) --
+    // pushUndo's own toast already carries the "disattivata" message, with
+    // an undo action attached, same as every other destructive action in
+    // this module.
+    const succeeded = await run(() => cancelStay(stay.id))
+    if (succeeded) {
+      pushUndo({
+        message: t('staff.stays.deactivateSuccess'),
+        undo: async () => {
+          await restoreStay(stay.id)
+          await onChanged()
+        },
+      })
+    }
   }
 
   return (
@@ -306,7 +327,7 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
                   {t('staff.stays.room')}
                 </Label>
                 <Select id={`edit-room-${stay.id}`} required value={detailsRoomId} onChange={(e) => setDetailsRoomId(e.target.value)}>
-                  {rooms.map((room) => (
+                  {assignableRooms.map((room) => (
                     <option key={room.id} value={room.id}>
                       {room.room_number}
                     </option>
