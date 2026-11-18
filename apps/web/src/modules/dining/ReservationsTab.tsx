@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, DatePicker, Modal, TimePicker, useRememberedState } from '@homisuite/ui'
 import { Plus } from 'lucide-react'
 import { supabase } from '../../core/client'
-import { createReservation, listGuestTags, listReservations, listRestaurants, type CreateReservationInput } from './api'
+import { createReservation, listGuestTags, listReservations, listRestaurants, subscribeToReservations, type CreateReservationInput } from './api'
 import type { GuestTag, ReservationRequest, Restaurant } from './types'
 import { readableDiningError } from './readableDiningError'
 import { OggiPanel } from './OggiPanel'
@@ -43,6 +43,14 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
   }, [hotelId])
 
   useEffect(() => { void load() }, [load])
+
+  // Keeps the queue in sync with another staff member's own claims/edits,
+  // same mechanism Categorie/Ristoranti already use -- this is the busiest,
+  // most time-sensitive tab in the module, so it matters here even more.
+  useEffect(() => {
+    const unsubscribe = subscribeToReservations(supabase, hotelId, () => void load())
+    return () => unsubscribe()
+  }, [hotelId, load])
 
   const selectedReservation = reservations.find((r) => r.id === detailId) ?? null
 

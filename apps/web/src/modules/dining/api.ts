@@ -275,6 +275,20 @@ export async function listReservations(client: SupabaseClient, hotelId: string):
   return (data as ReservationRequest[]).map((row) => ({ ...row, guest_preference_tags: row.guest_preference_tags ?? [] }))
 }
 
+// Same reasoning as subscribeToCategories/subscribeToRestaurants above --
+// without it, two reception staff working the "Da gestire" queue together
+// only ever see each other's claims/updates on a manual reload, which is
+// exactly the tab where that lag matters most.
+export function subscribeToReservations(client: SupabaseClient, hotelId: string, onChange: () => void): () => void {
+  const channel = client
+    .channel(`dining-reservations-${hotelId}-${crypto.randomUUID()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_reservation_requests', filter: `hotel_id=eq.${hotelId}` }, onChange)
+    .subscribe()
+  return () => {
+    client.removeChannel(channel)
+  }
+}
+
 export interface CreateReservationInput {
   // Exactly one of the two -- see the restaurant_reservation_requests_restaurant_xor_custom
   // check constraint. A restaurant not on this hotel's own list (custom_restaurant_name set)
