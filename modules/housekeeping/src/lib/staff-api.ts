@@ -5,7 +5,7 @@ import { usernameToEmail } from '@/lib/operator-login'
 import { hotelFilter, realtimeHotelFilter } from '@/lib/hotel-query-scope'
 
 const QUEUE_SELECT =
-  '*, request_types(name, name_i18n, allows_quantity, available_quantity, request_categories(name, name_i18n)), accepted_by_staff:staff_profiles!accepted_by(name), rejected_by_staff:staff_profiles!rejected_by(name)'
+  '*, request_types(name, name_i18n, allows_quantity, available_quantity, request_categories(name, name_i18n)), accepted_by_staff:staff_profiles!accepted_by(name, role), rejected_by_staff:staff_profiles!rejected_by(name, role)'
 
 export async function fetchMyProfile(): Promise<StaffProfile | null> {
   const {

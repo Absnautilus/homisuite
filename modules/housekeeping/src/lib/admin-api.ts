@@ -68,6 +68,12 @@ export interface OperatorSummary {
 // read access must not leak other properties' rosters into that view.
 // Standalone mode omits it deliberately: a master there manages every hotel
 // from one screen, which is the existing, intended standalone behavior.
+//
+// Admin Master itself is filtered out whenever hotelId is given (a
+// hotel-scoped view): it doesn't belong to any one property, and must
+// never appear inside a hotel's own staff list even though its RLS access
+// spans every property. Standalone mode's own master-wide listing is left
+// alone -- that view is master managing the platform, not a hotel roster.
 export async function listStaff(hotelId?: string): Promise<OperatorSummary[]> {
   const query = supabase
     .from('staff_profiles')
@@ -75,7 +81,7 @@ export async function listStaff(hotelId?: string): Promise<OperatorSummary[]> {
     .order('name')
   const { data, error } = await (hotelId ? query.eq(...hotelFilter(hotelId)) : query)
   if (error) throw error
-  return data ?? []
+  return hotelId ? (data ?? []).filter((person) => person.role !== 'master') : (data ?? [])
 }
 
 export async function setStaffActive(id: string, active: boolean): Promise<void> {
@@ -338,7 +344,7 @@ export interface StatsSummary {
 export async function fetchCompletionStats(hotelId: string): Promise<StatsSummary> {
   const { data, error } = await supabase
     .from('guest_requests')
-    .select('assigned_department, created_at, accepted_at, completed_at, accepted_by, accepted_by_staff:staff_profiles!accepted_by(name)')
+    .select('assigned_department, created_at, accepted_at, completed_at, accepted_by, accepted_by_staff:staff_profiles!accepted_by(name, role)')
     .eq(...hotelFilter(hotelId))
     .eq('status', 'completed')
     .not('completed_at', 'is', null)
@@ -349,7 +355,7 @@ export async function fetchCompletionStats(hotelId: string): Promise<StatsSummar
     accepted_at: string | null
     completed_at: string
     accepted_by: string | null
-    accepted_by_staff: { name: string } | null
+    accepted_by_staff: { name: string; role: StaffRole } | null
   }[]
   if (rows.length === 0) {
     return { overallCount: 0, overallAvgMinutes: null, overallAvgWaitMinutes: null, overallAvgExecMinutes: null, byDepartment: [], byOperator: [] }
@@ -377,7 +383,9 @@ export async function fetchCompletionStats(hotelId: string): Promise<StatsSummar
 
   const byOperatorGroups = new Map<string, { name: string; minutes: number[] }>()
   for (const r of withAcceptance) {
-    if (!r.accepted_by) continue
+    // Admin Master never belongs in a per-operator breakdown -- it's a
+    // platform-level account, not staff of this hotel.
+    if (!r.accepted_by || r.accepted_by_staff?.role === 'master') continue
     const entry = byOperatorGroups.get(r.accepted_by) ?? { name: r.accepted_by_staff?.name ?? '—', minutes: [] }
     entry.minutes.push(minutesBetween(r.accepted_at, r.completed_at))
     byOperatorGroups.set(r.accepted_by, entry)

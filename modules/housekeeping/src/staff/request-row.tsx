@@ -67,6 +67,10 @@ export function RequestRow({
   const categoryNameI18n = request.request_types?.request_categories?.name_i18n
   const trackable = request.request_types?.available_quantity != null
   const rejected = Boolean(request.rejected_at)
+  // Admin Master must never show up inside a hotel's own views, even in the
+  // "who rejected this" visibility this card otherwise gives colleagues.
+  const rejectedByName = request.rejected_by_staff && request.rejected_by_staff.role !== 'master' ? request.rejected_by_staff.name : null
+  const acceptedByName = request.accepted_by_staff && request.accepted_by_staff.role !== 'master' ? request.accepted_by_staff.name : null
 
   async function run(action: () => Promise<void>) {
     setPending(true)
@@ -174,8 +178,8 @@ export function RequestRow({
                 {request.quantity ? <span className="shrink-0 text-sm font-bold text-muted">× {request.quantity}</span> : null}
               </div>
               <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-bad-ink">
-                {request.rejected_by_staff && <Avatar name={request.rejected_by_staff.name} />}
-                {t('staff.row.rejectedBy', { name: request.rejected_by_staff?.name ?? '—' })}
+                {rejectedByName && <Avatar name={rejectedByName} />}
+                {t('staff.row.rejectedBy', { name: rejectedByName ?? '—' })}
                 {request.rejected_at && <span className="font-normal text-muted">· {formatTime(request.rejected_at)}</span>}
               </p>
             </div>
@@ -326,7 +330,7 @@ export function RequestRow({
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          {request.accepted_by_staff && <Avatar name={request.accepted_by_staff.name} />}
+          {acceptedByName && <Avatar name={acceptedByName} />}
           <StatusBadge status={request.status} label={t(`statusLabel.${request.status}` as const)} />
           {request.urgent && (
             <Badge className="border border-bad-ink/25 bg-bad-bg text-bad-ink">
