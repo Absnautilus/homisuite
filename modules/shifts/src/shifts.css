@@ -1426,3 +1426,19 @@
 .shift-vacation-settings-form input:focus { outline: none; border-color: var(--shift-accent); box-shadow: var(--shift-focus-ring); }
 .shift-vacation-settings-save { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 .shift-vacation-settings-error { color: var(--shift-terracotta-ink); font-size: 12.5px; }
+
+/* Square date cells on every screen size, not just >=761px. The desktop
+   rule a few hundred lines up (search "Square cells, desktop only") was
+   deliberately scoped to min-width:761px, on the idea that mobile should
+   get its own narrower, compressed column sizing -- but narrower columns
+   at the same fixed 42px row height just means narrower-than-tall
+   rectangles instead of squares, which reads as broken, not compact.
+   Unconditional here (placed last so it wins over every earlier,
+   width-gated version of these same properties) applies the exact same
+   fixed-table-layout, scroll-instead-of-compress approach on phones too:
+   width:max-content keeps every date column at its natural 42px instead
+   of being squeezed by the viewport, same as desktop already gets. */
+.shift-grid { table-layout: fixed; width: max-content; min-width: 0; }
+.shift-grid:has(th:nth-child(n+15)) { min-width: 0; }
+.shift-grid th:not(.shift-person-column),
+.shift-grid td:not(.shift-person-column) { width: 42px; }
