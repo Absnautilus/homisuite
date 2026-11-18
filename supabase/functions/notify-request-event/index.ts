@@ -16,7 +16,10 @@ type GuestRequestRecord = {
 type Body = {
   type?: unknown
   record?: unknown
+  target_staff_id?: unknown
 }
+
+const EVENT_TYPES = new Set(['urgent_flagged', 'priority_changed', 'unclaimed', 'stalled', 'reminder'])
 
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -33,7 +36,7 @@ Deno.serve(async (request: Request) => {
     }
 
     const body = (await request.json()) as Body
-    const eventType = body.type === 'urgent_flagged' ? 'urgent_flagged' : body.type === 'priority_changed' ? 'priority_changed' : null
+    const eventType = typeof body.type === 'string' && EVENT_TYPES.has(body.type) ? body.type : null
     const record = body.record as GuestRequestRecord | undefined
     const requestId = readUuid(record?.id)
     const hotelId = readUuid(record?.hotel_id)
@@ -44,17 +47,38 @@ Deno.serve(async (request: Request) => {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 
-    const { data: recipients, error: recipientError } = await admin.rpc('housekeeping_push_recipient_profiles', {
-      p_hotel_id: hotelId,
-      p_assigned_job_title_ids: assignedJobTitleIds,
-      p_exclude_staff_id: null,
-    })
-    if (recipientError) {
-      console.error('notify-request-event: recipient lookup failed', recipientError)
-      return json({ error: 'recipient_lookup_failed' }, 500)
+    let profileIds: string[]
+    if (eventType === 'reminder') {
+      // Targeted at whoever currently has the request in charge, regardless
+      // of on_duty -- unlike the broadcast types below, this is a nudge to
+      // one already-identified person, not a page to whoever's working.
+      const targetStaffId = readUuid(body.target_staff_id)
+      if (!targetStaffId) return json({ error: 'invalid_payload' }, 400)
+      const { data: staff, error: staffError } = await admin
+        .from('staff_profiles')
+        .select('auth_user_id')
+        .eq('id', targetStaffId)
+        .maybeSingle()
+      if (staffError) {
+        console.error('notify-request-event: target staff lookup failed', staffError)
+        return json({ error: 'recipient_lookup_failed' }, 500)
+      }
+      profileIds = staff?.auth_user_id ? [staff.auth_user_id as string] : []
+    } else {
+      // urgent_flagged / priority_changed / unclaimed / stalled all broadcast
+      // to whoever is on duty for this hotel/request, via the same
+      // on_duty-gated recipient rule already used for the existing types.
+      const { data: recipients, error: recipientError } = await admin.rpc('housekeeping_push_recipient_profiles', {
+        p_hotel_id: hotelId,
+        p_assigned_job_title_ids: assignedJobTitleIds,
+        p_exclude_staff_id: null,
+      })
+      if (recipientError) {
+        console.error('notify-request-event: recipient lookup failed', recipientError)
+        return json({ error: 'recipient_lookup_failed' }, 500)
+      }
+      profileIds = [...new Set((recipients ?? []).map((row: { profile_id: string }) => row.profile_id))]
     }
-
-    const profileIds = [...new Set((recipients ?? []).map((row: { profile_id: string }) => row.profile_id))]
     if (profileIds.length === 0) return json({ ok: true, sent: 0, reason: 'no_recipients' }, 200)
 
     const { data: subscriptions, error: subscriptionsError } = await admin
@@ -66,10 +90,16 @@ Deno.serve(async (request: Request) => {
       return json({ error: 'subscription_lookup_failed' }, 500)
     }
 
-    const title = eventType === 'urgent_flagged' ? 'Richiesta urgente' : 'Priorità aggiornata'
+    const title =
+      eventType === 'urgent_flagged' ? 'Richiesta urgente'
+      : eventType === 'priority_changed' ? 'Priorità aggiornata'
+      : eventType === 'unclaimed' ? 'Richiesta in attesa'
+      : eventType === 'stalled' ? 'Richiesta da completare'
+      : 'Promemoria'
+    const notificationBody = eventType === 'reminder' ? `Camera ${roomNumber}: completa la richiesta` : `Camera ${roomNumber}`
     const payload = JSON.stringify({
       title,
-      body: `Camera ${roomNumber}`,
+      body: notificationBody,
       data: { requestId, type: eventType, url: '/housekeeping' },
     })
 

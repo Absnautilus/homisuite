@@ -4,13 +4,14 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Select, Input, Textarea } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, ArrowDownToLine, ArrowLeft, Check, ChevronDown, ChevronUp, Clock, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
+import { AlertTriangle, ArrowDownToLine, ArrowLeft, Bell, Check, ChevronDown, ChevronUp, Clock, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
-import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, rejectRequest, revertRequest, setRequestUrgent, updateRequest } from '@/lib/staff-api'
+import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, rejectRequest, revertRequest, sendRequestReminder, setRequestUrgent, updateRequest } from '@/lib/staff-api'
 import type { QueueJobTitle, QueuedRequest } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
+import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 
 export function RequestRow({
@@ -52,6 +53,7 @@ export function RequestRow({
   onCompleteOverride?: (requestId: string) => Promise<void>
 }) {
   const { t } = useLocale()
+  const { push } = useToast()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDialog, confirm] = useConfirm()
@@ -370,6 +372,18 @@ export function RequestRow({
                 ) : (
                   <IconButton tone="danger" icon={X} label={t('staff.row.cancel')} disabled={pending} onClick={onCancel} />
                 ))}
+                {canManageRequest && request.status === 'in_progress' && (
+                  <IconButton
+                    tone="neutral"
+                    icon={Bell}
+                    label={t('staff.row.reminder')}
+                    disabled={pending}
+                    onClick={() => run(async () => {
+                      await sendRequestReminder(request.id)
+                      push(t('staff.row.reminderSent'), 'success')
+                    })}
+                  />
+                )}
                 {canManageRequest && request.status === 'in_progress' && (
                   <IconButton tone="neutral" icon={ArrowLeft} label={t('staff.row.revert')} disabled={pending} onClick={() => run(() => revertRequest(request.id, 'in_progress'))} />
                 )}

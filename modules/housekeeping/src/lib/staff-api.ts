@@ -118,6 +118,16 @@ export async function rejectRequest(id: string, staffId: string) {
   if (error) throw error
 }
 
+// Pushes a one-off reminder to whoever currently has this request in
+// charge (accepted_by), instead of waiting for the automatic 10-minute
+// stalled escalation. Doesn't touch the row itself -- send_request_reminder
+// only reads it and fires a push -- so there's nothing here to reflect back
+// into the local queue state.
+export async function sendRequestReminder(id: string) {
+  const { error } = await supabase.rpc('send_request_reminder', { p_request_id: id })
+  if (error) throw error
+}
+
 // Steps a request back one stage instead of forward: an accepted job goes
 // back to unclaimed, a completed one reopens as in-progress, a cancelled
 // one is put back in the active queue. Distinct from deleteRequest, which
