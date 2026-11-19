@@ -5,6 +5,7 @@ import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
 import { useModuleRuntime } from '../../core/ModuleRuntimeContext'
 import { loadLiveShiftData } from './shiftLiveData'
+import { subscribeToLiveData } from './subscribeToLiveData'
 import { loadAvailableTeamMembers } from './availableTeamMembers'
 import { addStaffMember } from './addStaffMember'
 import { saveShiftAssignments } from './saveShiftAssignments'
@@ -117,6 +118,16 @@ export function ShiftPlannerPage() {
     // requestRevision is a manual bump (e.g. after a request decision); it
     // isn't a dependency of refreshLiveData itself, so it's listed here too.
   }, [refreshLiveData, requestRevision])
+
+  // Keeps this tab in sync with another admin's own edits to the same
+  // property -- every save elsewhere in this file already refreshes this
+  // tab's own view after the fact, but had nothing to refresh it after
+  // someone ELSE's save.
+  useEffect(() => {
+    if (!propertyId) return
+    const unsubscribe = subscribeToLiveData(supabase, propertyId, () => void refreshLiveData({ silent: true }))
+    return unsubscribe
+  }, [propertyId, refreshLiveData])
 
   if (state.status === 'loading') return <PageState kind="loading" title="" />
   if (state.status === 'not-entitled') return <PageState kind="unavailable" title="Turni non è abilitato per questa struttura." />
