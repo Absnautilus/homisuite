@@ -31,9 +31,16 @@ export async function saveRuleSet(
   }).select('id').single()
   if (error) throw error
 
-  const { error: activateError } = await supabase.from('shift_planning_units')
+  // Without the row-count check, a 0-row match (wrong/stale unit.id) threw
+  // nothing: the new version above is inserted and the unit just keeps
+  // pointing at its old current_rule_set_id, so the edited rules look
+  // saved but never actually take effect.
+  const { data: activated, error: activateError } = await supabase.from('shift_planning_units')
     .update({ current_rule_set_id: data.id })
     .eq('property_id', propertyId)
     .eq('id', unit.id)
+    .select('id')
+    .maybeSingle()
   if (activateError) throw activateError
+  if (!activated) throw new Error('Unità di pianificazione non trovata.')
 }
