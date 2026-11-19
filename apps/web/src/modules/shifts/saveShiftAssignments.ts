@@ -16,6 +16,11 @@ export async function saveShiftAssignments(
   changes: ShiftAssignmentChange[],
 ) {
   if (!changes.length) return
+  // Same guard generateAssignments/clearDraftShifts/saveShiftLock already
+  // apply -- this is the grid's own manual-edit save path, and without it
+  // a finalized month's shifts could be silently overwritten by typing
+  // into a cell, the one path those other guards don't cover.
+  if (unit.monthStatus === 'final') throw new Error('Il mese è Definitivo: riporta il mese a Bozza per modificarlo.')
 
   const codeIds = new Map<string, string>()
   const { data: codes, error: codeError } = await supabase
