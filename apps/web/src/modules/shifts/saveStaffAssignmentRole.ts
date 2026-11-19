@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { assertRowAffected } from './assertRowAffected'
 
 /**
  * Persists the per-unit scheduling role ("Tipo turno" in the Employees
@@ -14,10 +15,13 @@ export async function saveStaffAssignmentRole(
   staffProfileId: string,
   assignmentProfileKey: string,
 ): Promise<void> {
-  const { error } = await supabase.from('shift_unit_members')
+  const { data, error } = await supabase.from('shift_unit_members')
     .update({ assignment_profile_key: assignmentProfileKey })
     .eq('property_id', propertyId)
     .eq('planning_unit_id', planningUnitId)
     .eq('staff_profile_id', staffProfileId)
+    .select('id')
+    .maybeSingle()
   if (error) throw error
+  assertRowAffected(data, 'Membro non trovato in questa unità.')
 }

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { assertRowAffected } from './assertRowAffected'
 
 export interface RotationSlotUpdate { staffProfileId: string; rotationSlot: number }
 export interface SaveInferredRotationSlotsResult { applied: string[]; skipped: string[] }
@@ -34,9 +35,11 @@ export async function saveInferredRotationSlots(
       continue
     }
     claimedThisBatch.add(update.rotationSlot)
-    const { error: updateError } = await supabase.from('shift_staff_profiles')
+    const { data, error: updateError } = await supabase.from('shift_staff_profiles')
       .update({ rotation_slot: update.rotationSlot }).eq('property_id', propertyId).eq('id', update.staffProfileId)
+      .select('id').maybeSingle()
     if (updateError) throw updateError
+    assertRowAffected(data, 'Profilo staff non trovato.')
     applied.push(update.staffProfileId)
   }
   return { applied, skipped }

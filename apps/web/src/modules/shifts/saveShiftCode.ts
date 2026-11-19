@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { contrastTextColor, type ShiftCode, type ShiftCodeSave } from '@homisuite/shifts-module'
+import { assertRowAffected } from './assertRowAffected'
 
 function timeLabel(start: string | null, end: string | null): string {
   if (!start || !end) return ''
@@ -50,7 +51,8 @@ export async function deleteOrArchiveShiftCode(supabase: SupabaseClient, propert
   const { error } = await supabase.from('shift_codes').delete().eq('property_id', propertyId).eq('id', codeId)
   if (!error) return 'deleted'
   if (error.code !== '23503') throw error
-  const { error: archiveError } = await supabase.from('shift_codes').update({ active: false }).eq('property_id', propertyId).eq('id', codeId)
+  const { data, error: archiveError } = await supabase.from('shift_codes').update({ active: false }).eq('property_id', propertyId).eq('id', codeId).select('id').maybeSingle()
   if (archiveError) throw archiveError
+  assertRowAffected(data, 'Codice turno non trovato.')
   return 'archived'
 }

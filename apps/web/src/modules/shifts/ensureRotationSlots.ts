@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { nextFreeRotationSlot, type RestRotationProfile } from '@homisuite/shifts-module'
+import { assertRowAffected } from './assertRowAffected'
 
 export interface StaffProfileRow {
   id: string
@@ -76,7 +77,10 @@ export async function ensureRotationSlots(
     if (profile) profile.rotationSlot = slot
   }
   await Promise.all([...newSlotByProfileId.entries()].map(([id, rotationSlot]) =>
-    supabase.from('shift_staff_profiles').update({ rotation_slot: rotationSlot }).eq('id', id).then(({ error: updateError }) => { if (updateError) throw updateError }),
+    supabase.from('shift_staff_profiles').update({ rotation_slot: rotationSlot }).eq('id', id).select('id').maybeSingle().then(({ data, error: updateError }) => {
+      if (updateError) throw updateError
+      assertRowAffected(data, 'Profilo staff non trovato.')
+    }),
   ))
   return newSlotByProfileId
 }

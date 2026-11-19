@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { UnitSave, UnitSaveResult } from '@homisuite/shifts-module'
+import { assertRowAffected } from './assertRowAffected'
 
 function slugify(name: string): string {
   const base = name.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unita'
@@ -80,8 +81,9 @@ async function saveUnitJobTitles(supabase: SupabaseClient, propertyId: string, u
 export async function saveUnit(supabase: SupabaseClient, propertyId: string, input: UnitSave): Promise<UnitSaveResult> {
   let unitId = input.id
   if (unitId) {
-    const { error } = await supabase.from('shift_planning_units').update({ name: input.name }).eq('property_id', propertyId).eq('id', unitId)
+    const { data, error } = await supabase.from('shift_planning_units').update({ name: input.name }).eq('property_id', propertyId).eq('id', unitId).select('id').maybeSingle()
     if (error) throw error
+    assertRowAffected(data, 'Unità di pianificazione non trovata.')
   } else {
     const { data, error } = await supabase.from('shift_planning_units').insert({ property_id: propertyId, name: input.name, slug: slugify(input.name) }).select('id').single()
     if (error) throw error
@@ -93,11 +95,13 @@ export async function saveUnit(supabase: SupabaseClient, propertyId: string, inp
 }
 
 export async function archiveUnit(supabase: SupabaseClient, propertyId: string, unitId: string): Promise<void> {
-  const { error } = await supabase.from('shift_planning_units').update({ status: 'inactive' }).eq('property_id', propertyId).eq('id', unitId)
+  const { data, error } = await supabase.from('shift_planning_units').update({ status: 'inactive' }).eq('property_id', propertyId).eq('id', unitId).select('id').maybeSingle()
   if (error) throw error
+  assertRowAffected(data, 'Unità di pianificazione non trovata.')
 }
 
 export async function restoreUnit(supabase: SupabaseClient, propertyId: string, unitId: string): Promise<void> {
-  const { error } = await supabase.from('shift_planning_units').update({ status: 'active' }).eq('property_id', propertyId).eq('id', unitId)
+  const { data, error } = await supabase.from('shift_planning_units').update({ status: 'active' }).eq('property_id', propertyId).eq('id', unitId).select('id').maybeSingle()
   if (error) throw error
+  assertRowAffected(data, 'Unità di pianificazione non trovata.')
 }
