@@ -457,15 +457,20 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     })))
     return saved
   }
-  async function archiveUnit(unitId: string) {
+  async function archiveUnit(targetUnitId: string) {
     if (!onArchiveUnit || !property) return
-    await onArchiveUnit(unitId)
-    const nextActive = property.units.find((candidate) => candidate.id !== unitId && candidate.status !== 'inactive')
+    await onArchiveUnit(targetUnitId)
+    const nextActive = property.units.find((candidate) => candidate.id !== targetUnitId && candidate.status !== 'inactive')
     setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
       ...candidate,
-      units: candidate.units.map((candidateUnit) => candidateUnit.id !== unitId ? candidateUnit : ({ ...candidateUnit, status: 'inactive' as const })),
+      units: candidate.units.map((candidateUnit) => candidateUnit.id !== targetUnitId ? candidateUnit : ({ ...candidateUnit, status: 'inactive' as const })),
     })))
-    if (unitId === unitId && nextActive) setUnitId(nextActive.id)
+    // Only jump the view away if the unit just archived was the one being
+    // looked at -- archiving some other unit shouldn't yank the manager
+    // over to a different one. The parameter used to be named `unitId` too,
+    // shadowing this component's own selected-unit state of the same name,
+    // so this comparison was `unitId === unitId` -- always true.
+    if (unitId === targetUnitId && nextActive) setUnitId(nextActive.id)
   }
   async function restoreUnit(restoredUnitId: string) {
     if (!onRestoreUnit || !property) return

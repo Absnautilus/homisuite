@@ -37,7 +37,11 @@ export function generateShiftCalendarIcs(
   for (const event of events) {
     const definition = definitions.get(event.code)
     if (!definition || event.code === 'R') continue
-    const uid = `${personId}-${event.year}${event.month}${event.day}-${event.code}@turni.homisuite`
+    // compactDate, not raw year/month/day: unpadded, month=1/day=15 and
+    // month=11/day=5 both read "115" and collide into the same UID --
+    // calendar clients key on UID for dedup/update, so a real export could
+    // silently lose one of the two actual shifts that collided.
+    const uid = `${personId}-${compactDate(event.year, event.month, event.day)}-${event.code}@turni.homisuite`
     lines.push('BEGIN:VEVENT', `UID:${escapeIcs(uid)}`, `DTSTAMP:${dateStamp(now)}`)
 
     const time = definition.time.match(TIME_RANGE)
