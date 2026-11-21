@@ -37,6 +37,7 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
               )}
               <IconButton
                 tone="hintPositive"
+                filled
                 icon={Check}
                 label={t('staff.row.claim')}
                 onClick={async () => {
