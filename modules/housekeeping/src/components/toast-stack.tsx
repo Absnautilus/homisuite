@@ -20,10 +20,16 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
         toast.card ? (
           <div key={toast.id} role="status" className="rounded-xl border border-line bg-surface p-3 text-sm text-foreground shadow-md">
             <p className="pr-1 font-semibold text-foreground">{toast.card.title}</p>
+            {/* Unlike request-row.tsx's own muted-until-hover icons, both
+                actions here get a visible-at-rest treatment (filled/active):
+                a floating card has no row content to anchor it and no
+                reliable hover (most of this app's use is touch), so a
+                muted-grey icon on a plain white card reads as blank. */}
             <div className="mt-2 flex justify-end gap-2">
               {toast.card.onReject && (
                 <IconButton
                   tone="hintCaution"
+                  active
                   icon={X}
                   label={t('staff.row.reject')}
                   onClick={async () => {
