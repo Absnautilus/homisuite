@@ -65,8 +65,11 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
     setError(null)
     try {
       await createStaffRequest({ hotelId, roomNumber: room.room_number, requestTypeId: typeId, quantity: selectedType?.allows_quantity ? quantity : null, note: note.trim() || null, staffId })
+      // Stays open (room kept, cosa/nota cleared) instead of closing --
+      // reporting several things for the same room one after another used
+      // to mean reopening this panel and re-picking the room every time.
+      setTypeId('')
       setNote('')
-      setOpen(false)
       onCreated()
     } catch (err) {
       const ref = tenantIntegrityErrorRef(err)
