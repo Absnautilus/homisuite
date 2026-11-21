@@ -187,15 +187,22 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
               ariaLabel: t('staff.queue.title'),
             }}
           />
-          <div className="admin-panel-title"><h2>{t('staff.nav.requests')}</h2></div>
+          {/* WhoOnDuty sits right beside this title instead of in the row
+              below with Nuova segnalazione -- floating alone under a lot of
+              empty space (nothing else shares that row when managesFrontDesk
+              is false) read as a layout bug, not a deliberate placement. */}
+          <div className="admin-panel-title flex flex-wrap items-center justify-between gap-3">
+            <h2>{t('staff.nav.requests')}</h2>
+            <WhoOnDuty hotelId={profile.hotel_id} />
+          </div>
         </div>
       ) : (
         <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
       )}
 
-      {(managesFrontDesk || !showMinimalBar) && (
+      {(managesFrontDesk || (!showMinimalBar && !embeddedNav)) && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {!showMinimalBar ? <WhoOnDuty hotelId={profile.hotel_id} /> : <span />}
+          {!showMinimalBar && !embeddedNav ? <WhoOnDuty hotelId={profile.hotel_id} /> : <span />}
           {managesFrontDesk && (
             <div className="ml-auto" data-tour="hk-new-request">
               <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
