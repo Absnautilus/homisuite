@@ -197,17 +197,20 @@ export function RequestQueue({ profile, canManageQueue, embeddedNav, onCompleteO
           </div>
         </div>
       ) : (
-        <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
+        <>
+          <PageHeader eyebrow={hotelName} title={t('staff.queue.title')} description={t('staff.queue.subtitle')} />
+          {!showMinimalBar && <WhoOnDuty hotelId={profile.hotel_id} />}
+        </>
       )}
 
-      {(managesFrontDesk || (!showMinimalBar && !embeddedNav)) && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {!showMinimalBar && !embeddedNav ? <WhoOnDuty hotelId={profile.hotel_id} /> : <span />}
-          {managesFrontDesk && (
-            <div className="ml-auto" data-tour="hk-new-request">
-              <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
-            </div>
-          )}
+      {/* Its own row, not sharing one with WhoOnDuty -- an extra wrapper div
+          around NewRequestForm here previously broke the open form Card's
+          own w-full (it resolved against that wrapper's shrink-to-fit
+          width, not the row's), squeezing it into a narrow fixed-width
+          card with empty space beside it instead of filling the row. */}
+      {managesFrontDesk && (
+        <div className="flex justify-end" data-tour="hk-new-request">
+          <NewRequestForm staffId={profile.id} hotelId={profile.hotel_id} onCreated={reload} />
         </div>
       )}
 
