@@ -38,6 +38,21 @@ export interface Restaurant {
   cover_image_attribution: string | null
   google_rating: number | null
   google_rating_count: number | null
+  // The same real-world restaurant another hotel also lists, if linked --
+  // see service_partners. null means "not linked yet", the default for
+  // every restaurant created before this existed and for most new ones.
+  partner_id: string | null
+}
+
+// A real-world external business (restaurant today; experience_operator/spa
+// once those modules exist) that more than one hotel's own catalog can link
+// to -- see restaurants.partner_id. Not hotel-scoped: no hotel_id, visible
+// to any staff with dining.manage on any property.
+export interface ServicePartner {
+  id: string
+  kind: 'restaurant' | 'experience_operator' | 'spa' | 'other'
+  name: string
+  notes: string | null
 }
 
 export type CommercialAgreement = 'partner_commission' | 'partner_no_commission' | 'none'

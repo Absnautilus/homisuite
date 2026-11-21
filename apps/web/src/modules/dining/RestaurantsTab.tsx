@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Button, Modal, useUndo } from '@homisuite/ui'
-import { ArrowUpDown, Clock, Download, Images, Plus, Search, Settings2, Trash2 } from 'lucide-react'
+import { ArrowUpDown, Clock, Download, Images, Link2, Plus, Search, Settings2, Trash2 } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { Switch } from '../../components/Switch'
 import { useConfirm } from '../../components/ConfirmDialog'
@@ -176,7 +176,10 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
                   ? <img className="dining-rest-thumb" src={restaurant.cover_image_url} alt="" />
                   : <div className="dining-rest-thumb">{restaurant.name[0]}</div>}
                 <div className="dining-rest-main">
-                  <strong>{restaurant.name}</strong>
+                  <strong>
+                    {restaurant.name}
+                    {restaurant.partner_id ? <Link2 size={12} aria-label="Partner condiviso con altri hotel" title="Partner condiviso con altri hotel" /> : null}
+                  </strong>
                   <div className="meta">
                     {restaurant.cuisine ?? ''}
                     {restaurant.price_tier ? ` · ${'€'.repeat(restaurant.price_tier)}` : ''}

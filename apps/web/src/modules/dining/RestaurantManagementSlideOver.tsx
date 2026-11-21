@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
-import { getOperationalProfile, getRestaurantStats, saveRestaurantManagement, type RestaurantStats } from './api'
-import type { CommercialAgreement, CommissionBasis, CommissionType, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile } from './types'
+import { createServicePartner, getOperationalProfile, getRestaurantStats, listServicePartners, saveRestaurantManagement, updateRestaurant, type RestaurantStats } from './api'
+import type { CommercialAgreement, CommissionBasis, CommissionType, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile, ServicePartner } from './types'
 import { COMMERCIAL_AGREEMENT_LABELS, COMMISSION_BASIS_LABELS, COMMISSION_TYPE_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
 import { SlideOver } from './SlideOver'
@@ -43,6 +43,17 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
   const [opsForm, setOpsForm] = useState<RestaurantOperationalProfile>(EMPTY_PROFILE)
   const [stats, setStats] = useState<RestaurantStats | null>(null)
 
+  // partner_id lives outside publicForm/curatedForm/opsForm on purpose: it's
+  // a plain column, not one of the two tables saveRestaurantManagement's RPC
+  // writes transactionally, so linking/unlinking saves immediately on its
+  // own (same pattern as RestaurantsTab's inline switches) rather than
+  // waiting for the big "Salva" button.
+  const [partners, setPartners] = useState<ServicePartner[]>([])
+  const [partnerId, setPartnerId] = useState<string | null>(null)
+  const [linkingPartner, setLinkingPartner] = useState(false)
+  const [creatingPartner, setCreatingPartner] = useState(false)
+  const [newPartnerName, setNewPartnerName] = useState('')
+
   // Guards against a slow fetch for a restaurant the staff member already
   // navigated away from (opened B right after A) landing after B's own
   // panel has already rendered -- without this, A's stale response would
@@ -80,14 +91,19 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       ideal_for: restaurant.ideal_for,
       guest_profile: restaurant.guest_profile,
     })
+    setPartnerId(restaurant.partner_id)
+    setCreatingPartner(false)
+    setNewPartnerName('')
     try {
-      const [profile, nextStats] = await Promise.all([
+      const [profile, nextStats, nextPartners] = await Promise.all([
         getOperationalProfile(supabase, restaurant.id),
         getRestaurantStats(supabase, restaurant.id),
+        listServicePartners(supabase, 'restaurant'),
       ])
       if (thisLoad !== loadId.current) return
       setOpsForm(profile ?? { ...EMPTY_PROFILE, restaurant_id: restaurant.id })
       setStats(nextStats)
+      setPartners(nextPartners)
     } catch (cause) {
       if (thisLoad !== loadId.current) return
       setError(readableDiningError(cause))
@@ -130,6 +146,39 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       setError(readableDiningError(cause))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function linkPartner(nextPartnerId: string | null) {
+    if (!restaurant) return
+    const previous = partnerId
+    setPartnerId(nextPartnerId)
+    setLinkingPartner(true)
+    try {
+      await updateRestaurant(supabase, restaurant.id, { partner_id: nextPartnerId })
+      await onSaved()
+    } catch (cause) {
+      setError(readableDiningError(cause))
+      setPartnerId(previous)
+    } finally {
+      setLinkingPartner(false)
+    }
+  }
+
+  async function createAndLinkPartner() {
+    const name = newPartnerName.trim()
+    if (!name) return
+    setLinkingPartner(true)
+    try {
+      const partner = await createServicePartner(supabase, 'restaurant', name)
+      setPartners((current) => [...current, partner].sort((a, b) => a.name.localeCompare(b.name, 'it')))
+      setCreatingPartner(false)
+      setNewPartnerName('')
+      await linkPartner(partner.id)
+    } catch (cause) {
+      setError(readableDiningError(cause))
+    } finally {
+      setLinkingPartner(false)
     }
   }
 
@@ -197,6 +246,38 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       {tab === 'ops' ? (
         <>
           <div className="dining-visibility-note" style={{ marginBottom: 14 }}>Questa sezione non è mai visibile agli ospiti -- è ad uso esclusivo dello staff.</div>
+          <div className="dining-field-grid">
+            <label className="form-field span2">
+              <span>Partner condiviso {linkingPartner ? '(salvataggio…)' : ''}</span>
+              <Select
+                id="service-partner"
+                name="partner_id"
+                value={partnerId ?? ''}
+                disabled={linkingPartner}
+                onChange={(v) => {
+                  if (v === '__new__') { setCreatingPartner(true); return }
+                  void linkPartner(v || null)
+                }}
+              >
+                <option value="">— nessuno —</option>
+                {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}
+                <option value="__new__">+ Nuovo partner…</option>
+              </Select>
+            </label>
+            {creatingPartner ? (
+              <label className="form-field span2">
+                <span>Nome del nuovo partner</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input autoFocus value={newPartnerName} onChange={(e) => setNewPartnerName(e.target.value)} />
+                  <Button variant="secondary" onClick={() => void createAndLinkPartner()} disabled={linkingPartner || !newPartnerName.trim()}>Crea e collega</Button>
+                  <Button variant="secondary" onClick={() => { setCreatingPartner(false); setNewPartnerName('') }}>Annulla</Button>
+                </div>
+              </label>
+            ) : null}
+          </div>
+          <div className="dining-visibility-note" style={{ marginBottom: 14 }}>
+            Collegare un partner condiviso identifica questo ristorante con lo stesso locale reale usato da altri hotel -- utile in futuro per una vista aggregata delle prenotazioni lato partner. Non cambia nulla di ciò che l'ospite vede.
+          </div>
           <div className="dining-field-grid">
             <label className="form-field"><span>Telefono</span><input value={opsForm.contact_phone ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_phone: e.target.value || null }))} /></label>
             <label className="form-field"><span>Email</span><input value={opsForm.contact_email ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_email: e.target.value || null }))} /></label>

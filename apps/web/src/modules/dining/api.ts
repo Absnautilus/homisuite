@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant, RestaurantHour, RestaurantOperationalProfile } from './types'
+import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant, RestaurantHour, RestaurantOperationalProfile, ServicePartner } from './types'
 
 // Untyped SupabaseClient, same as HousekeepingModule's own `supabase` prop:
 // the shared Database type (core-sdk) doesn't know about this module's
@@ -83,7 +83,9 @@ export async function listRestaurants(client: SupabaseClient, hotelId: string): 
   return data as Restaurant[]
 }
 
-export type RestaurantInput = Omit<Restaurant, 'id' | 'hotel_id' | 'sort_order' | 'active'>
+// partner_id excluded same as sort_order/active -- a new restaurant starts
+// unlinked, set later from its management screen, never at creation time.
+export type RestaurantInput = Omit<Restaurant, 'id' | 'hotel_id' | 'sort_order' | 'active' | 'partner_id'>
 
 export async function createRestaurant(client: SupabaseClient, hotelId: string, input: RestaurantInput): Promise<Restaurant> {
   const { data, error } = await client
@@ -95,7 +97,7 @@ export async function createRestaurant(client: SupabaseClient, hotelId: string, 
   return data as Restaurant
 }
 
-export async function updateRestaurant(client: SupabaseClient, id: string, changes: Partial<RestaurantInput & { active: boolean; sort_order: number }>): Promise<void> {
+export async function updateRestaurant(client: SupabaseClient, id: string, changes: Partial<RestaurantInput & { active: boolean; sort_order: number; partner_id: string | null }>): Promise<void> {
   await mutateOneOrThrow(client, 'restaurants', 'id', id, 'update', changes)
 }
 
@@ -133,6 +135,30 @@ export function subscribeToRestaurants(client: SupabaseClient, hotelId: string, 
   return () => {
     client.removeChannel(channel)
   }
+}
+
+// service_partners isn't hotel_id-scoped (see its own migration comment) --
+// any staff with dining.manage on any property can read/link/create one,
+// enforced by has_permission_anywhere() rather than the usual per-hotel
+// check every other function in this file relies on.
+export async function listServicePartners(client: SupabaseClient, kind: ServicePartner['kind'] = 'restaurant'): Promise<ServicePartner[]> {
+  const { data, error } = await client
+    .from('service_partners')
+    .select('id, kind, name, notes')
+    .eq('kind', kind)
+    .order('name')
+  if (error) throw error
+  return data as ServicePartner[]
+}
+
+export async function createServicePartner(client: SupabaseClient, kind: ServicePartner['kind'], name: string): Promise<ServicePartner> {
+  const { data, error } = await client
+    .from('service_partners')
+    .insert({ kind, name })
+    .select('id, kind, name, notes')
+    .single()
+  if (error) throw error
+  return data as ServicePartner
 }
 
 export class MapsLookupError extends Error {
