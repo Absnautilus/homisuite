@@ -6,6 +6,7 @@ import { useUndo } from '@homisuite/ui'
 import { createGuestTag, deleteGuestTag, listGuestTags, restoreGuestTag } from './api'
 import type { GuestTag } from './types'
 import { readableDiningError } from './readableDiningError'
+import { PartnerAccountsSection } from './PartnerAccountsSection'
 
 interface SettingsTabProps {
   hotelId: string
@@ -92,6 +93,9 @@ export function SettingsTab({ hotelId, canManage }: SettingsTabProps) {
           </form>
         ) : null}
       </section>
+
+      <PartnerAccountsSection hotelId={hotelId} canManage={canManage} />
+
       {confirmDialog}
     </div>
   )

@@ -55,6 +55,24 @@ export interface ServicePartner {
   notes: string | null
 }
 
+// One real person signed up to log into apps/partner for a given
+// service_partner -- see its own migration. No email here: it lives on
+// auth.users, which this table's own RLS doesn't expose to a plain select.
+export interface ServicePartnerUser {
+  id: string
+  full_name: string
+  active: boolean
+  created_at: string
+}
+
+// A service_partners row as seen from one hotel's own Impostazioni tab --
+// which of this hotel's restaurants link to it (a partner can also serve
+// other hotels, not shown here) plus its own account list.
+export interface ServicePartnerWithContext extends ServicePartner {
+  restaurantNames: string[]
+  users: ServicePartnerUser[]
+}
+
 export type CommercialAgreement = 'partner_commission' | 'partner_no_commission' | 'none'
 export type PreferredContactMethod = 'phone' | 'whatsapp' | 'email'
 // What commission_rate's number means: a percentage (0-100) of the basis

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant, RestaurantHour, RestaurantOperationalProfile, ServicePartner } from './types'
+import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant, RestaurantHour, RestaurantOperationalProfile, ServicePartner, ServicePartnerUser, ServicePartnerWithContext } from './types'
 
 // Untyped SupabaseClient, same as HousekeepingModule's own `supabase` prop:
 // the shared Database type (core-sdk) doesn't know about this module's
@@ -159,6 +159,73 @@ export async function createServicePartner(client: SupabaseClient, kind: Service
     .single()
   if (error) throw error
   return data as ServicePartner
+}
+
+// Dining's own Impostazioni tab (SettingsTab/PartnerAccountsSection) --
+// every service_partner this ONE hotel's restaurants link to, each with
+// the account(s) already created for it. Two round trips (restaurants+
+// service_partners, then service_partner_users for those partner ids)
+// rather than one deep nested select: PostgREST embedding a many-to-many
+// through restaurants would repeat each partner once per linked
+// restaurant at this hotel, which this grouping has to undo anyway.
+export async function listServicePartnersForHotel(client: SupabaseClient, hotelId: string): Promise<ServicePartnerWithContext[]> {
+  const { data: restaurantRows, error: restaurantError } = await client
+    .from('restaurants')
+    .select('name, partner_id, service_partners(id, kind, name, notes)')
+    .eq('hotel_id', hotelId)
+    .not('partner_id', 'is', null)
+  if (restaurantError) throw restaurantError
+
+  const byPartnerId = new Map<string, ServicePartnerWithContext>()
+  for (const row of (restaurantRows ?? []) as unknown as { name: string; partner_id: string; service_partners: ServicePartner | null }[]) {
+    if (!row.service_partners) continue
+    const existing = byPartnerId.get(row.partner_id)
+    if (existing) {
+      existing.restaurantNames.push(row.name)
+    } else {
+      byPartnerId.set(row.partner_id, { ...row.service_partners, restaurantNames: [row.name], users: [] })
+    }
+  }
+  if (byPartnerId.size === 0) return []
+
+  const { data: userRows, error: usersError } = await client
+    .from('service_partner_users')
+    .select('id, full_name, active, created_at, service_partner_id')
+    .in('service_partner_id', [...byPartnerId.keys()])
+    .order('created_at')
+  if (usersError) throw usersError
+  for (const user of (userRows ?? []) as unknown as (ServicePartnerUser & { service_partner_id: string })[]) {
+    byPartnerId.get(user.service_partner_id)?.users.push(user)
+  }
+
+  return [...byPartnerId.values()].sort((a, b) => a.name.localeCompare(b.name, 'it'))
+}
+
+export async function setServicePartnerUserActive(client: SupabaseClient, id: string, active: boolean): Promise<void> {
+  await mutateOneOrThrow(client, 'service_partner_users', 'id', id, 'update', { active })
+}
+
+export class CreatePartnerUserError extends Error {
+  constructor(readonly code: string | null) {
+    super(code ?? 'create_failed')
+  }
+}
+
+export async function createServicePartnerUserCredentials(
+  client: SupabaseClient, servicePartnerId: string, fullName: string, email: string, password: string,
+): Promise<void> {
+  const { error } = await client.functions.invoke('create-service-partner-user-credentials', {
+    body: { servicePartnerId, fullName, email, password },
+  })
+  if (error) {
+    let code: string | null = null
+    const context = (error as { context?: unknown }).context
+    if (context instanceof Response) {
+      const payload = await context.json().catch(() => null) as { error?: unknown } | null
+      code = typeof payload?.error === 'string' ? payload.error : null
+    }
+    throw new CreatePartnerUserError(code)
+  }
 }
 
 // Same error-unwrapping shape as lookupMapsPlace's own helper below --
