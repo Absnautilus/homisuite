@@ -23,5 +23,7 @@ export function readableDiningError(cause: unknown): string {
   if (/restaurant_reservation_requests_restaurant_id_fkey/i.test(message)) {
     return 'Non puoi eliminare questo ristorante: ha delle prenotazioni associate. Disattivalo con l’interruttore "Visibile" invece di eliminarlo, oppure elimina prima le sue prenotazioni.'
   }
+  if (/account_already_exists/i.test(message)) return 'Esiste già un account con questa email.'
+  if (/invalid_input/i.test(message)) return 'Controlla il nome e l’indirizzo email inseriti.'
   return 'Operazione non riuscita. Riprova.'
 }

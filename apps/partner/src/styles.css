@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800;900&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+/* Same token names/values as apps/web's own :root (styles.css) -- trimmed
+   to just what this small app actually uses, so the two apps still read as
+   one product without pulling in the whole staff shell's stylesheet. */
+:root {
+  color-scheme: light;
+  --bg: #f1f0f8;
+  --surface: #ffffff;
+  --surface-2: #f4f5fc;
+  --ink: #16182b;
+  --muted: #61658c;
+  --line: #e3e5f3;
+  --line-strong: #d3d6ec;
+  --f-head: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --f-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --accent: #9c4fc7;
+  --accent-ink: #ffffff;
+  --accent-soft: #f4e8fa;
+  --accent-text: #8241a6;
+
+  --ok-ink: #1e7a46;
+  --ok-bg: #dff6e8;
+  --wait-ink: #a16207;
+  --wait-bg: #fef9c3;
+  --bad-ink: #b23a3a;
+  --bad-bg: #fde8e8;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --shadow-sm: 0 2px 8px rgba(22, 24, 43, 0.05);
+  --shadow-md: 0 8px 24px rgba(22, 24, 43, 0.08);
+  --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #100f1e;
+    --surface: #1c1b33;
+    --surface-2: #211f3d;
+    --ink: #f1eefa;
+    --muted: #9294b8;
+    --line: #2c2a4d;
+    --line-strong: #3a3861;
+    --accent: #c77dee;
+    --accent-ink: #1c1b33;
+    --accent-soft: #2f2650;
+    --accent-text: #d9a6f5;
+    --ok-ink: #7fd9a6;
+    --ok-bg: #163a28;
+    --wait-ink: #e3c66a;
+    --wait-bg: #3a331a;
+    --bad-ink: #ecb3b3;
+    --bad-bg: #3a2020;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); -webkit-font-smoothing: antialiased; }
+h1, h2 { font-family: var(--f-head); margin: 0; }
+.muted { color: var(--muted); }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 6px; }
+
+/* Login / reset-password */
+.login-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--bg); }
+.login-card { width: min(100%, 380px); padding: 34px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-md); }
+.login-brand { margin-bottom: 30px; display: flex; align-items: center; gap: 9px; font-family: var(--f-head); font-size: 1.15rem; font-weight: 800; }
+.login-brand .mark { width: 28px; height: 28px; border-radius: 8px; display: block; flex-shrink: 0; }
+.login-copy { margin-bottom: 22px; }
+.login-copy .eyebrow { margin: 0 0 6px; color: var(--accent-text); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.login-copy h1 { font-size: 1.7rem; letter-spacing: -0.03em; }
+.login-copy > p:last-child { margin: 8px 0 0; color: var(--muted); line-height: 1.5; font-size: 13px; }
+.login-form { display: grid; gap: 15px; }
+.login-form label { display: grid; gap: 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.login-form input { width: 100%; height: 42px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); outline: none; background: var(--surface); color: var(--ink); font-size: 16px; font-weight: 400; text-transform: none; letter-spacing: normal; transition: border-color 120ms, box-shadow 120ms; }
+.login-form input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+.login-error { margin: -2px 0 0; color: var(--bad-ink); font-size: 0.82rem; line-height: 1.4; }
+.login-submit { height: 42px; margin-top: 4px; border: 0; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-ink); font-weight: 750; cursor: pointer; text-decoration: none; }
+.login-submit:hover:not(:disabled) { filter: brightness(1.07); }
+.login-submit:disabled { opacity: 0.65; cursor: wait; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 40px; }
+.password-field button { position: absolute; top: 0; right: 0; height: 42px; width: 40px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+
+/* Dashboard */
+.partner-shell { min-height: 100vh; }
+.partner-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.partner-header .brand { font-family: var(--f-head); font-weight: 800; }
+.partner-header .business-name { color: var(--muted); font-size: 13px; }
+.partner-logout { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: var(--r-sm); padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.partner-main { max-width: 860px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
+.partner-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.partner-tab { border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.partner-tab.is-active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.partner-card { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; display: grid; gap: 10px; }
+.partner-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.partner-card-title { font-weight: 800; }
+.partner-card-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.partner-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+.partner-badge.pending { background: var(--wait-bg); color: var(--wait-ink); }
+.partner-badge.confirmed { background: var(--ok-bg); color: var(--ok-ink); }
+.partner-badge.declined, .partner-badge.cancelled { background: var(--bad-bg); color: var(--bad-ink); }
+.partner-card-notes { font-size: 13px; color: var(--muted); }
+.partner-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.partner-btn { border: 0; border-radius: var(--r-sm); padding: 9px 16px; font-weight: 750; font-size: 13px; cursor: pointer; }
+.partner-btn.confirm { background: var(--ok-ink); color: #fff; }
+.partner-btn.decline { background: transparent; border: 1px solid var(--line-strong); color: var(--ink); }
+.partner-btn:disabled { opacity: 0.6; cursor: wait; }
+.partner-empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+.partner-note-input { width: 100%; min-height: 60px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 10px; font: inherit; font-size: 13px; resize: vertical; }

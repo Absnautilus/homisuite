@@ -161,6 +161,28 @@ export async function createServicePartner(client: SupabaseClient, kind: Service
   return data as ServicePartner
 }
 
+// Same error-unwrapping shape as lookupMapsPlace's own helper below --
+// supabase.functions.invoke puts a non-2xx response's {error: code} body on
+// error.context rather than throwing it directly.
+export class InvitePartnerUserError extends Error {
+  constructor(readonly code: string | null) {
+    super(code ?? 'invite_failed')
+  }
+}
+
+export async function inviteServicePartnerUser(client: SupabaseClient, servicePartnerId: string, fullName: string, email: string): Promise<void> {
+  const { error } = await client.functions.invoke('invite-service-partner-user', { body: { servicePartnerId, fullName, email } })
+  if (error) {
+    let code: string | null = null
+    const context = (error as { context?: unknown }).context
+    if (context instanceof Response) {
+      const payload = await context.json().catch(() => null) as { error?: unknown } | null
+      code = typeof payload?.error === 'string' ? payload.error : null
+    }
+    throw new InvitePartnerUserError(code)
+  }
+}
+
 export class MapsLookupError extends Error {
   constructor(readonly code: string | null) {
     super(code ?? 'maps_lookup_failed')

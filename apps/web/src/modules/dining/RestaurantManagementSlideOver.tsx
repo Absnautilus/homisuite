@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
-import { createServicePartner, getOperationalProfile, getRestaurantStats, listServicePartners, saveRestaurantManagement, updateRestaurant, type RestaurantStats } from './api'
+import { createServicePartner, getOperationalProfile, getRestaurantStats, inviteServicePartnerUser, listServicePartners, saveRestaurantManagement, updateRestaurant, type RestaurantStats } from './api'
 import type { CommercialAgreement, CommissionBasis, CommissionType, DiningCategory, PreferredContactMethod, Restaurant, RestaurantOperationalProfile, ServicePartner } from './types'
 import { COMMERCIAL_AGREEMENT_LABELS, COMMISSION_BASIS_LABELS, COMMISSION_TYPE_LABELS } from './types'
 import { readableDiningError } from './readableDiningError'
@@ -54,6 +54,16 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
   const [creatingPartner, setCreatingPartner] = useState(false)
   const [newPartnerName, setNewPartnerName] = useState('')
 
+  // Partner-user invite -- a separate small form, shown only once a partner
+  // is actually linked (inviting makes no sense before then), with its own
+  // pending/success state since it's an unrelated action from everything
+  // else on this tab and shouldn't block or get cleared by them.
+  const [invitingUser, setInvitingUser] = useState(false)
+  const [inviteFullName, setInviteFullName] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [invitePending, setInvitePending] = useState(false)
+  const [inviteSent, setInviteSent] = useState(false)
+
   // Guards against a slow fetch for a restaurant the staff member already
   // navigated away from (opened B right after A) landing after B's own
   // panel has already rendered -- without this, A's stale response would
@@ -94,6 +104,10 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     setPartnerId(restaurant.partner_id)
     setCreatingPartner(false)
     setNewPartnerName('')
+    setInvitingUser(false)
+    setInviteFullName('')
+    setInviteEmail('')
+    setInviteSent(false)
     try {
       const [profile, nextStats, nextPartners] = await Promise.all([
         getOperationalProfile(supabase, restaurant.id),
@@ -179,6 +193,22 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       setError(readableDiningError(cause))
     } finally {
       setLinkingPartner(false)
+    }
+  }
+
+  async function sendInvite() {
+    if (!partnerId || !inviteFullName.trim() || !inviteEmail.trim()) return
+    setInvitePending(true)
+    setError(null)
+    try {
+      await inviteServicePartnerUser(supabase, partnerId, inviteFullName.trim(), inviteEmail.trim())
+      setInviteSent(true)
+      setInviteFullName('')
+      setInviteEmail('')
+    } catch (cause) {
+      setError(readableDiningError(cause))
+    } finally {
+      setInvitePending(false)
     }
   }
 
@@ -278,6 +308,37 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
           <div className="dining-visibility-note" style={{ marginBottom: 14 }}>
             Collegare un partner condiviso identifica questo ristorante con lo stesso locale reale usato da altri hotel -- utile in futuro per una vista aggregata delle prenotazioni lato partner. Non cambia nulla di ciò che l'ospite vede.
           </div>
+
+          {partnerId ? (
+            <div className="dining-field-grid" style={{ marginBottom: 14 }}>
+              {!invitingUser ? (
+                <div className="form-field span2">
+                  <Button type="button" variant="secondary" onClick={() => { setInvitingUser(true); setInviteSent(false) }}>
+                    Invita utente partner
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <label className="form-field">
+                    <span>Nome e cognome</span>
+                    <input autoFocus value={inviteFullName} onChange={(e) => setInviteFullName(e.target.value)} />
+                  </label>
+                  <label className="form-field">
+                    <span>Email</span>
+                    <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+                  </label>
+                  <div className="form-field span2" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Button type="button" onClick={() => void sendInvite()} disabled={invitePending || !inviteFullName.trim() || !inviteEmail.trim()}>
+                      {invitePending ? 'Invio…' : 'Invia invito'}
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setInvitingUser(false)}>Annulla</Button>
+                    {inviteSent ? <span className="dining-visibility-note" style={{ marginBottom: 0 }}>Invito inviato.</span> : null}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
+
           <div className="dining-field-grid">
             <label className="form-field"><span>Telefono</span><input value={opsForm.contact_phone ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_phone: e.target.value || null }))} /></label>
             <label className="form-field"><span>Email</span><input value={opsForm.contact_email ?? ''} onChange={(e) => setOpsForm((f) => ({ ...f, contact_email: e.target.value || null }))} /></label>

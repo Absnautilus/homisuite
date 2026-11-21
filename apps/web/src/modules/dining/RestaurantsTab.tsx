@@ -178,7 +178,7 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
                 <div className="dining-rest-main">
                   <strong>
                     {restaurant.name}
-                    {restaurant.partner_id ? <Link2 size={12} aria-label="Partner condiviso con altri hotel" title="Partner condiviso con altri hotel" /> : null}
+                    {restaurant.partner_id ? <Link2 size={12} role="img" aria-label="Partner condiviso con altri hotel" /> : null}
                   </strong>
                   <div className="meta">
                     {restaurant.cuisine ?? ''}
