@@ -67,7 +67,7 @@ export function ReservationsTab({ hotelId, staffProfileId, canManage, view, time
       {!loading && restaurants.length === 0 ? (
         <p className="muted dining-empty-hint">Crea prima un ristorante nella scheda "Ristoranti".</p>
       ) : view === 'oggi' ? (
-        <OggiPanel reservations={reservations} restaurants={restaurants} timezone={timezone} onOpenDetail={setDetailId} />
+        <OggiPanel reservations={reservations} restaurants={restaurants} timezone={timezone} canManage={canManage} onOpenDetail={setDetailId} onChanged={load} />
       ) : (
         <TuttePanel key={view} reservations={reservations} restaurants={restaurants} onOpenDetail={setDetailId} timezone={timezone} canManage={canManage} onChanged={load} mode={view === 'archivio' ? 'archive' : 'upcoming'} />
       )}

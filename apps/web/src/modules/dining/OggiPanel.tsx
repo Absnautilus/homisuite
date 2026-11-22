@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Clock3, History, Inbox } from 'lucide-react'
 import { Button } from '@homisuite/ui'
+import { supabase } from '../../core/client'
+import { updateReservation } from './api'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
 import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
 import { todayIso } from './todayIso'
@@ -9,7 +11,11 @@ interface OggiPanelProps {
   reservations: ReservationRequest[]
   restaurants: Restaurant[]
   timezone: string
+  canManage: boolean
   onOpenDetail: (reservationId: string) => void
+  // Re-fetches the list after a queue-card claim, same "just reload"
+  // pattern TuttePanel's own inline edits already use.
+  onChanged: () => Promise<void>
 }
 
 function formatQueueDate(iso: string): string {
@@ -30,10 +36,27 @@ const QUEUE_GROUPS: { key: ConfirmationStatus[]; label: string; tone: 'urgent' |
 
 const KIND_BY_TONE: Record<'urgent' | 'waiting' | 'new', string> = { urgent: 'unavailable', waiting: 'waiting', new: 'new' }
 
-export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }: OggiPanelProps) {
+export function OggiPanel({ reservations, restaurants, timezone, canManage, onOpenDetail, onChanged }: OggiPanelProps) {
   const [statusFilter, setStatusFilter] = useState<ConfirmationStatus | 'tutte'>('tutte')
   const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
   const today = todayIso(timezone)
+
+  // The button already says "Prendi in carico" -- it should actually take
+  // charge, not just open the detail panel still sitting on "In attesa"
+  // with the same button to press again. Best-effort: if the claim fails,
+  // fall through to the detail panel anyway, where the status Select has
+  // its own error handling and a retry is one click away.
+  async function claim(reservationId: string) {
+    if (canManage) {
+      try {
+        await updateReservation(supabase, reservationId, { confirmation_status: 'in_progress' })
+        await onChanged()
+      } catch {
+        // Fall through to onOpenDetail below either way.
+      }
+    }
+    onOpenDetail(reservationId)
+  }
 
   const queueGroups = useMemo(
     () => QUEUE_GROUPS.map((group) => ({
@@ -104,7 +127,15 @@ export function OggiPanel({ reservations, restaurants, timezone, onOpenDetail }:
                     {reservation.guest_preference_tags.length > 0 ? (
                       <div className="dining-q-extra">{reservation.guest_preference_tags.join(' · ')}</div>
                     ) : null}
-                    <button className="dining-q-btn" type="button" onClick={(event) => { event.stopPropagation(); onOpenDetail(reservation.id) }}>
+                    <button
+                      className="dining-q-btn"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        if (group.tone === 'new') void claim(reservation.id)
+                        else onOpenDetail(reservation.id)
+                      }}
+                    >
                       {group.tone === 'new' ? 'Prendi in carico' : group.tone === 'urgent' ? 'Proponi alternativa' : 'Aggiorna'}
                     </button>
                   </article>

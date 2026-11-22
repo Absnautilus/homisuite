@@ -221,11 +221,12 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
   )
 }
 
-// A plain string by default; click to edit in place, Enter/blur saves,
-// Escape discards. Rows still open the detail slide-over on click
-// elsewhere, so every interactive element in here stops propagation --
-// otherwise entering edit mode (or the input itself) would re-trigger
-// onOpenDetail on the same click.
+// A plain string by default; double-click to edit in place, Enter/blur
+// saves, Escape discards. Double click (not single) so it reads as a
+// distinct "edit this cell" gesture rather than colliding with a single
+// click on the row, which opens the detail slide-over -- every interactive
+// element in here still stops propagation, so neither the trigger nor the
+// input itself ever re-triggers onOpenDetail.
 function InlineTextCell({ value, canEdit, onSave, type = 'text' }: {
   value: string | null
   canEdit: boolean
@@ -255,7 +256,9 @@ function InlineTextCell({ value, canEdit, onSave, type = 'text' }: {
       <button
         type="button"
         className="dining-inline-edit-trigger"
-        onClick={(event) => { event.stopPropagation(); setDraft(value ?? ''); setEditing(true) }}
+        title="Doppio click per modificare"
+        onClick={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => { event.stopPropagation(); setDraft(value ?? ''); setEditing(true) }}
         disabled={saving}
       >
         {value || <span className="muted">—</span>}
