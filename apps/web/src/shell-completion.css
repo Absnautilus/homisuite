@@ -428,8 +428,11 @@ table.dining-dense th.sortable { cursor: pointer; user-select: none; }
 table.dining-dense th.sortable:hover { color: var(--ink); }
 table.dining-dense th.sortable .arrow { opacity: .4; margin-left: 3px; }
 table.dining-dense th.sortable.is-sorted .arrow { opacity: 1; color: var(--accent-text); }
-.dining-inline-edit-trigger { all: unset; cursor: text; border-radius: var(--r-sm); padding: 3px 6px; margin: -3px -6px; }
-.dining-inline-edit-trigger:hover { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+/* A standing dashed underline, not just a hover state -- so which cells
+   take a double click to edit is visible at a glance across the whole
+   table, not something you only discover by hovering each one in turn. */
+.dining-inline-edit-trigger { all: unset; cursor: text; border-radius: var(--r-sm); padding: 3px 6px; margin: -3px -6px; border-bottom: 1px dashed var(--line-strong); }
+.dining-inline-edit-trigger:hover { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); border-bottom-color: var(--accent); }
 .dining-inline-edit-input { font: inherit; color: inherit; width: 100%; min-width: 60px; border: 1px solid var(--accent); border-radius: var(--r-sm); padding: 3px 6px; background: var(--surface); }
 .dining-activity-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer; }
 .dining-activity-btn:hover { background: var(--accent-soft); color: var(--accent-text); }

@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { supabase } from '../../core/client'
 import { createReservation, listGuestTags, listReservations, listRestaurants, subscribeToReservations, type CreateReservationInput } from './api'
 import type { GuestTag, ReservationRequest, Restaurant } from './types'
+import { resolveRestaurantInput } from './types'
 import { readableDiningError } from './readableDiningError'
 import { OggiPanel } from './OggiPanel'
 import { TuttePanel } from './TuttePanel'
@@ -136,13 +137,8 @@ function CreateReservationModal({ open, restaurants, hotelId, staffProfileId, on
     setError(null)
     try {
       const form = new FormData(event.currentTarget)
-      // A name that matches one of this hotel's own restaurants (regardless
-      // of case) resolves to it; anything else is kept as a one-off name --
-      // not every booking is for a restaurant already on the list.
-      const matched = restaurants.find((r) => r.name.trim().toLowerCase() === restaurantText.trim().toLowerCase())
       const input: CreateReservationInput = {
-        restaurant_id: matched?.id ?? null,
-        custom_restaurant_name: matched ? null : restaurantText.trim(),
+        ...resolveRestaurantInput(restaurantText, restaurants),
         room_number: String(form.get('room_number') || '') || null,
         guest_name: String(form.get('guest_name')),
         party_size: Number(form.get('party_size')),

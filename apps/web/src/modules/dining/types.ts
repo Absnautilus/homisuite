@@ -222,3 +222,15 @@ export function resolveRestaurantName(
   }
   return reservation.custom_restaurant_name ? `Altro (${reservation.custom_restaurant_name})` : '—'
 }
+
+// Inverse of resolveRestaurantName's matching half: a typed name that
+// matches one of this hotel's own restaurants (case-insensitive) resolves
+// to it; anything else is kept as a one-off custom name. Shared by every
+// place that writes restaurant_id/custom_restaurant_name from free text
+// (creating a reservation, reassigning one) so the matching rule never
+// drifts between them.
+export function resolveRestaurantInput(name: string, restaurants: Restaurant[]): { restaurant_id: string | null; custom_restaurant_name: string | null } {
+  const trimmed = name.trim()
+  const matched = restaurants.find((r) => r.name.trim().toLowerCase() === trimmed.toLowerCase())
+  return matched ? { restaurant_id: matched.id, custom_restaurant_name: null } : { restaurant_id: null, custom_restaurant_name: trimmed || null }
+}

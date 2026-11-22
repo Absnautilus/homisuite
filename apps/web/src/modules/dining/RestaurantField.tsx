@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import type { Restaurant } from './types'
 
 interface RestaurantFieldProps {
@@ -6,6 +6,9 @@ interface RestaurantFieldProps {
   value: string
   onChange: (value: string) => void
   restaurants: Restaurant[]
+  autoFocus?: boolean
+  onBlur?: (event: FocusEvent<HTMLInputElement>) => void
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void
 }
 
 // A free-text field for "which restaurant" that still offers this hotel's
@@ -14,7 +17,7 @@ interface RestaurantFieldProps {
 // anything else is kept as a one-off custom name, since not every booking
 // is for a restaurant this hotel has configured (see
 // CreateReservationInput's restaurant_id/custom_restaurant_name split).
-export function RestaurantField({ id, value, onChange, restaurants }: RestaurantFieldProps) {
+export function RestaurantField({ id, value, onChange, restaurants, autoFocus, onBlur, onKeyDown }: RestaurantFieldProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -38,7 +41,10 @@ export function RestaurantField({ id, value, onChange, restaurants }: Restaurant
         value={value}
         onChange={(event) => { onChange(event.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
         autoComplete="off"
+        autoFocus={autoFocus}
         placeholder="Nome del ristorante…"
         maxLength={120}
       />

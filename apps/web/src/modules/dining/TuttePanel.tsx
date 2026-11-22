@@ -5,8 +5,9 @@ import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { EDITABLE_STATUSES } from './BookingDetailSlideOver'
 import { updateReservation } from './api'
+import { RestaurantField } from './RestaurantField'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
+import { CONFIRMATION_STATUS_LABELS, resolveRestaurantInput, resolveRestaurantName } from './types'
 import { readableDiningError } from './readableDiningError'
 import { todayIso } from './todayIso'
 
@@ -144,7 +145,14 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
                       onSave={(next) => save(reservation.id, { booking_reference: next || null })}
                     />
                   </td>
-                  <td>{restaurantName(reservation)}</td>
+                  <td>
+                    <RestaurantInlineCell
+                      reservation={reservation}
+                      restaurants={restaurants}
+                      canEdit={canManage}
+                      onSave={(next) => save(reservation.id, next)}
+                    />
+                  </td>
                   <td>
                     <InlineTextCell
                       value={String(reservation.party_size)}
@@ -280,5 +288,70 @@ function InlineTextCell({ value, canEdit, onSave, type = 'text' }: {
         if (event.key === 'Escape') { setDraft(value ?? ''); setEditing(false) }
       }}
     />
+  )
+}
+
+// Same double-click-to-edit shape as InlineTextCell, but editing swaps in
+// RestaurantField (free text + this hotel's own list as suggestions)
+// instead of a plain input, and commits through resolveRestaurantInput --
+// the same name -> restaurant_id/custom_restaurant_name resolution
+// CreateReservationModal's submit already applies.
+function RestaurantInlineCell({ reservation, restaurants, canEdit, onSave }: {
+  reservation: ReservationRequest
+  restaurants: Restaurant[]
+  canEdit: boolean
+  onSave: (next: { restaurant_id: string | null; custom_restaurant_name: string | null }) => Promise<void>
+}) {
+  const currentName = reservation.restaurant_id
+    ? (restaurants.find((r) => r.id === reservation.restaurant_id)?.name ?? '')
+    : (reservation.custom_restaurant_name ?? '')
+  const displayName = resolveRestaurantName(reservation, restaurants)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(currentName)
+  const [saving, setSaving] = useState(false)
+
+  if (!canEdit) return <>{displayName}</>
+
+  async function commit() {
+    setEditing(false)
+    if (draft.trim() === currentName.trim()) return
+    setSaving(true)
+    try {
+      await onSave(resolveRestaurantInput(draft, restaurants))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="dining-inline-edit-trigger"
+        title="Doppio click per modificare"
+        onClick={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => { event.stopPropagation(); setDraft(currentName); setEditing(true) }}
+        disabled={saving}
+      >
+        {displayName}
+      </button>
+    )
+  }
+
+  return (
+    <div onClick={(event) => event.stopPropagation()}>
+      <RestaurantField
+        id={`tutte-restaurant-${reservation.id}`}
+        value={draft}
+        onChange={setDraft}
+        restaurants={restaurants}
+        autoFocus
+        onBlur={() => void commit()}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') { event.preventDefault(); void commit() }
+          if (event.key === 'Escape') { setDraft(currentName); setEditing(false) }
+        }}
+      />
+    </div>
   )
 }

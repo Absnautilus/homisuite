@@ -5,8 +5,9 @@ import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { getFeedback, listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
+import { RestaurantField } from './RestaurantField'
 import type { ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS, resolveRestaurantName } from './types'
+import { CONFIRMATION_STATUS_LABELS, resolveRestaurantInput, resolveRestaurantName } from './types'
 import { readableDiningError } from './readableDiningError'
 import { SlideOver } from './SlideOver'
 
@@ -41,6 +42,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editGuestName, setEditGuestName] = useState('')
+  const [editRestaurantText, setEditRestaurantText] = useState('')
   const [editRoomNumber, setEditRoomNumber] = useState('')
   const [editPartySize, setEditPartySize] = useState('')
   const [editDate, setEditDate] = useState('')
@@ -81,12 +83,17 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     setNote(reservation?.confirmation_note ?? '')
     setEditing(false)
     setEditGuestName(reservation?.guest_name ?? '')
+    setEditRestaurantText(reservation ? (reservation.restaurant_id ? restaurantName(reservation) : reservation.custom_restaurant_name ?? '') : '')
     setEditRoomNumber(reservation?.room_number ?? '')
     setEditPartySize(reservation ? String(reservation.party_size) : '')
     setEditDate(reservation?.reservation_date ?? '')
     setEditTime(reservation?.reservation_time?.slice(0, 5) ?? '')
     setEditSpecialRequests(reservation?.special_requests ?? '')
     void load()
+    // restaurantName is a plain closure over `restaurants`, recreated every
+    // render -- depending on it would re-run this reset on every render
+    // instead of only when the selected reservation changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservation, load])
 
   async function setStatus(status: ConfirmationStatus) {
@@ -123,6 +130,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     try {
       await updateReservation(supabase, reservation.id, {
         guest_name: editGuestName,
+        ...resolveRestaurantInput(editRestaurantText, restaurants),
         room_number: editRoomNumber || null,
         party_size: Number(editPartySize),
         reservation_date: editDate,
@@ -223,6 +231,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
         {editing ? (
           <form className="modal-form" id="edit-reservation-form" onSubmit={saveEdit}>
             <label className="form-field"><span>Nome ospite</span><input value={editGuestName} onChange={(event) => setEditGuestName(event.target.value)} required minLength={1} maxLength={120} /></label>
+            <label className="form-field"><span>Ristorante</span><RestaurantField id="edit-reservation-restaurant" value={editRestaurantText} onChange={setEditRestaurantText} restaurants={restaurants} /></label>
             <label className="form-field"><span>Camera</span><input value={editRoomNumber} onChange={(event) => setEditRoomNumber(event.target.value)} maxLength={20} /></label>
             <label className="form-field"><span>Data</span><DatePicker value={editDate} onChange={setEditDate} ariaLabel="Data prenotazione" /></label>
             <label className="form-field"><span>Ora</span><TimePicker value={editTime} onChange={setEditTime} ariaLabel="Ora prenotazione" /></label>
