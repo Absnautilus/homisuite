@@ -9,18 +9,22 @@
   display: inline-flex;
   font: inherit;
   font-size: 13px;
-  gap: 18px;
+  gap: 10px;
   justify-content: space-between;
   min-height: 42px;
   min-width: 110px;
-  padding: 0 11px;
+  padding: 0 4px 0 12px;
   transition: border-color var(--motion-fast, 120ms) var(--motion-ease, ease), box-shadow var(--motion-fast, 120ms) var(--motion-ease, ease);
 }
 .ui-time-trigger:disabled { cursor: not-allowed; opacity: 0.55; }
 .ui-time-trigger:hover:not(:disabled) { border-color: var(--accent, #9c4fc7); }
 .ui-time-picker.is-open .ui-time-trigger { border-color: var(--accent, #9c4fc7); box-shadow: var(--focus-ring, 0 0 0 3px rgba(156,79,199,.18)); }
-.ui-time-trigger svg { color: var(--muted, #61658c); flex: 0 0 auto; }
 .ui-time-placeholder { color: var(--muted, #61658c); }
+/* Same branded icon badge as DatePicker, so a plain grey clock glyph (which
+   reads as a native OS field) never ends up as this family's only visible
+   difference from the input it replaces. */
+.ui-time-icon { align-items: center; background: var(--accent-soft, #f4e8fa); border-radius: 6px; color: var(--accent, #9c4fc7); display: inline-flex; flex: 0 0 auto; height: 24px; justify-content: center; width: 24px; transition: background var(--motion-fast, 120ms) var(--motion-ease, ease), color var(--motion-fast, 120ms) var(--motion-ease, ease); }
+.ui-time-trigger:hover:not(:disabled) .ui-time-icon, .ui-time-picker.is-open .ui-time-icon { background: var(--accent, #9c4fc7); color: var(--accent-ink, #fff); }
 
 .ui-time-popover {
   background: var(--surface, #fff);

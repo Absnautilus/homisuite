@@ -78,7 +78,7 @@ export function TimePicker({ value, onChange, ariaLabel, id, disabled }: TimePic
         onClick={() => setOpen((v) => !v)}
       >
         <span className={parsed ? undefined : 'ui-time-placeholder'}>{parsed ? value : '--:--'}</span>
-        <Clock size={15} aria-hidden="true" />
+        <span className="ui-time-icon"><Clock size={15} aria-hidden="true" /></span>
       </button>
       {open ? (
         <div className="ui-time-popover" role="dialog" aria-label={ariaLabel}>

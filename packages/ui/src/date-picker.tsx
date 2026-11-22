@@ -107,7 +107,7 @@ export function DatePicker({ value, onChange, ariaLabel, id, disabled }: DatePic
         onClick={() => setOpen((v) => !v)}
       >
         <span className={selected ? undefined : 'ui-date-placeholder'}>{selected ? formatDisplay(selected) : 'gg/mm/aaaa'}</span>
-        <CalendarDays size={15} aria-hidden="true" />
+        <span className="ui-date-icon"><CalendarDays size={15} aria-hidden="true" /></span>
       </button>
       {open ? (
         <div className="ui-date-popover" role="dialog" aria-label={ariaLabel}>
