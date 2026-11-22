@@ -40,17 +40,20 @@ export async function getMyPartner(): Promise<{ servicePartnerId: string; busine
 }
 
 export async function listMyReservations(): Promise<PartnerReservation[]> {
-  // hotels needs an explicit !<fkey> hint -- restaurant_reservation_requests
-  // reaches hotels two ways (its own hotel_id, and via restaurant_id ->
-  // restaurants.hotel_id), so embedding both restaurants(name) and a bare
-  // hotels(name) in the same select is an ambiguous relationship PostgREST
-  // refuses with a 300, not a guess. The end-to-end verification before
-  // this shipped queried a simplified select with no embeds at all, so it
-  // never actually exercised this exact query -- caught only once a real
-  // account hit the live dashboard.
+  // Both embeds need an explicit !<fkey> hint. hotels: reachable both via
+  // this table's own hotel_id and via restaurant_id -> restaurants.hotel_id.
+  // restaurants: reachable both via the plain restaurant_id FK and via a
+  // second, composite (hotel_id, restaurant_id) FK that only exists to
+  // enforce "this reservation's restaurant belongs to this reservation's
+  // hotel" -- a real constraint, but PostgREST sees it as a second
+  // relationship path to the same table and refuses to guess, same as the
+  // hotels case. The end-to-end verification before this shipped queried a
+  // simplified select with no embeds at all, so it never actually
+  // exercised this exact query -- caught only once a real account hit the
+  // live dashboard.
   const { data, error } = await supabase
     .from('restaurant_reservation_requests')
-    .select('id, guest_name, party_size, reservation_date, reservation_time, booking_reference, confirmation_status, confirmation_note, special_requests, source, created_at, restaurants(name), hotels!restaurant_reservation_requests_hotel_id_fkey(name)')
+    .select('id, guest_name, party_size, reservation_date, reservation_time, booking_reference, confirmation_status, confirmation_note, special_requests, source, created_at, restaurants!restaurant_reservation_requests_restaurant_id_fkey(name), hotels!restaurant_reservation_requests_hotel_id_fkey(name)')
     .order('reservation_date', { ascending: false })
     .order('reservation_time', { ascending: false })
   if (error) throw error
