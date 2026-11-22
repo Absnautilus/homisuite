@@ -21,3 +21,24 @@ export interface PartnerReservation {
   source: 'staff' | 'guest'
   created_at: string
 }
+
+export interface PartnerCapacity {
+  seatsIndoor: number | null
+  seatsOutdoor: number | null
+  availabilityNotes: string | null
+}
+
+export interface PartnerHours {
+  id: string
+  dayOfWeek: number
+  opensAt: string
+  closesAt: string
+}
+
+export interface PartnerBlackoutDate {
+  id: string
+  blackoutDate: string
+  note: string | null
+}
+
+export const DAY_LABELS = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
