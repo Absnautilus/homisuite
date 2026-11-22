@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { PageHeader, Tabs, useRememberedState, useRememberedTab } from '@homisuite/ui'
-import { Bell, ChevronRight, Globe2, LockKeyhole, SunMoon, UserRound } from 'lucide-react'
+import { Button, PageHeader, Tabs, useRememberedState, useRememberedTab } from '@homisuite/ui'
+import { Bell, ChevronRight, Globe2, LockKeyhole, RefreshCw, SunMoon, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { LanguageToggle } from '../components/LanguageToggle'
 import { NotificationsToggle } from '../components/NotificationsToggle'
@@ -8,6 +8,7 @@ import { PageState } from '../components/PageState'
 import { ProfileModal } from '../components/ProfileModal'
 import { SecurityModal } from '../components/SecurityModal'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { useAppUpdate } from '../core/useAppUpdate'
 import { useModuleRuntime } from '../core/ModuleRuntimeContext'
 import { readStoredThemePreference, resolveTheme, subscribeThemeChange } from '../lib/theme'
 
@@ -70,6 +71,7 @@ export function SettingsPage() {
               <NotificationsToggle />
             </div>
             <SettingRow icon={<LockKeyhole size={17} />} title="Sicurezza" detail="Cambia la password del tuo account" onClick={() => setSecurityOpen(true)} />
+            <UpdatesRow />
           </div>
         </section>
       ) : (
@@ -78,6 +80,33 @@ export function SettingsPage() {
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} onSaved={async () => { setProfileOpen(false); await runtime.refresh() }} />
       <SecurityModal open={securityOpen} onClose={() => setSecurityOpen(false)} />
+    </div>
+  )
+}
+
+// The update banner (UpdateBanner, mounted globally) covers the person
+// who's using the app right when a new version ships, but it's dismissible
+// and only ever shows the version it first detected -- anyone who missed
+// or closed it has no other way to tell there's a newer build, or to pull
+// it in, short of guessing to hard-refresh. This reuses the same
+// useAppUpdate check so Settings always reflects the same state the
+// banner would show, with an explicit "Aggiorna ora" instead of waiting on it.
+function UpdatesRow() {
+  const { available, reload } = useAppUpdate()
+  return (
+    <div className="settings-row settings-row-control">
+      <span className="settings-row-main">
+        <span className="settings-row-icon"><RefreshCw size={17} /></span>
+        <span>
+          <strong>Aggiornamenti</strong>
+          <small>{available ? 'È disponibile una nuova versione di Homisuite.' : 'Stai usando la versione più recente.'}</small>
+        </span>
+      </span>
+      {available ? (
+        <Button variant="primary" size="sm" onClick={reload}>Aggiorna ora</Button>
+      ) : (
+        <span className="settings-row-status">Aggiornato</span>
+      )}
     </div>
   )
 }
