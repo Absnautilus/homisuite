@@ -42,7 +42,7 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
   }
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div className="partner-panel">
       {error ? <p className="login-error" role="alert">{error}</p> : null}
 
       <div className="partner-subtabs">
@@ -59,7 +59,8 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
           {subTab === 'pending' ? 'Nessuna prenotazione da confermare al momento.' : 'Nessuna prenotazione in storico.'}
         </div>
       ) : (
-        visible.map((request) => (
+      <div className="partner-card-grid">
+        {visible.map((request) => (
           <article key={request.id} className="partner-card">
             <div className="partner-card-top">
               <div>
@@ -105,7 +106,8 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
               </>
             ) : null}
           </article>
-        ))
+        ))}
+      </div>
       )}
     </div>
   )

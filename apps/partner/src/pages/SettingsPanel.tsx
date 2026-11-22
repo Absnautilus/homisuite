@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Button } from '@homisuite/ui'
+import { Button, DatePicker, TimePicker } from '@homisuite/ui'
 import { Plus, Trash2 } from 'lucide-react'
 import { addBlackoutDate, deleteBlackoutDate, listMyBlackoutDates, listMyHours, setMyHours, updateCapacity } from '../api'
 import { DAY_LABELS } from '../types'
@@ -113,7 +113,7 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
   }
 
   return (
-    <div style={{ display: 'grid', gap: 24 }}>
+    <div className="partner-settings-grid">
       {error ? <p className="login-error" role="alert">{error}</p> : null}
 
       <section className="partner-settings-section">
@@ -156,9 +156,9 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
                   </label>
                   {entry ? (
                     <div className="partner-hours-times">
-                      <input type="time" value={entry.opensAt.slice(0, 5)} onChange={(event) => updateDayTime(day, 'opensAt', event.target.value)} />
+                      <TimePicker ariaLabel={`Apertura ${label}`} value={entry.opensAt.slice(0, 5)} onChange={(value) => updateDayTime(day, 'opensAt', value)} />
                       <span>–</span>
-                      <input type="time" value={entry.closesAt.slice(0, 5)} onChange={(event) => updateDayTime(day, 'closesAt', event.target.value)} />
+                      <TimePicker ariaLabel={`Chiusura ${label}`} value={entry.closesAt.slice(0, 5)} onChange={(value) => updateDayTime(day, 'closesAt', value)} />
                     </div>
                   ) : <span className="muted" style={{ fontSize: 13 }}>Chiuso</span>}
                 </div>
@@ -176,7 +176,7 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
         <form onSubmit={(event) => void submitBlackout(event)} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label className="partner-field">
             <span>Data</span>
-            <input type="date" required value={newBlackoutDate} onChange={(event) => setNewBlackoutDate(event.target.value)} />
+            <DatePicker ariaLabel="Data non disponibile" value={newBlackoutDate} onChange={setNewBlackoutDate} />
           </label>
           <label className="partner-field" style={{ flex: 1, minWidth: 160 }}>
             <span>Nota (facoltativa)</span>

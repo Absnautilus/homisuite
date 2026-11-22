@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, PageHeader, Tabs } from '@homisuite/ui'
+import { Button, Tabs } from '@homisuite/ui'
 import { getMyPartner, listMyReservations, NoPartnerAccountError } from '../api'
 import { supabase } from '../lib/supabase'
 import type { PartnerCapacity, PartnerReservation } from '../types'
@@ -54,35 +54,47 @@ export function Dashboard() {
   const pendingCount = (reservations ?? []).filter((r) => r.confirmation_status === 'pending').length
 
   return (
-    <div className="partner-main">
-      <PageHeader
-        eyebrow="Homisuite Partner"
-        title={businessName ?? 'Area partner'}
-        actions={<Button variant="secondary" size="sm" onClick={() => void supabase.auth.signOut()}>Esci</Button>}
-      />
+    <div className="partner-app">
+      <header className="partner-topbar">
+        <div className="partner-topbar-brand">
+          <img className="mark" src="/icon-192.png" alt="" width={30} height={30} />
+          <div>
+            <strong>Homisuite Partner</strong>
+            {businessName ? <small>{businessName}</small> : null}
+          </div>
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => void supabase.auth.signOut()}>Esci</Button>
+      </header>
 
-      {error ? <p className="login-error" role="alert">{error}</p> : null}
+      <main className="partner-main">
+        {error ? <p className="login-error" role="alert">{error}</p> : null}
 
-      <Tabs
-        aria-label="Sezioni area partner"
-        items={[
-          { value: 'prenotazioni', label: `Prenotazioni${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
-          { value: 'calendario', label: 'Calendario' },
-          { value: 'impostazioni', label: 'Impostazioni' },
-        ]}
-        value={tab}
-        onValueChange={(value) => setTab(value as MainTab)}
-      />
+        <Tabs
+          aria-label="Sezioni area partner"
+          items={[
+            { value: 'prenotazioni', label: `Prenotazioni${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
+            { value: 'calendario', label: 'Calendario' },
+            { value: 'impostazioni', label: 'Impostazioni' },
+          ]}
+          value={tab}
+          onValueChange={(value) => setTab(value as MainTab)}
+        />
 
-      {reservations === null ? (
-        <p className="muted">Caricamento…</p>
-      ) : tab === 'prenotazioni' ? (
-        <ReservationsPanel reservations={reservations} onReload={load} />
-      ) : tab === 'calendario' ? (
-        <CalendarPanel reservations={reservations} />
-      ) : servicePartnerId && capacity ? (
-        <SettingsPanel servicePartnerId={servicePartnerId} initialCapacity={capacity} onCapacitySaved={setCapacity} />
-      ) : null}
+        {reservations === null ? (
+          <p className="muted">Caricamento…</p>
+        ) : tab === 'prenotazioni' ? (
+          <ReservationsPanel reservations={reservations} onReload={load} />
+        ) : tab === 'calendario' ? (
+          <CalendarPanel reservations={reservations} />
+        ) : servicePartnerId && capacity ? (
+          <SettingsPanel servicePartnerId={servicePartnerId} initialCapacity={capacity} onCapacitySaved={setCapacity} />
+        ) : null}
+      </main>
+
+      <footer className="partner-footer">
+        <img className="mark" src="/icon-192.png" alt="" width={18} height={18} />
+        <span>Homisuite Partner</span>
+      </footer>
     </div>
   )
 }

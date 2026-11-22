@@ -33,6 +33,16 @@
   --shadow-sm: 0 2px 8px rgba(22, 24, 43, 0.05);
   --shadow-md: 0 8px 24px rgba(22, 24, 43, 0.08);
   --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
+
+  /* Same fixed dark navbar tokens as apps/web's shell (ShellLayout/.mobile-header) --
+     not redefined under the dark media query there either, since the bar stays
+     dark regardless of the rest of the theme. */
+  --navbar-bg: #16182b;
+  --navbar-text: #ffffff;
+  --navbar-text-muted: #b9babf;
+  --navbar-icon: #adaeb5;
+  --navbar-surface: rgba(255, 255, 255, 0.06);
+  --navbar-surface-hover: rgba(255, 255, 255, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -89,11 +99,25 @@ h1, h2 { font-family: var(--f-head); margin: 0; }
 
 /* Dashboard */
 body { background: var(--bg); min-height: 100vh; }
-.partner-main { max-width: 860px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
+.partner-app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.partner-topbar { position: sticky; top: 0; z-index: 10; min-height: 58px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--navbar-bg); color: var(--navbar-text); }
+.partner-topbar-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.partner-topbar-brand .mark { border-radius: 8px; display: block; flex-shrink: 0; }
+.partner-topbar-brand div { min-width: 0; display: grid; }
+.partner-topbar-brand strong { font-family: var(--f-head); font-size: 14.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.partner-topbar-brand small { color: var(--navbar-icon); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.partner-footer { margin-top: auto; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+.partner-footer .mark { border-radius: 5px; display: block; opacity: 0.7; }
+
+.partner-main { max-width: 860px; margin: 0 auto; width: 100%; padding: 24px; display: grid; gap: 20px; }
+.partner-panel { display: grid; gap: 16px; }
 .partner-subtabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .partner-subtab { border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .partner-subtab.is-active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.partner-card { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; display: grid; gap: 10px; }
+.partner-card-grid { display: grid; gap: 12px; }
+.partner-card { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; display: grid; gap: 10px; align-content: start; }
 .partner-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .partner-card-title { font-weight: 800; }
 .partner-card-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
@@ -122,7 +146,9 @@ body { background: var(--bg); min-height: 100vh; }
 .partner-calendar-dot.is-pending { background: var(--wait-bg); color: var(--wait-ink); }
 
 /* Settings */
-.partner-settings-section { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 18px; display: grid; gap: 14px; }
+.partner-settings-grid { display: grid; gap: 16px; }
+.partner-settings-grid > .login-error { grid-column: 1 / -1; }
+.partner-settings-section { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 18px; display: grid; gap: 14px; align-content: start; }
 .partner-settings-section h2 { font-size: 15px; margin: 0; }
 .partner-field { display: grid; gap: 6px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .partner-field input, .partner-field textarea { font: inherit; text-transform: none; letter-spacing: normal; font-weight: 400; font-size: 14px; color: var(--ink); border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 10px; background: var(--surface); }
@@ -131,4 +157,19 @@ body { background: var(--bg); min-height: 100vh; }
 .partner-hours-row:last-of-type { border-bottom: 0; }
 .partner-hours-toggle { display: flex; align-items: center; gap: 8px; font-size: 13.5px; min-width: 110px; }
 .partner-hours-times { display: flex; align-items: center; gap: 6px; }
-.partner-hours-times input[type="time"] { font: inherit; font-size: 13px; border: 1.5px solid var(--line-strong); border-radius: var(--r-sm); padding: 6px 8px; background: var(--surface); color: var(--ink); }
+
+/* Responsive -- mobile first means the phone layout is the baseline, not the
+   ceiling: wider viewports get a wider column and real multi-column grids
+   instead of the same centered ~860px strip stretched across a desktop. */
+@media (min-width: 720px) {
+  .partner-main { max-width: 920px; padding: 32px; }
+  .partner-card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 860px) {
+  .partner-settings-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1080px) {
+  .partner-topbar { padding: 10px 40px; }
+  .partner-main { max-width: 1180px; padding: 40px; }
+  .partner-card-grid { grid-template-columns: repeat(3, 1fr); }
+}

@@ -55,7 +55,7 @@ export function CalendarPanel({ reservations }: CalendarPanelProps) {
   const selected = selectedDate ? (byDate.get(selectedDate) ?? []) : []
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div className="partner-panel">
       <div className="partner-calendar-nav">
         <button type="button" className="partner-calendar-nav-btn" aria-label="Mese precedente" onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}>
           <ChevronLeft size={18} />
@@ -93,7 +93,7 @@ export function CalendarPanel({ reservations }: CalendarPanelProps) {
       </div>
 
       {selectedDate ? (
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div className="partner-panel" style={{ gap: 10 }}>
           <strong>{new Date(`${selectedDate}T00:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
           {selected.length === 0 ? (
             <p className="muted">Nessuna prenotazione in questo giorno.</p>
