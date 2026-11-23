@@ -138,6 +138,24 @@ export async function createDiningReservationRequest(
   if (error) throw error
 }
 
+// cancel_dining_reservation mirrors cancel_my_request's own shape (same
+// token, same single UPDATE...WHERE...RETURNING, same
+// '<thing>_not_cancellable' error when the WHERE clause matches nothing --
+// already cancelled/declined, or the date has passed). Allowed from any of
+// those states including 'confirmed', unlike cancel_my_request's narrower
+// "only while requested" rule: a dining reservation already has its own
+// staff/partner-run lifecycle past the initial request that a Housekeeping
+// request doesn't, so plans changing after a partner already said yes is a
+// real case here.
+export async function cancelDiningReservation(token: string, reservationId: string): Promise<DiningReservation> {
+  const { data, error } = await supabase.rpc('cancel_dining_reservation', {
+    p_token: token,
+    p_reservation_id: reservationId,
+  })
+  if (error) throw error
+  return data
+}
+
 // list_my_dining_reservations (20261105200000_dining_reservation_feedback_rpcs)
 // mirrors listMyRequests' own shape exactly -- same token-based identity,
 // same table-returning RPC pattern. Each row already carries its own

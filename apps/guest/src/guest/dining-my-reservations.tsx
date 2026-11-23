@@ -4,7 +4,7 @@ import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/field'
-import { createDiningReservationFeedback, fetchDiningCatalog, isInvalidSessionError, listMyDiningReservations } from '@/lib/guest-api'
+import { cancelDiningReservation, createDiningReservationFeedback, fetchDiningCatalog, isInvalidSessionError, listMyDiningReservations } from '@/lib/guest-api'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { DiningReservation, DiningReservationStatus, DiningRestaurant } from '@/lib/types'
 
@@ -26,6 +26,14 @@ const STATUS_BUCKET: Record<DiningReservationStatus, 'requested' | 'in_progress'
 function isRateable(reservation: DiningReservation): boolean {
   const today = new Date().toISOString().slice(0, 10)
   return reservation.confirmation_status === 'confirmed' && reservation.reservation_date < today
+}
+
+// Mirrors cancel_dining_reservation's own WHERE clause -- not already
+// cancelled/declined, and not already in the past -- so the button only
+// ever shows when the RPC would actually succeed.
+function isCancellable(reservation: DiningReservation): boolean {
+  const today = new Date().toISOString().slice(0, 10)
+  return reservation.confirmation_status !== 'cancelled' && reservation.confirmation_status !== 'declined' && reservation.reservation_date >= today
 }
 
 export function DiningMyReservations({ token, onSessionExpired }: { token: string; onSessionExpired: () => void }) {
@@ -75,6 +83,9 @@ export function DiningMyReservations({ token, onSessionExpired }: { token: strin
               prev?.map((r) => (r.id === reservation.id ? { ...r, feedback_rating: rating, feedback_comment: comment } : r)) ?? null,
             )
           }}
+          onCancelled={(updated) => {
+            setReservations((prev) => prev?.map((r) => (r.id === updated.id ? updated : r)) ?? null)
+          }}
         />
       ))}
     </div>
@@ -85,17 +96,38 @@ function formatDate(iso: string, locale: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString(locale, { day: '2-digit', month: 'long' })
 }
 
-function ReservationCard({ reservation, restaurantName, token, onSessionExpired, onFeedbackSaved }: {
+function ReservationCard({ reservation, restaurantName, token, onSessionExpired, onFeedbackSaved, onCancelled }: {
   reservation: DiningReservation
   restaurantName: string
   token: string
   onSessionExpired: () => void
   onFeedbackSaved: (rating: 1 | 2 | 3 | 4 | 5, comment: string | null) => void
+  onCancelled: (updated: DiningReservation) => void
 }) {
   const { t, locale } = useLocale()
   const [editing, setEditing] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
   const bucket = STATUS_BUCKET[reservation.confirmation_status]
   const rateable = isRateable(reservation)
+  const cancellable = isCancellable(reservation)
+
+  async function handleCancel() {
+    setCancelling(true)
+    setCancelError(null)
+    try {
+      const updated = await cancelDiningReservation(token, reservation.id)
+      onCancelled(updated)
+    } catch (cause) {
+      if (isInvalidSessionError(cause)) {
+        onSessionExpired()
+        return
+      }
+      setCancelError(t('dining.cancelError'))
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   return (
     <Card>
@@ -107,8 +139,16 @@ function ReservationCard({ reservation, restaurantName, token, onSessionExpired,
               {formatDate(reservation.reservation_date, locale)} · {reservation.reservation_time.slice(0, 5)} · {t('dining.pax')} {reservation.party_size}
             </p>
           </div>
-          <StatusBadge status={bucket} label={t(`dining.myStatus.${bucket}`)} />
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <StatusBadge status={bucket} label={t(`dining.myStatus.${bucket}`)} />
+            {cancellable && (
+              <button type="button" disabled={cancelling} onClick={() => void handleCancel()} className="cursor-pointer text-xs text-muted hover:text-bad-ink disabled:cursor-wait">
+                {t('status.cancel')}
+              </button>
+            )}
+          </div>
         </div>
+        {cancelError && <p className="mt-1.5 text-xs text-bad-ink">{cancelError}</p>}
 
         {reservation.feedback_rating && !editing ? (
           <div className="mt-3 border-t border-line pt-3">
