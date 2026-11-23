@@ -17,6 +17,13 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [noAccount, setNoAccount] = useState(false)
   const [tab, setTab] = useState<MainTab>('prenotazioni')
+  const [email, setEmail] = useState<string | null>(null)
+
+  // AuthGate only ever renders this once a session exists, so this is just
+  // reading what's already there -- not re-checking whether one does.
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? null))
+  }, [])
 
   const load = useCallback(async () => {
     setError(null)
@@ -87,7 +94,7 @@ export function Dashboard() {
         ) : tab === 'calendario' ? (
           <CalendarPanel reservations={reservations} />
         ) : servicePartnerId && capacity ? (
-          <SettingsPanel servicePartnerId={servicePartnerId} initialCapacity={capacity} onCapacitySaved={setCapacity} />
+          <SettingsPanel servicePartnerId={servicePartnerId} initialCapacity={capacity} onCapacitySaved={setCapacity} businessName={businessName} email={email} />
         ) : null}
       </main>
 

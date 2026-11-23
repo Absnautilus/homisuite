@@ -10,6 +10,25 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#9D47F4" />
     <title>Homisuite Partner</title>
+    <script>
+      // Runs before any stylesheet or React code, so the page never paints
+      // the wrong theme and then flips. Mirrors @homisuite/ui's theme.ts own
+      // read-preference logic (same storage key, same apps/web convention);
+      // must stay a plain inline script (not an import) to execute
+      // synchronously ahead of first paint.
+      (function () {
+        try {
+          var stored = localStorage.getItem('homisuite.theme');
+          var pref = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+          var resolved = pref === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : pref;
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

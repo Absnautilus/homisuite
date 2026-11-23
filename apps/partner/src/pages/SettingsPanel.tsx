@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Button, DatePicker, TimePicker } from '@homisuite/ui'
-import { Plus, Trash2 } from 'lucide-react'
+import { Button, Checkbox, DatePicker, readStoredThemePreference, resolveTheme, setThemePreference, subscribeThemeChange, TimePicker } from '@homisuite/ui'
+import { Moon, Plus, Sun, Trash2 } from 'lucide-react'
 import { addBlackoutDate, deleteBlackoutDate, listMyBlackoutDates, listMyHours, setMyHours, updateCapacity } from '../api'
 import { DAY_LABELS } from '../types'
 import type { PartnerBlackoutDate, PartnerCapacity, PartnerHours } from '../types'
@@ -9,9 +9,14 @@ interface SettingsPanelProps {
   servicePartnerId: string
   initialCapacity: PartnerCapacity
   onCapacitySaved: (capacity: PartnerCapacity) => void
+  businessName: string | null
+  email: string | null
 }
 
-export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySaved }: SettingsPanelProps) {
+export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySaved, businessName, email }: SettingsPanelProps) {
+  const [theme, setTheme] = useState(() => resolveTheme(readStoredThemePreference()))
+  useEffect(() => subscribeThemeChange(() => setTheme(resolveTheme(readStoredThemePreference()))), [])
+
   const [seatsIndoor, setSeatsIndoor] = useState(initialCapacity.seatsIndoor?.toString() ?? '')
   const [seatsOutdoor, setSeatsOutdoor] = useState(initialCapacity.seatsOutdoor?.toString() ?? '')
   const [availabilityNotes, setAvailabilityNotes] = useState(initialCapacity.availabilityNotes ?? '')
@@ -117,6 +122,23 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
       {error ? <p className="login-error" role="alert">{error}</p> : null}
 
       <section className="partner-settings-section">
+        <h2>Account</h2>
+        <div className="partner-account-row">
+          <span className="partner-account-row-label"><strong>Attività</strong><small>{businessName ?? '—'}</small></span>
+        </div>
+        <div className="partner-account-row">
+          <span className="partner-account-row-label"><strong>Email</strong><small>{email ?? '—'}</small></span>
+        </div>
+        <div className="partner-account-row">
+          <span className="partner-account-row-label"><strong>Tema</strong><small>{theme === 'dark' ? 'Scuro' : 'Chiaro'}</small></span>
+          <span className="partner-theme-toggle">
+            <Button variant="chip" size="sm" pressed={theme === 'light'} aria-label="Tema chiaro" onClick={() => setThemePreference('light')}><Sun size={15} /></Button>
+            <Button variant="chip" size="sm" pressed={theme === 'dark'} aria-label="Tema scuro" onClick={() => setThemePreference('dark')}><Moon size={15} /></Button>
+          </span>
+        </div>
+      </section>
+
+      <section className="partner-settings-section">
         <h2>Capienza</h2>
         <form onSubmit={(event) => void saveCapacity(event)} style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -150,8 +172,8 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
               const entry = hours.find((h) => h.dayOfWeek === day)
               return (
                 <div key={day} className="partner-hours-row">
-                  <label className="partner-hours-toggle">
-                    <input type="checkbox" checked={Boolean(entry)} onChange={() => toggleDay(day)} />
+                  <label className="partner-hours-toggle" htmlFor={`day-${day}`}>
+                    <Checkbox id={`day-${day}`} checked={Boolean(entry)} onCheckedChange={() => toggleDay(day)} aria-label={label} />
                     <span>{label}</span>
                   </label>
                   {entry ? (

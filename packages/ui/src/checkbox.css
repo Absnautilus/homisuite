@@ -1,0 +1,20 @@
+/* Fallback values match the suite's own tokens so this reads correctly even
+   outside a host that defines them -- same convention as DatePicker/TimePicker. */
+.ui-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1.5px solid var(--line-strong, #d3d6ec);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+  color: var(--accent-ink, #fff);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.ui-checkbox:hover:not(:disabled) { border-color: var(--accent, #9c4fc7); }
+.ui-checkbox[data-checked='true'] { background: var(--accent, #9c4fc7); border-color: var(--accent, #9c4fc7); }
+.ui-checkbox:disabled { opacity: 0.5; cursor: not-allowed; }
