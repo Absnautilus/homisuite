@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { QueueJobTitle, QueuedRequest, StaffProfile } from '@/lib/staff-types'
 import { usernameToEmail } from '@/lib/operator-login'
 import { hotelFilter, realtimeHotelFilter } from '@/lib/hotel-query-scope'
+import { sortJobTitlesReceptionFirst } from '@/lib/format'
 
 const QUEUE_SELECT =
   '*, request_types(name, name_i18n, allows_quantity, available_quantity, request_categories(name, name_i18n)), accepted_by_staff:staff_profiles!accepted_by(name, role), rejected_by_staff:staff_profiles!rejected_by(name, role)'
@@ -241,7 +242,7 @@ export async function savePushSubscription(sub: { endpoint: string; p256dh: stri
 export async function listQueueJobTitles(hotelId: string): Promise<QueueJobTitle[]> {
   const { data, error } = await supabase.rpc('guest_requests_property_job_titles', { p_hotel_id: hotelId })
   if (error) throw error
-  return data ?? []
+  return sortJobTitlesReceptionFirst(data ?? [])
 }
 
 export async function reassignRequestToJobTitle(id: string, jobTitleId: string) {

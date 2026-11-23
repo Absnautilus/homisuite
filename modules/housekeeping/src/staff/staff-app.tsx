@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
+import { goOffDuty } from '@/lib/push'
 import { unlockAudio } from '@/lib/beep'
+import { useIdleLogout } from '@/hooks/use-idle-logout'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { StaffProfile } from '@/lib/staff-types'
 import type { HousekeepingCapabilities, PlatformHotelSettings, PlatformStaffManagementLink } from '@/public/HousekeepingModule'
@@ -11,6 +13,8 @@ import { DashboardHeader } from '@/staff/dashboard-header'
 import { RequestQueue } from '@/staff/request-queue'
 import { AdminHome } from '@/staff/admin/admin-home'
 import { StaysPage } from '@/staff/stays/stays-page'
+
+const IDLE_LOGOUT_MS = 8 * 60 * 60 * 1000
 
 interface StaffAppProps {
   mode?: 'standalone' | 'embedded'
@@ -109,6 +113,17 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     document.addEventListener('pointerdown', onFirstPointer)
     return () => document.removeEventListener('pointerdown', onFirstPointer)
   }, [])
+
+  // A shared/kiosk-style terminal (reception desk, housekeeping tablet) is
+  // the common case this guards -- left signed in and "on duty" long after
+  // whoever was using it has gone home. Skipped for readOnlyProfile: that's
+  // Platform Admin looking in on someone else's queue, not a real staff
+  // session to end. goOffDuty() is a no-op if the profile is already off
+  // duty, so there's no need to track on_duty separately here.
+  useIdleLogout(Boolean(profile?.active && !readOnlyProfile), IDLE_LOGOUT_MS, () => {
+    void goOffDuty().catch(() => {})
+    void supabase.auth.signOut()
+  })
 
   useEffect(() => {
     const claimId = searchParams.get('claim')

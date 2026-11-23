@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { FieldError, FieldGroup, Label, Select, Textarea } from '@/components/ui/field'
+import { FieldError, FieldGroup, Label, Textarea } from '@/components/ui/field'
 import { ItemCombobox } from '@/components/item-combobox'
+import { RoomCombobox } from '@/components/room-combobox'
 import { listMenu, listRooms, type Room } from '@/lib/admin-api'
 import { createStaffRequest } from '@/lib/staff-api'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -114,13 +115,14 @@ export function NewRequestForm({ staffId, hotelId, onCreated }: { staffId: strin
               <Label htmlFor="sr-room" required>
                 {t('staff.newRequest.room')}
               </Label>
-              <Select id="sr-room" required value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-                {rooms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.room_number}
-                  </option>
-                ))}
-              </Select>
+              <RoomCombobox
+                id="sr-room"
+                rooms={rooms}
+                value={roomId}
+                onChange={setRoomId}
+                required
+                placeholder={t('staff.newRequest.roomPlaceholder')}
+              />
             </FieldGroup>
             <FieldGroup>
               <Label htmlFor="sr-type" required>

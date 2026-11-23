@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { hotelFilter } from '@/lib/hotel-query-scope'
+import { sortJobTitlesReceptionFirst } from '@/lib/format'
 import type { Department, StaffDepartment, StaffRole } from '@/lib/types'
 
 export interface Room {
@@ -129,7 +130,7 @@ export interface JobTitleOption {
 export async function listPropertyJobTitles(hotelId: string): Promise<JobTitleOption[]> {
   const { data, error } = await supabase.rpc('guest_requests_property_job_titles', { p_hotel_id: hotelId })
   if (error) throw error
-  return data ?? []
+  return sortJobTitlesReceptionFirst(data ?? [])
 }
 
 export async function listMenu(hotelId: string): Promise<{ categories: RequestCategoryAdmin[]; types: RequestTypeAdmin[] }> {

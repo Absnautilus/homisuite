@@ -84,7 +84,16 @@ export function ItemCombobox({
 
   const selected = items.find((item) => item.id === value) ?? null
   const term = query.trim().toLowerCase()
-  const sorted = [...items].sort((a, b) => itemName(a, locale).localeCompare(itemName(b, locale), locale))
+  // The hotel's catch-all "Altro"/"Other" item is meant to be the one
+  // staff can always find without scrolling, not wherever it happens to
+  // alphabetize to -- pinned first regardless of its name, ahead of the
+  // otherwise-alphabetical rest.
+  const isOther = (item: RequestTypeAdmin) => ['altro', 'other'].includes(itemName(item, locale).trim().toLowerCase())
+  const sorted = [...items].sort((a, b) => {
+    const otherDiff = Number(isOther(b)) - Number(isOther(a))
+    if (otherDiff !== 0) return otherDiff
+    return itemName(a, locale).localeCompare(itemName(b, locale), locale)
+  })
   const matches = term
     ? sorted.filter((item) => itemName(item, locale).toLowerCase().includes(term) || categoryLabelFor(item).toLowerCase().includes(term))
     : sorted

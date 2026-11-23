@@ -4,7 +4,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { Select, Input, Textarea } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, ArrowDownToLine, ArrowLeft, Bell, Check, ChevronDown, ChevronUp, Clock, GripVertical, PackageCheck, Pencil, Trash2, X } from 'lucide-react'
+import { AlertTriangle, ArrowDownToLine, ArrowLeft, Bell, Check, ChevronDown, ChevronUp, Clock, GripVertical, PackageCheck, Pencil, Smartphone, Trash2, UserRound, X } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
@@ -262,7 +262,10 @@ export function RequestRow({
                   </span>
                 ) : null}
               </div>
-              <p className="mt-0.5 text-sm text-muted">
+              <p className="mt-0.5 flex items-center gap-1 text-sm text-muted">
+                <span className="inline-flex shrink-0" title={request.created_by_staff ? t('staff.row.sourceStaff') : t('staff.row.sourceGuest')}>
+                  {request.created_by_staff ? <UserRound className="h-3.5 w-3.5" /> : <Smartphone className="h-3.5 w-3.5" />}
+                </span>
                 {formatTime(request.created_at)}
                 {categoryName && (
                   <>
