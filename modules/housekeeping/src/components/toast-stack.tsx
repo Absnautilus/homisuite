@@ -18,7 +18,13 @@ export function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: 
     <div className="fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
       {toasts.map((toast) =>
         toast.card ? (
-          <div key={toast.id} role="status" className="rounded-xl border border-line bg-surface p-3 text-sm text-foreground shadow-md">
+          // Mobile only (same breakpoint as the shell's own sidebar <->
+          // mobile-header switch, apps/web's styles.css): on a desktop-sized
+          // screen reception is already looking at the live queue list, so
+          // a floating card on top of it is a reminder nobody asked for --
+          // the queue list (and the sound) are enough there. On a phone the
+          // list usually isn't on screen, so the card is the only heads-up.
+          <div key={toast.id} role="status" className="hidden max-[920px]:block rounded-xl border border-line bg-surface p-3 text-sm text-foreground shadow-md">
             <p className="pr-1 font-semibold text-foreground">{toast.card.title}</p>
             {/* Unlike request-row.tsx's own muted-until-hover icons, both
                 actions here get a visible-at-rest treatment (filled/active):
