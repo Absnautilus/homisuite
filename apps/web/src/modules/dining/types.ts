@@ -128,6 +128,19 @@ export type ConfirmationStatus =
   | 'new' | 'scheduled' | 'in_progress' | 'unavailable' | 'confirmed' | 'cancelled'
   | 'pending' | 'declined'
 
+// Whether the guest actually showed up -- separate from confirmation_status,
+// which is about the booking itself (accepted/declined), not what happened
+// on the day. Same three values apps/partner's own types.ts uses, so a
+// partner-linked restaurant's staff-side view and partner-side view never
+// disagree on what these mean.
+export type AttendanceStatus = 'pending' | 'arrived' | 'no_show'
+
+export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  pending: 'Da segnare',
+  arrived: 'Arrivato',
+  no_show: 'Non presentato',
+}
+
 export interface ReservationRequest {
   id: string
   hotel_id: string
@@ -143,6 +156,7 @@ export interface ReservationRequest {
   reservation_time: string
   booking_reference: string | null
   confirmation_status: ConfirmationStatus
+  attendance_status: AttendanceStatus
   confirmation_note: string | null
   special_requests: string | null
   staff_notes: string | null

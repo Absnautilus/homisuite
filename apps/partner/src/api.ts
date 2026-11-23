@@ -12,6 +12,7 @@ interface RawReservationRow {
   reservation_time: string
   booking_reference: string | null
   confirmation_status: PartnerReservation['confirmation_status']
+  attendance_status: PartnerReservation['attendance_status']
   confirmation_note: string | null
   special_requests: string | null
   source: PartnerReservation['source']
@@ -114,7 +115,7 @@ export async function listMyReservations(): Promise<PartnerReservation[]> {
   // live dashboard.
   const { data, error } = await supabase
     .from('restaurant_reservation_requests')
-    .select('id, guest_name, party_size, reservation_date, reservation_time, booking_reference, confirmation_status, confirmation_note, special_requests, source, created_at, restaurants!restaurant_reservation_requests_restaurant_id_fkey(name), hotels!restaurant_reservation_requests_hotel_id_fkey(name)')
+    .select('id, guest_name, party_size, reservation_date, reservation_time, booking_reference, confirmation_status, attendance_status, confirmation_note, special_requests, source, created_at, restaurants!restaurant_reservation_requests_restaurant_id_fkey(name), hotels!restaurant_reservation_requests_hotel_id_fkey(name)')
     .order('reservation_date', { ascending: false })
     .order('reservation_time', { ascending: false })
   if (error) throw error
@@ -128,6 +129,7 @@ export async function listMyReservations(): Promise<PartnerReservation[]> {
     reservation_time: row.reservation_time,
     booking_reference: row.booking_reference,
     confirmation_status: row.confirmation_status,
+    attendance_status: row.attendance_status,
     confirmation_note: row.confirmation_note,
     special_requests: row.special_requests,
     source: row.source,
@@ -140,6 +142,14 @@ export async function respondToReservation(requestId: string, status: 'confirmed
     p_request_id: requestId,
     p_status: status,
     p_note: note,
+  })
+  if (error) throw error
+}
+
+export async function setAttendance(requestId: string, status: PartnerReservation['attendance_status']): Promise<void> {
+  const { error } = await supabase.rpc('partner_set_attendance', {
+    p_request_id: requestId,
+    p_attendance: status,
   })
   if (error) throw error
 }

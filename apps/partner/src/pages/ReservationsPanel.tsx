@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { respondToReservation } from '../api'
+import { Button } from '@homisuite/ui'
+import { CheckCircle2, XCircle } from 'lucide-react'
+import { respondToReservation, setAttendance } from '../api'
+import { ATTENDANCE_LABELS } from '../types'
 import type { PartnerReservation } from '../types'
 
 const STATUS_LABELS: Record<PartnerReservation['confirmation_status'], string> = {
@@ -20,6 +23,7 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
   const [subTab, setSubTab] = useState<SubTab>('pending')
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [respondingId, setRespondingId] = useState<string | null>(null)
+  const [attendanceSavingId, setAttendanceSavingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const pending = reservations.filter((r) => r.confirmation_status === 'pending')
@@ -38,6 +42,22 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
       setError('Non è stato possibile inviare la risposta. Riprova.')
     } finally {
       setRespondingId(null)
+    }
+  }
+
+  // Clicking the already-selected option again clears it back to "Da
+  // segnare" -- a mis-click (or a reservation that later turns out to have
+  // been entered wrong) shouldn't require a third state just to undo.
+  async function markAttendance(request: PartnerReservation, next: 'arrived' | 'no_show') {
+    setAttendanceSavingId(request.id)
+    setError(null)
+    try {
+      await setAttendance(request.id, request.attendance_status === next ? 'pending' : next)
+      await onReload()
+    } catch {
+      setError('Non è stato possibile aggiornare la presenza. Riprova.')
+    } finally {
+      setAttendanceSavingId(null)
     }
   }
 
@@ -76,6 +96,32 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
             {request.special_requests ? <p className="partner-card-notes">Richieste: {request.special_requests}</p> : null}
             {request.booking_reference ? <p className="partner-card-notes">Riferimento: {request.booking_reference}</p> : null}
             {request.confirmation_note ? <p className="partner-card-notes">Nota: {request.confirmation_note}</p> : null}
+
+            {subTab === 'history' && request.confirmation_status === 'confirmed' ? (
+              <div className="partner-attendance-row">
+                <span className="muted">Presenza: {ATTENDANCE_LABELS[request.attendance_status]}</span>
+                <div className="partner-attendance-actions">
+                  <Button
+                    variant="chip"
+                    size="sm"
+                    pressed={request.attendance_status === 'arrived'}
+                    disabled={attendanceSavingId === request.id}
+                    onClick={() => void markAttendance(request, 'arrived')}
+                  >
+                    <CheckCircle2 size={14} /> Arrivato
+                  </Button>
+                  <Button
+                    variant="chip"
+                    size="sm"
+                    pressed={request.attendance_status === 'no_show'}
+                    disabled={attendanceSavingId === request.id}
+                    onClick={() => void markAttendance(request, 'no_show')}
+                  >
+                    <XCircle size={14} /> Non presentato
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             {subTab === 'pending' ? (
               <>

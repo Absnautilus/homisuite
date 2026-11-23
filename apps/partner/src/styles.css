@@ -153,6 +153,8 @@ body { background: var(--bg); min-height: 100vh; }
 .partner-badge.declined, .partner-badge.cancelled { background: var(--bad-bg); color: var(--bad-ink); }
 .partner-card-notes { font-size: 13px; color: var(--muted); }
 .partner-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.partner-attendance-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; padding-top: 4px; border-top: 1px dashed var(--line); }
+.partner-attendance-actions { display: flex; gap: 6px; }
 .partner-btn { border: 0; border-radius: var(--r-sm); padding: 9px 16px; font-weight: 750; font-size: 13px; cursor: pointer; }
 .partner-btn.confirm { background: var(--ok-ink); color: #fff; }
 .partner-btn.decline { background: transparent; border: 1px solid var(--line-strong); color: var(--ink); }

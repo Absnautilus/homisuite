@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant, RestaurantHour, RestaurantOperationalProfile, ServicePartner, ServicePartnerUser, ServicePartnerWithContext } from './types'
+import type { AttendanceStatus, ChangeLogEntry, ConfirmationStatus, DiningCategory, GuestTag, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant, RestaurantHour, RestaurantOperationalProfile, ServicePartner, ServicePartnerUser, ServicePartnerWithContext } from './types'
 
 // Untyped SupabaseClient, same as HousekeepingModule's own `supabase` prop:
 // the shared Database type (core-sdk) doesn't know about this module's
@@ -440,7 +440,7 @@ export async function createReservation(client: SupabaseClient, hotelId: string,
 export async function updateReservation(
   client: SupabaseClient,
   id: string,
-  changes: Partial<CreateReservationInput & { confirmation_status: ConfirmationStatus; confirmation_note: string | null; assigned_to: string | null }>,
+  changes: Partial<CreateReservationInput & { confirmation_status: ConfirmationStatus; attendance_status: AttendanceStatus; confirmation_note: string | null; assigned_to: string | null }>,
 ): Promise<void> {
   await mutateOneOrThrow(client, 'restaurant_reservation_requests', 'id', id, 'update', changes)
 }

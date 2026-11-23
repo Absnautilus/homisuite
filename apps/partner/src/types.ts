@@ -1,4 +1,11 @@
 export type ReservationConfirmationStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+export type AttendanceStatus = 'pending' | 'arrived' | 'no_show'
+
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  pending: 'Da segnare',
+  arrived: 'Arrivato',
+  no_show: 'Non presentato',
+}
 
 // Flattened shape of restaurant_reservation_requests joined with the
 // restaurant/hotel names a partner needs to tell bookings apart -- this
@@ -16,6 +23,7 @@ export interface PartnerReservation {
   reservation_time: string
   booking_reference: string | null
   confirmation_status: ReservationConfirmationStatus
+  attendance_status: AttendanceStatus
   confirmation_note: string | null
   special_requests: string | null
   source: 'staff' | 'guest'

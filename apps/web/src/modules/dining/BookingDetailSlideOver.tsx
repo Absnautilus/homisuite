@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button, DatePicker, TimePicker } from '@homisuite/ui'
-import { Pencil, Star, Trash2 } from 'lucide-react'
+import { CheckCircle2, Pencil, Star, Trash2, XCircle } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { useConfirm } from '../../components/ConfirmDialog'
 import { getFeedback, listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
 import { RestaurantField } from './RestaurantField'
-import type { ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
-import { CONFIRMATION_STATUS_LABELS, resolveRestaurantInput, resolveRestaurantName } from './types'
+import type { AttendanceStatus, ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
+import { ATTENDANCE_STATUS_LABELS, CONFIRMATION_STATUS_LABELS, resolveRestaurantInput, resolveRestaurantName } from './types'
 import { readableDiningError } from './readableDiningError'
 import { SlideOver } from './SlideOver'
 
@@ -113,6 +113,24 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
     setError(null)
     try {
       await updateReservation(supabase, reservation.id, { confirmation_status: status })
+      await onChanged()
+      await load()
+    } catch (cause) {
+      setError(readableDiningError(cause))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Clicking the already-selected option again clears it back to "Da
+  // segnare" -- same undo-by-reclicking rule as apps/partner's own
+  // equivalent control, so the two never read as two different features.
+  async function setAttendance(status: AttendanceStatus) {
+    if (!reservation) return
+    setSaving(true)
+    setError(null)
+    try {
+      await updateReservation(supabase, reservation.id, { attendance_status: reservation.attendance_status === status ? 'pending' : status })
       await onChanged()
       await load()
     } catch (cause) {
@@ -269,6 +287,24 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
           <span className={`dining-pill status-${reservation.confirmation_status}`}>{CONFIRMATION_STATUS_LABELS[reservation.confirmation_status]}</span>
         )}
       </div>
+
+      {reservation.confirmation_status === 'confirmed' ? (
+        <div className="dining-dp-section">
+          <h3>Presenza</h3>
+          {canManage ? (
+            <div className="dining-attendance-actions">
+              <Button variant="chip" size="sm" pressed={reservation.attendance_status === 'arrived'} disabled={saving} onClick={() => void setAttendance('arrived')}>
+                <CheckCircle2 size={14} /> Arrivato
+              </Button>
+              <Button variant="chip" size="sm" pressed={reservation.attendance_status === 'no_show'} disabled={saving} onClick={() => void setAttendance('no_show')}>
+                <XCircle size={14} /> Non presentato
+              </Button>
+            </div>
+          ) : (
+            <span className="muted" style={{ fontSize: 13 }}>{ATTENDANCE_STATUS_LABELS[reservation.attendance_status]}</span>
+          )}
+        </div>
+      ) : null}
 
       {feedback ? (
         <div className="dining-dp-section">

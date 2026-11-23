@@ -368,6 +368,7 @@ button.job-role-chip:hover { border-color: var(--accent); }
 
 /* ---------- guest feedback (post-dinner star rating) ---------- */
 .dining-feedback-stars { display: flex; gap: 2px; }
+.dining-attendance-actions { display: flex; gap: 8px; }
 .dining-feedback-star { color: var(--line-strong); }
 .dining-feedback-star.is-filled { color: var(--amber-ink); fill: var(--amber-ink); }
 
