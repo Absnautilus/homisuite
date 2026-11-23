@@ -72,9 +72,9 @@ export function PartnerAccountsSection({ hotelId, canManage }: PartnerAccountsSe
     <section className="shell-card">
       <div className="section-heading" style={{ padding: '16px 20px 0' }}>
         <h2>Account partner</h2>
-        <p>Chi può accedere a Homisuite Partner per le prenotazioni dei ristoranti collegati qui.</p>
+        <p>Gli account con cui lo staff del ristorante partner accede a Homisuite Partner per gestire le prenotazioni.</p>
       </div>
-      <div style={{ padding: '0 20px 20px', display: 'grid', gap: 16 }}>
+      <div style={{ padding: '16px 20px 20px', display: 'grid', gap: 16 }}>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
 
         {partners === null ? (
