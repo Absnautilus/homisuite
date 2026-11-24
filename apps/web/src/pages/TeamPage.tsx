@@ -83,6 +83,13 @@ export function TeamPage() {
     }))
     try {
       await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId: property.id, membershipStatus: next })
+      pushUndo({
+        message: `${member.profile.fullName} ${next === 'active' ? 'riattivato' : 'sospeso'}.`,
+        undo: async () => {
+          await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId: property.id, membershipStatus: member.membership.status })
+          await loadTeam({ silent: true })
+        },
+      })
     } catch (cause) {
       setTeam((current) => ({
         ...current,
@@ -457,6 +464,7 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
   const [housekeepingSaving, setHousekeepingSaving] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pushUndo = useUndo()
 
   useEffect(() => {
     if (!member || !housekeepingEnabled) { setHousekeepingStatus(null); setError(null); return }
@@ -484,6 +492,14 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
       // "Visualizza tutte le richieste" permission below governs full-queue
       // visibility from here on, independent of this reset.
       await core.updateTeamMember({ membershipId: member.membership.id, profileId: member.profile.id, propertyId, housekeepingDepartment: null })
+      pushUndo({
+        message: `Accesso a Housekeeping ${next ? 'concesso' : 'revocato'}.`,
+        undo: async () => {
+          if (next) await core.revokeHousekeepingAccess({ membershipId: member.membership.id })
+          else await core.grantHousekeepingAccess({ membershipId: member.membership.id })
+          setHousekeepingStatus(!next)
+        },
+      })
     } catch (cause) {
       setHousekeepingStatus(!next)
       setError(readableError(cause))
@@ -523,6 +539,13 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
     setModuleAccessStatus((prev) => ({ ...prev, [moduleSlug]: next }))
     try {
       await core.setMemberModuleAccess(member.membership.id, moduleSlug, next)
+      pushUndo({
+        message: `Accesso al modulo ${next ? 'concesso' : 'revocato'}.`,
+        undo: async () => {
+          await core.setMemberModuleAccess(member.membership.id, moduleSlug, current)
+          setModuleAccessStatus((prev) => ({ ...prev, [moduleSlug]: current }))
+        },
+      })
     } catch (cause) {
       setModuleAccessStatus((prev) => ({ ...prev, [moduleSlug]: current }))
       setError(readableError(cause))
@@ -566,6 +589,14 @@ function ModulesModal({ member, propertyId, entitlements, onClose }: { member: T
       } else {
         await core.revokeMemberPermission(member.membership.id, permissionSlug)
       }
+      pushUndo({
+        message: `Permesso ${nextOn ? 'concesso' : 'revocato'}.`,
+        undo: async () => {
+          if (nextOn) await core.revokeMemberPermission(member.membership.id, permissionSlug)
+          else await core.grantMemberPermission(member.membership.id, permissionSlug)
+          setPermissionStatus((prev) => ({ ...prev, [permissionSlug]: current }))
+        },
+      })
     } catch (cause) {
       setPermissionStatus((prev) => ({ ...prev, [permissionSlug]: current }))
       setError(readableError(cause))
@@ -655,11 +686,32 @@ function EditMemberModal({ member, roles, jobTitles, currentProfileId, propertyI
   }, [member])
   const isSelf = member?.profile.id === currentProfileId
   const orgWide = member?.membership.propertyId == null
+  const pushUndo = useUndo()
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!member) return; const form = new FormData(event.currentTarget); setSaving(true); setError(null)
     try {
-      await core.updateTeamMember(buildTeamMemberUpdateInput(member, propertyId, currentProfileId, form))
+      const input = buildTeamMemberUpdateInput(member, propertyId, currentProfileId, form)
+      await core.updateTeamMember(input)
       await onSaved()
+      pushUndo({
+        message: `${member.profile.fullName} modificato.`,
+        undo: async () => {
+          await core.updateTeamMember({
+            membershipId: member.membership.id,
+            profileId: member.profile.id,
+            propertyId,
+            jobTitleId: member.jobTitle?.id ?? null,
+            employmentStatus: member.employmentStatus,
+            // Same "only send a role when it actually changed" rule
+            // buildTeamMemberUpdateInput itself follows -- input.roleId is
+            // only ever set when this submit changed it, so reverting on
+            // that same condition mirrors it instead of re-triggering the
+            // rank check on an unchanged role.
+            ...(input.roleId ? { roleId: member.role.id } : {}),
+          })
+          await onSaved()
+        },
+      })
     } catch (cause) { setError(readableError(cause)); setSaving(false) }
   }
   return <Modal open={Boolean(member)} title={member ? `Modifica ${member.profile.fullName}` : 'Modifica persona'} description={orgWide ? 'L’accesso organizzazione si modifica a livello organizzazione; qui puoi assegnare la mansione locale.' : undefined} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>Annulla</Button><Button variant="primary" type="submit" form="edit-member-form" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</Button></>}>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { History, Search } from 'lucide-react'
-import { Button, DatePicker } from '@homisuite/ui'
+import { Button, DatePicker, useUndo } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { EDITABLE_STATUSES } from './BookingDetailSlideOver'
@@ -46,6 +46,7 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
   const [dateTo, setDateTo] = useState('')
   const [sort, setSort] = useState<{ col: SortCol; dir: 1 | -1 }>({ col: 'date', dir: mode === 'archive' ? -1 : 1 })
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const pushUndo = useUndo()
 
   const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
   const today = todayIso(timezone)
@@ -85,10 +86,28 @@ export function TuttePanel({ reservations, restaurants, onOpenDetail, timezone, 
   }
 
   async function save(id: string, changes: Parameters<typeof updateReservation>[2]) {
+    // Generic undo for whatever subset of fields this particular cell just
+    // changed: snapshot only those same keys from the row as it stood
+    // before this call, so undo reverts exactly what changed and nothing
+    // the person edited in some other cell meanwhile.
+    const before = reservations.find((r) => r.id === id)
+    const beforeRecord = before as unknown as Record<string, unknown>
+    const previous = before
+      ? (Object.fromEntries(Object.keys(changes).map((key) => [key, beforeRecord[key]])) as typeof changes)
+      : null
     try {
       setRowError(null)
       await updateReservation(supabase, id, changes)
       await onChanged()
+      if (previous) {
+        pushUndo({
+          message: 'Prenotazione aggiornata.',
+          undo: async () => {
+            await updateReservation(supabase, id, previous)
+            await onChanged()
+          },
+        })
+      }
     } catch (cause) {
       setRowError(readableDiningError(cause))
     }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Button } from '@homisuite/ui'
+import { Button, useUndo } from '@homisuite/ui'
 import { supabase } from '../../core/client'
 import { createServicePartnerUserCredentials, listServicePartnersForHotel, setServicePartnerUserActive } from './api'
 import type { ServicePartnerUser, ServicePartnerWithContext } from './types'
@@ -25,6 +25,7 @@ export function PartnerAccountsSection({ hotelId, canManage }: PartnerAccountsSe
   const [form, setForm] = useState(EMPTY_FORM)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const pushUndo = useUndo()
 
   const load = useCallback(async () => {
     try {
@@ -59,10 +60,18 @@ export function PartnerAccountsSection({ hotelId, canManage }: PartnerAccountsSe
   }
 
   async function toggleActive(user: ServicePartnerUser) {
+    const was = user.active
     setError(null)
     try {
-      await setServicePartnerUserActive(supabase, user.id, !user.active)
+      await setServicePartnerUserActive(supabase, user.id, !was)
       await load()
+      pushUndo({
+        message: `${user.full_name} ${was ? 'disattivato' : 'riattivato'}.`,
+        undo: async () => {
+          await setServicePartnerUserActive(supabase, user.id, was)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }

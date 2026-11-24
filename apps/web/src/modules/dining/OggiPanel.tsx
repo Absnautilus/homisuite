@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Clock3, History, Inbox } from 'lucide-react'
-import { Button } from '@homisuite/ui'
+import { Button, useUndo } from '@homisuite/ui'
 import { supabase } from '../../core/client'
 import { updateReservation } from './api'
 import type { ConfirmationStatus, ReservationRequest, Restaurant } from './types'
@@ -40,6 +40,7 @@ export function OggiPanel({ reservations, restaurants, timezone, canManage, onOp
   const [statusFilter, setStatusFilter] = useState<ConfirmationStatus | 'tutte'>('tutte')
   const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
   const today = todayIso(timezone)
+  const pushUndo = useUndo()
 
   // The button already says "Prendi in carico" -- it should actually take
   // charge, not just open the detail panel still sitting on "In attesa"
@@ -48,9 +49,19 @@ export function OggiPanel({ reservations, restaurants, timezone, canManage, onOp
   // its own error handling and a retry is one click away.
   async function claim(reservationId: string) {
     if (canManage) {
+      const previousStatus = reservations.find((r) => r.id === reservationId)?.confirmation_status
       try {
         await updateReservation(supabase, reservationId, { confirmation_status: 'in_progress' })
         await onChanged()
+        if (previousStatus) {
+          pushUndo({
+            message: 'Prenotazione presa in carico.',
+            undo: async () => {
+              await updateReservation(supabase, reservationId, { confirmation_status: previousStatus })
+              await onChanged()
+            },
+          })
+        }
       } catch {
         // Fall through to onOpenDetail below either way.
       }

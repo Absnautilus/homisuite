@@ -92,9 +92,17 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   }
 
   async function toggleRecommended(restaurant: Restaurant) {
+    const was = restaurant.is_recommended
     setRestaurants((current) => current.map((r) => r.id === restaurant.id ? { ...r, is_recommended: !r.is_recommended } : r))
     try {
-      await updateRestaurant(supabase, restaurant.id, { is_recommended: !restaurant.is_recommended })
+      await updateRestaurant(supabase, restaurant.id, { is_recommended: !was })
+      pushUndo({
+        message: `"${restaurant.name}" ${was ? 'non più consigliato' : 'segnato come consigliato'}.`,
+        undo: async () => {
+          await updateRestaurant(supabase, restaurant.id, { is_recommended: was })
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
       await load()
@@ -102,9 +110,17 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   }
 
   async function toggleVisible(restaurant: Restaurant) {
+    const was = restaurant.active
     setRestaurants((current) => current.map((r) => r.id === restaurant.id ? { ...r, active: !r.active } : r))
     try {
-      await updateRestaurant(supabase, restaurant.id, { active: !restaurant.active })
+      await updateRestaurant(supabase, restaurant.id, { active: !was })
+      pushUndo({
+        message: `"${restaurant.name}" ${was ? 'nascosto' : 'reso visibile'}.`,
+        undo: async () => {
+          await updateRestaurant(supabase, restaurant.id, { active: was })
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
       await load()
@@ -112,9 +128,17 @@ export function RestaurantsTab({ hotelId, hotelAddress, canManage }: Restaurants
   }
 
   async function setPriority(restaurant: Restaurant, value: number) {
+    const previous = restaurant.sort_order
     setRestaurants((current) => current.map((r) => r.id === restaurant.id ? { ...r, sort_order: value } : r))
     try {
       await updateRestaurant(supabase, restaurant.id, { sort_order: value })
+      pushUndo({
+        message: `Priorità di "${restaurant.name}" aggiornata.`,
+        undo: async () => {
+          await updateRestaurant(supabase, restaurant.id, { sort_order: previous })
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
       await load()

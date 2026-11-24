@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@homisuite/ui'
+import { Button, useUndo } from '@homisuite/ui'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { createServicePartner, getOperationalProfile, getRestaurantStats, inviteServicePartnerUser, listServicePartners, saveRestaurantManagement, updateRestaurant, type RestaurantStats } from './api'
@@ -37,6 +37,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
   const [tab, setTab] = useState<MgmtTab>('public')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pushUndo = useUndo()
 
   const [publicForm, setPublicForm] = useState<Partial<Restaurant>>({})
   const [curatedForm, setCuratedForm] = useState<Partial<Restaurant>>({})
@@ -163,7 +164,7 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     }
   }
 
-  async function linkPartner(nextPartnerId: string | null) {
+  async function linkPartner(nextPartnerId: string | null, options?: { silent?: boolean }) {
     if (!restaurant) return
     const previous = partnerId
     setPartnerId(nextPartnerId)
@@ -171,6 +172,19 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
     try {
       await updateRestaurant(supabase, restaurant.id, { partner_id: nextPartnerId })
       await onSaved()
+      // Suppressed right after createAndLinkPartner: that action already
+      // pushes its own undo (unlink), which would otherwise be replaced
+      // immediately by this one (only one pending action at a time).
+      if (!options?.silent) {
+        pushUndo({
+          message: nextPartnerId ? 'Partner collegato.' : 'Partner scollegato.',
+          undo: async () => {
+            await updateRestaurant(supabase, restaurant.id, { partner_id: previous })
+            setPartnerId(previous)
+            await onSaved()
+          },
+        })
+      }
     } catch (cause) {
       setError(readableDiningError(cause))
       setPartnerId(previous)
@@ -188,7 +202,20 @@ export function RestaurantManagementSlideOver({ restaurant, categories, onClose,
       setPartners((current) => [...current, partner].sort((a, b) => a.name.localeCompare(b.name, 'it')))
       setCreatingPartner(false)
       setNewPartnerName('')
-      await linkPartner(partner.id)
+      await linkPartner(partner.id, { silent: true })
+      // The new partner record itself isn't deleted on undo (just unlinked)
+      // -- an empty, never-linked partner left behind is harmless, and
+      // deleting service_partners rows isn't something this view does
+      // anywhere else.
+      pushUndo({
+        message: `Partner "${partner.name}" creato e collegato.`,
+        undo: async () => {
+          if (!restaurant) return
+          await updateRestaurant(supabase, restaurant.id, { partner_id: null })
+          setPartnerId(null)
+          await onSaved()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {

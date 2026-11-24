@@ -46,9 +46,17 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
   }, [hotelId, load])
 
   async function toggleActive(category: DiningCategory) {
+    const wasActive = category.active
     setCategories((current) => current.map((c) => c.id === category.id ? { ...c, active: !c.active } : c))
     try {
-      await updateCategory(supabase, category.id, { active: !category.active })
+      await updateCategory(supabase, category.id, { active: !wasActive })
+      pushUndo({
+        message: `"${category.name}" ${wasActive ? 'nascosta' : 'resa visibile'}.`,
+        undo: async () => {
+          await updateCategory(supabase, category.id, { active: wasActive })
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
       await load()
@@ -56,9 +64,17 @@ export function CategoriesTab({ hotelId, canManage }: CategoriesTabProps) {
   }
 
   async function setPriority(category: DiningCategory, value: number) {
+    const previous = category.sort_order
     setCategories((current) => current.map((c) => c.id === category.id ? { ...c, sort_order: value } : c))
     try {
       await updateCategory(supabase, category.id, { sort_order: value })
+      pushUndo({
+        message: `Priorità di "${category.name}" aggiornata.`,
+        undo: async () => {
+          await updateCategory(supabase, category.id, { sort_order: previous })
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
       await load()
@@ -151,6 +167,7 @@ function CategoryModal({ category, hotelId, onClose, onSaved, onRefresh, onDelet
   onRefresh: () => Promise<void>
   onDelete: (category: DiningCategory) => Promise<void>
 }) {
+  const pushUndo = useUndo()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -180,8 +197,19 @@ function CategoryModal({ category, hotelId, onClose, onSaved, onRefresh, onDelet
     setError(null)
     try {
       const name = String(new FormData(event.currentTarget).get('name'))
-      if (existing) await updateCategory(supabase, existing.id, { name })
-      else await createCategory(supabase, hotelId, name)
+      if (existing) {
+        const previousName = existing.name
+        await updateCategory(supabase, existing.id, { name })
+        pushUndo({
+          message: `Nome categoria aggiornato.`,
+          undo: async () => {
+            await updateCategory(supabase, existing.id, { name: previousName })
+            await onRefresh()
+          },
+        })
+      } else {
+        await createCategory(supabase, hotelId, name)
+      }
       await onSaved()
     } catch (cause) {
       setError(readableDiningError(cause))

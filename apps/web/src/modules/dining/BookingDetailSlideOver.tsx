@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Button, DatePicker, TimePicker } from '@homisuite/ui'
+import { Button, DatePicker, TimePicker, useUndo } from '@homisuite/ui'
 import { CheckCircle2, Pencil, Star, Trash2, XCircle } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
@@ -49,6 +49,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   const [editTime, setEditTime] = useState('')
   const [editSpecialRequests, setEditSpecialRequests] = useState('')
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
 
   const restaurantName = (reservation: ReservationRequest) => resolveRestaurantName(reservation, restaurants)
   const alternativeRestaurantName = (id: string) => restaurants.find((r) => r.id === id)?.name ?? '—'
@@ -109,12 +110,21 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
       })
       if (!ok) return
     }
+    const previousStatus = reservation.confirmation_status
     setSaving(true)
     setError(null)
     try {
       await updateReservation(supabase, reservation.id, { confirmation_status: status })
       await onChanged()
       await load()
+      pushUndo({
+        message: `Stato aggiornato a "${CONFIRMATION_STATUS_LABELS[status]}".`,
+        undo: async () => {
+          await updateReservation(supabase, reservation.id, { confirmation_status: previousStatus })
+          await onChanged()
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {
@@ -127,12 +137,22 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   // equivalent control, so the two never read as two different features.
   async function setAttendance(status: AttendanceStatus) {
     if (!reservation) return
+    const previousAttendance = reservation.attendance_status
+    const nextAttendance = previousAttendance === status ? 'pending' : status
     setSaving(true)
     setError(null)
     try {
-      await updateReservation(supabase, reservation.id, { attendance_status: reservation.attendance_status === status ? 'pending' : status })
+      await updateReservation(supabase, reservation.id, { attendance_status: nextAttendance })
       await onChanged()
       await load()
+      pushUndo({
+        message: `Presenza aggiornata a "${ATTENDANCE_STATUS_LABELS[nextAttendance]}".`,
+        undo: async () => {
+          await updateReservation(supabase, reservation.id, { attendance_status: previousAttendance })
+          await onChanged()
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {
@@ -143,6 +163,16 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
   async function saveEdit(event: FormEvent) {
     event.preventDefault()
     if (!reservation) return
+    const previous = {
+      guest_name: reservation.guest_name,
+      restaurant_id: reservation.restaurant_id,
+      custom_restaurant_name: reservation.custom_restaurant_name,
+      room_number: reservation.room_number,
+      party_size: reservation.party_size,
+      reservation_date: reservation.reservation_date,
+      reservation_time: reservation.reservation_time,
+      special_requests: reservation.special_requests,
+    }
     setSaving(true)
     setError(null)
     try {
@@ -158,6 +188,14 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
       await onChanged()
       await load()
       setEditing(false)
+      pushUndo({
+        message: 'Prenotazione modificata.',
+        undo: async () => {
+          await updateReservation(supabase, reservation.id, previous)
+          await onChanged()
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {
@@ -167,11 +205,19 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
 
   async function saveNote() {
     if (!reservation) return
+    const previousNote = reservation.confirmation_note
     setSaving(true)
     setError(null)
     try {
       await updateReservation(supabase, reservation.id, { confirmation_note: note || null })
       await onChanged()
+      pushUndo({
+        message: 'Nota aggiornata.',
+        undo: async () => {
+          await updateReservation(supabase, reservation.id, { confirmation_note: previousNote })
+          await onChanged()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     } finally {
@@ -181,11 +227,19 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
 
   async function addAlternative() {
     if (!reservation || !addAltId) return
-    const nextIds = [...alternatives.map((a) => a.restaurant_id), addAltId]
+    const previousIds = alternatives.map((a) => a.restaurant_id)
+    const nextIds = [...previousIds, addAltId]
     setAddAltId('')
     try {
       await setAlternatives(supabase, reservation.id, nextIds)
       await load()
+      pushUndo({
+        message: 'Alternativa aggiunta.',
+        undo: async () => {
+          await setAlternatives(supabase, reservation.id, previousIds)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }
@@ -193,10 +247,18 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
 
   async function removeAlternative(restaurantId: string) {
     if (!reservation) return
-    const nextIds = alternatives.map((a) => a.restaurant_id).filter((id) => id !== restaurantId)
+    const previousIds = alternatives.map((a) => a.restaurant_id)
+    const nextIds = previousIds.filter((id) => id !== restaurantId)
     try {
       await setAlternatives(supabase, reservation.id, nextIds)
       await load()
+      pushUndo({
+        message: 'Alternativa rimossa.',
+        undo: async () => {
+          await setAlternatives(supabase, reservation.id, previousIds)
+          await load()
+        },
+      })
     } catch (cause) {
       setError(readableDiningError(cause))
     }
