@@ -23,6 +23,7 @@ import {
   setCategoryJobTitles,
   setRequestCategoryActive,
   setRequestTypeActive,
+  subscribeToMenu,
   updateRequestCategoryIcon,
   updateRequestCategoryName,
   updateRequestCategoryTranslations,
@@ -71,6 +72,13 @@ export function ItemsPage({ hotelId }: { hotelId: string }) {
 
   useEffect(() => {
     reload().catch(() => setError(t('staff.items.loadError')))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelId])
+
+  // Another admin editing the menu from a second device/tab shows up here
+  // without a manual refresh.
+  useEffect(() => {
+    return subscribeToMenu(hotelId, () => void reload())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId])
 

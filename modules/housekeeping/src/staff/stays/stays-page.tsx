@@ -10,7 +10,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { FieldError, FieldGroup, Input, Label, Select } from '@/components/ui/field'
 import { DatePicker, TimePicker } from '@homisuite/ui'
 import { listRooms, type Room } from '@/lib/admin-api'
-import { cancelStay, checkOutStayNow, createStay, fetchRequestsForStay, listStays, restoreStay, updateCheckout, updateStay, type Stay, type StayRequest } from '@/lib/stays-api'
+import { cancelStay, checkOutStayNow, createStay, deleteStay, fetchRequestsForStay, listStays, restoreStay, subscribeToStays, updateCheckout, updateStay, type Stay, type StayRequest } from '@/lib/stays-api'
 import { OperaImportPanel } from '@/staff/stays/opera-import-panel'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
@@ -75,6 +75,13 @@ export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId])
 
+  // Another reception device checking in/out/cancelling a stay shows up
+  // here without a manual refresh.
+  useEffect(() => {
+    return subscribeToStays(hotelId, () => void reload())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelId])
+
   return (
     <div className="space-y-6">
       {profile && embeddedNav ? (
@@ -106,6 +113,7 @@ export function StaysPage({ hotelId, hotelSettings, profile, embeddedNav }: {
 
 function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: string; rooms: Room[]; hotelSettings?: PlatformHotelSettings; onCreated: () => Promise<void> }) {
   const { t } = useLocale()
+  const pushUndo = useUndo()
   const [roomId, setRoomId] = useState('')
   const [lastName, setLastName] = useState('')
   const [checkIn, setCheckIn] = useState(() => hotelSettings?.checkInTime ? defaultDateTimeInput(0, hotelSettings.checkInTime) : '')
@@ -132,6 +140,14 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
       setCheckIn(hotelSettings?.checkInTime ? defaultDateTimeInput(0, hotelSettings.checkInTime) : '')
       setCheckOut(hotelSettings?.checkOutTime ? defaultDateTimeInput(1, hotelSettings.checkOutTime) : '')
       await onCreated()
+      pushUndo({
+        message: t('common.toast.done'),
+        undo: async () => {
+          await deleteStay(stay.id)
+          setCreatedPin((current) => (current?.pin === stay.guest_pin ? null : current))
+          await onCreated()
+        },
+      })
     } catch (err) {
       const ref = tenantIntegrityErrorRef(err)
       setError(ref ? t('staff.stays.tenantMismatchError', { ref }) : t('staff.stays.addError'))
@@ -280,7 +296,26 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
       description: t('staff.stays.checkoutNowDesc', { room: stay.rooms?.room_number ?? '', name: stay.guest_last_name, pin: stay.guest_pin }),
       confirmLabel: t('staff.stays.checkoutNowConfirm'),
     })
-    if (ok) await run(() => checkOutStayNow(stay.id), t('staff.stays.checkoutNowSuccess'))
+    if (!ok) return
+    // Captured before the action runs -- checkOutStayNow overwrites
+    // check_out_at (to "now") as well as status, so undoing it needs both
+    // reverted, not just the status restoreStay already handles for
+    // onDeactivate below.
+    const previousCheckOutAt = stay.check_out_at
+    // No separate success toast here (unlike run()'s other callers) --
+    // pushUndo's own toast already carries the "check-out effettuato"
+    // message, with an undo action attached, same as onDeactivate below.
+    const succeeded = await run(() => checkOutStayNow(stay.id))
+    if (succeeded) {
+      pushUndo({
+        message: t('staff.stays.checkoutNowSuccess'),
+        undo: async () => {
+          await restoreStay(stay.id)
+          await updateCheckout(stay.id, previousCheckOutAt)
+          await onChanged()
+        },
+      })
+    }
   }
 
   async function onDeactivate() {
@@ -362,7 +397,15 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
                 <Button
                   size="sm"
                   disabled={pending || !detailsRoomId || !detailsGuestLastName.trim()}
-                  onClick={() =>
+                  onClick={() => {
+                    // Captured before the save overwrites them -- undo
+                    // replays updateStay with these instead of the new values.
+                    const previous = {
+                      roomId: stay.room_id,
+                      guestLastName: stay.guest_last_name,
+                      checkInAt: stay.check_in_at,
+                      checkOutAt: stay.check_out_at,
+                    }
                     run(() =>
                       updateStay(stay.id, {
                         roomId: detailsRoomId,
@@ -370,9 +413,18 @@ function StayRow({ hotelId, stay, rooms, onChanged }: { hotelId: string; stay: S
                         checkInAt: new Date(detailsCheckIn).toISOString(),
                         checkOutAt: new Date(detailsCheckOut).toISOString(),
                       }),
-                      t('common.toast.saved'),
-                    ).then((ok) => { if (ok) setEditingDetails(false) })
-                  }
+                    ).then((ok) => {
+                      if (!ok) return
+                      setEditingDetails(false)
+                      pushUndo({
+                        message: t('common.toast.saved'),
+                        undo: async () => {
+                          await updateStay(stay.id, previous)
+                          await onChanged()
+                        },
+                      })
+                    })
+                  }}
                 >
                   {t('staff.stays.save')}
                 </Button>

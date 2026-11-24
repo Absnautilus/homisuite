@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { hotelFilter } from '@/lib/hotel-query-scope'
+import { hotelFilter, realtimeHotelFilter } from '@/lib/hotel-query-scope'
 import { sortJobTitlesReceptionFirst } from '@/lib/format'
 import type { Department, StaffDepartment, StaffRole } from '@/lib/types'
 
@@ -42,6 +42,19 @@ export async function deleteRoom(id: string): Promise<void> {
 export async function restoreRoom(room: Room): Promise<void> {
   const { error } = await supabase.from('rooms').insert(room)
   if (error) throw error
+}
+
+// So another admin adding/toggling a room from a second device/tab shows
+// up here without a manual refresh -- same invalidate-and-refetch shape as
+// staff-api.ts's subscribeToQueue/subscribeToRoster.
+export function subscribeToRooms(hotelId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`rooms-admin-${hotelId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: realtimeHotelFilter(hotelId) }, onChange)
+    .subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
 }
 
 export interface Hotel {
@@ -159,6 +172,29 @@ export async function listMenu(hotelId: string): Promise<{ categories: RequestCa
   const categories = categoryRows.map((category) => ({ ...category, job_title_ids: jobTitleIdsByCategory.get(category.id) ?? [] }))
 
   return { categories, types: typesRes.data ?? [] }
+}
+
+// Invalidate-and-refetch for listMenu's two tables. request_types has no
+// hotel_id of its own (it's scoped indirectly via category_id), so its leg
+// of the subscription can't be filtered server-side the way
+// request_categories' can -- it fires on every hotel's request_types
+// changes, same as any other cross-tenant postgres_changes payload this
+// app never reads directly (the callback only triggers a refetch, which
+// listMenu's own hotelFilter still scopes correctly; no other hotel's row
+// contents ever reach this client).
+export function subscribeToMenu(hotelId: string, onChange: () => void) {
+  const categoriesChannel = supabase
+    .channel(`request_categories-admin-${hotelId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'request_categories', filter: realtimeHotelFilter(hotelId) }, onChange)
+    .subscribe()
+  const typesChannel = supabase
+    .channel(`request_types-admin-${hotelId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'request_types' }, onChange)
+    .subscribe()
+  return () => {
+    supabase.removeChannel(categoriesChannel)
+    supabase.removeChannel(typesChannel)
+  }
 }
 
 export async function createRequestCategory(input: { name: string; jobTitleIds: string[] }): Promise<void> {

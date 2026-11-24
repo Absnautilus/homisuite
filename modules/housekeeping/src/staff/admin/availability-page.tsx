@@ -3,7 +3,8 @@ import { Badge } from '@/components/ui/badge'
 import { AutoText } from '@/components/auto-text'
 import { EmptyState, IconInboxEmpty } from '@/components/empty-state'
 import { Table, TableBody, TableCell, TableFrame, TableHead, TableHeaderCell, TableRow } from '@/components/ui/table'
-import { fetchItemAvailability, type ItemAvailability } from '@/lib/admin-api'
+import { fetchItemAvailability, subscribeToMenu, type ItemAvailability } from '@/lib/admin-api'
+import { subscribeToQueue } from '@/lib/staff-api'
 import { getErrorMessage } from '@/lib/errors'
 import { useLocale } from '@/lib/i18n/locale-context'
 
@@ -12,13 +13,31 @@ export function AvailabilityPage({ hotelId }: { hotelId: string }) {
   const [items, setItems] = useState<ItemAvailability[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  function reload() {
     fetchItemAvailability(hotelId)
       .then(setItems)
       .catch((err) => {
         console.error(err)
         setError(getErrorMessage(err))
       })
+  }
+
+  useEffect(() => {
+    reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelId])
+
+  // What's "in use" right now (guest_requests) and the tracked totals
+  // themselves (request_types.available_quantity) can both change from
+  // another device without this one doing anything.
+  useEffect(() => {
+    const unsubscribeQueue = subscribeToQueue(hotelId, () => reload())
+    const unsubscribeMenu = subscribeToMenu(hotelId, () => reload())
+    return () => {
+      unsubscribeQueue()
+      unsubscribeMenu()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId])
 
   return (

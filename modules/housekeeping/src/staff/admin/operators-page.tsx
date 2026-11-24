@@ -4,12 +4,14 @@ import { LinkButton } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableFrame, TableHead, TableHeaderCell, TableRow } from '@/components/ui/table'
 import { listStaff, setStaffActive, type OperatorSummary } from '@/lib/admin-api'
+import { subscribeToRoster } from '@/lib/staff-api'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { TranslationKey } from '@/lib/i18n/dictionaries'
 import type { StaffRole } from '@/lib/types'
 import type { StaffProfile } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
+import { useUndo } from '@homisuite/ui'
 import type { PlatformStaffManagementLink } from '@/public/HousekeepingModule'
 
 const ROLE_KEY: Record<StaffRole, TranslationKey> = {
@@ -40,6 +42,7 @@ export function OperatorsPage({
   const [staff, setStaff] = useState<OperatorSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmDialog, confirm] = useConfirm()
+  const pushUndo = useUndo()
 
   async function reload() {
     setStaff(await listStaff(hotelId))
@@ -47,6 +50,16 @@ export function OperatorsPage({
 
   useEffect(() => {
     reload().catch(() => setError(t('staff.operators.loadError')))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelId])
+
+  // Another admin toggling someone's access from a second device/tab (or
+  // Team bridging/unbridging a profile) shows up here without a manual
+  // refresh. No scoped hotelId (the legacy standalone path) means nothing
+  // safe to filter the subscription by, so it's skipped there.
+  useEffect(() => {
+    if (!hotelId) return
+    return subscribeToRoster(hotelId, () => void reload())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId])
 
@@ -60,13 +73,28 @@ export function OperatorsPage({
       if (!ok) return
     }
     setError(null)
-    const next = !person.active
+    const wasActive = person.active
+    const next = !wasActive
     setStaff((current) => current?.map((p) => (p.id === person.id ? { ...p, active: next } : p)) ?? current)
     try {
       await setStaffActive(person.id, next)
-      push(t(next ? 'common.toast.activated' : 'common.toast.deactivated'), 'success')
+      if (next) {
+        push(t('common.toast.activated'), 'success')
+      } else {
+        // No separate success toast for deactivation -- pushUndo's own
+        // toast already carries it, with an undo action attached, same as
+        // every other destructive toggle in this module (rooms-page.tsx,
+        // stays-page.tsx).
+        pushUndo({
+          message: t('common.toast.deactivated'),
+          undo: async () => {
+            await setStaffActive(person.id, true)
+            setStaff((current) => current?.map((p) => (p.id === person.id ? { ...p, active: true } : p)) ?? current)
+          },
+        })
+      }
     } catch {
-      setStaff((current) => current?.map((p) => (p.id === person.id ? { ...p, active: person.active } : p)) ?? current)
+      setStaff((current) => current?.map((p) => (p.id === person.id ? { ...p, active: wasActive } : p)) ?? current)
       setError(t('staff.operators.toggleError'))
     }
   }

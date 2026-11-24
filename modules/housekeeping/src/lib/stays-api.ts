@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Room } from '@/lib/admin-api'
 import type { Department } from '@/lib/types'
-import { hotelFilter } from '@/lib/hotel-query-scope'
+import { hotelFilter, realtimeHotelFilter } from '@/lib/hotel-query-scope'
 
 export interface Stay {
   id: string
@@ -25,6 +25,19 @@ export async function listStays(hotelId: string): Promise<Stay[]> {
   return (data ?? []) as unknown as Stay[]
 }
 
+// So a stay checked in/out/cancelled from another device shows up here
+// without a manual refresh -- same invalidate-and-refetch shape as
+// staff-api.ts's subscribeToQueue/subscribeToRoster.
+export function subscribeToStays(hotelId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`stays-admin-${hotelId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stays', filter: realtimeHotelFilter(hotelId) }, onChange)
+    .subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
 export async function createStay(input: {
   hotelId: string
   roomId: string
@@ -45,6 +58,15 @@ export async function createStay(input: {
     .single()
   if (error) throw error
   return data as unknown as Stay
+}
+
+// Undo for createStay -- the stay has no history yet the instant after
+// creation (no requests, no guest session worth preserving), so this is a
+// real delete rather than the soft cancel/restore pair above.
+export async function deleteStay(id: string): Promise<void> {
+  const { data, error } = await supabase.from('stays').delete().eq('id', id).select('id').maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('stay_delete_not_applied')
 }
 
 export async function updateCheckout(id: string, checkOutAt: string): Promise<void> {

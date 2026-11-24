@@ -180,6 +180,16 @@ export async function rejectRequest(id: string, staffId: string) {
   if (error) throw error
 }
 
+// Undo for rejectRequest -- clears the same two columns it set, leaving
+// status untouched just as rejectRequest itself does.
+export async function unrejectRequest(id: string) {
+  const { error } = await supabase
+    .from('guest_requests')
+    .update({ rejected_by: null, rejected_at: null })
+    .eq('id', id)
+  if (error) throw error
+}
+
 // Pushes a one-off reminder to whoever currently has this request in
 // charge (accepted_by), instead of waiting for the automatic 10-minute
 // stalled escalation. Doesn't touch the row itself -- send_request_reminder

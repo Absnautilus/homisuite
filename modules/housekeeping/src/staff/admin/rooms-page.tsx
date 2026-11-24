@@ -14,7 +14,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
-import { createRoom, deleteRoom, listRooms, restoreRoom, setRoomActive, type Room } from '@/lib/admin-api'
+import { createRoom, deleteRoom, listRooms, restoreRoom, setRoomActive, subscribeToRooms, type Room } from '@/lib/admin-api'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
@@ -41,6 +41,13 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId])
 
+  // Another admin adding/toggling/deleting a room from a second device/tab
+  // shows up here without a manual refresh.
+  useEffect(() => {
+    return subscribeToRooms(hotelId, () => void reload())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelId])
+
   async function onToggle(room: Room) {
     if (room.active) {
       const ok = await confirm({
@@ -51,13 +58,27 @@ export function RoomsPage({ hotelId }: { hotelId: string }) {
       if (!ok) return
     }
     setError(null)
-    const next = !room.active
+    const wasActive = room.active
+    const next = !wasActive
     setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: next } : r)) ?? current)
     try {
       await setRoomActive(room.id, next)
-      push(t(next ? 'common.toast.activated' : 'common.toast.deactivated'), 'success')
+      if (next) {
+        push(t('common.toast.activated'), 'success')
+      } else {
+        // No separate success toast for deactivation -- pushUndo's own
+        // toast already carries it, with an undo action attached, same as
+        // deleteRoom below.
+        pushUndo({
+          message: t('common.toast.deactivated'),
+          undo: async () => {
+            await setRoomActive(room.id, true)
+            setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: true } : r)) ?? current)
+          },
+        })
+      }
     } catch {
-      setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: room.active } : r)) ?? current)
+      setRooms((current) => current?.map((r) => (r.id === room.id ? { ...r, active: wasActive } : r)) ?? current)
       setError(t('staff.rooms.toggleError'))
     }
   }

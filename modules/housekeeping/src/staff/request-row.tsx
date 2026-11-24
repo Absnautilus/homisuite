@@ -8,11 +8,12 @@ import { AlertTriangle, ArrowDownToLine, ArrowLeft, Bell, Check, ChevronDown, Ch
 import { Avatar } from '@/components/avatar'
 import { AutoText } from '@/components/auto-text'
 import { formatElapsed, formatTime } from '@/lib/format'
-import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, rejectRequest, revertRequest, sendRequestReminder, setRequestUrgent, updateRequest } from '@/lib/staff-api'
+import { cancelRequest, claimRequest, completeRequest, deleteRequest, markItemReturned, reassignRequestToJobTitle, rejectRequest, revertRequest, sendRequestReminder, setRequestUrgent, unrejectRequest, updateRequest } from '@/lib/staff-api'
 import type { QueueJobTitle, QueuedRequest } from '@/lib/staff-types'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { useUndo } from '@homisuite/ui'
 
 export function RequestRow({
   request,
@@ -54,6 +55,7 @@ export function RequestRow({
 }) {
   const { t } = useLocale()
   const { push } = useToast()
+  const pushUndo = useUndo()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDialog, confirm] = useConfirm()
@@ -72,13 +74,15 @@ export function RequestRow({
   const rejectedByName = request.rejected_by_staff && request.rejected_by_staff.role !== 'master' ? request.rejected_by_staff.name : null
   const acceptedByName = request.accepted_by_staff && request.accepted_by_staff.role !== 'master' ? request.accepted_by_staff.name : null
 
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>): Promise<boolean> {
     setPending(true)
     setError(null)
     try {
       await action()
+      return true
     } catch {
       setError(t('staff.row.opFailed'))
+      return false
     } finally {
       setPending(false)
     }
@@ -120,7 +124,17 @@ export function RequestRow({
       description: t('staff.row.cancelDesc', { room: request.room_number, type: typeName }),
       confirmLabel: t('staff.row.cancelConfirm'),
     })
-    if (ok) run(() => cancelRequest(request.id))
+    if (!ok) return
+    // revertRequest(id, 'cancelled') is the same undo the persistent
+    // "Annulla" revert button in 'done' mode already uses -- offered here
+    // too via Ctrl+Z/the toast so undoing doesn't require first finding
+    // this request under "Completate".
+    if (await run(() => cancelRequest(request.id))) {
+      pushUndo({
+        message: t('staff.row.cancelConfirm'),
+        undo: () => revertRequest(request.id, 'cancelled'),
+      })
+    }
   }
 
   // Deliberately not cancelRequest: rejecting a still-unclaimed request
@@ -132,7 +146,17 @@ export function RequestRow({
       description: t('staff.row.rejectDesc', { room: request.room_number, type: typeName }),
       confirmLabel: t('staff.row.rejectConfirm'),
     })
-    if (ok) run(() => rejectRequest(request.id, staffId))
+    if (!ok) return
+    // Unlike cancel/complete, a rejected-but-unclaimed request has no
+    // persistent "un-reject" control anywhere in the UI (its own compact
+    // card only offers Delete) -- this is the only way back short of
+    // asking the guest to resubmit.
+    if (await run(() => rejectRequest(request.id, staffId))) {
+      pushUndo({
+        message: t('staff.row.rejectConfirm'),
+        undo: () => unrejectRequest(request.id),
+      })
+    }
   }
 
   async function onDelete() {
