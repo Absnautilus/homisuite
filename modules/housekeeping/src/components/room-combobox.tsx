@@ -87,8 +87,15 @@ export function RoomCombobox({
   function openForBrowsing() {
     window.clearTimeout(blurTimeout.current)
     setEditing(true)
-    setQuery('')
+    // Prefilled with the current room (not blanked to the placeholder) and
+    // selected outright -- clicking a field that already has a value used
+    // to wipe it to "Scrivi il numero", which read as the room number
+    // vanishing and left nothing on screen to backspace. Selecting it means
+    // typing a digit replaces it in one go, same as a plain text field, and
+    // a bare Backspace clears it.
+    setQuery(selected ? selected.room_number : '')
     setOpen(true)
+    inputRef.current?.select()
   }
 
   function pick(room: Room) {
