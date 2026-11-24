@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ShiftPlannerModule, type ShiftAvailableTeamMember, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem, type VacationPeriod, type VacationSettings } from '@homisuite/shifts-module'
+import { useUndo } from '@homisuite/ui'
 import '@homisuite/shifts-module/style.css'
 import { PageState } from '../../components/PageState'
 import { supabase } from '../../core/client'
@@ -8,7 +9,7 @@ import { loadLiveShiftData } from './shiftLiveData'
 import { subscribeToLiveData } from './subscribeToLiveData'
 import { loadAvailableTeamMembers } from './availableTeamMembers'
 import { addStaffMember } from './addStaffMember'
-import { saveShiftAssignments } from './saveShiftAssignments'
+import { saveShiftAssignments, type ShiftAssignmentChange } from './saveShiftAssignments'
 import { saveMemberOrder } from './saveMemberOrder'
 import { saveRuleSet } from './saveRuleSet'
 import { setUnitRestDays, setUnitFutureRestDays } from './saveRestDays'
@@ -32,6 +33,7 @@ type State =
 
 export function ShiftPlannerPage() {
   const runtime = useModuleRuntime()
+  const pushUndo = useUndo()
   const propertyId = runtime.property?.id ?? null
   const propertyName = runtime.property?.name ?? 'Struttura'
   const entitled = runtime.entitlements.some((item) => item.enabled && item.slug === 'shifts')
@@ -166,11 +168,35 @@ export function ShiftPlannerPage() {
     if (!propertyId || !profileId) throw new Error('Missing active property/profile')
     const byUnit = new Map<string, typeof changes>()
     for (const change of changes) byUnit.set(change.planningUnitId, [...(byUnit.get(change.planningUnitId) ?? []), change])
+
+    // Snapshot each cell's current code before this save overwrites it --
+    // undo replays the same saveShiftAssignments call with these instead of
+    // the new ones, same shape generate/clear/lock already use for theirs.
+    const previousChanges: ShiftAssignmentChange[] = changes.map((change) => {
+      const unit = readyState.property.units.find((candidate) => candidate.id === change.planningUnitId)
+      const dateIndex = unit?.assignmentDates?.indexOf(change.shiftDate) ?? -1
+      const previousCode = dateIndex >= 0 ? (unit?.assignments[change.staffProfileId]?.[dateIndex] ?? '') : ''
+      return { ...change, code: previousCode }
+    })
+
     for (const [unitId, unitChanges] of byUnit) {
       const unit = readyState.property.units.find((candidate) => candidate.id === unitId)
       if (!unit) throw new Error('Unknown planning unit')
       await saveShiftAssignments(supabase, propertyId, profileId, unit, unitChanges)
     }
+    pushUndo({
+      message: changes.length > 1 ? 'Turni aggiornati.' : 'Turno aggiornato.',
+      undo: async () => {
+        const byUnitPrev = new Map<string, ShiftAssignmentChange[]>()
+        for (const change of previousChanges) byUnitPrev.set(change.planningUnitId, [...(byUnitPrev.get(change.planningUnitId) ?? []), change])
+        for (const [unitId, unitChanges] of byUnitPrev) {
+          const unit = readyState.property.units.find((candidate) => candidate.id === unitId)
+          if (!unit) continue
+          await saveShiftAssignments(supabase, propertyId, profileId, unit, unitChanges)
+        }
+        void refreshLiveData({ silent: true })
+      },
+    })
   }} onReorderMembers={async ({ planningUnitId, staffProfileIds }) => {
     if (!propertyId) throw new Error('Missing active property')
     await saveMemberOrder(supabase, propertyId, planningUnitId, staffProfileIds)

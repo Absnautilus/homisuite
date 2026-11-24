@@ -157,6 +157,11 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
       setSelectedKeys(new Set())
       return
     }
+    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedKeys.size > 0) {
+      event.preventDefault()
+      applyToSelection('')
+      return
+    }
     const mod = event.ctrlKey || event.metaKey
     if (!mod || selectedKeys.size === 0) return
     const key = event.key.toLowerCase()
