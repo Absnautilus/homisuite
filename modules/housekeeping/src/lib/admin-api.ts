@@ -49,7 +49,7 @@ export async function restoreRoom(room: Room): Promise<void> {
 // staff-api.ts's subscribeToQueue/subscribeToRoster.
 export function subscribeToRooms(hotelId: string, onChange: () => void) {
   const channel = supabase
-    .channel(`rooms-admin-${hotelId}`)
+    .channel(`rooms-admin-${hotelId}-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: realtimeHotelFilter(hotelId) }, onChange)
     .subscribe()
   return () => {
@@ -184,11 +184,11 @@ export async function listMenu(hotelId: string): Promise<{ categories: RequestCa
 // contents ever reach this client).
 export function subscribeToMenu(hotelId: string, onChange: () => void) {
   const categoriesChannel = supabase
-    .channel(`request_categories-admin-${hotelId}`)
+    .channel(`request_categories-admin-${hotelId}-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'request_categories', filter: realtimeHotelFilter(hotelId) }, onChange)
     .subscribe()
   const typesChannel = supabase
-    .channel(`request_types-admin-${hotelId}`)
+    .channel(`request_types-admin-${hotelId}-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'request_types' }, onChange)
     .subscribe()
   return () => {

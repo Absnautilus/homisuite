@@ -168,7 +168,7 @@ export async function setAttendance(requestId: string, status: PartnerReservatio
 // for the realtime feed exactly as it does for the plain select.
 export function subscribeToReservations(onChange: () => void) {
   const channel = supabase
-    .channel('partner-reservations')
+    .channel(`partner-reservations-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_reservation_requests' }, onChange)
     .subscribe()
   return () => {

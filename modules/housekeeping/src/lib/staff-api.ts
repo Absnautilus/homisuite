@@ -69,7 +69,7 @@ export function subscribeToQueue(
   onChange: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void,
 ) {
   const channel = supabase
-    .channel(`guest_requests-queue-${hotelId}`)
+    .channel(`guest_requests-queue-${hotelId}-${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'guest_requests', filter: realtimeHotelFilter(hotelId) },
@@ -122,7 +122,7 @@ export async function listRoster(hotelId: string): Promise<StaffProfile[]> {
 
 export function subscribeToRoster(hotelId: string, onChange: () => void) {
   const channel = supabase
-    .channel(`staff_profiles-roster-${hotelId}`)
+    .channel(`staff_profiles-roster-${hotelId}-${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'staff_profiles', filter: realtimeHotelFilter(hotelId) },

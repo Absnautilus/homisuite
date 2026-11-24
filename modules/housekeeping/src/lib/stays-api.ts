@@ -30,7 +30,7 @@ export async function listStays(hotelId: string): Promise<Stay[]> {
 // staff-api.ts's subscribeToQueue/subscribeToRoster.
 export function subscribeToStays(hotelId: string, onChange: () => void) {
   const channel = supabase
-    .channel(`stays-admin-${hotelId}`)
+    .channel(`stays-admin-${hotelId}-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'stays', filter: realtimeHotelFilter(hotelId) }, onChange)
     .subscribe()
   return () => {
