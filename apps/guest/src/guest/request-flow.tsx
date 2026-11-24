@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Minus, Plus } from 'lucide-react'
+import { useUndo } from '@homisuite/ui'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Label, Textarea } from '@/components/ui/field'
 import { CategoryIcon } from '@/components/category-icon'
 import { AutoText } from '@/components/auto-text'
-import { createGuestRequest, fetchMenu, isInvalidSessionError } from '@/lib/guest-api'
+import { cancelMyRequest, createGuestRequest, fetchMenu, isInvalidSessionError } from '@/lib/guest-api'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useBackableStep } from '@/lib/use-backable-step'
 import type { GuestRequest, RequestCategory, RequestType } from '@/lib/types'
@@ -26,6 +27,7 @@ export function RequestFlow({
   onCreated: (request: GuestRequest) => void
 }) {
   const { t } = useLocale()
+  const pushUndo = useUndo()
   const [menu, setMenu] = useState<{ categories: RequestCategory[]; types: RequestType[] } | null>(null)
   const [menuError, setMenuError] = useState<string | null>(null)
   const [step, setStep] = useBackableStep<Step>({ name: 'categories' })
@@ -76,6 +78,15 @@ export function RequestFlow({
             const request = await createGuestRequest(token, step.type.id, quantity, note)
             setStep({ name: 'confirm', type: step.type, request })
             onCreated(request)
+            // A fresh request is always still 'requested', the one status
+            // cancelMyRequest accepts -- undoing the creation is exactly a
+            // cancel, no separate "delete" RPC needed.
+            pushUndo({
+              message: t('flow.confirmTitle'),
+              undo: async () => {
+                await cancelMyRequest(token, request.id)
+              },
+            })
           } catch (error) {
             if (isInvalidSessionError(error)) {
               onSessionExpired()

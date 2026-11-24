@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ChevronDown, Clock, Globe, Map as MapIcon, Minus, Phone, Plus, Sparkles } from 'lucide-react'
+import { useUndo } from '@homisuite/ui'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldGroup, Input, Label, Textarea } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
 import { CategoryIcon } from '@/components/category-icon'
-import { createDiningReservationRequest, fetchDiningCatalog, fetchDiningHours, fetchDiningPhotos, isInvalidSessionError } from '@/lib/guest-api'
+import { cancelDiningReservation, createDiningReservationRequest, fetchDiningCatalog, fetchDiningHours, fetchDiningPhotos, isInvalidSessionError } from '@/lib/guest-api'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useBackableStep } from '@/lib/use-backable-step'
 import type { DiningCategory, DiningHour, DiningPhoto, DiningRestaurant } from '@/lib/types'
@@ -381,6 +382,7 @@ function RequestWizard({ restaurant, token, onBack, onSessionExpired, onSubmitte
   onSubmitted: () => void
 }) {
   const { t } = useLocale()
+  const pushUndo = useUndo()
   const [date, setDate] = useState('')
   const [time, setTime] = useState('20:00')
   const [pax, setPax] = useState(2)
@@ -392,8 +394,17 @@ function RequestWizard({ restaurant, token, onBack, onSessionExpired, onSubmitte
     setPending(true)
     setError(null)
     try {
-      await createDiningReservationRequest(token, restaurant.id, date, time, pax, note.trim() || null)
+      const reservationId = await createDiningReservationRequest(token, restaurant.id, date, time, pax, note.trim() || null)
       onSubmitted()
+      // A brand-new reservation is always in a cancellable state (see
+      // cancelDiningReservation's own comment) -- undoing the creation is
+      // exactly a cancel, no separate "delete" RPC needed.
+      pushUndo({
+        message: t('dining.confirmTitle'),
+        undo: async () => {
+          await cancelDiningReservation(token, reservationId)
+        },
+      })
     } catch (cause) {
       if (isInvalidSessionError(cause)) {
         onSessionExpired()

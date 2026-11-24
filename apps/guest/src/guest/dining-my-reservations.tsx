@@ -8,6 +8,8 @@ import { cancelDiningReservation, createDiningReservationFeedback, fetchDiningCa
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { DiningReservation, DiningReservationStatus, DiningRestaurant } from '@/lib/types'
 
+const POLL_INTERVAL_MS = 12_000
+
 // Dining has its own, richer status set than guest_requests' simple
 // requested/in_progress/completed/cancelled (see DiningReservationStatus's
 // own comment) -- reusing StatusBadge's existing four color buckets rather
@@ -51,15 +53,31 @@ export function DiningMyReservations({ token, onSessionExpired }: { token: strin
   }, [])
 
   useEffect(() => {
-    listMyDiningReservations(token)
-      .then(setReservations)
-      .catch((cause) => {
+    let cancelled = false
+
+    async function load() {
+      try {
+        const data = await listMyDiningReservations(token)
+        if (!cancelled) setReservations(data)
+      } catch (cause) {
         if (isInvalidSessionError(cause)) {
           onSessionExpired()
           return
         }
-        setError(t('dining.loadReservationsError'))
-      })
+        if (!cancelled) setError(t('dining.loadReservationsError'))
+      }
+    }
+
+    // No anon-safe Realtime subscription exists for this table yet (guest
+    // reads go through list_my_dining_reservations, not direct RLS) -- same
+    // polling fallback status-list.tsx already uses, so a guest still sees
+    // the restaurant's confirm/decline without a manual refresh.
+    load()
+    const interval = setInterval(load, POLL_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 

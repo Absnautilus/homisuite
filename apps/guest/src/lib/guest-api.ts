@@ -119,6 +119,10 @@ export async function fetchDiningPhotos(restaurantId: string): Promise<DiningPho
 // mirrors createGuestRequest's own shape exactly: same token, same
 // 'invalid_session' contract, same SECURITY DEFINER RPC as the only way an
 // anon guest ever touches restaurant_reservation_requests.
+// Returns the created row's id (the RPC itself returns the full row) so a
+// caller can offer Ctrl+Z straight after submitting: undo = cancel this
+// exact reservation via cancelDiningReservation, no separate "delete" RPC
+// needed since a brand-new reservation is always in a cancellable state.
 export async function createDiningReservationRequest(
   token: string,
   restaurantId: string,
@@ -126,8 +130,8 @@ export async function createDiningReservationRequest(
   reservationTime: string,
   partySize: number,
   specialRequests: string | null,
-): Promise<void> {
-  const { error } = await supabase.rpc('create_dining_reservation_request', {
+): Promise<string> {
+  const { data, error } = await supabase.rpc('create_dining_reservation_request', {
     p_token: token,
     p_restaurant_id: restaurantId,
     p_reservation_date: reservationDate,
@@ -136,6 +140,7 @@ export async function createDiningReservationRequest(
     p_special_requests: specialRequests,
   })
   if (error) throw error
+  return (data as DiningReservation).id
 }
 
 // cancel_dining_reservation mirrors cancel_my_request's own shape (same
