@@ -22,6 +22,32 @@ into `@homisuite/ui` (and updating every call site) is a deliberate,
 separate piece of work, not something to do incidentally while adding an
 unrelated feature.
 
+## Undo (Ctrl+Z) and realtime
+
+Every write a user makes (create, update, delete, status change — any
+mutation, not just deletes) must be undoable with Ctrl+Z / Cmd+Z for a
+short window right after it happens. Use the existing mechanism:
+`useUndo()` from `@homisuite/ui` (`packages/ui/src/undo-context.tsx`) —
+call `pushUndo({ message, undo })` right after the mutation succeeds,
+where `undo` reverses it (restore the deleted row, revert the previous
+field values, flip the status back). `UndoProvider` already wires the
+Ctrl+Z listener and the "Annulla" toast; it just needs to be mounted once
+near each app's root (`apps/web`, `apps/partner`, `apps/guest` each need
+their own — it is not shared across separate deployed apps the way it is
+across modules embedded in the same app). One pending action at a time,
+not a stack: a new undoable action simply replaces whatever was pending.
+Never build a second, local undo/toast mechanism — if a screen's own
+mutation doesn't fit the existing shape, extend `useUndo`/`UndoAction`
+rather than reinventing it there.
+
+Every view that lists or displays data another user or device can also
+change (requests, bookings, shifts, stays, reservations, ...) must update
+itself live via Supabase Realtime instead of requiring a manual refresh —
+follow the pattern already used in Turni and Dining's Prenotazioni tab
+(`subscribeToQueue`/`realtimeHotelFilter` in `staff-api.ts` is the
+reference implementation). A list that only loads once on mount and never
+subscribes is a bug, not a missing nice-to-have.
+
 ## Save buttons
 
 A page or panel's save button must always read exactly "Salva" — never
