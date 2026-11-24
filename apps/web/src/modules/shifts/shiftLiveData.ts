@@ -86,7 +86,7 @@ export async function loadLiveShiftData(
     supabase.from('shift_codes').select('id,planning_unit_id,code,label,kind,starts_at,ends_at,color,text_color,active').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_unit_members').select('id,planning_unit_id,staff_profile_id,assignment_profile_key,inclusion_source,display_order').eq('property_id', propertyId).in('planning_unit_id', unitIds).eq('active', true),
     supabase.from('shift_rule_sets').select('id,planning_unit_id,version,preset_key,engine_version,rules').eq('property_id', propertyId).in('planning_unit_id', unitIds),
-    supabase.from('shifts').select('id,planning_unit_id,staff_profile_id,shift_date,locked,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
+    supabase.from('shifts').select('id,planning_unit_id,staff_profile_id,shift_date,locked,note,shift_codes!inner(code)').eq('property_id', propertyId).gte('shift_date', monthStart).lt('shift_date', nextMonthStart),
     supabase.from('shift_month_states').select('planning_unit_id,status').eq('property_id', propertyId).eq('month', monthStart),
     supabase.from('shift_unit_job_titles').select('planning_unit_id,job_title_id').eq('property_id', propertyId).in('planning_unit_id', unitIds),
   ])
@@ -136,6 +136,7 @@ export async function loadLiveShiftData(
     const rules = related(activeRule?.rules) ?? {}
     const assignments: Record<string, string[]> = {}
     const lockedAssignments: Record<string, string[]> = {}
+    const lockedAssignmentNotes: Record<string, Record<string, string>> = {}
     const shiftIds: Record<string, string[]> = {}
 
     for (const member of unitMembers) {
@@ -147,7 +148,13 @@ export async function loadLiveShiftData(
         return typeof shiftCode?.code === 'string' ? shiftCode.code : ''
       })
       shiftIds[staffProfileId] = assignmentDates.map((date) => String(memberShifts.find((candidate) => candidate.shift_date === date)?.id ?? ''))
-      lockedAssignments[staffProfileId] = memberShifts.filter((shift) => shift.locked === true).map((shift) => String(shift.shift_date))
+      const lockedShifts = memberShifts.filter((shift) => shift.locked === true)
+      lockedAssignments[staffProfileId] = lockedShifts.map((shift) => String(shift.shift_date))
+      const notes: Record<string, string> = {}
+      for (const shift of lockedShifts) {
+        if (typeof shift.note === 'string' && shift.note.trim()) notes[String(shift.shift_date)] = shift.note
+      }
+      if (Object.keys(notes).length > 0) lockedAssignmentNotes[staffProfileId] = notes
     }
 
     return {
@@ -199,6 +206,7 @@ export async function loadLiveShiftData(
       assignments,
       assignmentDates,
       lockedAssignments,
+      lockedAssignmentNotes,
       shiftIds,
       month,
       monthStatus: monthStates.find((state) => state.planning_unit_id === unit.id)?.status === 'final' ? 'final' : 'draft',

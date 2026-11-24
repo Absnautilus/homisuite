@@ -49,6 +49,8 @@ export interface ShiftPlanningUnit {
   assignments: Record<string, string[]>
   assignmentDates?: string[]
   lockedAssignments?: Record<string, string[]>
+  /** Note entered when a cell was locked (DNM), keyed the same way as lockedAssignments. Shown on hover over the DNM badge. */
+  lockedAssignmentNotes?: Record<string, Record<string, string>>
   shiftIds?: Record<string, string[]>
   month?: string
   monthStatus?: 'draft' | 'final'

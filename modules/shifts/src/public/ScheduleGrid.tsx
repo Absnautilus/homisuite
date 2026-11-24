@@ -1,5 +1,6 @@
-import { Lock } from 'lucide-react'
+import { Pin } from 'lucide-react'
 import { useEffect, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
+import { Button, Modal } from '@homisuite/ui'
 import type { ShiftPlanningUnit } from '../preview/fixtures'
 import { ShiftSelect } from './ShiftSelect'
 
@@ -8,7 +9,7 @@ interface ScheduleGridProps {
   view: 'month' | 'week'
   editable?: boolean
   onAssignmentChange?: (changes: { staffProfileId: string; date: string; code: string }[]) => void
-  onLockChange?: (staffProfileId: string, date: string, locked: boolean) => Promise<void>
+  onLockChange?: (staffProfileId: string, date: string, locked: boolean, note?: string | null) => Promise<void>
   /** Reverts the most recent not-yet-saved edit. Passed as undefined when
    * there's nothing staged locally, which is what lets Ctrl+Z fall through
    * (via bubbling, since it's then left un-intercepted) to the window-level
@@ -76,6 +77,12 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   // unrelated earlier selection never leaks into the next Shift+Arrow.
   const [activeCell, setActiveCell] = useState<CellPos | null>(null)
   const [selectionAnchor, setSelectionAnchor] = useState<CellPos | null>(null)
+  // The DNM (Non Movibile) dialog: creating it fresh from the ShiftSelect
+  // menu action, or editing/removing it from the badge on an already-locked
+  // cell -- one shared dialog for both, since they differ only in which
+  // footer actions make sense and whether the note field starts blank.
+  const [lockDialog, setLockDialog] = useState<{ personIdx: number; dateIdx: number; mode: 'create' | 'edit'; note: string } | null>(null)
+  const [lockSaving, setLockSaving] = useState(false)
 
   // A view switch (or unit switch) changes which dates/people are visible at
   // all, so any row/column indices held in the selection would point at
@@ -85,6 +92,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
     setDragAnchor(null)
     setActiveCell(null)
     setSelectionAnchor(null)
+    setLockDialog(null)
   }, [view, unit.id])
 
   // The button can be released over any element, or outside the window
@@ -142,6 +150,45 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
     const date = visibleDates[dateIdx]
     if (!person || date == null) return false
     return unit.lockedAssignments?.[person.id]?.includes(date) ?? false
+  }
+
+  function lockNoteAt(personIdx: number, dateIdx: number): string {
+    const person = people[personIdx]
+    const date = visibleDates[dateIdx]
+    if (!person || date == null) return ''
+    return unit.lockedAssignmentNotes?.[person.id]?.[date] ?? ''
+  }
+
+  function openLockDialog(personIdx: number, dateIdx: number, mode: 'create' | 'edit') {
+    setLockDialog({ personIdx, dateIdx, mode, note: mode === 'edit' ? lockNoteAt(personIdx, dateIdx) : '' })
+  }
+
+  async function confirmLockDialog() {
+    if (!lockDialog || !onLockChange) return
+    const person = people[lockDialog.personIdx]
+    const date = visibleDates[lockDialog.dateIdx]
+    if (!person || date == null) return
+    setLockSaving(true)
+    try {
+      await onLockChange(person.id, date, true, lockDialog.note.trim() || null)
+      setLockDialog(null)
+    } finally {
+      setLockSaving(false)
+    }
+  }
+
+  async function removeLock() {
+    if (!lockDialog || !onLockChange) return
+    const person = people[lockDialog.personIdx]
+    const date = visibleDates[lockDialog.dateIdx]
+    if (!person || date == null) return
+    setLockSaving(true)
+    try {
+      await onLockChange(person.id, date, false, null)
+      setLockDialog(null)
+    } finally {
+      setLockSaving(false)
+    }
   }
 
   function handleCellClick(event: MouseEvent, personIdx: number, dateIdx: number) {
@@ -296,6 +343,7 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
   }
 
   return (
+  <>
     <div className="shift-grid-scroll" tabIndex={0} aria-label={`Tabella turni ${unit.name}`} onKeyDown={handleGridKeyDown}>
       {editable && selectionSize > 1 ? <div className="shift-selection-bar" role="toolbar" aria-label="Azioni sulla selezione">
         <span>{selectionSize} celle selezionate</span>
@@ -343,13 +391,36 @@ export function ScheduleGrid({ unit, view, editable = false, onAssignmentChange,
               onMouseDown={(event) => handleCellMouseDown(event, personIdx, dateIdx)}
               onMouseEnter={(event) => handleCellMouseEnter(event, personIdx, dateIdx)}
             >
-              {editable && !locked ? <div className={`shift-cell-editor${cellStateClass}`}><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} value={code} onChange={(next) => onAssignmentChange?.([{ staffProfileId: person.id, date, code: next }])} extraAction={code && onLockChange ? { label: 'Non spostare (DNM)', icon: <Lock size={13} strokeWidth={2.25} />, onSelect: () => { void onLockChange(person.id, date, true) } } : undefined} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}${cellStateClass}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
-                <strong>{code}</strong>{locked ? <button type="button" className="shift-lock-toggle is-locked" title={editable ? 'Consenti di nuovo lo spostamento' : 'Turno bloccato'} aria-label={editable ? `Sblocca ${person.name}, ${date}` : 'Bloccato'} disabled={!editable || !onLockChange} onClick={(event) => { event.stopPropagation(); void onLockChange?.(person.id, date, false) }}><Lock size={9} strokeWidth={2.5} /></button> : null}
+              {editable && !locked ? <div className={`shift-cell-editor${cellStateClass}`}><ShiftSelect compact ariaLabel={`${person.name}, ${date}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} value={code} onChange={(next) => onAssignmentChange?.([{ staffProfileId: person.id, date, code: next }])} extraAction={code && onLockChange ? { label: 'Non spostare (DNM)', icon: <Pin size={13} strokeWidth={2.25} />, onSelect: () => openLockDialog(personIdx, dateIdx, 'create') } : undefined} options={[{ value: '', label: 'Nessun turno', shortLabel: '' }, ...unit.codes.map((item) => ({ value: item.code, label: `${item.code} · ${item.label}${item.time ? ` (${item.time})` : ''}`, shortLabel: item.code, color: item.color, textColor: item.textColor }))]} /></div> : <div className={`shift-cell${code ? ' has-value' : ''}${cellStateClass}`} aria-label={`${person.name}, ${date}: ${definition?.label ?? (code || 'non assegnato')}`} title={`${definition?.label ?? code}${definition?.time ? ` · ${definition.time}` : ''}`} style={{ '--shift-color': definition?.color ?? '#9AA0A6', '--shift-text': definition?.textColor ?? '#fff' } as CSSProperties}>
+                <strong>{code}</strong>{locked ? <button type="button" className="shift-dnm-badge" title={lockNoteAt(personIdx, dateIdx) ? `Non movibile: ${lockNoteAt(personIdx, dateIdx)}` : 'Non movibile (nessuna nota)'} aria-label={editable ? `Gestisci blocco DNM, ${person.name}, ${date}` : 'Turno non movibile'} disabled={!editable || !onLockChange} onClick={(event) => { event.stopPropagation(); openLockDialog(personIdx, dateIdx, 'edit') }}><Pin size={9} strokeWidth={2.5} /></button> : null}
               </div>}
             </td>
           })}
         </tr>)}</tbody>
       </table>
     </div>
+    <Modal
+      open={lockDialog !== null}
+      title={lockDialog?.mode === 'edit' ? 'Non movibile (DNM)' : 'Blocca turno (DNM)'}
+      description="Il turno non verrà toccato da riassegnazioni automatiche o da altre modifiche in blocco. La nota è facoltativa ed è visibile passando il cursore sul blocco."
+      onClose={() => { if (!lockSaving) setLockDialog(null) }}
+      dismissible={!lockSaving}
+      footer={<>
+        {lockDialog?.mode === 'edit' ? <Button variant="danger" size="sm" disabled={lockSaving} onClick={() => void removeLock()}>Rimuovi blocco</Button> : <Button variant="secondary" size="sm" disabled={lockSaving} onClick={() => setLockDialog(null)}>Annulla</Button>}
+        <Button variant="primary" size="sm" loading={lockSaving} onClick={() => void confirmLockDialog()}>{lockDialog?.mode === 'edit' ? 'Salva nota' : 'Blocca'}</Button>
+      </>}
+    >
+      <label className="shift-dnm-note-field">
+        <span>Nota (facoltativa)</span>
+        <textarea
+          rows={3}
+          value={lockDialog?.note ?? ''}
+          onChange={(event) => setLockDialog((current) => current ? { ...current, note: event.target.value } : current)}
+          placeholder="Es. richiesta del cliente, manutenzione, evento…"
+          autoFocus
+        />
+      </label>
+    </Modal>
+  </>
   )
 }

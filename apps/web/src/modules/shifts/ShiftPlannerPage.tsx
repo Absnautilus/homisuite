@@ -265,9 +265,9 @@ export function ShiftPlannerPage() {
     const result = await saveInferredRotationSlots(supabase, propertyId, updates)
     void refreshLiveData({ silent: true })
     return result
-  }} onSetShiftLocked={async (planningUnitId, staffProfileId, shiftDate, locked) => {
+  }} onSetShiftLocked={async (planningUnitId, staffProfileId, shiftDate, locked, note) => {
     if (!propertyId) throw new Error('Missing active property')
-    await setShiftLocked(supabase, propertyId, planningUnitId, staffProfileId, shiftDate, locked)
+    await setShiftLocked(supabase, propertyId, planningUnitId, staffProfileId, shiftDate, locked, note)
   }} onSaveUnit={async (input) => {
     if (!propertyId) throw new Error('Missing active property')
     const result = await saveUnit(supabase, propertyId, input)

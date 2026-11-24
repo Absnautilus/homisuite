@@ -22,7 +22,7 @@ export interface ClearDraftShiftsResult { cleared: Record<string, string[]> }
 export interface RotationSlotUpdate { staffProfileId: string; rotationSlot: number }
 export interface InferRotationResult { applied: string[]; skipped: string[] }
 export type { ShiftRuleSetSave, ShiftCodeSave, AssignmentConflict, UnitSave, UnitSaveResult, ShiftRequestInboxItem }
-export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveStaffPlanning?: (change: import('./PlannerPanels').ShiftStaffPlanningSave) => Promise<void>; availableTeamMembers?: ShiftAvailableTeamMember[]; onAddStaffMember?: (input: ShiftStaffAdd) => Promise<string>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSetFutureRestDays?: (planningUnitId: string) => Promise<number>; onInferRotation?: (planningUnitId: string, updates: RotationSlotUpdate[]) => Promise<InferRotationResult>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult>; onClearDraftShifts?: (planningUnitId: string) => Promise<ClearDraftShiftsResult>; onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>; onArchiveUnit?: (unitId: string) => Promise<void>; onRestoreUnit?: (unitId: string) => Promise<void>; currentStaffProfileId?: string; month?: string; onMonthChange?: (month: string) => void; onSetShiftLocked?: (planningUnitId: string, staffProfileId: string, shiftDate: string, locked: boolean) => Promise<void>; onSubmitRequest?: (planningUnitId: string, request: ShiftRequestSubmit) => Promise<void>; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void>; requestInbox?: ShiftRequestInboxItem[]; onRequestDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void>; vacationPeriods?: VacationPeriod[]; vacationSettings?: VacationSettings; onRequestVacationPeriod?: (input: VacationRequestInput) => Promise<void>; onDecideVacationPeriod?: (periodId: string, approve: boolean) => Promise<VacationDecisionConflict[]>; onSaveVacationSettings?: (settings: VacationSettings) => Promise<void> }
+export interface ShiftPlannerModuleProps { preview?: boolean; initialPropertyId?: string; capabilities?: ShiftPlannerCapabilities; previewProperties?: ShiftPreviewProperty[]; onSaveAssignments?: (changes: ShiftAssignmentEdit[]) => Promise<void>; onReorderMembers?: (change: ShiftMemberReorder) => Promise<void>; onSaveStaffPlanning?: (change: import('./PlannerPanels').ShiftStaffPlanningSave) => Promise<void>; availableTeamMembers?: ShiftAvailableTeamMember[]; onAddStaffMember?: (input: ShiftStaffAdd) => Promise<string>; onSaveRules?: (change: ShiftRuleSetSave) => Promise<void>; onSetRestDays?: (planningUnitId: string) => Promise<Record<string, string[]>>; onSetFutureRestDays?: (planningUnitId: string) => Promise<number>; onInferRotation?: (planningUnitId: string, updates: RotationSlotUpdate[]) => Promise<InferRotationResult>; onSaveCode?: (input: ShiftCodeSave) => Promise<ShiftCode>; onDeleteCode?: (planningUnitId: string, codeId: string) => Promise<'deleted' | 'archived'>; onSetMonthStatus?: (planningUnitId: string, status: 'draft' | 'final') => Promise<void>; onGenerateAssignments?: (planningUnitId: string) => Promise<GenerateAssignmentsResult>; onClearDraftShifts?: (planningUnitId: string) => Promise<ClearDraftShiftsResult>; onSaveUnit?: (input: UnitSave) => Promise<UnitSaveResult>; onArchiveUnit?: (unitId: string) => Promise<void>; onRestoreUnit?: (unitId: string) => Promise<void>; currentStaffProfileId?: string; month?: string; onMonthChange?: (month: string) => void; onSetShiftLocked?: (planningUnitId: string, staffProfileId: string, shiftDate: string, locked: boolean, note?: string | null) => Promise<void>; onSubmitRequest?: (planningUnitId: string, request: ShiftRequestSubmit) => Promise<void>; initialPreferences?: StaffPreferenceSave; onSavePreferences?: (preferences: StaffPreferenceSave) => Promise<void>; requestInbox?: ShiftRequestInboxItem[]; onRequestDecision?: (item: ShiftRequestInboxItem, approve: boolean) => Promise<void>; vacationPeriods?: VacationPeriod[]; vacationSettings?: VacationSettings; onRequestVacationPeriod?: (input: VacationRequestInput) => Promise<void>; onDecideVacationPeriod?: (periodId: string, approve: boolean) => Promise<VacationDecisionConflict[]>; onSaveVacationSettings?: (settings: VacationSettings) => Promise<void> }
 type ModuleTab = 'calendar' | 'mine' | 'employees' | 'rules' | 'codes' | 'units' | 'preferences' | 'swaps' | 'absences' | 'preassignments' | 'vacation'
 type CalendarView = 'month' | 'week'
 type NavGroup = 'operativo' | 'impostazioni'
@@ -434,16 +434,24 @@ export function ShiftPlannerModule({ preview = false, initialPropertyId, capabil
     })))
     return outcome
   }
-  async function setShiftLocked(staffProfileId: string, shiftDate: string, locked: boolean) {
+  async function setShiftLocked(staffProfileId: string, shiftDate: string, locked: boolean, note?: string | null) {
     if (!onSetShiftLocked || !property || !unit || monthFinal) return
-    await onSetShiftLocked(unit.id, staffProfileId, shiftDate, locked)
+    await onSetShiftLocked(unit.id, staffProfileId, shiftDate, locked, note)
     setDraftProperties((current) => current.map((candidate) => candidate.id !== property.id ? candidate : ({
       ...candidate,
       units: candidate.units.map((candidateUnit) => {
         if (candidateUnit.id !== unit.id) return candidateUnit
         const currentDates = candidateUnit.lockedAssignments?.[staffProfileId] ?? []
         const nextDates = locked ? [...new Set([...currentDates, shiftDate])] : currentDates.filter((date) => date !== shiftDate)
-        return { ...candidateUnit, lockedAssignments: { ...candidateUnit.lockedAssignments, [staffProfileId]: nextDates } }
+        const currentNotes = candidateUnit.lockedAssignmentNotes?.[staffProfileId] ?? {}
+        const nextNotes = { ...currentNotes }
+        if (locked && note) nextNotes[shiftDate] = note
+        else delete nextNotes[shiftDate]
+        return {
+          ...candidateUnit,
+          lockedAssignments: { ...candidateUnit.lockedAssignments, [staffProfileId]: nextDates },
+          lockedAssignmentNotes: { ...candidateUnit.lockedAssignmentNotes, [staffProfileId]: nextNotes },
+        }
       }),
     })))
   }

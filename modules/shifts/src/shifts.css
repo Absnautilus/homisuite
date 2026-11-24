@@ -1261,28 +1261,6 @@
    user asks for a name, give the legend breathing room, and keep DNM controls
    available without repeating a large control in every assigned cell. */
 .shift-legend { padding: 16px 18px 20px; }
-.shift-lock-toggle {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
-  display: inline-flex;
-  height: 16px;
-  justify-content: center;
-  min-width: 16px;
-  padding: 0;
-}
-.shift-cell-editor .shift-lock-toggle {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 140ms ease;
-}
-.shift-cell-editor:focus-within .shift-lock-toggle,
-.shift-cell-editor:hover .shift-lock-toggle {
-  opacity: .65;
-  pointer-events: auto;
-}
-.shift-lock-toggle.is-locked { opacity: .7; }
 
 @media (max-width: 760px) {
   .shift-grid .shift-person-column,
@@ -1301,28 +1279,47 @@
   .shift-legend { padding: 16px 14px 20px; }
 }
 
-/* DNM is a corner affordance on the shift chip, never a second full-size control. */
+/* DNM is a corner affordance on the shift chip, never a second full-size
+   control. A fixed warm amber rather than --shift-accent (reserved for
+   selection) or --shift-warning-ink (its light/dark pair swap lightness,
+   which would need the icon color to invert right along with it for a
+   badge that's always a small solid-filled circle, not text blended into
+   the page) -- one pin-shaped icon, one color, in both themes. */
 .shift-cell,
 .shift-cell-editor { position: relative; }
-.shift-lock-toggle {
+.shift-dnm-badge {
   align-items: center;
   display: inline-flex;
   justify-content: center;
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 15px;
-  min-width: 15px;
-  height: 15px;
+  top: -5px;
+  right: -5px;
+  width: 17px;
+  min-width: 17px;
+  height: 17px;
   border: 1.5px solid var(--shift-ink-contrast);
   border-radius: 999px;
   padding: 0;
-  background: var(--shift-ink);
-  color: var(--shift-ink-contrast);
-  box-shadow: 0 1px 3px rgba(20,24,45,.28);
+  background: #b45309;
+  color: #fff;
+  rotate: -40deg;
+  box-shadow: 0 1px 3px rgba(20,24,45,.32);
   z-index: 2;
+  transition: transform 120ms ease;
 }
-.shift-lock-toggle.is-locked { background: var(--shift-accent); }
+.shift-dnm-badge:not(:disabled):hover { transform: scale(1.12); }
+.shift-dnm-badge:disabled { cursor: default; }
+.shift-dnm-note-field { display: grid; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--shift-ink); }
+.shift-dnm-note-field textarea {
+  background: var(--shift-panel);
+  border: 1px solid var(--shift-line-strong);
+  border-radius: 10px;
+  color: var(--shift-ink);
+  font: inherit;
+  padding: 9px 11px;
+  resize: vertical;
+}
+.shift-dnm-note-field textarea:focus-visible { outline: none; box-shadow: var(--shift-focus-ring); }
 .shift-legend { padding: 20px 28px 24px; }
 @media (max-width: 760px) {
   .shift-legend { padding: 18px 20px 22px; }
