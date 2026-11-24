@@ -91,9 +91,14 @@ export async function listMyBlackoutDates(): Promise<PartnerBlackoutDate[]> {
   }))
 }
 
-export async function addBlackoutDate(servicePartnerId: string, date: string, note: string | null): Promise<void> {
-  const { error } = await supabase.from('service_partner_blackout_dates').insert({ service_partner_id: servicePartnerId, blackout_date: date, note })
+export async function addBlackoutDate(servicePartnerId: string, date: string, note: string | null): Promise<string> {
+  const { data, error } = await supabase
+    .from('service_partner_blackout_dates')
+    .insert({ service_partner_id: servicePartnerId, blackout_date: date, note })
+    .select('id')
+    .single()
   if (error) throw error
+  return (data as { id: string }).id
 }
 
 export async function deleteBlackoutDate(id: string): Promise<void> {
@@ -152,4 +157,21 @@ export async function setAttendance(requestId: string, status: PartnerReservatio
     p_attendance: status,
   })
   if (error) throw error
+}
+
+// No filter string, unlike modules/housekeeping's subscribeToQueue (which
+// filters by hotel_id): a partner's reservations span whichever hotel(s)
+// their restaurant(s) serve, with no single tenant column to filter on
+// client-side, and listMyReservations() above already reads this same
+// table with no .eq() filter at all -- RLS alone (restaurant_reservation_requests'
+// own partner-scoped select policy) is what actually limits visibility,
+// for the realtime feed exactly as it does for the plain select.
+export function subscribeToReservations(onChange: () => void) {
+  const channel = supabase
+    .channel('partner-reservations')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_reservation_requests' }, onChange)
+    .subscribe()
+  return () => {
+    supabase.removeChannel(channel)
+  }
 }

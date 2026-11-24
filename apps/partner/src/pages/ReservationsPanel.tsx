@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@homisuite/ui'
+import { Button, useUndo } from '@homisuite/ui'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { respondToReservation, setAttendance } from '../api'
 import { ATTENDANCE_LABELS } from '../types'
@@ -25,6 +25,7 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
   const [respondingId, setRespondingId] = useState<string | null>(null)
   const [attendanceSavingId, setAttendanceSavingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const pushUndo = useUndo()
 
   const pending = reservations.filter((r) => r.confirmation_status === 'pending')
   const history = reservations
@@ -49,11 +50,20 @@ export function ReservationsPanel({ reservations, onReload }: ReservationsPanelP
   // segnare" -- a mis-click (or a reservation that later turns out to have
   // been entered wrong) shouldn't require a third state just to undo.
   async function markAttendance(request: PartnerReservation, next: 'arrived' | 'no_show') {
+    const previous = request.attendance_status
+    const nextStatus = previous === next ? 'pending' : next
     setAttendanceSavingId(request.id)
     setError(null)
     try {
-      await setAttendance(request.id, request.attendance_status === next ? 'pending' : next)
+      await setAttendance(request.id, nextStatus)
       await onReload()
+      pushUndo({
+        message: `Presenza di ${request.guest_name} aggiornata.`,
+        undo: async () => {
+          await setAttendance(request.id, previous)
+          await onReload()
+        },
+      })
     } catch {
       setError('Non è stato possibile aggiornare la presenza. Riprova.')
     } finally {

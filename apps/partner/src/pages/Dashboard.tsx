@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Tabs } from '@homisuite/ui'
-import { getMyPartner, listMyReservations, NoPartnerAccountError } from '../api'
+import { getMyPartner, listMyReservations, NoPartnerAccountError, subscribeToReservations } from '../api'
 import { supabase } from '../lib/supabase'
 import type { PartnerCapacity, PartnerReservation } from '../types'
 import { ReservationsPanel } from './ReservationsPanel'
@@ -43,6 +43,11 @@ export function Dashboard() {
   }, [])
 
   useEffect(() => { void load() }, [load])
+
+  // Another device (staff making a booking on the guest's behalf, or the
+  // guest themselves) can create/change a reservation at any time -- this
+  // keeps the dashboard current without the partner needing to refresh.
+  useEffect(() => subscribeToReservations(() => { void listMyReservations().then(setReservations).catch(() => {}) }), [])
 
   if (noAccount) {
     return (

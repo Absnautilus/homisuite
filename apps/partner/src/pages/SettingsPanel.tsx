@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Button, Checkbox, DatePicker, readStoredThemePreference, resolveTheme, setThemePreference, subscribeThemeChange, TimePicker } from '@homisuite/ui'
+import { Button, Checkbox, DatePicker, readStoredThemePreference, resolveTheme, setThemePreference, subscribeThemeChange, TimePicker, useUndo } from '@homisuite/ui'
 import { Moon, Plus, Sun, Trash2 } from 'lucide-react'
 import { addBlackoutDate, deleteBlackoutDate, listMyBlackoutDates, listMyHours, setMyHours, updateCapacity } from '../api'
 import { DAY_LABELS } from '../types'
@@ -31,6 +31,8 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
   const [newBlackoutDate, setNewBlackoutDate] = useState('')
   const [newBlackoutNote, setNewBlackoutNote] = useState('')
 
+  const pushUndo = useUndo()
+
   const loadExtras = useCallback(async () => {
     try {
       const [h, b] = await Promise.all([listMyHours(), listMyBlackoutDates()])
@@ -45,6 +47,7 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
 
   async function saveCapacity(event: FormEvent) {
     event.preventDefault()
+    const previous = initialCapacity
     setSavingCapacity(true)
     setError(null)
     setCapacitySaved(false)
@@ -57,6 +60,16 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
       await updateCapacity(capacity)
       onCapacitySaved(capacity)
       setCapacitySaved(true)
+      pushUndo({
+        message: 'Capienza aggiornata.',
+        undo: async () => {
+          await updateCapacity(previous)
+          onCapacitySaved(previous)
+          setSeatsIndoor(previous.seatsIndoor?.toString() ?? '')
+          setSeatsOutdoor(previous.seatsOutdoor?.toString() ?? '')
+          setAvailabilityNotes(previous.availabilityNotes ?? '')
+        },
+      })
     } catch {
       setError('Non è stato possibile salvare. Riprova.')
     } finally {
@@ -81,11 +94,19 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
 
   async function saveHours() {
     if (!hours) return
+    const previous = hours
     setSavingHours(true)
     setError(null)
     try {
       await setMyHours(servicePartnerId, hours.map((h) => ({ dayOfWeek: h.dayOfWeek, opensAt: h.opensAt, closesAt: h.closesAt })))
       await loadExtras()
+      pushUndo({
+        message: 'Orari di apertura aggiornati.',
+        undo: async () => {
+          await setMyHours(servicePartnerId, previous.map((h) => ({ dayOfWeek: h.dayOfWeek, opensAt: h.opensAt, closesAt: h.closesAt })))
+          await loadExtras()
+        },
+      })
     } catch {
       setError('Non è stato possibile salvare gli orari. Riprova.')
     } finally {
@@ -97,21 +118,37 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
     event.preventDefault()
     if (!newBlackoutDate) return
     setError(null)
+    const date = newBlackoutDate
+    const note = newBlackoutNote.trim() || null
     try {
-      await addBlackoutDate(servicePartnerId, newBlackoutDate, newBlackoutNote.trim() || null)
+      const id = await addBlackoutDate(servicePartnerId, date, note)
       setNewBlackoutDate('')
       setNewBlackoutNote('')
       await loadExtras()
+      pushUndo({
+        message: 'Data non disponibile aggiunta.',
+        undo: async () => {
+          await deleteBlackoutDate(id)
+          await loadExtras()
+        },
+      })
     } catch {
       setError('Non è stato possibile aggiungere la data. Riprova.')
     }
   }
 
-  async function removeBlackout(id: string) {
+  async function removeBlackout(blackout: PartnerBlackoutDate) {
     setError(null)
     try {
-      await deleteBlackoutDate(id)
+      await deleteBlackoutDate(blackout.id)
       await loadExtras()
+      pushUndo({
+        message: 'Data non disponibile rimossa.',
+        undo: async () => {
+          await addBlackoutDate(servicePartnerId, blackout.blackoutDate, blackout.note)
+          await loadExtras()
+        },
+      })
     } catch {
       setError('Non è stato possibile rimuovere la data. Riprova.')
     }
@@ -213,7 +250,7 @@ export function SettingsPanel({ servicePartnerId, initialCapacity, onCapacitySav
             {blackoutDates.map((blackout) => (
               <li key={blackout.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <span>{new Date(`${blackout.blackoutDate}T00:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}{blackout.note ? ` — ${blackout.note}` : ''}</span>
-                <Button variant="ghost" size="sm" aria-label="Rimuovi" onClick={() => void removeBlackout(blackout.id)}><Trash2 size={16} /></Button>
+                <Button variant="ghost" size="sm" aria-label="Rimuovi" onClick={() => void removeBlackout(blackout)}><Trash2 size={16} /></Button>
               </li>
             ))}
           </ul>
