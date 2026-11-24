@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { claimRequest, fetchMyProfile } from '@/lib/staff-api'
+import { claimRequest, fetchMyProfile, touchPresence } from '@/lib/staff-api'
 import { goOffDuty } from '@/lib/push'
 import { unlockAudio } from '@/lib/beep'
 import { useIdleLogout } from '@/hooks/use-idle-logout'
@@ -15,6 +15,7 @@ import { AdminHome } from '@/staff/admin/admin-home'
 import { StaysPage } from '@/staff/stays/stays-page'
 
 const IDLE_LOGOUT_MS = 8 * 60 * 60 * 1000
+const PRESENCE_HEARTBEAT_MS = 5 * 60 * 1000
 
 interface StaffAppProps {
   mode?: 'standalone' | 'embedded'
@@ -124,6 +125,22 @@ export function StaffApp({ mode = 'standalone', expectedHotelId, basePath = '/ho
     void goOffDuty().catch(() => {})
     void supabase.auth.signOut()
   })
+
+  // The idle timer above only ever fires if this tab keeps running for the
+  // full 8h uninterrupted -- closing the laptop, quitting the browser, or
+  // the device sleeping all skip it entirely, leaving on_duty stuck true
+  // indefinitely with nothing to notice. This heartbeat is the other half:
+  // proof to the server-side sweep (auto-off-duty-stale-presence) that a
+  // session is genuinely still open, so it can flip on_duty off for anyone
+  // whose heartbeat goes stale regardless of what their tab is doing.
+  useEffect(() => {
+    if (!profile?.active || readOnlyProfile) return
+    void touchPresence().catch(() => {})
+    const interval = window.setInterval(() => {
+      void touchPresence().catch(() => {})
+    }, PRESENCE_HEARTBEAT_MS)
+    return () => window.clearInterval(interval)
+  }, [profile?.active, readOnlyProfile])
 
   useEffect(() => {
     const claimId = searchParams.get('claim')

@@ -233,6 +233,16 @@ export async function setOnDuty(onDuty: boolean) {
   if (error) throw error
 }
 
+// Lightweight heartbeat so a scheduled server-side sweep can tell a tab
+// that's genuinely still open from one that was simply never closed out of
+// (closed laptop lid, browser quit, device asleep) -- the client-side idle
+// timer alone only ever fires if the tab keeps running uninterrupted for
+// the full 8h window, which a closed tab or a sleeping device never does.
+export async function touchPresence(): Promise<void> {
+  const { error } = await supabase.rpc('touch_staff_presence')
+  if (error) throw error
+}
+
 // Housekeeping now uses the Core per-device push registry too. That keeps
 // one browser subscription per signed-in profile instead of maintaining a
 // second module-local registry keyed to legacy staff_profiles.
