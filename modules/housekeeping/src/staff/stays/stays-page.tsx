@@ -18,7 +18,7 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast-context'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { useHotelName } from '@/lib/hotel-branding-context'
-import { tenantIntegrityErrorRef } from '@/lib/errors'
+import { classifyStayCreationError, tenantIntegrityErrorRef } from '@/lib/errors'
 import type { StaffProfile } from '@/lib/staff-types'
 
 function toLocalInputValue(iso: string): string {
@@ -150,7 +150,13 @@ function NewStayForm({ hotelId, rooms, hotelSettings, onCreated }: { hotelId: st
       })
     } catch (err) {
       const ref = tenantIntegrityErrorRef(err)
-      setError(ref ? t('staff.stays.tenantMismatchError', { ref }) : t('staff.stays.addError'))
+      const kind = classifyStayCreationError(err)
+      setError(ref
+        ? t('staff.stays.tenantMismatchError', { ref })
+        : kind === 'overlap' ? t('staff.stays.overlapError')
+        : kind === 'invalidDates' ? t('staff.stays.invalidDatesError')
+        : kind === 'permission' ? t('staff.stays.permissionError')
+        : t('staff.stays.addError'))
     } finally {
       setPending(false)
     }

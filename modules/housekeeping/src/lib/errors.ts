@@ -35,3 +35,16 @@ export function tenantIntegrityErrorRef(err: unknown): string | null {
   if (code !== '23514' || typeof message !== 'string' || !TENANT_INTEGRITY_ERROR_REFS.has(message)) return null
   return message
 }
+
+// PostgreSQL exclusion_violation is raised by stays_no_overlapping_active.
+// Never infer an overlap from an arbitrary failed insert: RLS, integrity,
+// connectivity, and other failures must not be presented as room conflicts.
+export function classifyStayCreationError(err: unknown): 'overlap' | 'invalidDates' | 'permission' | 'other' {
+  if (typeof err !== 'object' || err === null) return 'other'
+  const code = 'code' in err ? (err as { code?: unknown }).code : undefined
+  const message = getErrorMessage(err)
+  if (code === '23P01') return 'overlap'
+  if (code === '23514' && message.includes('stays_checkout_after_checkin')) return 'invalidDates'
+  if (code === '42501' || code === 'PGRST301') return 'permission'
+  return 'other'
+}
