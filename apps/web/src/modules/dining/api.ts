@@ -449,6 +449,28 @@ export async function deleteReservation(client: SupabaseClient, id: string): Pro
   await mutateOneOrThrow(client, 'restaurant_reservation_requests', 'id', id, 'delete')
 }
 
+// Undo for deleteReservation -- the delete cascades to
+// restaurant_reservation_alternatives, so the caller captures that too
+// (just before deleting) and this puts both back, same ids, in one call.
+// dining_change_log keeps its own rows for this reservation_id regardless
+// (no FK to cascade), so its history survives the round trip untouched.
+//
+// restaurant_reservation_feedback also cascades, but can't be restored the
+// same way: it's guest-submitted and the `authenticated` role has no
+// INSERT grant on it at all (only service_role does, via whatever path
+// guests use to leave feedback), so a staff session can never recreate a
+// feedback row directly. The caller warns at delete time instead -- see
+// BookingDetailSlideOver's onDelete -- rather than letting the whole undo
+// throw once it gets around to that insert.
+export async function restoreReservation(client: SupabaseClient, reservation: ReservationRequest, alternatives: ReservationAlternative[]): Promise<void> {
+  const { error } = await client.from('restaurant_reservation_requests').insert(reservation)
+  if (error) throw error
+  if (alternatives.length > 0) {
+    const { error: altError } = await client.from('restaurant_reservation_alternatives').insert(alternatives)
+    if (altError) throw altError
+  }
+}
+
 export async function getOperationalProfile(client: SupabaseClient, restaurantId: string): Promise<RestaurantOperationalProfile | null> {
   const { data, error } = await client
     .from('restaurant_operational_profiles')

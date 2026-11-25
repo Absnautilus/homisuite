@@ -4,7 +4,7 @@ import { CheckCircle2, Pencil, Star, Trash2, XCircle } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { supabase } from '../../core/client'
 import { useConfirm } from '../../components/ConfirmDialog'
-import { getFeedback, listAlternatives, listChangeLogForEntity, setAlternatives, updateReservation } from './api'
+import { deleteReservation, getFeedback, listAlternatives, listChangeLogForEntity, restoreReservation, setAlternatives, updateReservation } from './api'
 import { RestaurantField } from './RestaurantField'
 import type { AttendanceStatus, ChangeLogEntry, ConfirmationStatus, ReservationAlternative, ReservationFeedback, ReservationRequest, Restaurant } from './types'
 import { ATTENDANCE_STATUS_LABELS, CONFIRMATION_STATUS_LABELS, resolveRestaurantInput, resolveRestaurantName } from './types'
@@ -123,6 +123,46 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
           await updateReservation(supabase, reservation.id, { confirmation_status: previousStatus })
           await onChanged()
           await load()
+        },
+      })
+    } catch (cause) {
+      setError(readableDiningError(cause))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Unlike setStatus('cancelled'), which keeps the row (just marked
+  // annullata, still visible in "Tutte"), this removes it entirely -- for a
+  // booking that should never have existed (a duplicate, a wrong import
+  // row), not one the guest simply isn't coming to anymore.
+  async function onDelete() {
+    if (!reservation) return
+    // The feedback (if any) can't come back on undo -- restoring it needs
+    // an INSERT privilege only the service role has, not a staff session --
+    // so say so upfront rather than silently losing it.
+    const feedbackWarning = feedback ? ' Il feedback lasciato dall\'ospite andrà perso definitivamente.' : ''
+    const ok = await confirm({
+      title: 'Eliminare questa prenotazione?',
+      description: `${reservation.guest_name} · ${restaurantName(reservation)}, ${formatDate(reservation.reservation_date)} alle ${reservation.reservation_time.slice(0, 5)}. Verrà rimossa definitivamente dall'elenco.${feedbackWarning}`,
+      confirmLabel: 'Elimina',
+    })
+    if (!ok) return
+    setSaving(true)
+    setError(null)
+    try {
+      // Captured before deleting -- the delete cascades to this table too,
+      // and undoing it needs to put it back, not just the reservation's
+      // own row.
+      const previousAlternatives = await listAlternatives(supabase, reservation.id)
+      await deleteReservation(supabase, reservation.id)
+      await onChanged()
+      onClose()
+      pushUndo({
+        message: `Prenotazione di ${reservation.guest_name} eliminata.`,
+        undo: async () => {
+          await restoreReservation(supabase, reservation, previousAlternatives)
+          await onChanged()
         },
       })
     } catch (cause) {
@@ -296,6 +336,7 @@ export function BookingDetailSlideOver({ reservation, restaurants, canManage, on
           {reservation.confirmation_status === 'confirmed' && (
             <Button variant="secondary" onClick={() => void setStatus('cancelled')} disabled={saving}>Annulla prenotazione</Button>
           )}
+          <Button variant="danger" onClick={() => void onDelete()} disabled={saving}><Trash2 size={14} /> Elimina</Button>
         </>
       ) : null}
     >

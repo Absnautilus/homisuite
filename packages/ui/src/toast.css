@@ -23,6 +23,12 @@
 .ui-toast.is-open {
   translate: -50% 0;
   opacity: 1;
+  /* The closed state needs pointer-events: none (otherwise the invisible,
+     still-fading-out toast sits on top of whatever's underneath and eats
+     its clicks) -- but nothing ever turned them back on once open, so the
+     "Annulla" button every undo toast across the app renders was never
+     actually clickable by mouse or touch, only by its own Ctrl+Z shortcut. */
+  pointer-events: auto;
 }
 
 .ui-toast button {
