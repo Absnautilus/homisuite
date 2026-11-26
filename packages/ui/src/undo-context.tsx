@@ -88,7 +88,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       <Toast open={Boolean(pending) || Boolean(errorMessage)}>
         {pending ? (
           <>
-            <span>{pending.message}</span>
+            <span className="ui-toast-message">{pending.message}</span>
             <button type="button" onClick={() => void runUndo(pending)} disabled={undoing}>
               {undoing ? 'Annullo…' : 'Annulla'}
             </button>

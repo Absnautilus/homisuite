@@ -8,7 +8,19 @@
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  border-radius: 999px;
+  /* A full pill (border-radius: 999px) reads fine for a short one-line
+     message, but a longer one (a guest's name, a restaurant name) wraps to
+     several lines on a narrow viewport, and 999px on a box that tall turns
+     the corners into an oversized, lopsided blob instead of a rounded
+     rectangle. 16px stays a normal "toast" shape at any height. */
+  border-radius: 16px;
+  /* A fixed width (not fit-content/max-width) -- fit-content on a
+     position: fixed flex container didn't size up from its content the
+     way it does on an ordinary block box: it kept collapsing to a narrow
+     column regardless of how the message/button children's own flex
+     properties were tuned. A steady width every toast shares, short
+     message or long, sidesteps that rather than continuing to fight it. */
+  width: min(88vw, 380px);
   background: var(--ink);
   color: var(--surface);
   box-shadow: var(--shadow-lg);
@@ -31,6 +43,18 @@
   pointer-events: auto;
 }
 
+/* min-width: 0 is what lets a long message (a guest's name, a restaurant
+   name) actually wrap and shrink below its own longest-word min-content
+   size, instead of forcing .ui-toast itself wider -- a flex item's default
+   min-width: auto resolves to that min-content size otherwise. flex-basis
+   stays auto (not 0): a 0 basis would make this item's own single-line
+   width stop counting toward .ui-toast's fit-content sizing, which is
+   exactly backwards -- it's that single-line width .ui-toast needs to grow
+   toward (up to its max-width) before any wrapping should kick in at all,
+   not shrink to minimum the moment there's an "Annulla" sibling to share
+   the row with. */
+.ui-toast-message { flex: 1 1 auto; min-width: 0; }
+
 .ui-toast button {
   border: 1px solid color-mix(in srgb, var(--surface) 35%, transparent);
   background: transparent;
@@ -41,6 +65,7 @@
   border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .ui-toast button:disabled { opacity: 0.6; cursor: default; }
 
