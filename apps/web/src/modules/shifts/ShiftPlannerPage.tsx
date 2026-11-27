@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ShiftPlannerModule, type ShiftAvailableTeamMember, type ShiftPlannerCapabilities, type ShiftPreviewProperty, type ShiftRequestInboxItem, type VacationPeriod, type VacationSettings } from '@homisuite/shifts-module'
 import { useUndo } from '@homisuite/ui'
 import '@homisuite/shifts-module/style.css'
@@ -40,6 +40,16 @@ export function ShiftPlannerPage() {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [requestRevision, setRequestRevision] = useState(0)
+
+  // `state` only ever gets a new reference from this component's own
+  // setState calls (an actual load/refresh), never from an unrelated
+  // re-render -- e.g. pushUndo() changing UndoProvider's context, which
+  // re-renders every useUndo() consumer including this page. Memoizing on
+  // `state` keeps this array's reference stable across those unrelated
+  // re-renders, so ShiftPlannerModule's own reset-effect (keyed on this
+  // array by reference) doesn't fire and clobber its optimistic local
+  // state with this stale, unrefreshed copy.
+  const previewProperties = useMemo(() => (state.status === 'ready' ? [state.property] : []), [state])
 
   // Flips to true only across the render where `month` itself just changed
   // (the calendar's prev/next-month buttons), then is consumed back to false
@@ -146,7 +156,7 @@ export function ShiftPlannerPage() {
     else if (item.kind === 'preassignments') await decidePreassignment(supabase, item.id, approve)
     else await respondShiftSwap(supabase, item.id, approve)
     setRequestRevision((value) => value + 1)
-  }} initialPropertyId={readyState.property.id} previewProperties={[readyState.property]} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} initialPreferences={readyState.preferences} onSavePreferences={async (preferences) => {
+  }} initialPropertyId={readyState.property.id} previewProperties={previewProperties} capabilities={readyState.capabilities} currentStaffProfileId={readyState.currentStaffProfileId} month={month} onMonthChange={setMonth} initialPreferences={readyState.preferences} onSavePreferences={async (preferences) => {
     if (!propertyId || !readyState.currentStaffProfileId) throw new Error('Missing active staff profile')
     await saveStaffShiftPreferences(supabase, propertyId, readyState.currentStaffProfileId, preferences)
   }} onSubmitRequest={async (planningUnitId, request) => {
@@ -184,6 +194,7 @@ export function ShiftPlannerPage() {
       if (!unit) throw new Error('Unknown planning unit')
       await saveShiftAssignments(supabase, propertyId, profileId, unit, unitChanges)
     }
+    void refreshLiveData({ silent: true })
     pushUndo({
       message: changes.length > 1 ? 'Turni aggiornati.' : 'Turno aggiornato.',
       undo: async () => {
